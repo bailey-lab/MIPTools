@@ -1,15 +1,3 @@
-
-# coding: utf-8
-
-# In[1]:
-
-
-
-"""
-Created on Tue Apr 29 16:50:42 2014
-
-@author: oz
-"""
 import subprocess
 import json
 import os
@@ -22,7 +10,7 @@ import shutil
 import random
 import string
 from ast import literal_eval as evaluate
-import pickle as pickle
+import pickle
 import copy
 from Bio import SeqIO
 import numpy as np
@@ -42,10 +30,6 @@ print("functions reloading")
 
 # > Below class allows processors from a pool from multiprocessing module to create processor pools of their own.
 # http://mindcache.io/2015/08/09/python-multiprocessing-module-daemonic-processes-are-not-allowed-to-have-children.html
-
-# In[2]:
-
-
 class NoDaemonProcess(multiprocessing.Process):
     # make 'daemon' attribute always return False
     def _get_daemon(self):
@@ -57,11 +41,6 @@ class NoDaemonProcess(multiprocessing.Process):
 # because the latter is only a wrapper function, not a proper class.
 class NoDaemonProcessPool(multiprocessing.pool.Pool):
     Process = NoDaemonProcess
-
-
-# In[3]:
-
-
 def get_file_locations():
     """ All static files such as fasta genomes, snp files, etc. must be listed
     in a file in the working directory. File name is file_locations.
@@ -79,11 +58,6 @@ def get_file_locations():
                 else:
                     file_locations[newline[0]][newline[1]] = newline[2]
     return file_locations
-
-
-# In[4]:
-
-
 def rinfo_converter(rinfo_file, output_file, flank, species="hs", host_species="none",
                     capture_type="targets", target_snps="functional", must_snps=[],
                     target_diffs="filtered", target_dic=None):
@@ -322,57 +296,6 @@ def rinfo_converter(rinfo_file, output_file, flank, species="hs", host_species="
             outfile.write(comment)
             outfile.write(sep)
     return
-
-
-# In[5]:
-
-
-def rinfo_maker(gene_name, gene_dic):
-    res_dir = gene_name + "/resources/"
-    if not os.path.exists(res_dir):
-        os.makedirs(res_dir)
-    rinfo_0_name = res_dir + gene_name + "_0.rinfo"
-    rinfo_name = res_dir + gene_name + ".rinfo"
-    with open (rinfo_0_name, "w") as outfile:
-        outfile.write("######################################\n")
-        outfile.write("#name of the locus\n")
-        outfile.write("NAME\t" + gene_name + "\n")
-        outfile.write("DESC\t" + gene_name + "\n")
-        outfile.write("##### PARALOGOUS AND NON PARALOGOUS REGION DESCRIPTIONS ####\n")
-        outfile.write("COL:REGION\tcopyname\tseqn\tseqb\tseqe\torient\tlength\n")
-        outfile.write("#REGION:segment:copy is the proper nomenclature\n")
-        outfile.write("#copy number zero should be the master sequence \n")
-        outfile.write("#(best if master has minimal deletion in relation to others)\n")
-        if gene_dic["orientation"] == "+":
-            ori = "F"
-        else:
-            ori = "R"
-        outlist = ["REGION:S0:C0", gene_dic["gene_name"], gene_dic["chrom"], int(gene_dic["begin"]) -1,
-         gene_dic["end"],  ori, int(gene_dic["end"]) - int(gene_dic["begin"]) + 1]
-        outfile.write("\t".join(map(str,outlist)) + "\n")
-    # create allsnps file for gene region
-    species = gene_dic["species"]
-    allsnp_file = res_dir + "bedraw.S0.allsnps"
-    region_key = gene_dic["chrom"] + ":" + str(int(gene_dic["begin"]) -1) +                     "-" + str(gene_dic["end"])
-    make_allsnps_file(region_key, allsnp_file, species)
-    #print region_key, allsnp_file, species
-    # set up rinfo converter function arguments
-    capture_type = gene_dic["capture_type"]
-    target_snps = gene_dic["target_snps"]
-    target_diffs = gene_dic["target_diffs"]
-    host_species = gene_dic["host_species"]
-    flank = gene_dic["flank"]
-    must_snps=gene_dic["must"]
-    rinfo_converter(rinfo_0_name, rinfo_name, flank, must_snps=must_snps,
-                        species=species, host_species=host_species,
-                         capture_type=capture_type, target_snps=target_snps,
-                        target_diffs=target_diffs, target_dic=gene_dic)
-    return
-
-
-# In[6]:
-
-
 def merge_coordinates(coordinates, capture_size):
     """ Create MIP targets starting from a snp file that is produced offline,
     usually from Annovar. This is a tab separated file with the following content:
@@ -418,22 +341,12 @@ def merge_coordinates(coordinates, capture_size):
             outfile.write(fasta)
     """
     return target_coordinates, target_names
-
-
-# In[7]:
-
-
 def create_target_fastas(res_dir, targets, species, flank):
     for t in targets:
         rk = targets[t][0] + ":" + str(targets[t][1] - flank + 1)           + "-" + str(targets[t][2] + flank)
         with open(res_dir + t + ".fa", "w") as outfile:
             outfile.write(get_fasta(rk, species, header = t))
     return
-
-
-# In[8]:
-
-
 def coordinate_to_target(coordinates, snp_locations, capture_size):
     """ Create MIP targets starting from a snp file that is produced offline,
     usually from Annovar. This is a tab separated file with the following content:
@@ -511,11 +424,6 @@ def coordinate_to_target(coordinates, snp_locations, capture_size):
             outfile.write(fasta)
     """
     return target_coordinates
-
-
-# In[9]:
-
-
 def rsid_to_target(resource_dir, snp_file):
     """ Create MIP targets starting from a snp file that is produced offline,
     usually from Annovar. This is a tab separated file with the following content:
@@ -572,11 +480,6 @@ def rsid_to_target(resource_dir, snp_file):
                 problem_snps.append(s)
         reference_snp_locations[s]["capture_type"] = capture_types[s]
     return reference_snp_locations, snp_locations
-
-
-# In[10]:
-
-
 def gene_to_target(gene_list, species):
     target_coordinates = {}
     for gene in gene_list:
@@ -592,11 +495,6 @@ def gene_to_target(gene_list, species):
                                         "begin": np.nan,
                                         "end": np.nan}
     return target_coordinates
-
-
-# In[11]:
-
-
 def gene_to_target_exons(gene_list, species, exon_list):
     target_coordinates = {}
     for i in range(len(gene_list)):
@@ -626,11 +524,6 @@ def gene_to_target_exons(gene_list, species, exon_list):
                 except IndexError:
                     print("Exon ", j, " does not exist for gene ", gene)
     return target_coordinates
-
-
-# In[12]:
-
-
 def parse_alignment(reg_file):
     """ Create a rinfo dictionary from a rinfo file."""
     reg_dic = {}
@@ -655,83 +548,10 @@ def parse_alignment(reg_file):
                                              "end":int(newline[5]),
                                              "ori":(newline[6]=="F")}
     return reg_dic
-
-def make_segment_fasta(reg_file, reg_dir):
-    """ Take a 1 based rinfo file. For each segment
-    create a fasta file that has fasta sequences of all copies
-    in that segment."""
-    reg_dic = parse_alignment(reg_dir + reg_file)
-    for s in reg_dic:
-        with open(reg_dir + "segments" + s + ".fasta", "w") as outfile:
-            for c in reg_dic[s]:
-                reg_key = make_region(reg_dic[s][c]["chr"],
-                                                      reg_dic[s][c]["begin"],
-                                                      reg_dic[s][c]["end"])
-                if reg_dic[s][c]["ori"]:
-                    f = get_fasta(reg_key, "hs")
-                    outfile.write(">" + s + c + "_")
-                    outfile.write(f)
-                else:
-                    f = reverse_complement(
-                        fasta_to_sequence(
-                        get_fasta(reg_key, "hs"))) + "\n"
-                    outfile.write(">" + s + c + "\n")
-                    outfile.write(f)
-def miptools_run(gene_name):
-    """ Run miptools script, using rinfo_0 file."""
-    command = ["/home/baileyj1/bin_sync/mip_tools_v023ozkan.py",
-               "design_region",
-               "-r",
-               gene_name + "_0.rinfo",
-               "-c",
-               get_file_locations()["all"]["script_DIR"]+\
-               get_file_locations()["hs"]["hg19.config"]]
-    try:
-        res = subprocess.check_output(command, cwd = gene_name + "/resources")
-    except subprocess.CalledProcessError as e:
-        return e.output
-    return
-def paralog_rinfo_maker(family_name, gene_dic):
-    """
-    Take rinfo_0 file, and create rinfo file + run miptools to get sequences.
-    Any additional, nonparalogus sequences must be added to the rinfo_0
-    PRIOR to calling this function.
-    Fasta file for segments also created, for double checking final alignments.
-    Rinfo file properties that are not specified here are taken from the settings_(species)
-    file in resources directory.
-    Must snps can be manually added or a target file can be used.
-    """
-    res_dir = family_name + "/resources/"
-    rinfo_0_name = res_dir + family_name + "_0.rinfo"
-    rinfo_name = res_dir + family_name + ".rinfo"
-    species = gene_dic["species"]
-    capture_type = gene_dic["capture_type"]
-    target_snps = gene_dic["target_snps"]
-    target_diffs = gene_dic["target_diffs"]
-    host_species = gene_dic["host_species"]
-    flank = gene_dic["flank"]
-    must_snps=gene_dic["must"]
-    rinfo_converter(rinfo_0_name, rinfo_name, flank, must_snps=must_snps,
-                        species=species, host_species=host_species,
-                         capture_type=capture_type, target_snps=target_snps,
-                        target_diffs=target_diffs, target_dic=gene_dic)
-    make_segment_fasta(family_name + ".rinfo", res_dir)
-    dump = miptools_run(family_name)
-    return
-
-
-# In[13]:
-
-
 def id_generator(N):
     """ Generate a random string of length N consisting of uppercase letters and digits.
     Used for generating names for temporary files, etc."""
     return ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(N))
-
-
-# In[14]:
-
-
 def hybrid_TM (temp_dir, s1, s2, Na=0.025, Mg=0.01, conc=(0.4*pow(10,-9)), tm=65):
     """ Return the melting temperature of two oligos at given conditions, using melt.pl
     of UNAfold software suite."""
@@ -745,11 +565,6 @@ def hybrid_TM (temp_dir, s1, s2, Na=0.025, Mg=0.01, conc=(0.4*pow(10,-9)), tm=65
             out2.write(s2)
     t = subprocess.check_output(["melt.pl", "-n",  "DNA", "-t" , str(tm),                      "-N", str(Na), "-M", str(Mg), "-C", str(conc),                     f1, f2], cwd=temp_dir)
     return float(t.strip().split("\t")[-1])
-
-
-# In[15]:
-
-
 def hybrid_TM_files (temp_dir, f1, f2, fo, Na=0.025, Mg=0.01, conc=(0.4*pow(10,-9)), tm=65):
     """ Return the melting temperature of two oligos at given conditions, using melt.pl
     of UNAfold software suite."""
@@ -759,11 +574,6 @@ def hybrid_TM_files (temp_dir, f1, f2, fo, Na=0.025, Mg=0.01, conc=(0.4*pow(10,-
     with open(temp_dir + fo, "w") as of:
         of.write(t)
     return t
-
-
-# In[16]:
-
-
 def align_region_worker_for_design(l):
     try:
         # get parameters from the input list
@@ -859,12 +669,6 @@ def align_region_multi_for_design(alignment_list, pro):
     except Exception as e:
         res.append(str(e))
     return res
-
-
-
-# In[17]:
-
-
 def align_region_worker(l):
     try:
         # get parameters from the input list
@@ -954,11 +758,6 @@ def align_region_multi(alignment_list, pro):
     except Exception as e:
         res.append(str(e))
     return res
-
-
-# In[18]:
-
-
 def align_region(l):
     try:
         region_key = l[0]
@@ -1004,11 +803,6 @@ def align_region(l):
         return 0
     except Exception as e:
         return str(e)
-
-
-# In[19]:
-
-
 def merge_alignments (resource_dir, fasta_list, output_prefix = "merged"):
     als_out = []
     diffs_out = []
@@ -1031,14 +825,9 @@ def merge_alignments (resource_dir, fasta_list, output_prefix = "merged"):
         alignment_file.write("\n".join(als_out))
         diff_file.write("\n".join(diffs_out))
     return
-
-
-# In[20]:
-
-
 def align_genes_for_design(gene_name_list, res_dir,
                            alignment_types = ["differences", "general"],
-                species = "hs", num_processor=30, ):
+                species = "hs", num_processor=30 ):
     """ Align genes given in a list to the reference genome of given species.
     Extract gene sequence of the gene from refgene file of the species, starting
     from the first exon and ending with the last exon. Any alternatively spliced
@@ -1091,11 +880,6 @@ def align_genes_for_design(gene_name_list, res_dir,
     align_region_multi_for_design(region_list, num_processor)
     #check = alignment_check(region_list)
     return
-
-
-# In[21]:
-
-
 def align_genes(gene_name_list, wdir, alignment_types = ["differences", "general"],
                 species = "hs", num_processor=30, flank=150, identity=90, coverage=5,
                 options = ["--notransition", "--step=100"]):
@@ -1158,11 +942,6 @@ def align_genes(gene_name_list, wdir, alignment_types = ["differences", "general
     align_region_multi(region_list, num_processor)
     #check = alignment_check(region_list)
     return
-
-
-# In[22]:
-
-
 def align_haplotypes(settings,
                      target_actions = ["unmask", "multiple"],
                      query_actions = ["unmask"],
@@ -1222,7 +1001,6 @@ def align_haplotypes(settings,
     with open(alignment_out_file, "w") as outfile:
         json.dump(alignment, outfile)
     return
-
 def parse_aligned_haplotypes(settings):
     wdir = settings["workingDir"]
     species = settings["species"]
@@ -1734,12 +1512,6 @@ def parse_aligned_haplotypes(settings):
     with open(alignment_file, "w") as outfile:
         json.dump(result, outfile)
     return
-
-
-
-# In[23]:
-
-
 def update_aligned_haplotypes (settings):
     """
     Update haplotypes with information from the alignment results.
@@ -1875,11 +1647,6 @@ def update_aligned_haplotypes (settings):
     with open(temp_mapped_haps_file, "w") as outfile:
         json.dump(haplotypes, outfile, indent=1)
     return
-
-
-# In[24]:
-
-
 def update_unique_haplotypes (settings):
     """
     Add new on and off target haplotypes to the unique haplotypes.
@@ -1945,11 +1712,6 @@ def update_unique_haplotypes (settings):
     with open(sequence_to_haplotype_file, "w") as outfile:
         json.dump(sequence_to_haplotype, outfile, indent=1)
     return
-
-
-# In[25]:
-
-
 def update_variation(settings):
     """
     Add new on and off target haplotypes to the unique haplotypes.
@@ -2095,11 +1857,6 @@ def update_variation(settings):
     except KeyError:
         pass
     return
-
-
-# In[27]:
-
-
 def get_raw_data (settings):
     """ Extract raw data from filtered_data file. If there is data from a previous run,
     new data can be added to old data. If this sample set is new, or being analyzed
@@ -2183,11 +1940,6 @@ def get_raw_data (settings):
     with open(problem_data_file, "w") as outfile:
         json.dump(problem_data, outfile, indent=1)
     return
-
-
-# In[28]:
-
-
 def filter_data (data_file, filter_field, comparison, criteria, output_file):
     """
     Data fields to filter: sample_name, gene_name, mip_name, barcode_count etc.
@@ -2221,11 +1973,6 @@ def filter_data (data_file, filter_field, comparison, criteria, output_file):
                 filtered_data.append(d)
     with open(output_file, "w") as outfile:
         json.dump(filtered_data, outfile, indent = 1)
-
-
-# In[29]:
-
-
 def group_samples (settings):
     wdir = settings["workingDir"]
     raw_data_file = wdir  + settings["rawDataFile"]
@@ -2315,11 +2062,6 @@ def group_samples (settings):
     with open(sample_info_file, "w") as outfile:
         json.dump(results,outfile, indent=1)
     return
-
-
-# In[30]:
-
-
 def update_raw_data (settings):
     wdir = settings["workingDir"]
     raw_data_file = wdir  + settings["rawDataFile"]
@@ -2351,12 +2093,6 @@ def update_raw_data (settings):
     with open(problem_data_file, "w") as outfile:
         json.dump(problem_data, outfile, indent=1)
     return
-
-
-
-# In[31]:
-
-
 def get_counts (settings):
     wdir = settings["workingDir"]
     data_file = wdir + settings["normalizedDataFile"]
@@ -2478,11 +2214,6 @@ def get_counts (settings):
     with open(probe_results_file, "w") as outfile:
         json.dump(counts, outfile, indent=1)
     return
-
-
-# In[32]:
-
-
 def get_unique_probes(settings):
     wdir = settings["workingDir"]
     unique_haplotype_file = wdir + settings["haplotypeDictionary"]
@@ -2589,11 +2320,6 @@ def get_unique_probes(settings):
     with open(uniq_file, "w") as outfile:
         json.dump(result, outfile, indent = 1)
     return
-
-
-# In[33]:
-
-
 def create_data_table (settings):
     wdir = settings["workingDir"]
     with open(settings["callInfoDictionary"]) as infile:
@@ -2661,11 +2387,6 @@ def create_data_table (settings):
     with open(tables_file, "w") as outfile:
         json.dump(result, outfile)
     return
-
-
-# In[34]:
-
-
 def filter_tables (settings):
     wdir = settings["workingDir"]
     tables_file = wdir + settings["tablesFile"]
@@ -2716,11 +2437,6 @@ def filter_tables (settings):
     with open(filtered_tables_file, "wb") as outfile:
         pickle.dump(filtered_tables, outfile)
     return
-
-
-# In[35]:
-
-
 def generate_clusters(settings):
     cluster_output = {}
     problem_clusters = []
@@ -2831,13 +2547,6 @@ def generate_clusters(settings):
     with open(cluster_output_file, "wb") as outfile:
         pickle.dump(cluster_output, outfile)
     return problem_clusters
-
-
-
-
-# In[36]:
-
-
 def dbscan_clusters(settings):
     cluster_output = {}
     problem_clusters = []
@@ -2976,13 +2685,6 @@ def dbscan_clusters(settings):
     with open(db_output_file, "wb") as outfile:
         pickle.dump(cluster_output, outfile)
     return problem_clusters
-
-
-
-
-# In[37]:
-
-
 def plot_clusters(settings, cluster_method="dbscan"):
     wdir = settings["workingDir"]
     if cluster_method == "dbscan":
@@ -3138,13 +2840,6 @@ def plot_clusters(settings, cluster_method="dbscan"):
         fig4.savefig(image_dir + gene_name + "_meanshift", dpi = 96)
         plt.close("all")
     return
-
-
-
-
-# In[38]:
-
-
 def type_clinical(settings):
     wdir = settings["workingDir"]
     call_info_file = settings["callInfoDictionary"]
@@ -3328,11 +3023,6 @@ def type_clinical(settings):
     with open(snp_file, "w") as outfile:
         json.dump(result, outfile, indent=1)
     return result
-
-
-# In[39]:
-
-
 def plot_clinical(settings):
     wdir = settings["workingDir"]
     snp_file = wdir + settings["snpResultsFile"]
@@ -3411,11 +3101,6 @@ def plot_clinical(settings):
             plt.savefig(snp_dir + g + "_clinical", dpi = 96)
             plt.close("all")
     return
-
-
-# In[40]:
-
-
 def clean_alignment(alignment_file, output_file, directory):
     """ Alignment output in .differences format has sequence information
     that is unnecessary. This function removes that information for easier handling."""
@@ -3426,11 +3111,6 @@ def clean_alignment(alignment_file, output_file, directory):
             outline = "\t".join(newline) + '\n'
             outfile.write(outline)
     return
-
-
-# In[41]:
-
-
 def alignment_parser(wdir, name, spacer = 0):
     alignment_dict = {}
     # open alignment files
@@ -3510,11 +3190,6 @@ def alignment_parser(wdir, name, spacer = 0):
     # which queries have overlapping alignments with each other (overlaps)
     # for each query in overlaps, non overlapping genomic regions (separated_merged
     return [alignment_dict, aligned_regions, overlaps, separated_merged_regions]
-
-
-# In[42]:
-
-
 def intraparalog_aligner(resource_dir,
                          target_regions,
                          region_names,
@@ -3581,18 +3256,6 @@ def intraparalog_aligner(resource_dir,
         alignment_commands.append(comm)
     #print alignment_commands
     return align_region_multi(alignment_commands, num_process)
-
-
-# In[43]:
-
-
-def check_overlap_old (r1, r2, padding = 0):
-    """ Check if two regions overlap. Regions are given as lists of chrom (str),
-    begin (int), end (int)."""
-    overlap = ((r1[0] == r2[0])
-               and (max(r1[1:]) - min(r2[1:]) > padding )
-               and (max(r2[1:]) - min(r1[1:])> padding))
-    return overlap
 def check_overlap (r1, r2, padding = 0):
     """ Check if two regions overlap. Regions are given as lists of chrom (str),
     begin (int), end (int)."""
@@ -3639,11 +3302,6 @@ def alignment_check(region_list):
                                 overlap_found = True
                                 break
     return alignments
-
-
-# In[44]:
-
-
 def intra_alignment_checker(family_name,
                             res_dir,
                            target_regions,
@@ -3699,13 +3357,6 @@ def intra_alignment_checker(family_name,
             region_names[ci]
             )
     return [ret_regions, rnames]
-
-
-
-
-# In[45]:
-
-
 def alignment_mapper(family_name, res_dir):
     """ Once alignment files (.al and .differences) have been created,
     MODIFY .al file to include copyname, copynumber and query columns.
@@ -3917,33 +3568,18 @@ def alignment_mapper(family_name, res_dir):
         return alignment_dic, return_dic
     except Exception as e:
         return [family_name, e]
-
-
-# In[46]:
-
-
 def make_region (chromosome, begin, end):
     """ Create region string from coordinates.
     takes 2 (1 for human 1-9) digit chromosome,
     begin and end positions (1 indexed)"""
     region="chr" + str(chromosome) + ":" + str(begin) + "-" + str(end)
     return region
-
-
-# In[47]:
-
-
 def create_region (chromosome, begin, end):
     """ Create region string from coordinates.
     chromosome string,
     begin and end positions (1 indexed)"""
     region=chromosome + ":" + str(begin) + "-" + str(end)
     return region
-
-
-# In[48]:
-
-
 def create_dirs (dir_name):
     """ create subdirectory names for a given dir,
     to be used by os.makedirs, Return a list of
@@ -3955,13 +3591,6 @@ def create_dirs (dir_name):
     mfold_input_DIR = dir_name + "/mfold_input/"
     mfold_output_DIR = dir_name + "/mfold_output/"
     return [primer3_input_DIR, primer3_output_DIR, bowtie2_input_DIR,            bowtie2_output_DIR, mfold_input_DIR, mfold_output_DIR]
-
-
-
-
-# In[49]:
-
-
 def get_coordinates (region):
     """ Define coordinates chr, start pos and end positions
     from region string chrX:start-end. Return coordinate list.
@@ -3972,11 +3601,6 @@ def get_coordinates (region):
     begin = int(coord_list [0])
     end = int(coord_list [1])
     return [chromosome, begin, end]
-
-
-# In[50]:
-
-
 def get_fasta (region, species="pf", offset=1, header="na"):
     """ Take a region string (chrX:begin-end (1 indexed)),
     and species (human=hs, plasmodium= pf),Return fasta record.
@@ -3992,11 +3616,6 @@ def get_fasta (region, species="pf", offset=1, header="na"):
         fasta_seq = "\n".join(fasta.split("\n")[1:])
         fasta = ">" + header + "\n" + fasta_seq
     return fasta.decode("utf-8")
-
-
-# In[51]:
-
-
 def get_fasta_list(regions, species):
     """ Take a list of regions and return fasta sequences."""
     file_locations = get_file_locations()
@@ -4015,21 +3634,11 @@ def get_fasta_list(regions, species):
             fseq = "".join(fl[1:])
             fasta_dic[fhead] = fseq
     return fasta_dic
-
-
-# In[52]:
-
-
 def create_fasta_file (region, species, output_file):
     if not os.path.exists(output_file):
         os.makedirs(output_file)
     with open (output_file, "w") as outfile:
         outfile.write(get_fasta(region, species))
-
-
-# In[53]:
-
-
 def get_snps (region, snp_file):
     """ Take a region string and a  tabix'ed snp file,
     return a list of snps which are lists of
@@ -4046,11 +3655,6 @@ def get_snps (region, snp_file):
         snps.append(snp)
     del snps[-1] #remove last item which is coming from the new line at the end
     return snps
-
-
-# In[54]:
-
-
 def get_vcf_snps(region, snp_file):
     """ Take a region string and a tabix'ed snp file,
     return a list of snps which are lists of
@@ -4069,33 +3673,6 @@ def get_vcf_snps(region, snp_file):
         snp = line.split('\t')[:8]
         snps.append(snp)
     return snps
-
-
-# In[55]:
-
-
-def make_allsnps_file(region, output_file, species):
-    """Create an (fake) allsnps file for a given region.
-    Normally allsnps file is generated by miptools for paralogus regions.
-    For nonparalogus regions this is not necessary, and for parasite genome
-    it is not possible at the moment. This function takes a genomic region,
-    gets the snps in the region from the species specific tabix'ed snp file.
-    It then creates the allsnps file, which is simply the snps in region.
-    This allows parasite regions to be plugged into the paralog pipeline.
-    """
-    snp_list = get_snps(region, get_file_locations()[species]["snps"])
-    outfile = open(output_file, "w")
-    outfile_list = []
-    for s in snp_list:
-        outlist = s[1:]
-        outfile_list.append("\t".join(map(str,outlist)))
-    outfile.write("\n".join(outfile_list))
-    outfile.close()
-
-
-# In[56]:
-
-
 def snp_filter_pf (snp_list, col=23, min_allele_freq=0.001, min_total_allele=50):
     """ filter a SNP list using given criteria, print summary,
     return filtered SNP list. col should be a column in the
@@ -4121,11 +3698,6 @@ def snp_filter_pf (snp_list, col=23, min_allele_freq=0.001, min_total_allele=50)
     print(" ".join(["Found", str(len(filtered_snps)), "SNPs with >=", str(min_allele_freq),
                     "frequency and >=", str(min_total_allele), "reported alleles!"]))
     return filtered_snps
-
-
-# In[57]:
-
-
 def snp_filter_hs (snp_list, col=23, min_allele_freq=0.001, min_total_allele=50):
     """ filter a SNP list using given criteria, print summary,
     return filtered SNP list. col should be a column in the
@@ -4153,11 +3725,6 @@ def snp_filter_hs (snp_list, col=23, min_allele_freq=0.001, min_total_allele=50)
     print(" ".join(["Found", str(len(filtered_snps)), "SNPs with >=", str(min_allele_freq),
                     "frequency and >=", str(min_total_allele), "reported alleles!"]))
     return filtered_snps
-
-
-# In[58]:
-
-
 def snp_filter_hla (snp_list, col=23, min_allele_freq=0.001, min_total_allele=50, submitter='SI_MHC_SNP'):
     """ filter a SNP list using given criteria, print summary,
     return filtered SNP list. col should be a column in the
@@ -4188,32 +3755,6 @@ def snp_filter_hla (snp_list, col=23, min_allele_freq=0.001, min_total_allele=50
     print(" ".join(["Found", str(len(filtered_snps)), "SNPs with >=", str(min_allele_freq),
                     "frequency and >=", str(min_total_allele), "reported alleles!"]))
     return filtered_snps
-
-
-# In[59]:
-
-
-def snp_filter_pf_old (snp_list, maf_col, count_col, min_maf=0.03, min_count=10):
-    """Filter a snp list for given criteria for Pf. maf_col should specify
-    which column in the original snp file was the minor allele frequency;
-    and count_col is where the strain count was. Return a list of filtered
-    SNPs."""
-    filtered_snps = []
-    for snp in snp_list:
-        # find strain count
-        strain_count = int(snp[count_col])
-        # find maf
-        maf = float(snp[maf_col])
-        # filter snps with maf > min_maf and has information
-        # from more than min_count strains
-        if strain_count >= min_count and maf >= min_maf:
-            filtered_snps.append(snp)
-    return filtered_snps
-
-
-# In[60]:
-
-
 def snp_function_filter_hs (snp_list, func_list=["nonsense", "missense","stop-loss", "frameshift",                            "cds-indel", "splice-3","splice-5"], col=15):
     """ Take a snp list and filter for functional consequence of that snp.
     Functionality of a snp is located in col (index) 15 of UCSC table and 14 of include file.
@@ -4233,14 +3774,6 @@ def snp_function_filter_hs (snp_list, func_list=["nonsense", "missense","stop-lo
             filtered_snps.append(snp)
     print("Found ", len(filtered_snps), " SNPs with functional significance")
     return filtered_snps
-
-
-
-
-
-# In[61]:
-
-
 def targets (must_file, diff_list):
     """ Take a file with snps or regions that must be captured by mips and a list
     of other variations of interest (created in ucsc table format) and return a target
@@ -4279,88 +3812,6 @@ def targets (must_file, diff_list):
             targets[key] = {"chrom":snp_chr, "begin":snp_begin, "end":snp_end,                             "name": snp_name, "diff": "na", "source": src}
     # return targets dictionary
     return targets
-
-
-# In[62]:
-
-
-def get_exons_old (gene_list, refseq_id):
-    """Take a list of genes in refgene format and return a list of exons for the gene
-    that has the given refseq id."""
-    ##########################################################################
-    ##########################################################################
-    """This must be updated to include chromosome information because the same
-    refseq id can be used for genes on alternative chromosomes"""
-    ##########################################################################
-    ##########################################################################
-    # get start and end coordinates of exons in gene list
-    starts = []
-    ends = []
-    gene_names = []
-    gene_ids= []
-    gene_found = 0
-    for gene in gene_list:
-        if gene[1] == refseq_id:
-            gene_found = 1
-            starts.extend(list(map(int, gene[9].split(",")[:-1])))
-            ends.extend(list(map(int, gene[10].split(",")[:-1])))
-            gene_names.append(gene[12])
-            gene_ids.append(gene[1])
-            break
-        else:
-            continue
-    if gene_found:
-        # pair exon starts and ends
-        exons = []
-        for i in range(len(starts)):
-            exons.append([starts[i] + 1, ends[i]])
-        # check for overlapping exons and merge if any
-        overlapping = 1
-        while overlapping:
-            overlapping = 0
-            for i in range(len(exons)):
-                e = exons[i]
-                for j in range(len(exons)):
-                    x = exons[j]
-                    if (i != j) and                        ((e[0] <= x[0] <= e[1]) or (e[0] <= x[1] <= e[1]) or (x[0] <= e[0] <= x[1])):
-                        # merge exons and add to the exon list
-                        exons.append([min(e[0], x[0]), max(e[1], x[1])])
-                        # remove the exons e and x
-                        exons.remove(e)
-                        exons.remove(x)
-                        # change overlapping to 1 so we can stop the outre for loop
-                        overlapping = 1
-                        # once an overlapping exon is found, break out of the for loop
-                        break
-                if overlapping:
-                    # if an overlapping exon is found, stop this for loop and continue with the
-                    # while loop with the updated exon list
-                    break
-        # get the gene start and end coordinates
-        start = min(starts)
-        end = max(ends)
-        # get chromosome name
-        chrom = gene[2]
-        # create an output dict
-        out = {}
-        out["chrom"] = chrom
-        out["begin"] = start
-        out["end"] = end
-        out["exons"] = sorted(exons, key=itemgetter(0))
-        out["names"] = gene_names
-        out["ids"] = gene_ids
-        return out
-    else:
-        print("RefSeq id not found in gene list.")
-        return 1
-
-
-
-
-
-# In[63]:
-
-
 def merge_overlap (intervals, spacer=0):
     """ Merge overlapping intervals. Take a list of lists of 2 elements, [start, stop],
     check if any [start, stop] pairs overlap and merge if any. Return the merged [start, stop]
@@ -4404,12 +3855,6 @@ def merge_overlap (intervals, spacer=0):
                 break
     exons.sort()
     return exons
-
-
-
-# In[64]:
-
-
 def overlap(reg1, reg2, spacer = 0):
     """
     Return overlap between two regions.
@@ -4424,11 +3869,6 @@ def overlap(reg1, reg2, spacer = 0):
             return []
     except IndexError:
         return []
-
-
-# In[65]:
-
-
 def remove_overlap(reg1, reg2, spacer = 0):
     """
     Remove overlap between two regions.
@@ -4444,11 +3884,6 @@ def remove_overlap(reg1, reg2, spacer = 0):
             return regions
     except IndexError:
         return []
-
-
-# In[66]:
-
-
 def subtract_overlap (uncovered_regions, covered_regions, spacer = 0):
     """
     Given two sets of regions in the form
@@ -4482,12 +3917,6 @@ def subtract_overlap (uncovered_regions, covered_regions, spacer = 0):
         return [[unc[i], unc[i+1]]for i in range(0, len(unc), 2)               if unc[i+1] - unc[i] > spacer]
     else:
         return []
-
-
-
-# In[67]:
-
-
 def trim_overlap (region_list, low = 0.1, high = 0.9, spacer = 0):
     """
     Given a set of regions in the form [[start, end], [start, end]],
@@ -4539,12 +3968,6 @@ def trim_overlap (region_list, low = 0.1, high = 0.9, spacer = 0):
                                     print(overlap_ratio, "is outside trim range for ",                                    reg_i, reg_j)
 
     return region_list
-
-
-
-# In[68]:
-
-
 def get_exons (gene_list):
     """Take a list of transcript information in refgene format and return a list of exons
     in the region as [[e1_start, e1_end], [e2_start], [e2_end], ..]. The transcripts must
@@ -4626,14 +4049,6 @@ def get_exons (gene_list):
     out["ids"] = gene_ids
     out["orientation"] = ori
     return out
-
-
-
-
-
-# In[70]:
-
-
 def get_gene_name(region, species):
     """ Return the gene(s) in a region. """
     gene_names = []
@@ -4644,11 +4059,6 @@ def get_gene_name(region, species):
     except KeyError:
         pass
     return gene_names
-
-
-# In[71]:
-
-
 def get_gene (gene_name, refgene_file, chrom=None, alternative_chr=1):
     """ Return genomic coordinates of a gene extracted from the refseq genes file.
     Refgene fields are as follows:
@@ -4682,11 +4092,6 @@ def get_gene (gene_name, refgene_file, chrom=None, alternative_chr=1):
         for c in coord:
             alter.append(c)
     return alter
-
-
-# In[72]:
-
-
 def create_gene_fasta (gene_name_list, wdir, species = "hs", flank=150, multi_file=False):
     """ Get a list of genes, extract exonic sequence + flanking sequence.
     Create fasta files in corresponding directory for each gene if multi_file is True,
@@ -4714,22 +4119,12 @@ def create_gene_fasta (gene_name_list, wdir, species = "hs", flank=150, multi_fi
     else:
         with open(wdir + "multi.fa", "w") as outfile:
             outfile.write("\n".join(region_list))
-
-
-# In[69]:
-
-
 def get_region_exons(region, species):
     try:
         genes = get_snps(region, get_file_locations()[species]["refgene_tabix"])
     except KeyError:
         genes = []
     return get_exons(genes)
-
-
-# In[73]:
-
-
 def get_cds(gene_name, species):
     gene_list = get_gene(gene_name,
                          get_file_locations()[species]["refgene"],
@@ -4783,11 +4178,6 @@ def get_cds(gene_name, species):
     cds["coordinates"] = coord
     cds
     return cds
-
-
-# In[74]:
-
-
 def make_targets_dic(targets_file):
     with open (targets_file) as infile:
         # create a targets dictionary from targets file
@@ -4873,11 +4263,6 @@ def make_targets_dic(targets_file):
 
 
     return targets
-
-
-# In[75]:
-
-
 def make_subregions (target_region,
                      gene_name,
                      capture_type,
@@ -4970,11 +4355,6 @@ def make_subregions (target_region,
         regs.append([gene_name + "_S" + str(counter), tar_region])
         counter += 1
     return regs
-
-
-# In[76]:
-
-
 def mask_snps (region, snp_file, count_col, min_maf=0.03, min_count=10):
     """lower case mask SNPs in plasmodium genome, return fasta record"""
     # get sequence of the region
@@ -5003,11 +4383,6 @@ def mask_snps (region, snp_file, count_col, min_maf=0.03, min_count=10):
     # masked sequence
     fasta_rec = fasta_head + "\n" + fasta_seq
     return fasta_rec
-
-
-# In[77]:
-
-
 def exclude_snps (region, snp_file, maf_col=6, count_col=9, min_maf=0.03, min_count=10):
     """Prepare an exclude list to be used in boulder record.
     Gets SNPs from plasmodium snp file and assumes SNP length
@@ -5033,11 +4408,6 @@ def exclude_snps (region, snp_file, maf_col=6, count_col=9, min_maf=0.03, min_co
         # create an exclude list for snp index with length 1
         exclude.append([snp_index,1])
     return exclude
-
-
-# In[78]:
-
-
 def exclude_snps_hla (region, col=23, min_frequency=0.001, min_total_alleles=50):
     """Prepare an exclude list to be used in boulder record.
     Gets SNPs from human snp file and assumes SNP length
@@ -5075,11 +4445,6 @@ def exclude_snps_hla (region, col=23, min_frequency=0.001, min_total_alleles=50)
             exclude[i] = "delete"
     excluded = [x for x in exclude if x != "delete"]
     return excluded
-
-
-# In[79]:
-
-
 def exclude_snps_hs (region, col=23, min_frequency=0.001, min_total_alleles=50):
     """Prepare an exclude list to be used in boulder record.
     Gets SNPs from human snp file and assumes SNP length
@@ -5118,11 +4483,6 @@ def exclude_snps_hs (region, col=23, min_frequency=0.001, min_total_alleles=50):
             exclude[i] = "delete"
     excluded = [x for x in exclude if x != "delete"]
     return excluded
-
-
-# In[80]:
-
-
 def mask_snps_hla (region, col=23, min_frequency=0.001, min_total_alleles=50):
     """lowercase mask SNPs in a human genomic region
     return fasta record."""
@@ -5168,11 +4528,6 @@ def mask_snps_hla (region, col=23, min_frequency=0.001, min_total_alleles=50):
     fasta_seq = "".join(seq_template_list)
     fasta_rec = fasta_head + "\n" + fasta_seq
     return fasta_rec
-
-
-# In[81]:
-
-
 def mask_snps_hs (region, col=23, min_frequency=0.001, min_total_alleles=50):
     """lowercase mask SNPs in a human genomic region
     return fasta record."""
@@ -5199,11 +4554,6 @@ def mask_snps_hs (region, col=23, min_frequency=0.001, min_total_alleles=50):
     fasta_seq = "".join(seq_template_list)
     fasta_rec = fasta_head + "\n" + fasta_seq
     return fasta_rec
-
-
-# In[82]:
-
-
 def make_boulder (fasta,
                   primer3_input_DIR,
                   exclude_list=[],
@@ -5239,11 +4589,6 @@ def make_boulder (fasta,
     with open(primer3_input_DIR + outname, 'w') as outfile:
         outfile.write(boulder)
     return boulder
-
-
-# In[83]:
-
-
 def snp_masker(wdir,
                output_name,
                region_key,
@@ -5298,11 +4643,6 @@ def snp_masker(wdir,
     make_boulder (fasta_rec, wdir,exclude_list=excluded,                      output_file_name=output_name,
                       sequence_targets = sequence_targets)
     return
-
-
-# In[84]:
-
-
 def make_primers (input_file,  settings, primer3_input_DIR, primer3_output_DIR, output_file="input_file"):
     """ make primers using boulder record file in primer3_input_DIR
     using settings file in primer3_settings_DIR and output as boulder
@@ -5322,11 +4662,6 @@ def make_primers (input_file,  settings, primer3_input_DIR, primer3_output_DIR, 
     outfile.write(primer3_output)
     outfile.close()
     return
-
-
-# In[85]:
-
-
 def make_primers_worker (l):
     """ A worker function to make primers for multiple regions
     using separate processors. Reads boulder record in given input
@@ -5367,11 +4702,6 @@ def make_primers_multi(ext_list, lig_list, pro):
     # wait for processes to finish
     p.join()
     return
-
-
-# In[86]:
-
-
 def primer_parser3 (input_file,
                     primer3_output_DIR,
                     bowtie2_input_DIR,
@@ -5524,11 +4854,6 @@ def primer_parser3 (input_file,
             outfile.write(">" + fasta_head + "\n" + fasta_line +"\n")
         outfile.close()
     return primer_dic
-
-
-# In[87]:
-
-
 def adjust_worker(chores):
     try:
         p_name = chores[0]
@@ -5628,7 +4953,6 @@ def adjust_worker(chores):
     except Exception as e:
         p_dic["error"] = str(e)
         return [p_name, p_dic]
-
 def adjust_paralogs (primer_dic, copies, p_chromosomes, settings,                           primer3_output_DIR, outname, species):
     """ Take a primer dictionary file and add genomic start and end coordinates
     of all its paralogs."""
@@ -5675,11 +4999,6 @@ def adjust_paralogs (primer_dic, copies, p_chromosomes, settings,               
         json.dump(out_dic, outf, indent=1)
     shutil.rmtree(tmp)
     return out_dic
-
-
-# In[88]:
-
-
 def paralog_primer_worker(chores):
     p_name = chores[0]
     p_dic = chores[1]
@@ -5725,8 +5044,6 @@ def paralog_primer_worker(chores):
                 p_dic["PARALOG_COORDINATES"][c] = {"SEQUENCE": para_primer_seq,                          "ORI": "reverse","CHR":chroms[c], "NAME":p_name,                          "GENOMIC_START": para_start, "GENOMIC_END": para_end,                          "COORDINATES":ref_coord}
 
     return [p_name, p_dic]
-
-
 def paralog_primers_multi (primer_dic, copies, coordinate_converter, settings,                           primer3_output_DIR, outname, species, outp = 0):
     """ Take a primer dictionary file and add genomic start and end coordinates
     of all its paralogs."""
@@ -5772,11 +5089,6 @@ def paralog_primers_multi (primer_dic, copies, coordinate_converter, settings,  
             json.dump(out_dic, outf, indent=1)
     shutil.rmtree(tmp)
     return out_dic
-
-
-# In[89]:
-
-
 def alter_worker(chores):
     p_name = chores[0]
     p_dic = chores[1]
@@ -5845,8 +5157,6 @@ def alter_worker(chores):
             para["ALT_BOUND"] = False
 
     return [p_name, p_dic]
-
-
 def alternative_paralogs (primer_dic, copies, coordinate_converter, settings,                           primer3_output_DIR, outname, species):
     """ Take a primer dictionary file and add genomic start and end coordinates
     of all its paralogs."""
@@ -5893,11 +5203,6 @@ def alternative_paralogs (primer_dic, copies, coordinate_converter, settings,   
         json.dump(out_dic, outf, indent=1)
     shutil.rmtree(tmp)
     return out_dic
-
-
-# In[90]:
-
-
 def fasta_parser(fasta):
     """ Convert a fasta file with multiple sequences
     to a dictionary with fasta headers as keys and sequences
@@ -5917,11 +5222,6 @@ def fasta_parser(fasta):
             except KeyError:
                 fasta_dic[header] = line.strip()
     return fasta_dic
-
-
-# In[91]:
-
-
 def fasta_to_sequence(fasta):
     """ Convert a fasta sequence to one line sequence"""
     f = fasta.strip().split("\n")
@@ -5929,18 +5229,8 @@ def fasta_to_sequence(fasta):
         return "".join(f[1:])
     else:
         return ""
-
-
-# In[92]:
-
-
 def get_sequence(region, species):
     return fasta_to_sequence(get_fasta(region,species))
-
-
-# In[93]:
-
-
 def bowtie2_run (fasta_file, output_file, bowtie2_input_DIR, bowtie2_output_DIR, species,process_num=4,                 seed_MM=1, mode="-a", seed_len=18, gbar=1, local=0):
     """ Extract primer sequences from the fasta file,
     check alignments for given species genome(s), create
@@ -5978,11 +5268,6 @@ def bowtie2_run (fasta_file, output_file, bowtie2_input_DIR, bowtie2_output_DIR,
                                    "-S",
                                     bowtie2_output_DIR + output_file])
     return 0
-
-
-# In[94]:
-
-
 def bowtie(fasta_file, output_file, bowtie2_input_DIR, bowtie2_output_DIR, options,
            species,process_num=4, mode="-a", local=0, fastq = 0):
     """ Extract primer sequences from the fasta file,
@@ -6009,11 +5294,6 @@ def bowtie(fasta_file, output_file, bowtie2_input_DIR, bowtie2_output_DIR, optio
     com.append("-S " + bowtie2_output_DIR + output_file)
     dump = subprocess.check_output(com)
     return 0
-
-
-# In[95]:
-
-
 def bwa(fastq_file, output_file, output_type, input_dir,
         output_dir, options, species):
     """ Run bwa alignment on given fastq file using the species bwa indexed genome.
@@ -6041,12 +5321,6 @@ def bwa(fastq_file, output_file, output_type, input_dir,
         with open(output_dir + output_file, "w") as outfile:
             bam = subprocess.Popen(bam_com, stdin=sam.stdout,
                                    stdout=outfile)
-
-
-
-# In[96]:
-
-
 def reverse_complement(sequence):
     """ Return reverse complement of a sequence. """
     complement_bases = {'g':'c', 'c':'g', 'a':'t', 't':'a', 'n':'n', 'N':'N', 'G':'C', 'C':'G', 'A':'T', 'T':'A', "-": "-"}
@@ -6060,11 +5334,6 @@ def reverse_complement(sequence):
             print("Unexpected base encountered: ", base, " returned as X!!!")
             revcomp.append("X")
     return "".join(revcomp)
-
-
-# In[97]:
-
-
 def check_TM (s1,s2):
     """ Return melting temparature of two sequences as string.
     Uses ntthal program and current MIP conditions, salt concentration etc.
@@ -6079,11 +5348,6 @@ def check_TM (s1,s2):
     # run ntthal through subprocess
     TM = subprocess.check_output(ntthal_input, stderr=subprocess.STDOUT)
     return TM
-
-
-# In[98]:
-
-
 def parse_cigar(cigar):
     """ Parse a cigar string which is made up of numbers followed
     by key letters that represent a sequence alignment; return a dictionary
@@ -6111,11 +5375,6 @@ def parse_cigar(cigar):
                 cig[c] = int("".join(values))
             values = []
     return cig
-
-
-# In[99]:
-
-
 def get_cigar_length(cigar):
     """ Get the length of the reference sequence that a read is aligned to,
     given their cigar string."""
@@ -6128,11 +5387,6 @@ def get_cigar_length(cigar):
     # all the values in the cigar dictionary represent a base in the reference seq,
     # except the insertions, so they should be subtracted
     return sum(parse_cigar(cigar).values()) - insertions
-
-
-# In[100]:
-
-
 def cleanest_bowtie (primer_file, primer_out,primer3_output_DIR,                   bowtie2_output_DIR, species, settings, host = False,
                     outp = 1):
     """ Take a primer dict with bowtie information added.
@@ -6313,7 +5567,8 @@ def cleanest_bowtie (primer_file, primer_out,primer3_output_DIR,                
     #infile.close()
     #outfile.close()
     if len(hit_list) > 0:
-        with open(bowtie2_output_DIR + "seq_for_tm", "w") as seq_for_tm,             open(bowtie2_output_DIR + "hits_for_tm", "w") as hits_for_tm:
+        with open(bowtie2_output_DIR + "seq_for_tm", "w") as seq_for_tm, \
+            open(bowtie2_output_DIR + "hits_for_tm", "w") as hits_for_tm:
             seq_for_tm.write("\n".join(seq_list))
             hits_for_tm.write("\n".join(hit_list))
         melt_ext = id_generator(6)
@@ -6357,11 +5612,6 @@ def cleanest_bowtie (primer_file, primer_out,primer3_output_DIR,                
         with open(primer3_output_DIR + primer_out, 'w') as outfile:
             json.dump(primers, outfile, indent=1)
     return primers
-
-
-# In[101]:
-
-
 def cleanest_bowtie_old (primer_file, primer_out,primer3_output_DIR,                   bowtie2_output_DIR, species, settings):
     """ Take a primer dict with bowtie information added.
     Look at bowtie hits for each primer, determine if they
@@ -6501,11 +5751,6 @@ def cleanest_bowtie_old (primer_file, primer_out,primer3_output_DIR,            
     with open(primer3_output_DIR + primer_out, 'w') as outfile:
         json.dump(primers, outfile, indent=1)
     return primers
-
-
-# In[102]:
-
-
 def parse_bowtie (primer_file, bt_file, primer_out,primer3_output_DIR,                   bowtie2_output_DIR, species, settings, outp = 1):
     """ take a bowtie output file and filter top N hits per primer.
     When a primer has more than "upper_hit_limit" bowtie hits,
@@ -6634,11 +5879,6 @@ def parse_bowtie (primer_file, bt_file, primer_out,primer3_output_DIR,          
         with open(primer3_output_DIR + primer_out, 'w') as outfile:
             json.dump(primers, outfile, indent=1)
     return primers
-
-
-# In[103]:
-
-
 def alternative(primer_file, output_file, primer3_output_DIR, tm_diff, outp = 1):
     """ Pick the best alternative arm for primers that do not bind
     all paralogs.
@@ -6681,14 +5921,6 @@ def alternative(primer_file, output_file, primer3_output_DIR, tm_diff, outp = 1)
         with open(primer3_output_DIR + output_file, "w") as outfile:
             json.dump(primer_dic, outfile, indent=1)
     return primer_dic
-
-
-
-
-
-# In[104]:
-
-
 def cleaner_bowtie (primer_file, bt_file, bt_out, primer_out,primer3_output_DIR,                   bowtie2_output_DIR, N=50, M=500):
     """ take a bowtie output file and remove all hits on intended
     target. Then, filter top N hits per primer/mip.
@@ -6805,11 +6037,6 @@ def cleaner_bowtie (primer_file, bt_file, bt_out, primer_out,primer3_output_DIR,
         with open(primer3_output_DIR + primer_out, 'w') as outfile:
             json.dump(primers, outfile, indent=1)
     return primers
-
-
-# In[105]:
-
-
 def cleaner_host_bowtie (primer_file, bt_file, bt_out,primer3_output_DIR,                   bowtie2_output_DIR, N=50):
     """ take a bowtie output file and remove all hits on intended
     target. Then, filter top N hits per primer/mip.
@@ -6858,11 +6085,6 @@ def cleaner_host_bowtie (primer_file, bt_file, bt_out,primer3_output_DIR,       
     infile.close()
     outfile.close()
     return primers
-
-
-# In[106]:
-
-
 def add_bt_worker (primer_name, primer_seq, strand, region, mip, fasta_genome, tmp, settings):
     """ Worker function for add_bowtie_multi function.
     Return TM of each bowtie hit passed from parent function."""
@@ -6891,9 +6113,6 @@ def add_bt_worker (primer_name, primer_seq, strand, region, mip, fasta_genome, t
     # add strand information to bowtie dict
     # add TM and region information to bowtie dict
     return TM
-
-
-
 def add_bowtie_multi (primer_file, bowtie_out_file, output_file,                      primer3_output_DIR, bowtie2_output_DIR, num_processors,settings, species="pf"):
     """Adds bowtie information to a given primer (or MIP) dictionary file (json object).
     Once done, primer dic still has 2 keys, sequence_information and primer_information.
@@ -7024,11 +6243,6 @@ def add_bowtie_multi (primer_file, bowtie_out_file, output_file,                
     # remove files by the tm calculation function
     shutil.rmtree(tmp)
     return primers
-
-
-# In[107]:
-
-
 def filter_bowtie (primer_file,
                    output_file,
                    primer3_output_DIR,
@@ -7087,11 +6301,6 @@ def filter_bowtie (primer_file,
         json.dump(primers, outfile, indent=1)
         outfile.close()
     return primers
-
-
-# In[108]:
-
-
 def filter_bowtie_hits (primer_file, output_file, primer3_output_DIR, species, TM=46, hit_threshold=0,
                         lower_tm=46, lower_hit_threshold=3):
     """ Check TMs of bowtie hits of given mips or primers,
@@ -7202,11 +6411,6 @@ def filter_bowtie_hits (primer_file, output_file, primer3_output_DIR, species, T
     json.dump(primers, outfile, indent=1)
     outfile.close()
     return primers
-
-
-# In[109]:
-
-
 def filter_bowtie_hits_dup (primer_file, output_file, species, primer3_output_DIR, TM=46):
     """ Check TMs of bowtie hits of given mips or primers,
     on a given genome.if high, make sure they are the intended
@@ -7282,11 +6486,6 @@ def filter_bowtie_hits_dup (primer_file, output_file, species, primer3_output_DI
     json.dump(primers, outfile, indent=1)
     outfile.close()
     return primers
-
-
-# In[110]:
-
-
 def pick_paralog_primer_pairs (ext_file,
                                lig_file,
                                output_file,
@@ -7554,11 +6753,6 @@ def pick_paralog_primer_pairs (ext_file,
         json.dump (primer_pairs, outfile, indent=1)
         outfile.close()
     return primer_pairs
-
-
-# In[111]:
-
-
 def add_capture_sequence(pairs_file, output_file, primer3_output_DIR,species,
                         outp = 1):
     """
@@ -7586,13 +6780,6 @@ def add_capture_sequence(pairs_file, output_file, primer3_output_DIR,species,
         with open(primer3_output_DIR + output_file, "w") as outfile:
             json.dump(primer_pairs, outfile, indent=1)
     return primer_pairs
-
-
-
-
-# In[112]:
-
-
 def make_mips (primer_pairs,
                output_file,
                primer3_output_DIR,
@@ -7680,11 +6867,6 @@ def make_mips (primer_pairs,
         json.dump(pairs, outfile, indent=1)
         outfile.close()
     return pairs
-
-
-# In[113]:
-
-
 def check_hairpin (input_fasta, output_json, primer3_output_DIR, bowtie2_input_DIR, mfold_input_DIR, dg=0.8):
     """ Check free energy values of secondary structures formed by mips @60°C.
     Run mfold_quiker script with mip condition parameters, get dG, dH, dS and TM
@@ -7756,11 +6938,6 @@ def check_hairpin (input_fasta, output_json, primer3_output_DIR, bowtie2_input_D
     json.dump(hairpin_dic, outfile, indent=1)
     outfile.close()
     return hairpin_dic
-
-
-# In[114]:
-
-
 def hairpin_worker (l):
     file_locations = get_file_locations()
     script_DIR = file_locations["all"]["script_DIR"]
@@ -7819,36 +6996,11 @@ def hairpin_worker (l):
     with open(mfold_output_DIR + input_fasta, 'w') as outfile:
         outfile.write("\n".join(["\t".join(map(str, o))                                 for o in output_tm]))
     return 0
-
-
 def make_chunks(l, n):
     """ Yield successive n-sized chunks from l.
     """
     for i in range(0, len(l), n):
         yield l[i:i+n]
-"""
-def split_file(input_file, primer3_output_DIR, mfold_input_DIR, mfold_output_DIR, hairpin_tm):
-    # open the mip fasta file
-    with open(mfold_input_DIR + input_file, 'r') as infile:
-        lines = infile.readlines()
-    # divide the file into smaller, 300 mip sized files
-    chunks = list(make_chunks(lines, 600))
-    counter = 0
-    out_dic = {}
-    out_list = []
-    map_input = []
-    for chunk in chunks:
-        outfile = open(mfold_input_DIR + input_file +\
-                       str(counter),  'w')
-        # write each line in the chunk to file
-        for line in chunk:
-            outfile.write(line)
-        temp = [input_file + str(counter), input_file, hairpin_tm, \
-                primer3_output_DIR, mfold_input_DIR, mfold_output_DIR]
-        map_input.append(temp)
-        counter += 1
-    return map_input
-"""
 def split_file(input_file,
                primer3_output_DIR,
                mfold_input_DIR,
@@ -7879,7 +7031,6 @@ def split_file(input_file,
             temp = [input_file + str(counter), input_file, hairpin_tm,             primer3_output_DIR, mfold_input_DIR, mfold_output_DIR]
             map_input.append(temp)
     return map_input
-
 def hairpin_multi (input_dict,
                    input_file,
                    output_file, primer3_output_DIR, bowtie2_input_DIR,\
@@ -7966,11 +7117,6 @@ def hairpin_multi (input_dict,
             outline = ">" + mip + '\n' + mip_seq + '\n'
             outfile.write(outline)
     return hairpin_dict
-
-
-# In[115]:
-
-
 def score_paralog_primers (primer_file,
                            output_file,
                            primer3_output_DIR,
@@ -8165,11 +7311,6 @@ def score_paralog_primers (primer_file,
         outfile.close()
         #print "hello"
     return dic
-
-
-# In[116]:
-
-
 def score_primers (ext_file, lig_file, ext_out, lig_out, primer3_output_DIR):
     """ Score primers in a dictionary according to scoring matrix
     Scoring matrices are somewhat crude at this time.
@@ -8340,11 +7481,6 @@ def score_primers (ext_file, lig_file, ext_out, lig_out, primer3_output_DIR):
     with open (primer3_output_DIR + lig_out, "w") as outfile:
      json.dump(lig_dic, outfile, indent=1)
     return
-
-
-# In[117]:
-
-
 def filter_primers (primer_file, output_file,
                     primer3_output_DIR, n, bin_size,
                    outp = 1):
@@ -8418,13 +7554,6 @@ def filter_primers (primer_file, output_file,
         with open (primer3_output_DIR + output_file, "w") as outfile:
             json.dump(best_dic, outfile, indent=1)
     return best_dic
-
-
-
-
-# In[118]:
-
-
 def filter_mips (mip_dic, bin_size, mip_limit):
     """
     Filter mips in "mip_dic" so that only top scoring mip
@@ -8467,11 +7596,6 @@ def filter_mips (mip_dic, bin_size, mip_limit):
         except KeyError:
             continue
     return
-
-
-# In[119]:
-
-
 def remove_mips (mip_dic):
     """ filter primers so that only top n scoring primers
     ending within the same subregion (determined by bin_size)
@@ -8520,11 +7644,6 @@ def remove_mips (mip_dic):
         except KeyError:
             continue
     return
-
-
-# In[120]:
-
-
 def score_mips (mip_file, primer3_output_DIR, output_file):
     """ Score mips in a dictionary according to a scoring matrix
     Scoring matrices are somewhat crude at this time.
@@ -8735,11 +7854,6 @@ def score_mips (mip_file, primer3_output_DIR, output_file):
     json.dump(dic, outfile, indent=1)
     outfile.close()
     return dic
-
-
-# In[121]:
-
-
 def add_captures (mip_dic, target_dic):
     for mip in list(mip_dic["pair_information"].keys()):
         d = mip_dic["pair_information"][mip]
@@ -8760,8 +7874,6 @@ def add_captures (mip_dic, target_dic):
         # add captured diffs information to mip dictionary
         d["mip_information"]["captured_diffs"] = captured_snps
     return mip_dic
-
-
 def add_paralog_info(mip_dic, num_para):
     for mip in list(mip_dic["pair_information"].keys()):
         # extract the captured diffs from the mip_dic
@@ -8792,11 +7904,6 @@ def add_paralog_info(mip_dic, num_para):
         # add this information to mip dic
         mip_dic["pair_information"][mip]["mip_information"]["captured_paralog_number"] = mip_para
     return mip_dic
-
-
-# In[122]:
-
-
 def score_mip_objects (mip_object):
     """ Score mips in a dictionary according to a scoring matrix
     Scoring matrices are somewhat crude at this time.
@@ -9008,11 +8115,6 @@ def score_mip_objects (mip_object):
     json.dump(dic, outfile, indent=1)
     outfile.close()
     return dic
-
-
-# In[123]:
-
-
 def score_mips_hla (mip_file, primer3_output_DIR, output_file, desired_copies=[]):
     """ Score mips in a dictionary according to a scoring matrix
     Scoring matrices are somewhat crude at this time.
@@ -9224,11 +8326,6 @@ def score_mips_hla (mip_file, primer3_output_DIR, output_file, desired_copies=[]
     json.dump(dic, outfile, indent=1)
     outfile.close()
     return dic
-
-
-# In[124]:
-
-
 def score_hs_mips(mip_file, primer3_output_DIR, output_file):
     """ Score mips in a dictionary according to scoring matrix
     Scoring matrices are somewhat crude at this time.
@@ -9327,11 +8424,6 @@ def score_hs_mips(mip_file, primer3_output_DIR, output_file):
     json.dump(dic, outfile, indent=1)
     outfile.close()
     return dic
-
-
-# In[125]:
-
-
 # backbone compatible with truseq read 2 primer
 hybrid_bb = "AGATCGGAAGAGCACACGTGACTCGCCAAGCTGAAG" + "NNNNNNNNNNNN"
 # backbone compatible with truseq read 2 primer, molecular barcodes 10/4 split
@@ -9350,21 +8442,10 @@ backbones = {
             "gc_bb": "GCAGATCGGAAGAGCACACCTCGCCAAGCTTTCGGC" + "NNNNNNNNNNNN",
             "slx_bb": "CTTCAGCTTCCCGATCCGACGGTAGTGT" + "NNNNNNNNNNNN"
             }
-
-
-# In[126]:
-
-
 def strip_fasta (sequence):
     seq_list = sequence.split('\n')[1:]
     seq_join = "".join(seq_list)
     return seq_join
-
-
-
-# In[127]:
-
-
 def calculate_gc (sequence, fasta=0):
     if fasta:
         seq_list = sequence.split('\n')[1:]
@@ -9377,11 +8458,6 @@ def calculate_gc (sequence, fasta=0):
     at_count = seq.count('a') + seq.count('t')
     percent = int (gc_count * 100 / (gc_count + at_count))
     return percent
-
-
-# In[128]:
-
-
 def translate(sequence, three_letter = False):
     gencode = {
     'ATA':'I', 'ATC':'I', 'ATT':'I', 'ATG':'M',
@@ -9426,11 +8502,6 @@ def translate(sequence, three_letter = False):
         return ''.join([gencode.get(seq[3*i:3*i+3],'X') for i in range(len(sequence)//3)])
     else:
         return ''.join([gencode3.get(gencode.get(seq[3*i:3*i+3],'X'), "X")                                     for i in range(len(sequence)//3)])
-
-
-# In[129]:
-
-
 def aa_converter(aa_name):
     """
     Output 3 letter and 1 letter amino acid codes for a given
@@ -9462,11 +8533,6 @@ def aa_converter(aa_name):
         return gencode3[aa_name.capitalize()]
     except KeyError:
         return "%s is not a valid amino acid name" %a
-
-
-# In[130]:
-
-
 def compatible_mip_check(m1, m2, overlap_same, overlap_opposite):
     d = m1.mip_dic
     es = ext_start = d["extension_primer_information"]["GENOMIC_START"]
@@ -9491,11 +8557,6 @@ def compatible_mip_check(m1, m2, overlap_same, overlap_opposite):
         return overlap <= overlap_same
     else:
         return overlap <= overlap_opposite
-
-
-# In[131]:
-
-
 def compatible_chains (primer_file, primer3_output_DIR, primer_out, output_file,
                       overlap_same = 0, overlap_opposite = 0, outp = 1):
     try:
@@ -9667,11 +8728,6 @@ def compatible_chains (primer_file, primer3_output_DIR, primer_out, output_file,
         with open(primer3_output_DIR + primer_out, "w") as outfile:
             json.dump(scored_mips, outfile, indent=1)
     return fs
-
-
-# In[132]:
-
-
 def compatible_mips(primer_file, primer3_output_DIR, primer_out, output_file,
                overlap_same = 0, overlap_opposite = 0):
     try:
@@ -9772,13 +8828,6 @@ def compatible_mips(primer_file, primer3_output_DIR, primer_out, output_file,
         with open(primer3_output_DIR + primer_out, "w") as outfile:
             json.dump(scored_mips, outfile, indent=1)
     return
-
-
-
-
-# In[133]:
-
-
 def compatibility (scored_mips, primer3_output_DIR = "", primer_out = "",
                       overlap_same = 0, overlap_opposite = 0):
     # create in/compatibility lists for each mip
@@ -9841,163 +8890,6 @@ def compatibility (scored_mips, primer3_output_DIR = "", primer_out = "",
     """
 
     return scored_mips
-
-
-# In[134]:
-
-
-def compatible_old(primer_file, primer3_output_DIR, primer_out, output_file,
-               overlap_same = 0, overlap_opposite = 0):
-    try:
-        with open (primer3_output_DIR + primer_file, "r") as infile:
-            scored_mips = json.load(infile)
-    except IOError:
-        print("Primer file does not exist.")
-        return 1
-    else:
-        # create in/compatibility lists for each mip
-        for k in list(scored_mips["pair_information"].keys()):
-            # get coordinates of mip arms
-            d = scored_mips["pair_information"][k]
-            es = ext_start = d["extension_primer_information"]["GENOMIC_START"]
-            ee = ext_end = d["extension_primer_information"]["GENOMIC_END"]
-            ls = lig_start = d["ligation_primer_information"]["GENOMIC_START"]
-            le = lig_end = d["ligation_primer_information"]["GENOMIC_END"]
-            # get mip orientation
-            ori = d["orientation"]
-            #print k, es, ee, ls, le, ori
-            # create an incompatibility list
-            incompatible = []
-            compatible = []
-            for mip in list(scored_mips["pair_information"].keys()):
-                m = scored_mips["pair_information"][mip]
-                nes = next_ext_start = m["extension_primer_information"]["GENOMIC_START"]
-                nee = next_ext_end = m["extension_primer_information"]["GENOMIC_END"]
-                nls = next_lig_start = m["ligation_primer_information"]["GENOMIC_START"]
-                nle = next_lig_end = m["ligation_primer_information"]["GENOMIC_END"]
-                # get mip orientation
-                next_ori = m["orientation"]
-                compat = 0
-                # check if the two mips are compatible in terms of orientation and coordinates
-                if ori == next_ori == "forward":
-                    if ((ls < nls) and (ls < nes + overlap_same)) or                      ((ls > nls) and (es + overlap_same> nls)):
-                        compat = 1
-                elif ori == next_ori == "reverse":
-                    if ((ls < nls) and (es < nls + overlap_same)) or                       ((ls > nls) and (ls + overlap_same> nes)):
-                        compat = 1
-                elif (ori == "forward") and (next_ori == "reverse"):
-                    if (ls < nls + overlap_opposite) or (es  + overlap_opposite> nes):
-                        compat = 1
-                    elif (es < nls) and (ee < nls + overlap_opposite) and                         (le  + overlap_opposite> nle) and (ls < nee + overlap_opposite):
-                        compat = 1
-                    elif (es > nls) and (es  + overlap_opposite> nle) and                          (ee < nee + overlap_opposite) and (le + overlap_opposite > nes):
-                        compat = 1
-                elif (ori == "reverse") and (next_ori == "forward"):
-                    if (ls + overlap_opposite > nls) or (es < nes + overlap_opposite):
-                        compat = 1
-                    elif (ls > nes) and (ls + overlap_opposite > nee) and                         (le < nle + overlap_opposite) and (ee + overlap_opposite>nls):
-                        compat = 1
-                    elif (ls < nes) and (le < nes + overlap_opposite) and                          (ee + overlap_opposite > nee) and (es < nle + overlap_opposite):
-                        compat = 1
-                if not compat:
-                    incompatible.append(mip)
-                else:
-                    compatible.append(mip)
-            d["incompatible"] = incompatible
-            d["compatible"] = compatible
-        # assign numbers to mip names for sorting purposes
-        sorted_keys = []
-        counter = 0
-        for k in list(scored_mips["pair_information"].keys()):
-            scored_mips["pair_information"][k]["place"] = counter
-            counter += 1
-            sorted_keys.append(k)
-        # make a list of compatible and incompatible mip numbers
-        # and add this information to mip dictionary
-        for k in list(scored_mips["pair_information"].keys()):
-            d = scored_mips["pair_information"][k]
-            comp = d["compatible"]
-            comp_list = []
-            d["comp"] = []
-            for m in comp:
-                comp_list.append(scored_mips["pair_information"][m]["place"])
-                comp_list.sort()
-                d["comp"] = comp_list
-        # create a dictionary of compatibility that has key(mip number): value(compatible mip list)
-        dcom = {}
-        for i in range(len(sorted_keys)):
-            # change index numbers to strings due to json format restrictions
-            dcom[i] = scored_mips["pair_information"][sorted_keys[i]]["comp"]
-        #print len(dcom), "MIPs scored for target region ", target_region
-        scored_mips["compatibility"] = {"keys":sorted_keys, "dic":dcom}
-        # get the keys of the compatibility dic, which is all mips represented as numbers
-        keys = list(dcom.keys())
-        # sort the mips
-        keys.sort()
-        # create a list to be populated by the recursive function that follows
-        final_results = []
-        d = dcom
-        f = final_results
-        def compatible_recurse (r, i, l):
-            """ Take a list, l,  of numbers that represent a mip set with their corresponding
-            "place" in the mip dictionary, and index number, i. Find the subset of mips in the
-            rest of the list that are compatible with the mip at index i, using compatibility
-            dictionary d. For each mip in the subset, find compatible mips in the rest of the list.
-            Recurse until the subset does not have any mips. Append each compatible subset to
-            a final result list, f."""
-            # make a list of mips compatible with the i'th mip in the input list
-            l2 = d[l[i]]
-            # get the intersection of the new list with the rest of the original list
-            # we will continue using only the mips that are compatible not only with ith mip,
-            # but also with the rest of the original mip set.
-            # convert one of the lists to set so we can get the intersection
-            c = list(set(l2).intersection(l[(i+1):]))
-            # sort the compatible mip set, c
-            c.sort()
-            # since this function will be used in a loop
-            r.append(l[i])
-            if len(c) > 0:
-                for j in range(len(c)):
-                    if c[j] > l[i]:
-                        s = list(r)
-                        #print s, j, c[j], l[i]
-                        compatible_recurse(s, j, c)
-            elif len(c) == 0:
-                f.append(r)
-                #print r
-                return r
-        # for each mip
-        for k in keys:
-            # get the list of compatible mips from the compatibility dictionary.
-            comp_list = dcom[k]
-            if len(comp_list) > 0:
-                # for each of the mips in the compatibility list,
-                for m in range(len(comp_list)):
-                    # create an initial result list to be used by the compatible_recurse function
-                    initial_res = [k]
-                    # continue only if the mip from the compatibitily list has a higher number
-                    # than the original mip since the lower numbers are irrelevant due to the use
-                    # of sorted lists. i.e. they have already been checked before this point.
-                    if comp_list[m] > k:
-                        compatible_recurse(initial_res, m, comp_list)
-        # for each mip
-        for k in keys:
-            # get the list of compatible mips from the compatibility dictionary.
-            comp_list = dcom[k]
-            if len(comp_list) == 0:
-                final_results.append([k])
-
-        #print len(output)
-        with open(primer3_output_DIR + output_file, "w") as outfile:
-            json.dump(final_results, outfile, indent=1)
-        with open(primer3_output_DIR + primer_out, "w") as outfile:
-            json.dump(scored_mips, outfile, indent=1)
-    return
-
-
-# In[135]:
-
-
 def best_mip_set (compatible_mip_sets, compatible_mip_dic, num_para, diff_score_dic, outfile):
     # open file containing compatible mip lists
     with open(primer3_output_DIR + compatible_mip_sets, "r") as infile:
@@ -10138,11 +9030,6 @@ def best_mip_set (compatible_mip_sets, compatible_mip_dic, num_para, diff_score_
         else:
             print("No mips available for target region ", gene[0])
         return
-
-
-# In[136]:
-
-
 def get_analysis_settings(settings_file):
     """ Convert analysis settings file to dictionary"""
     settings = {}
@@ -10157,12 +9044,6 @@ def get_analysis_settings(settings_file):
                 else:
                     settings[newline[0]] = [v for v in value if v != ""]
     return settings
-
-
-
-# In[137]:
-
-
 def filter_mipster (settings):
     """
     Import data from Mipster pipeline, filter and save to filtered_file
@@ -10208,11 +9089,6 @@ def filter_mipster (settings):
                 outfile.write("\t".join(outlist) + "\n")
             counter += 1
     return
-
-
-# In[138]:
-
-
 def get_haplotypes(settings):
     """ 1) Extract all haplotypes from new data.
         2) Remove known haplotypes using previous data (if any).
@@ -10367,11 +9243,6 @@ def get_haplotypes(settings):
         json.dump(haplotypes, out1, indent=1)
         json.dump(off_target_haplotypes, out2, indent=1)
     return
-
-
-# In[139]:
-
-
 def rename_mipster_haplotypes(settings):
     """ 1) Extract all haplotypes from new data.
         2) Remove known haplotypes using previous data (if any).
@@ -10417,11 +9288,6 @@ def rename_mipster_haplotypes(settings):
                 except KeyError:
                     problem_sequences.append(hapseq)
     return problem_sequences
-
-
-# In[140]:
-
-
 def get_summary_table(settings):
     wdir = settings["workingDir"]
     call_info_file = settings["callInfoDictionary"]
@@ -10901,11 +9767,6 @@ def get_summary_table(settings):
     with open(wdir + settings["sampleVariationFile"], "w") as outfile:
         json.dump(sample_diffs, outfile)
     return
-
-
-# In[141]:
-
-
 def filter_variation(variation_json,
                      min_barcode_count,
                      min_barcode_fraction,
@@ -11029,11 +9890,6 @@ def filter_variation(variation_json,
             filtered_var_table.append(updated_var)
     write_list(filtered_var_table, variation_json + ".filtered")
     return
-
-
-# In[142]:
-
-
 def variation_filter(variation_json, min_barcode_count, min_barcode_fraction):
     """
     Filter SNP variation for total minimum total depth and minimum
@@ -11103,31 +9959,16 @@ def variation_filter(variation_json, min_barcode_count, min_barcode_fraction):
             filtered_var_table.append(updated_var)
     write_list(filtered_var_table, variation_json + ".filtered.tsv")
     return
-
-
-# In[143]:
-
-
 def map_str(s):
     try:
         return str(s).encode("utf-8")
     except UnicodeEncodeError:
         return s.encode("utf-8")
-
-
-# In[144]:
-
-
 def write_list(alist, outfile_name):
     """ Convert values of a list to strings and save to file."""
     with open(outfile_name, "w") as outfile:
         outfile.write("\n".encode("utf-8").join(["\t".encode("utf-8").                                    join(map(map_str, l)) for l in alist])                      + "\n".encode("utf-8"))
     return
-
-
-# In[145]:
-
-
 def snp_stats(hom_case, hom_control,
                het_case, het_control,
               wt_case, wt_control):
@@ -11169,11 +10010,6 @@ def snp_stats(hom_case, hom_control,
         output.extend(fish)
         output.append(chi[1])
     return output
-
-
-# In[146]:
-
-
 def cnv_stats(hom_case, hom_control,
               wt_case, wt_control):
     """
@@ -11208,11 +10044,6 @@ def cnv_stats(hom_case, hom_control,
     output.extend(fish)
     output.append(chi[1])
     return output
-
-
-# In[147]:
-
-
 def design_mips(design_dir, g):
     print("Designing MIPs for ", g)
     try:
@@ -11229,11 +10060,6 @@ def design_mips(design_dir, g):
     except Exception as e:
         print(g, str(e), " FAILED!!!")
     return
-
-
-# In[148]:
-
-
 def design_mips_worker(design_list):
     design_dir, g = design_list
     print("Designing MIPs for ", g)
@@ -11251,11 +10077,6 @@ def design_mips_worker(design_list):
     except Exception as e:
         print(g, str(e), " FAILED!!!")
     return 0
-
-
-# In[149]:
-
-
 def design_mips_multi(design_dir, g_list, num_processor):
     chore_list = [[design_dir, g] for g in g_list]
     res = []
@@ -11267,11 +10088,6 @@ def design_mips_multi(design_dir, g_list, num_processor):
     except Exception as e:
         res.append(str(e))
     return res
-
-
-# In[150]:
-
-
 def unmask_fasta(masked_fasta, unmasked_fasta):
     """ Unmask lowercased masked fasta file, save """
     with open(masked_fasta) as infile, open(unmasked_fasta, "w") as outfile:
@@ -11281,11 +10097,6 @@ def unmask_fasta(masked_fasta, unmasked_fasta):
             else:
                 outfile.write(line)
     return
-
-
-# In[151]:
-
-
 def fasta_to_fastq(fasta_file, fastq_file):
     """ Create a fastq file from fasta file with dummy quality scores."""
     fasta = fasta_parser(fasta_file)
@@ -11298,14 +10109,6 @@ def fasta_to_fastq(fasta_file, fastq_file):
     with open(fastq_file, "w") as outfile:
         outfile.write("\n".join(fastq_list))
     return
-
-
-
-
-
-# In[152]:
-
-
 def parasight (resource_dir,
                design_info_file,
                designed_gene_list = None,
@@ -11376,12 +10179,6 @@ def parasight (resource_dir,
     with open(resource_dir + "visualize", "w") as outfile:
         outfile.write("\n".join(visualization_list))
     return
-
-
-
-# In[153]:
-
-
 def parasight_mod (resource_dir,
                design_info_file,
                   species,
@@ -11521,12 +10318,6 @@ def parasight_mod (resource_dir,
     with open(resource_dir + "visualize_mod", "w") as outfile:
         outfile.write("\n".join(visualization_list))
     return
-
-
-
-# In[154]:
-
-
 def parasight_shift (resource_dir,
                design_info_file,
                   species,
@@ -11625,22 +10416,11 @@ def parasight_shift (resource_dir,
     with open(resource_dir + "visualize_mod", "w") as outfile:
         outfile.write("\n".join(visualization_list))
     return
-
-
-
-# In[181]:
-
-
 def parasight_print(gene_list, extra_suffix = ".extra"):
     for g in gene_list:
         print("cd ../" + g)
         print(("parasight76.pl -showseq "+ g + ".show "
                + "-extra " + g + extra_suffix))
-
-
-# In[155]:
-
-
 def rescue_mips(design_dir,
                 paralog_name,
                 redesign_list,
@@ -11829,11 +10609,6 @@ def rescue_mips(design_dir,
     with open(design_dir + paralog_name + "/" + paralog_name +              "_rescue.mips", "w") as outfile:
         outfile.write("\n".join(["\t".join(map(str, outlist)) for                                 outlist in outfile_list]))
     return
-
-
-# In[156]:
-
-
 def analyze_data_old(settings_file):
     settings = get_analysis_settings(settings_file)
     group_samples(settings)
@@ -11874,11 +10649,6 @@ def process_data(wdir, run_ids):
         get_data(settings_file)
         analyze_data(settings_file)
     return
-
-
-# In[157]:
-
-
 def update_probe_sets(mipset_table = "resources/mip_ids/mipsets.csv",
                      mipset_json = "resources/mip_ids/probe_sets.json"):
     mipsets = pd.read_csv(mipset_table)
@@ -11890,11 +10660,6 @@ def update_probe_sets(mipset_table = "resources/mip_ids/mipsets.csv",
     with open(mipset_json, "w") as outfile:
         json.dump(mipset_dict, outfile, indent = 1)
     return
-
-
-# In[158]:
-
-
 def generate_mock_fastqs(settings_file):
     """
     Generate fastq files for each sample. These files will have stitched and
@@ -11928,11 +10693,6 @@ def generate_mock_fastqs(settings_file):
                                 fastq_lines = "\n".join([read_name, seq, "+", qual]) + "\n"
                                 outfile.write(fastq_lines)
     return
-
-
-# In[159]:
-
-
 def generate_fastqs(wdir, mipster_files, min_bc_count, min_bc_frac):
     """
     Generate fastq files for each sample. These files will have stitched and
@@ -11974,11 +10734,6 @@ def generate_fastqs(wdir, mipster_files, min_bc_count, min_bc_frac):
                     outfile_list.extend([read_name, seq, "+", qual])
             outfile.write("\n".join(outfile_list) + "\n")
     return
-
-
-# In[160]:
-
-
 def make_vcf(settings):
     """
     Create a vcf file from variation table to be used
@@ -12078,115 +10833,6 @@ def make_vcf(settings):
     meta_info_lines.extend(updated_var)
     #save vcf file
     write_list(meta_info_lines, wdir + "variation.vcf")
-
-
-# In[161]:
-
-
-def make_vcf_old(settings):
-    """
-    Create a vcf file from variation table to be used
-    in vcf friendly programs.
-    """
-    wdir = settings["workingDir"]
-    with open(wdir + settings["variationTableFile"]
-         + ".json") as infile:
-        var_tab = json.load(infile)
-    var_head = var_tab[0]
-    var_data = var_tab[1:]
-    head_cols = ["CHROM", "POS", "ID", "REF", "ALT",
-                "QUAL", "FILTER", "INFO", "FORMAT"]
-    ann_index = list(range(var_head.index("CP") + 1,
-                      var_head.index("NS")))
-    format_index = var_head.index("FORMAT")
-    gen_index = list(range(var_head.index("FORMAT") + 1,
-                     len(var_head)))
-    info_index = list(range(var_head.index("NS"),
-                      var_head.index("HE") + 1))
-    col_index = list(range(var_head.index("CHROM"),
-                     var_head.index("ALT") + 1))
-    mip_index = list(range(var_head.index("TARGET"),
-                     var_head.index("PAR") + 1))
-    mip_index.append(var_head.index("VKEY"))
-    # Allele depth field in the variation table file only shows
-    # the alt allele depth. VCF specs want REF, ALT counts.
-    # REF count is inferred from total - ALT here, so this
-    # will not work for multiallelic sites such as microsatellites.
-    updated_var = []
-    for v in var_data:
-        vd = []
-        for i in col_index:
-            vd.append(v[i])
-        vd.extend([".", "."])
-        info = []
-        for ind in [info_index, ann_index, mip_index]:
-            for i in ind:
-                field_name = var_head[i]
-                field_value = v[i]
-                info.append("=".join(map(str,
-                    [field_name, field_value])))
-        vd.append(";".join(info))
-        format_text = v[format_index]
-        vd.append(format_text)
-        for i in gen_index:
-            gen = v[i].split(":")
-            try:
-                ad = int(float(gen[1]))
-                dp = int(float(gen[2]))
-                wd = dp - ad
-                ad = str(wd) + "," + str(ad)
-                gen[1] = ad
-            except ValueError:
-                pass
-            gen = ":".join(gen)
-            vd.append(gen)
-        updated_var.append(vd)
-    # get the meta information lines from ANNOVAR output
-    with open(wdir + settings["annotationOutput"]
-             + "." + settings["annotationBuildVersion"]
-             + "_multianno.vcf") as infile:
-        meta_info_lines = []
-        for line in infile:
-            if line.startswith("##"):
-                meta_info_lines.append(line.strip())
-            else:
-                break
-    # add meta information lines for the MIP pipeline fields
-    met1 = ['##INFO=<ID=NS,Number=1,Type=Integer,Description="Number of Samples With Data">',
-    '##INFO=<ID=DP,Number=1,Type=Integer,Description="Total Depth">',
-    '##INFO=<ID=AD,Number=A,Type=Integer,Description="Alternate Allele Depth">',
-    '##INFO=<ID=AF,Number=A,Type=Float,Description="Allele Frequency, as determined by # heterozygous or homozygous samples divided by NS">',
-    '##INFO=<ID=HO,Number=A,Type=Integer,Description="Number of Samples Homozygous for ALT allele">',
-    '##INFO=<ID=HE,Number=A,Type=Integer,Description="Number of Samples Heterozygous for ALT Allele">',
-           '##INFO=<ID=TARGET,Number=1,Type=String,Description="Whether the position was targeted.">',
-    '##INFO=<ID=TID,Number=1,Type=String,Description="Target ID if the position was targeted.">',
-    '##INFO=<ID=PSV,Number=1,Type=String,Description="Whether the position was determined as a paralog specific locus.">',
-    '##INFO=<ID=PAR,Number=1,Type=String,Description="Gene or region name from MIP pipeline.">',
-    '##INFO=<ID=VKEY,Number=1,Type=String,Description="Unique ID given to each variation.">',
-    '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype.">',
-           '##FORMAT=<ID=AD,Number=R,Type=Float,Description="Read depth for each allele, starting with REF.">',
-           '##FORMAT=<ID=DP,Number=1,Type=Float,Description=" Read depth at this position for this sample.">',
-           '##FORMAT=<ID=BQ,Number=1,Type=Float,Description="Base quality for alt allele.">',
-           '##FORMAT=<ID=ADS,Number=.,Type=Float,Description="Alt allele read depths when supported by multiple MIPs.">'
-           '##FORMAT=<ID=DPS,Number=.,Type=Float,Description="Total read depths when supported by multiple MIPs.">'
-           '##FORMAT=<ID=MM,Number=.,Type=String,Description="Whether the allele mapping to multiple locations on reference genome.">',
-           '##FORMAT=<ID=HID,Number=.,Type=String,Description="Haplotype ID supporting the alt allele. This can be considered similar to Phase Set. Alleles on the same HID are on the same chromosome.">',
-           '##FORMAT=<ID=CS,Number=1,Type=String,Description="Case/control status of sample.">']
-    meta_info_lines.extend(met1)
-    meta_info_lines = [[m] for m in meta_info_lines]
-    up_var_head = ["#CHROM", "POS", "ID", "REF", "ALT",
-                   "QUAL", "FILTER", "INFO", "FORMAT"]
-    for i in gen_index:
-        up_var_head.append(var_head[i])
-    meta_info_lines.append(up_var_head)
-    meta_info_lines.extend(updated_var)
-    #save vcf file
-    write_list(meta_info_lines, wdir + "variation.vcf")
-
-
-# In[162]:
-
-
 def convert_to_int(n):
     """
     Convert values to integers. This is to be used when
@@ -12198,11 +10844,6 @@ def convert_to_int(n):
         return int(n)
     except ValueError:
         return np.nan
-
-
-# In[163]:
-
-
 def get_ternary_genotype(gen):
     """
     Convert a 0/0, 0/1, 1/1 type genotype string to
@@ -12213,11 +10854,6 @@ def get_ternary_genotype(gen):
     except ValueError:
         g = np.nan
     return g
-
-
-# In[164]:
-
-
 def variation_to_geno(settings, var_file, output_prefix):
     """
     Create PLINK files from variation table file.
@@ -12331,11 +10967,6 @@ def variation_to_geno(settings, var_file, output_prefix):
     write_list([["**", o] + genes[o] for o in ordered_genes],
                wdir + output_prefix + ".hlist")
     return
-
-
-# In[165]:
-
-
 def absence_presence(col):
     """
     Given a numerical dataframe column, convert to binary values.
@@ -12343,11 +10974,6 @@ def absence_presence(col):
     """
     return pd.Series([0 if (c == 0 or np.isnan(c))
                       else 1 for c in col.tolist()])
-
-
-# In[166]:
-
-
 def plot_performance(barcode_counts,
                     tick_label_size = 8,
                     cbar_label_size = 5,
@@ -12406,13 +11032,6 @@ def plot_performance(barcode_counts,
     else:
         return fig,ax
     return
-
-
-# In[167]:
-
-
-# define some functions that'll be used for
-# processing the variation table
 def split_aa(aa):
     try:
         return aa.split(";")[0].split(":")[4][2:]
@@ -12669,11 +11288,6 @@ def genotype(settings,
                         sep = "\t",
                         index = False)
     return
-
-
-# In[168]:
-
-
 def call_microsats(settings, sim = None, freq_cutoff = 0.005,
                    min_bc_cutoff = 0,
                   use_filtered_mips = True,
@@ -12755,11 +11369,6 @@ def call_microsats(settings, sim = None, freq_cutoff = 0.005,
                                      how = "left")
     return {"ms_calls": merged_calls,
             "strain_freqs": strain_freqs}
-
-
-# In[169]:
-
-
 def get_copy_counts(count_table,
                    average_copy_count = 2,
                    norm_percentiles = [0.4, 0.6]):
@@ -12792,11 +11401,6 @@ def get_copy_counts(count_table,
     p_norm = s_norm.transform(
         lambda a: average_copy_count * a/(a.quantile(norm_percentiles).mean()))
     return p_norm
-
-
-# In[170]:
-
-
 def process_downstream(settings,
                        run_ids,
                        sample_sets,
@@ -13256,11 +11860,6 @@ def process_downstream(settings,
     multi_df.to_csv(wdir + "multi_counts.csv",
                     index = False)
     return
-
-
-# In[171]:
-
-
 def process_downstream_shorter(settings,
                        run_ids,
                        sample_sets,
@@ -13374,11 +11973,6 @@ def process_downstream_shorter(settings,
     multi_df.to_csv(wdir + "multi_counts.csv",
                     index = False)
     return
-
-
-# In[172]:
-
-
 def process_downstream_short(settings,
                        run_ids,
                        sample_sets,
@@ -13898,11 +12492,6 @@ def process_downstream_short(settings,
     multi_df.to_csv(wdir + "multi_counts.csv",
                     index = False)
     return
-
-
-# In[173]:
-
-
 def repool(
     wdir,
     data_summary,
@@ -14064,11 +12653,6 @@ def repool(
         data_summary.loc[data_summary["Uneven Coverage"]
                           & (data_summary["Status"] == "Repool")].shape[0]))
     return
-
-
-# In[174]:
-
-
 def aa_to_coordinate(gene, species, aa_number, alias = False):
     """
     Given a gene name and its amino acid location,
@@ -14115,11 +12699,6 @@ def aa_to_coordinate(gene, species, aa_number, alias = False):
         )
     aa = translate(codon)
     return [chrom, cds_start, cds_end, ori, codon, aa]
-
-
-# In[175]:
-
-
 def merge_snps(settings):
     """
     When more than one SNP affects the same codon of a gene,
@@ -14338,11 +12917,6 @@ def merge_snps(settings):
     # save the report
     write_list(outlist, wdir + "merge_snps_output.txt")
     return outlist
-
-
-# In[176]:
-
-
 def load_processed_data(settings):
     """
     Load the data after initial processing.
@@ -14371,11 +12945,6 @@ def load_processed_data(settings):
     return {"Barcode Counts": bc,
             "Data Summary": data_summary,
             "Meta Data": merged_meta}
-
-
-# In[177]:
-
-
 def vcf_to_df(vcf_file):
     """
     Convert a possibly compressed (.gz) vcf file to a Pandas DataFrame.
@@ -14580,11 +13149,6 @@ def vcf_to_table(collapsed, output_file):
     subprocess.call(["tabix", "-0", "-s 2",
                          "-b 3", "-e 3", output_file + ".gz"])
     return table
-
-
-# In[178]:
-
-
 def header_to_primer (seq_to_bc_dict,
                      header_string,
                      platform):
@@ -14628,11 +13192,6 @@ def primer_to_header(bc_dict, primers, platform):
         return reverse_complement(rev_seq) + "+" + reverse_complement(fw_seq)
     elif platform == "miseq":
         return  fw_seq + "+" + reverse_complement(rev_seq)
-
-
-# In[179]:
-
-
 def check_stitching(stitch_file):
     """
     Take a stitch log file from MIPWrangler output, return summary datframe.
@@ -14668,11 +13227,6 @@ def check_stitching(stitch_file):
                          "Total Reads",
                          "Combined Reads"])
     return sti
-
-
-# In[180]:
-
-
 def filter_vcf(in_vcf, out_vcf, filters_to_remove):
     """
     Filter a vcf (possibly gzipped) for given filters

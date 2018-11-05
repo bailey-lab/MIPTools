@@ -1,39 +1,31 @@
 
-# coding: utf-8
-
-# In[4]:
-
-
 """
 Created on Tue Apr 29 16:50:42 2014
 
 @author: oz
 """
 import json
-import pickle as pickle
+import pickle
 import os
 import subprocess
-#from uniformity_functions_updated import *
 from operator import itemgetter
 import ast
 import mip_functions_testing as mip
 import copy
 import numpy as np
-print("mip module reloading")
 import math
 import pandas as pd
-
-
-# In[4]:
-
+print("mip module reloading")
 
 class Locus:
     """
     Locus class provides a construct for creating objects representing
-    any DNA loci that is to be used for MIP designs.
+    any DNA locus that is to be used for MIP designs.
+    Multiple loci can and should be represented by a single
+    object when there is high sequence similarity, i.e. paralogus sequencesself.
     A locus must have at least one sequence that is designated as the
-    reference. Multiple loci can and should be represented by a single
-    object when there is high sequence similarity, i.e. paralogus sequences
+    reference when multiple loci represented in a single Locus object.
+    Locus objects will be instantiated by
     """
     def __init__ (self, paralog, rinfo_file):
         # connect the paralog object creating the locus so that the locus
@@ -82,7 +74,6 @@ class Locus:
         self.subregions = {}
         self.designed = False
         self.failed = False
-
     def target_base_converter(self):
         for r in self.regions:
             r[1] += 1
@@ -140,7 +131,6 @@ class Locus:
         return {"segment_dic": segment_dic,
                 "extras_dic": extras_dic,
                 "segment_copies": segment_copies}
-
     def segment_converter(self):
         """ Convert 0-offset coordinates between paralogs for a given segment."""
         segment_dic = self.segment_dic["S0"]
@@ -163,7 +153,6 @@ class Locus:
                     j = int(np.floor(i))
                     coordinates[c][j + copy_start] = int(np.floor(rev_co[i])) + ref_start
         return coordinates
-
     def base_converter(self):
         """ Convert 0-offset pcoordinates to 1-offset."""
         zcoordinates = self.zcoordinates
@@ -184,8 +173,6 @@ class Locus:
                 for k in zcoordinates[c]:
                     pcoordinates[c][k+1] = zcoordinates[c][k] + 1
         return pcoordinates
-
-
     def get_pdiffs(self):
         """ Return 1-offset pdiffs and extra snps. """
         alignments = self.alignments
@@ -401,7 +388,6 @@ class Locus:
                           + ref_base] = d
         return {"pdiffs": diffs,
                 "extra_snps": extra_snps}
-
     def get_snps_from_table(self):
         pcoordinates = self.pcoordinates
         chrom = pcoordinates["C0"]["chromosomes"]["C0"]
@@ -524,8 +510,6 @@ class Locus:
                 snp_key = schr + ":" + str(spos) + ":" + sref + ":" + s[4]
                 snps[c][snp_key] = d
         return snps
-
-
     def get_must(self):
         must_dic = self.rinfo["MUST"]
         pcoordinates = self.pcoordinates
@@ -570,7 +554,6 @@ class Locus:
                         + must_dic[m]["snp_bases"]] = d
 
         return must
-
     def get_variants(self):
         columns = ["chrom", "begin", "end", "base",
          "copy_chrom", "copy_begin", "copy_end", "copy_base",
@@ -790,16 +773,12 @@ class Locus:
                                              >= maf_filter]
         self.insertions = filt_insertions
         return
-
-
     def get_exons(self):
         copies = self.segment_dic["S0"]
         for c in copies:
             copy_key = copies[c]["chrom"] + ":" + str(copies[c]["begin"]) +                         "-" + str(copies[c]["end"])
             copies[c]["genes"] = mip.get_region_exons(copy_key, self.species)
         return
-
-
     def get_projected_exons(self):
         """create a dictionary of segment exons projected on reference copy
         keys: copy_names: [list of exons of this copy projected on reference copy coordinates],
@@ -849,9 +828,6 @@ class Locus:
             all_exons.extend(projected_exons[p])
         projected_exons["merged"] = sorted(mip.merge_overlap(all_exons), key=itemgetter(0) )
         return projected_exons
-
-
-
     def make_subregions (self):
         """ Take a region with its genomic coordinates, a dictionary of possible targets in the region
         which is the output of targets function. Return subregions depending on the capture type that
@@ -913,55 +889,6 @@ class Locus:
                                            spacer = 2 * flank)
 
         return subregions
-
-
-    def rinfo_parser_old (self, rinfo_file):
-        """ Take a region information file and extract all information.
-        return a dictionary with keys: NAME, BASE and each of the separate information groups,
-        such as REGION, INCLUDE and SNP.
-        Each dictionary vaule except NAME and BASE are also dictionaries with the first column
-        values keys and dictionary values. Each of these dictionaries have column names as
-        keys and column values as values.
-        Example: {NAME:GYP, BASE:0, REGION:{S0C0:{region:S0C0, copyname:GYPA, seqn:14..
-                                    INCLUDE:{NM_198682_exon_0_0_chr4_144792019_r:{name:..., seq:...
-        """
-        rinfo = {}
-        datain = []
-        filein = open(rinfo_file, "r")
-        infile = filein.readlines()
-        filein.close()
-        info_fields = ["NAME", "SPECIES", "HOST_SPECIES", "DESIGN_DIR"]
-        for line in infile:
-            if not line.startswith("#"):
-                newline = line.strip().split("\t")
-                if newline[0] in info_fields:
-                    rinfo[newline[0]] = newline[1]
-                # each information group has a descriptive line starting with COL:group_name
-                elif line.startswith("COL:"):
-                    newline = line.strip().split("\t")
-                    # remove COL and get the group name
-                    key = newline[0].split(":")[1]
-                    # second column is reserved for the name of the group member
-                    # for example if rinfo file for paralogus locus is parsed, it will have
-                    # multiple regions (members of region group) defined.
-                    # rest of the line is column names for following lines
-                    columns = newline[2:]
-                    # create a dictionary for each information group, e.g. REGION
-                    rinfo[key] = {}
-                    # find all lines of the information group, starting with group name
-                    for l in infile:
-                        if l.startswith(key):
-                            newl = l.strip().split("\t")
-                            sub_key = newl[1]
-                            # index 0 in newl is the group name and index1 is the identifier
-                            # of that specific line, so create a dictionary for that
-                            rinfo[key][sub_key] = {}
-                            # populate dictionary with the column_name:column_value pairs
-                            for i in range(len(columns)):
-                                rinfo[key][sub_key][columns[i]] = newl[i+2]
-        if "MUST" not in rinfo:
-            rinfo["MUST"] = {}
-        return rinfo
     def rinfo_parser(self, rinfo_file):
         settings_dict = {}
         must_list = []
@@ -1001,10 +928,6 @@ class Locus:
             pass
         settings_dict["MUST"] = must_dict
         return settings_dict
-
-
-
-
     def get_gene_names(self, rinfo):
         """ Currently Unused """
         gene_names = []
@@ -1016,11 +939,9 @@ class Locus:
             if g not in r:
                 r.append(g)
         return r
-
     def add_subregion (self, name, subregion):
         """ Add a subregion object to subregions dictionary of a segment or gene."""
         self.subregions[name] = Subregion(self, name, subregion)
-
     def make_primers(self):
         ext_list = []
         lig_list = []
@@ -1055,18 +976,11 @@ class Locus:
         for s in self.subregions:
             self.subregions[s].update_subregion()
 
-
-
-# In[9]:
-
-
 class Paralog(Locus):
-    """ Represent a gene or a paralogus gene family family. Requires a region information file.
-    Extracts segments in the .rinfo file and creates a segment object for each segment
-    that has multiple copies (paralogus segments) or a gene object for segments that have
-    only one copy. Has two lists of objects: genes and segments.
-    Paralogus genes will have segments and possibly genes,
-    Non-paralogus genes will only have genes list which will have a single gene.
+    """ Represent a gene or a paralogus gene family family.
+    Requires a region information (rinfo) file which is generated by the
+    upstream region prep module.
+    Instantiates a Locus object using the sequence information in the rinfo file.
     """
     def __init__(self, rinfo_file):
         # rifo file has capture specifics for the mips
@@ -1089,7 +1003,9 @@ class Paralog(Locus):
         # files should be in a directory named as the paralog family name
         self.cwd = self.design_dir + self.paralog_name + "/"
         self.resource_dir = self.cwd + "resources/"
-        # load the target dictionary
+        # load the target dictionary, generated by the upstream region prep
+        # module. It holds the information regarding capture targets such as
+        # genomic coordinates.
         with open(self.resource_dir + self.paralog_name + ".pkl", "rb") as infile:
             self.target_dict = pickle.load(infile)
         self.regions = self.target_dict["regions"]
@@ -1114,8 +1030,6 @@ class Paralog(Locus):
         self.add_segments()
         self.designed = False
         self.failed = False
-
-
     def add_segments(self):
         """ Create a segment object for each segment in the segment_dic of a paralog object and
         add it to segments list."""
@@ -1146,8 +1060,6 @@ class Paralog(Locus):
                 break
         else:
             self.copies_captured = True
-
-
     def run_segments(self, seg):
         """ Make subregions and primers for each segment/gene."""
         if seg.designed:
@@ -1198,8 +1110,6 @@ class Paralog(Locus):
         else:
             print(sub.fullname, " design has failed before and will not be repeated.")
             return
-
-
     def run(self):
         """ Top function that runs other functions in the design pipeline.
         Runs run_segments for segments and genes, run_subregions for subregions."""
@@ -1228,7 +1138,6 @@ class Paralog(Locus):
 
             with open(self.cwd + self.paralog_name, "wb") as savefile:
                     pickle.dump(self, savefile)
-
     def order_mips(self):
         """ Extract summary information from mips in the paralog and
         output text files for ordering mips."""
@@ -1611,8 +1520,6 @@ class Paralog(Locus):
                         min(begin_coordinates), max(end_coordinates)])))
             extra.write("\n".join(outfile_list))
         return
-
-
     def sort_mips(self):
         purple = "#a0462009f0e4" # purple in parasight
         blue = "#00830000ffff"
@@ -1738,280 +1645,13 @@ class Paralog(Locus):
         with open(self.cwd + self.paralog_name, "wb") as savefile:
                 pickle.dump(self, savefile)
 
-
-# In[8]:
-
-
-class Mip():
-    def __init__(self, subregion, name, mip_dic, backbone):
-        try:
-            self.extension = mip_dic["extension_primer_information"]["PARALOG_COORDINATES"]
-            self.ligation = mip_dic["ligation_primer_information"]["PARALOG_COORDINATES"]
-        except KeyError:
-            self.extension = {"C0": mip_dic["extension_primer_information"]}
-            self.ligation = {"C0": mip_dic["ligation_primer_information"]}
-        self.mip_dic = mip_dic
-        self.mip = mip_dic["pairs"]
-        self.name = name
-        self.backbone = backbone
-        self.sequence = mip_dic["mip_information"]["ref"]["SEQUENCE"]
-        self.subregion = subregion
-        self.species = self.subregion.species
-        self.host = self.subregion.host
-        try:
-            self.alt_copies = mip_dic["alt_copies"]
-        except KeyError:
-            self.alt_copies = []
-        self.captured_copies = mip_dic["captured_copies"]
-        self.captured_copies.extend(self.alt_copies)
-    def add_capture_info(self):
-        # calculate what is captured by a mip
-        self.capture_info = {
-            "captured_targets": {},
-             "unique_captures": []
-        }
-        cap_targets = self.capture_info["captured_targets"]
-        pdiffs = self.subregion.locus.pdiffs
-        # get target dictionary
-        targets = self.subregion.targets
-        extension_read_len = int(self.subregion.settings["extension"]["read_length"])
-        ligation_read_len = int(self.subregion.settings["ligation"]["read_length"])
-        extension_min_trim = int(self.subregion.settings["extension"]["minimum_trim"])
-        ligation_min_trim = int(self.subregion.settings["ligation"]["minimum_trim"])
-        extension_umi_len = int(self.subregion.settings["extension"]["umi_length"])
-        ligation_umi_len = int(self.subregion.settings["ligation"]["umi_length"])
-        minimum_read_overlap = int(self.subregion.settings["mip"]["minimum_read_overlap"])
-        maximum_read_overlap = int(self.subregion.settings["mip"]["maximum_read_overlap"])
-        try:
-            arms = self.subregion.capture["arms"]
-        except KeyError:
-            arms = "capture"
-        if arms not in ["extension",
-                       "ligation",
-                       "any",
-                       "both",
-                       "capture"]:
-            arms = "capture"
-        size_min = (extension_read_len + ligation_read_len
-                   - extension_umi_len - ligation_umi_len - maximum_read_overlap)
-        size_max = (extension_read_len + ligation_read_len
-                   - extension_umi_len - ligation_umi_len - minimum_read_overlap)
-        insertions = self.subregion.locus.insertions
-        for target_type in targets:
-            for copy_id in targets[target_type]:
-                if copy_id in self.mip:
-                    copy_mip = self.mip[copy_id]
-                    cs = copy_mip["capture_start"]
-                    ce = copy_mip["capture_end"]
-                    cc = copy_mip["chrom"]
-                    co = copy_mip["orientation"]
-                    if co == "forward":
-                        ext_cs = cs
-                        ext_ce = (
-                            cs + extension_read_len
-                            - extension_umi_len - extension_min_trim)
-                        ext_insertion_len = insertions.loc[
-                            (insertions["copy_chrom"] == cc)
-                            & (insertions["copy_begin"] > ext_cs)
-                            & (insertions["copy_end"] < ext_ce),
-                        "max_size"].sum()
-                        lig_ce = ce
-                        lig_cs = (
-                            ce - ligation_read_len
-                            + ligation_umi_len + ligation_min_trim)
-                        lig_insertion_len = insertions.loc[
-                            (insertions["copy_chrom"] == cc)
-                            & (insertions["copy_begin"] > lig_cs)
-                            & (insertions["copy_end"] < lig_ce),
-                        "max_size"].sum()
-                    else:
-                        lig_cs = cs
-                        lig_ce = (
-                            cs + ligation_read_len
-                            - ligation_umi_len - ligation_min_trim)
-                        lig_insertion_len = insertions.loc[
-                            (insertions["copy_chrom"] == cc)
-                            & (insertions["copy_begin"] > lig_cs)
-                            & (insertions["copy_end"] < lig_ce),
-                        "max_size"].sum()
-                        ext_ce = ce
-                        ext_cs = (
-                            ce - extension_read_len
-                            + extension_umi_len + extension_min_trim)
-                        ext_insertion_len = insertions.loc[
-                            (insertions["copy_chrom"] == cc)
-                            & (insertions["copy_begin"] > ext_cs)
-                            & (insertions["copy_end"] < ext_ce),
-                        "max_size"].sum()
-                    for t in targets[target_type][copy_id]:
-                        tar = targets[target_type][copy_id][t]
-                        tbeg = tar["copy_begin"]
-                        try:
-                            tend = tar["copy_end"]
-                        except KeyError:
-                            tend = tbeg
-                        tchrom = tar["copy_chrom"]
-                        try:
-                            size_diff = int(tar["size_difference"])
-                        except KeyError:
-                            size_diff = 0
-                        ext_size_diff = max(size_diff, ext_insertion_len)
-                        lig_size_diff = max(size_diff, lig_insertion_len)
-                        if co == "forward":
-                            ext_coverage_start = ext_cs
-                            ext_coverage_end = ext_ce - ext_size_diff
-                            lig_coverage_start = lig_cs + lig_size_diff
-                            lig_coverage_end = lig_ce
-                        else:
-                            ext_coverage_start = ext_cs + ext_size_diff
-                            ext_coverage_end = ext_ce
-                            lig_coverage_start = lig_cs
-                            lig_coverage_end = lig_ce - lig_size_diff
-                        covered_by_capture = False
-                        covered_by_ext = False
-                        covered_by_lig = False
-                        if tchrom == cc:
-                            if cs <= tbeg <= tend <= ce:
-                                covered_by_capture = True
-                            if (ext_coverage_start
-                                <= tbeg <= tend
-                                <= ext_coverage_end):
-                                covered_by_ext = True
-                            if (lig_coverage_start
-                                <= tbeg <= tend
-                                <= lig_coverage_end):
-                                covered_by_lig = True
-                        covered_by_both = covered_by_ext and covered_by_lig
-                        covered_by_any = covered_by_ext or covered_by_lig
-                        if (((arms == "capture") and covered_by_capture)
-                            or ((arms == "extension") and covered_by_ext)
-                            or ((arms == "ligation") and covered_by_lig)
-                            or (((arms == "both") and covered_by_both))
-                            or ((arms == "any") and covered_by_any)):
-                            try:
-                                cap_targets[
-                                    target_type][copy_id][t] = tar
-                            except KeyError:
-                                try:
-                                    cap_targets[
-                                        target_type][copy_id] = {t: tar}
-                                except KeyError:
-                                    cap_targets[target_type] = {
-                                        copy_id:{
-                                            t: tar
-                                        }
-                                    }
-        all_captured_sequences = []
-        for c in self.captured_copies:
-            all_captured_sequences.append(
-                self.mip[c]["capture_sequence"]
-            )
-        for c in self.captured_copies:
-            copy_seq = self.mip[c]["capture_sequence"]
-            if all_captured_sequences.count(copy_seq) == 1:
-                self.capture_info["unique_captures"].append(c)
-        return
-
-    def score_mips(self):
-        """
-        Score a mip object technically and functionally.
-        Technical scores would reflect how well we think the mip will work.
-        Functional scores would reflect how informative the capture will be, assuming the mip
-        works.
-        """
-        # TECHNICAL SCORING
-        # arm scores are already calculated at primer level
-        arm_scores = self.mip_dic["ligation_primer_information"]["SCORE"] +                     self.mip_dic["extension_primer_information"]["SCORE"]
-        if arm_scores < 0:
-            arm_scores = 0
-        # capture gc content score matrix
-        # define best to worst values for gc content. Best is very important so it has a huge effect on score.
-        best = 2000
-        mid = 1000
-        low = 500
-        worse = 100
-        worst = 0
-        # define matrix
-        cap_gc_con = {}
-        for i in range(100):
-            if i<20:
-                cap_gc_con[i] = worst
-            elif i < 35:
-                cap_gc_con[i] = mid
-            elif i < 55:
-                    cap_gc_con[i] = best
-            elif i < 60:
-                    cap_gc_con[i] = mid
-            elif i < 70:
-                cap_gc_con[i] = low
-            elif i < 80:
-                cap_gc_con[i] = worse
-            else :
-                cap_gc_con[i] = worst
-        gc_scores = []
-        gc_values = []
-        for c in self.mip:
-            capture_gc = mip.calculate_gc(self.mip[c]["capture_sequence"])
-            if self.subregion.species.startswith("pf"):
-                gc_scores.append(capture_gc * 100 - 2000)
-            else:
-                gc_scores.append(cap_gc_con[capture_gc])
-            gc_values.append(capture_gc)
-        mean_gc_value = float(sum(gc_values)/len(gc_values))
-        mean_gc_score = int(sum(gc_scores)/len(gc_scores))
-        tech_score = mean_gc_score + int(arm_scores/10)
-        # FUNCTIONAL SCORING
-        func_score = 0
-        diff_scores = self.subregion.scoring["diff_scores"]
-        snp_scores = self.subregion.scoring["snp_scores"]
-        diff_scores.update(snp_scores)
-        self.captures = []
-        self.captured_targets = []
-        capped = self.capture_info["captured_targets"]
-        for target_type in capped:
-            for copy_id in capped[target_type]:
-                for t in capped[target_type][copy_id]:
-                    func_score += diff_scores[target_type]
-                    if target_type == "must":
-                        self.captures.append(t)
-                    else:
-                        self.captured_targets.append(t)
-        unique_copy_bonus = self.subregion.scoring["unique_copy_bonus"]
-        alternative_copy_penalty = self.subregion.scoring["alternative_copy_penalty"]
-        copy_bonus = len(self.capture_info["unique_captures"]) * unique_copy_bonus +                        (len(self.captured_copies) - len(self.alt_copies)/2.)                        * alternative_copy_penalty
-        func_score += copy_bonus
-        self.tech_score = self.subregion.scoring[
-            "technical_score_coefficient"
-        ]* tech_score
-        self.func_score = func_score
-        self.capture_gc = mean_gc_value
-        return
-
-    def compatible(self):
-        pass
-    def score_mipsets(self):
-        pass
-    def best_mipset(self):
-        pass
-    def print_info(self):
-        pass
-    def mip_order(self):
-        pass
-
-
-
-# In[9]:
-
-
-class Gene(Locus):
-    def __init__(self):
-        pass
-
-
-# In[7]:
-
-
 class Subregion(Locus):
+    """ Subregion class is used to create objects representing DNA loci
+    which is a subregion of interest of a segment object. For example,
+    if a exonic regions of a gene is to be targeted for MIP capture,
+    the whole gene would be the segment, and each exon would be a subregion.
+    MIP are designed at the subregion level.
+    """
     def __init__(self, locus, name, intervals):
         self.subregion_name = name
         self.locus = locus
@@ -2019,7 +1659,6 @@ class Subregion(Locus):
         self.designed = False
         self.failed = False
         self.update_subregion()
-
     def update_subregion(self):
         self.chrom = self.locus.chrom
         self.snps = self.locus.snps
@@ -2051,8 +1690,6 @@ class Subregion(Locus):
         self.masking()
         self.get_targets()
         self.update_scoring()
-
-
     def get_targets(self):
         """ Select targets falling into the subregion, if
         parent segment has targets attribute."""
@@ -2082,7 +1719,6 @@ class Subregion(Locus):
                                     }
                                 }
         return targets
-
     def create_dirs(self):
         if not os.path.exists(self.cwd):
             # create a list of subdirectories, for input and output files
@@ -2101,7 +1737,6 @@ class Subregion(Locus):
         self.mfold_input_DIR = self.cwd + "mfold_input/"
         self.mfold_output_DIR = self.cwd + "mfold_output/"
         return
-
     def masking(self):
         # get masking criteria
         mask_diffs_lig = int(self.capture["mask_diffs_lig"])
@@ -2172,7 +1807,6 @@ class Subregion(Locus):
         mip.make_boulder (fasta_rec_lig, self.primer3_input_DIR,exclude_list=exclude_lig,                          output_file_name=lig_output_name)
         mip.make_boulder (fasta_rec_ext, self.primer3_input_DIR,exclude_list=exclude_ext,                          output_file_name=ext_output_name)
         return
-
     def update_scoring(self):
         self.scoring = {"snp_scores":{}, "diff_scores":{} }
         snps = self.capture["target_snp_functions"].split(",")
@@ -2194,7 +1828,6 @@ class Subregion(Locus):
         self.scoring["must_bonus"] = int(self.capture["must_bonus"])
         self.scoring["set_copy_bonus"] = int(self.capture["set_copy_bonus"])
         return
-
     def update_capture(self):
         #self.locus.segment_rinfo["CAPTURE"] = self.rinfo_parser(self.config_file)\
         #                                     ["CAPTURE"][self.locus.segment_name]
@@ -2208,7 +1841,6 @@ class Subregion(Locus):
         self.capture = self.rinfo_parser(self.config_file)["CAPTURE"][self.locus.segment_name]
         self.update_scoring()
         return
-
     def parse_primers(self):
         self.primers = {"original":{}, "parsed":{}}
         for arm in ["extension", "ligation"]:
@@ -2230,7 +1862,6 @@ class Subregion(Locus):
                                             outp = int(self.locus.rinfo["CAPTURE"]["S0"]["output_level"]))
             self.primers["parsed"][arm]["dictionary"] = par
         return
-
     def bowtie2_run(self):
         species = self.species
         host = self.host
@@ -2388,7 +2019,6 @@ class Subregion(Locus):
                                          outp = 1)
             self.primers["alternative"][arm]["dictionary"] = alternative
         return
-
     def score_primers(self):
         self.primers["scored"] = {}
         self.primers["filtered"] = {}
@@ -2414,7 +2044,6 @@ class Subregion(Locus):
                                )
             self.primers["filtered"][arm]["dictionary"] = filtered
         return
-
     def pick_primer_pairs (self):
         self.primers["paired"] = {"filename":self.fullname + "_paired"}
         settings = self.settings["mip"]
@@ -2489,7 +2118,6 @@ class Subregion(Locus):
             self.mips["original"][h].hairpin = dg
             self.mips["hairpin"][h] = self.mips["original"][h]
         return
-
     def score_mips(self):
         for m in list(self.mips["hairpin"].keys()):
             try:
@@ -2531,7 +2159,6 @@ class Subregion(Locus):
             json.dump(self.mips["scored_filtered"]["dictionary"], infile, indent=1)
 
         return
-
     def compatible(self):
         try:
             overlap_same = int(self.locus.rinfo["SELECTION"]["compatibility"]                                               ["same_strand_overlap"])
@@ -2555,10 +2182,8 @@ class Subregion(Locus):
                                                    outp = int(self.locus.rinfo["CAPTURE"]["S0"]["output_level"]))
             self.primers["compatible"]["list"] = compatible_sets
         return
-
     def score_mipsets(self):
         pass
-
     def best_mipset(self):
         self.mips["best_mipset"] = {"filename": self.fullname + "_best_set",
                                      "dictionary":{"mips":{}} }
@@ -2810,7 +2435,7 @@ class Subregion(Locus):
                     if  mip_obj.tech_score != 0 and  mip_obj.func_score != 0:
                         total_score = mip_obj.tech_score * mip_obj.func_score
                     else:
-                        total_score = mip_obj.tech_score + mip_obj.func_score
+            p            total_score = mip_obj.tech_score + mip_obj.func_score
                     try:
                         if total_score > best_score:
                             best_score = total_score
@@ -2880,13 +2505,256 @@ class Subregion(Locus):
                     best_mipset.pop(mip_key)
         return
 
-    def print_info(self):
+class Mip():
+    """
+    Mip class provides a construct to represent a MIP probeself.
+    It is instantiated by a subregion object.
+    """
+    def __init__(self, subregion, name, mip_dic, backbone):
+        try:
+            self.extension = mip_dic["extension_primer_information"]["PARALOG_COORDINATES"]
+            self.ligation = mip_dic["ligation_primer_information"]["PARALOG_COORDINATES"]
+        except KeyError:
+            self.extension = {"C0": mip_dic["extension_primer_information"]}
+            self.ligation = {"C0": mip_dic["ligation_primer_information"]}
+        self.mip_dic = mip_dic
+        self.mip = mip_dic["pairs"]
+        self.name = name
+        self.backbone = backbone
+        self.sequence = mip_dic["mip_information"]["ref"]["SEQUENCE"]
+        self.subregion = subregion
+        self.species = self.subregion.species
+        self.host = self.subregion.host
+        try:
+            self.alt_copies = mip_dic["alt_copies"]
+        except KeyError:
+            self.alt_copies = []
+        self.captured_copies = mip_dic["captured_copies"]
+        self.captured_copies.extend(self.alt_copies)
+    def add_capture_info(self):
+        # calculate what is captured by a mip
+        self.capture_info = {
+            "captured_targets": {},
+             "unique_captures": []
+        }
+        cap_targets = self.capture_info["captured_targets"]
+        pdiffs = self.subregion.locus.pdiffs
+        # get target dictionary
+        targets = self.subregion.targets
+        extension_read_len = int(self.subregion.settings["extension"]["read_length"])
+        ligation_read_len = int(self.subregion.settings["ligation"]["read_length"])
+        extension_min_trim = int(self.subregion.settings["extension"]["minimum_trim"])
+        ligation_min_trim = int(self.subregion.settings["ligation"]["minimum_trim"])
+        extension_umi_len = int(self.subregion.settings["extension"]["umi_length"])
+        ligation_umi_len = int(self.subregion.settings["ligation"]["umi_length"])
+        minimum_read_overlap = int(self.subregion.settings["mip"]["minimum_read_overlap"])
+        maximum_read_overlap = int(self.subregion.settings["mip"]["maximum_read_overlap"])
+        try:
+            arms = self.subregion.capture["arms"]
+        except KeyError:
+            arms = "capture"
+        if arms not in ["extension",
+                       "ligation",
+                       "any",
+                       "both",
+                       "capture"]:
+            arms = "capture"
+        size_min = (extension_read_len + ligation_read_len
+                   - extension_umi_len - ligation_umi_len - maximum_read_overlap)
+        size_max = (extension_read_len + ligation_read_len
+                   - extension_umi_len - ligation_umi_len - minimum_read_overlap)
+        insertions = self.subregion.locus.insertions
+        for target_type in targets:
+            for copy_id in targets[target_type]:
+                if copy_id in self.mip:
+                    copy_mip = self.mip[copy_id]
+                    cs = copy_mip["capture_start"]
+                    ce = copy_mip["capture_end"]
+                    cc = copy_mip["chrom"]
+                    co = copy_mip["orientation"]
+                    if co == "forward":
+                        ext_cs = cs
+                        ext_ce = (
+                            cs + extension_read_len
+                            - extension_umi_len - extension_min_trim)
+                        ext_insertion_len = insertions.loc[
+                            (insertions["copy_chrom"] == cc)
+                            & (insertions["copy_begin"] > ext_cs)
+                            & (insertions["copy_end"] < ext_ce),
+                        "max_size"].sum()
+                        lig_ce = ce
+                        lig_cs = (
+                            ce - ligation_read_len
+                            + ligation_umi_len + ligation_min_trim)
+                        lig_insertion_len = insertions.loc[
+                            (insertions["copy_chrom"] == cc)
+                            & (insertions["copy_begin"] > lig_cs)
+                            & (insertions["copy_end"] < lig_ce),
+                        "max_size"].sum()
+                    else:
+                        lig_cs = cs
+                        lig_ce = (
+                            cs + ligation_read_len
+                            - ligation_umi_len - ligation_min_trim)
+                        lig_insertion_len = insertions.loc[
+                            (insertions["copy_chrom"] == cc)
+                            & (insertions["copy_begin"] > lig_cs)
+                            & (insertions["copy_end"] < lig_ce),
+                        "max_size"].sum()
+                        ext_ce = ce
+                        ext_cs = (
+                            ce - extension_read_len
+                            + extension_umi_len + extension_min_trim)
+                        ext_insertion_len = insertions.loc[
+                            (insertions["copy_chrom"] == cc)
+                            & (insertions["copy_begin"] > ext_cs)
+                            & (insertions["copy_end"] < ext_ce),
+                        "max_size"].sum()
+                    for t in targets[target_type][copy_id]:
+                        tar = targets[target_type][copy_id][t]
+                        tbeg = tar["copy_begin"]
+                        try:
+                            tend = tar["copy_end"]
+                        except KeyError:
+                            tend = tbeg
+                        tchrom = tar["copy_chrom"]
+                        try:
+                            size_diff = int(tar["size_difference"])
+                        except KeyError:
+                            size_diff = 0
+                        ext_size_diff = max(size_diff, ext_insertion_len)
+                        lig_size_diff = max(size_diff, lig_insertion_len)
+                        if co == "forward":
+                            ext_coverage_start = ext_cs
+                            ext_coverage_end = ext_ce - ext_size_diff
+                            lig_coverage_start = lig_cs + lig_size_diff
+                            lig_coverage_end = lig_ce
+                        else:
+                            ext_coverage_start = ext_cs + ext_size_diff
+                            ext_coverage_end = ext_ce
+                            lig_coverage_start = lig_cs
+                            lig_coverage_end = lig_ce - lig_size_diff
+                        covered_by_capture = False
+                        covered_by_ext = False
+                        covered_by_lig = False
+                        if tchrom == cc:
+                            if cs <= tbeg <= tend <= ce:
+                                covered_by_capture = True
+                            if (ext_coverage_start
+                                <= tbeg <= tend
+                                <= ext_coverage_end):
+                                covered_by_ext = True
+                            if (lig_coverage_start
+                                <= tbeg <= tend
+                                <= lig_coverage_end):
+                                covered_by_lig = True
+                        covered_by_both = covered_by_ext and covered_by_lig
+                        covered_by_any = covered_by_ext or covered_by_lig
+                        if (((arms == "capture") and covered_by_capture)
+                            or ((arms == "extension") and covered_by_ext)
+                            or ((arms == "ligation") and covered_by_lig)
+                            or (((arms == "both") and covered_by_both))
+                            or ((arms == "any") and covered_by_any)):
+                            try:
+                                cap_targets[
+                                    target_type][copy_id][t] = tar
+                            except KeyError:
+                                try:
+                                    cap_targets[
+                                        target_type][copy_id] = {t: tar}
+                                except KeyError:
+                                    cap_targets[target_type] = {
+                                        copy_id:{
+                                            t: tar
+                                        }
+                                    }
+        all_captured_sequences = []
+        for c in self.captured_copies:
+            all_captured_sequences.append(
+                self.mip[c]["capture_sequence"]
+            )
+        for c in self.captured_copies:
+            copy_seq = self.mip[c]["capture_sequence"]
+            if all_captured_sequences.count(copy_seq) == 1:
+                self.capture_info["unique_captures"].append(c)
+        return
+    def score_mips(self):
+        """
+        Score a mip object technically and functionally.
+        Technical scores would reflect how well we think the mip will work.
+        Functional scores would reflect how informative the capture will be, assuming the mip
+        works.
+        """
+        # TECHNICAL SCORING
+        # arm scores are already calculated at primer level
+        arm_scores = self.mip_dic["ligation_primer_information"]["SCORE"] +                     self.mip_dic["extension_primer_information"]["SCORE"]
+        if arm_scores < 0:
+            arm_scores = 0
+        # capture gc content score matrix
+        # define best to worst values for gc content. Best is very important so it has a huge effect on score.
+        best = 2000
+        mid = 1000
+        low = 500
+        worse = 100
+        worst = 0
+        # define matrix
+        cap_gc_con = {}
+        for i in range(100):
+            if i<20:
+                cap_gc_con[i] = worst
+            elif i < 35:
+                cap_gc_con[i] = mid
+            elif i < 55:
+                    cap_gc_con[i] = best
+            elif i < 60:
+                    cap_gc_con[i] = mid
+            elif i < 70:
+                cap_gc_con[i] = low
+            elif i < 80:
+                cap_gc_con[i] = worse
+            else :
+                cap_gc_con[i] = worst
+        gc_scores = []
+        gc_values = []
+        for c in self.mip:
+            capture_gc = mip.calculate_gc(self.mip[c]["capture_sequence"])
+            if self.subregion.species.startswith("pf"):
+                gc_scores.append(capture_gc * 100 - 2000)
+            else:
+                gc_scores.append(cap_gc_con[capture_gc])
+            gc_values.append(capture_gc)
+        mean_gc_value = float(sum(gc_values)/len(gc_values))
+        mean_gc_score = int(sum(gc_scores)/len(gc_scores))
+        tech_score = mean_gc_score + int(arm_scores/10)
+        # FUNCTIONAL SCORING
+        func_score = 0
+        diff_scores = self.subregion.scoring["diff_scores"]
+        snp_scores = self.subregion.scoring["snp_scores"]
+        diff_scores.update(snp_scores)
+        self.captures = []
+        self.captured_targets = []
+        capped = self.capture_info["captured_targets"]
+        for target_type in capped:
+            for copy_id in capped[target_type]:
+                for t in capped[target_type][copy_id]:
+                    func_score += diff_scores[target_type]
+                    if target_type == "must":
+                        self.captures.append(t)
+                    else:
+                        self.captured_targets.append(t)
+        unique_copy_bonus = self.subregion.scoring["unique_copy_bonus"]
+        alternative_copy_penalty = self.subregion.scoring["alternative_copy_penalty"]
+        copy_bonus = len(self.capture_info["unique_captures"]) * unique_copy_bonus +                        (len(self.captured_copies) - len(self.alt_copies)/2.)                        * alternative_copy_penalty
+        func_score += copy_bonus
+        self.tech_score = self.subregion.scoring[
+            "technical_score_coefficient"
+        ]* tech_score
+        self.func_score = func_score
+        self.capture_gc = mean_gc_value
+        return
+    def compatible(self):
         pass
-
-
-# In[10]:
-
-
-class Segment(Locus):
-    def __init__(self):
+    def score_mipsets(self):
+        pass
+    def best_mipset(self):
         pass
