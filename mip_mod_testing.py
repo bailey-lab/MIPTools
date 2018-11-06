@@ -2435,7 +2435,7 @@ class Subregion(Locus):
                     if  mip_obj.tech_score != 0 and  mip_obj.func_score != 0:
                         total_score = mip_obj.tech_score * mip_obj.func_score
                     else:
-            p            total_score = mip_obj.tech_score + mip_obj.func_score
+                        total_score = mip_obj.tech_score + mip_obj.func_score
                     try:
                         if total_score > best_score:
                             best_score = total_score
