@@ -9035,7 +9035,6 @@ def get_analysis_settings(settings_file):
     settings = {}
     with open(settings_file) as infile:
         for line in infile:
-            line = line.decode("utf-8")
             if not line.startswith("#"):
                 newline = line.strip().split("\t")
                 value = newline[1].split(",")
@@ -9589,7 +9588,7 @@ def get_summary_table(settings):
 
     try:
         with open(wdir + settings["caseFile"]) as infile:
-            case = {line.decode("utf-8").split("\t")[0] :                     line.decode("utf-8").strip().split("\t")[1] for line in infile}
+            case = {line.split("\t")[0] : line.strip().split("\t")[1] for line in infile}
     except IOError:
         case = {}
 
