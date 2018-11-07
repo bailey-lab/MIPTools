@@ -1033,14 +1033,14 @@ def parse_aligned_haplotypes(settings):
                     if rf_ori == "reverse":
                         ref_al = reverse_complement(ref_al)
                     # aligned part of the reference without gaps
-                    ref_used = ref_al.translate(None, "-").upper()
+                    ref_used = ref_al.translate(str.maketrans({"-" : None})).upper()
                     hap_name = newline[2]
                     # aligned part of the haplotype with gaps
                     hap_al = newline[3].upper()
                     if rf_ori == "reverse":
                         hap_al = reverse_complement(hap_al)
                     # aligned part of the haplotype without gaps
-                    hap_used = hap_al.translate(None, "-").upper()
+                    hap_used = hap_al.translate(str.maketrans({"-" : None})).upper()
                     # alignment (.for match, : and X mismatch, - gap)
                     diff = newline[4]
                     if rf_ori == "reverse":
