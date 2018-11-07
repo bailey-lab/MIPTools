@@ -11798,13 +11798,13 @@ def combine_info_files(wdir,
         ).to_dict(orient = "index")
         line_number = 0
         try:
-            dump = gzip.open(i_file).readline()
-            inf_file = gzip.open(i_file)
+            dump = gzip.open(i_file, "rb").readline()
+            inf_file = gzip.open(i_file, "rb")
         except IOError:
-            inf_file = open(i_file)
+            inf_file = open(i_file, "rb")
         with inf_file as infile:
             for line in infile:
-                newline = line.strip().split("\t")
+                newline = line.decode("utf-8").strip().split("\t")
                 line_number += 1
                 if line_number == 1:
                     col_indexes = [
