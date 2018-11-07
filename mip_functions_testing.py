@@ -3559,7 +3559,7 @@ def get_fasta (region, species="pf", offset=1, header="na"):
     if header != "na":
         fasta_seq = "\n".join(fasta.split("\n")[1:])
         fasta = ">" + header + "\n" + fasta_seq
-    return fasta.decode("utf-8")
+    return fasta
 def get_fasta_list(regions, species):
     """ Take a list of regions and return fasta sequences."""
     file_locations = get_file_locations()
