@@ -489,7 +489,7 @@ class Locus:
                         split_inf = inf.split("=")
                         sdict[split_inf[0]] = split_inf[1].split(",")
                     except IndexError:
-                        continue
+                        sdict[inf] = True
                 d = {"copy_chrom": schr,
                      "copy_begin": spos,
                      "snp_id": sID,
@@ -2577,39 +2577,43 @@ class Mip():
                         ext_ce = (
                             cs + extension_read_len
                             - extension_umi_len - extension_min_trim)
-                        ext_insertion_len = insertions.loc[
-                            (insertions["copy_chrom"] == cc)
-                            & (insertions["copy_begin"] > ext_cs)
-                            & (insertions["copy_end"] < ext_ce),
-                        "max_size"].sum()
                         lig_ce = ce
                         lig_cs = (
                             ce - ligation_read_len
                             + ligation_umi_len + ligation_min_trim)
-                        lig_insertion_len = insertions.loc[
-                            (insertions["copy_chrom"] == cc)
-                            & (insertions["copy_begin"] > lig_cs)
-                            & (insertions["copy_end"] < lig_ce),
-                        "max_size"].sum()
+                        if not insertions.empty:
+                            ext_insertion_len = insertions.loc[
+                                (insertions["copy_chrom"] == cc)
+                                & (insertions["copy_begin"] > ext_cs)
+                                & (insertions["copy_end"] < ext_ce),
+                            "max_size"].sum()
+                            lig_insertion_len = insertions.loc[
+                                (insertions["copy_chrom"] == cc)
+                                & (insertions["copy_begin"] > lig_cs)
+                                & (insertions["copy_end"] < lig_ce),
+                            "max_size"].sum()
+                        else:
+                            ext_insertion_len = lig_insertion_len = 0
                     else:
                         lig_cs = cs
                         lig_ce = (
                             cs + ligation_read_len
                             - ligation_umi_len - ligation_min_trim)
-                        lig_insertion_len = insertions.loc[
-                            (insertions["copy_chrom"] == cc)
-                            & (insertions["copy_begin"] > lig_cs)
-                            & (insertions["copy_end"] < lig_ce),
-                        "max_size"].sum()
                         ext_ce = ce
                         ext_cs = (
                             ce - extension_read_len
                             + extension_umi_len + extension_min_trim)
-                        ext_insertion_len = insertions.loc[
-                            (insertions["copy_chrom"] == cc)
-                            & (insertions["copy_begin"] > ext_cs)
-                            & (insertions["copy_end"] < ext_ce),
-                        "max_size"].sum()
+                        if not insertions.empty:
+                            lig_insertion_len = insertions.loc[
+                                (insertions["copy_chrom"] == cc)
+                                & (insertions["copy_begin"] > lig_cs)
+                                & (insertions["copy_end"] < lig_ce),
+                            "max_size"].sum()
+                            ext_insertion_len = insertions.loc[
+                                (insertions["copy_chrom"] == cc)
+                                & (insertions["copy_begin"] > ext_cs)
+                                & (insertions["copy_end"] < ext_ce),
+                            "max_size"].sum()
                     for t in targets[target_type][copy_id]:
                         tar = targets[target_type][copy_id][t]
                         tbeg = tar["copy_begin"]
