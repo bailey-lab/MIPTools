@@ -11226,7 +11226,7 @@ def process_results(wdir,
     # that holds which MIPs cover a given position for
     # coverage calculations
     cpos = variant_counts.groupby(["CHROM", "POS"]).first().reset_index()[["CHROM", "POS"]]
-    cpos = cpos.apply(lambda a: (a["CHROM"], a["POS"]), axis = 1).tolist()
+    cpos = cpos.apply(lambda a: (a["CHROM"], a["POS"]), axis = 1).values.tolist()
     position_to_mip = {}
     # go through found variants and add any MIP associated
     # with a given variant
