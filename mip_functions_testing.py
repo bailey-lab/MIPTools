@@ -12197,11 +12197,11 @@ def plot_performance(barcode_counts,
     Plot presence/absence plot for a mip run.
     """
     if xtick_freq is None:
-        xtick_freq = barcode_counts.shape[1]/30
+        xtick_freq = barcode_counts.shape[1]//30
         if xtick_freq == 0:
             xtick_freq = 1
     if ytick_freq is None:
-        ytick_freq = barcode_counts.shape[0]/30
+        ytick_freq = barcode_counts.shape[0]//30
         if ytick_freq == 0:
             ytick_freq = 1
     fig, ax = plt.subplots()
@@ -12266,11 +12266,11 @@ def plot_coverage(barcode_counts,
     Plot presence/absence plot for a mip run.
     """
     if xtick_freq is None:
-        xtick_freq = barcode_counts.shape[1]/30
+        xtick_freq = barcode_counts.shape[1]//30
         if xtick_freq == 0:
             xtick_freq = 1
     if ytick_freq is None:
-        ytick_freq = barcode_counts.shape[0]/30
+        ytick_freq = barcode_counts.shape[0]//30
         if ytick_freq == 0:
             ytick_freq = 1
     fig, ax = plt.subplots()
