@@ -11380,12 +11380,20 @@ def process_results(wdir,
     # calculate reference allele counts
     vcf_ref = vcf_co - vcf_non_ref
     # get variant qualities
-    vcf_quals = variant_counts.pivot_table(
-        index = "Sample ID",
-        columns = ["CHROM", "POS", "ID", "REF", "ALT"],
-        values = "Variation Quality",
-        aggfunc = "mean",
-    ).drop("Temp").fillna(".")
+    try:
+        vcf_quals = variant_counts.pivot_table(
+            index = "Sample ID",
+            columns = ["CHROM", "POS", "ID", "REF", "ALT"],
+            values = "Variation Quality",
+            aggfunc = "mean",
+        ).drop("Temp").fillna(".")
+    except KeyError:
+        vcf_quals = variant_counts.pivot_table(
+            index = "Sample ID",
+            columns = ["CHROM", "POS", "ID", "REF", "ALT"],
+            values = "Variation Quality",
+            aggfunc = "mean",
+        ).fillna(".")
     # calculate allele frequencies and
     # create genotype calls from frequencies
     # no filtering will be applied here so
