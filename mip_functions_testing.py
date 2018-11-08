@@ -11021,12 +11021,8 @@ def process_results(wdir,
         # assinged a False value for this.
         try:
             variation_df["Reference Resistant"].fillna(
-                False, inplace = True
+                "No", inplace = True
             )
-            variation_df["Reference Resistant"] = (
-                variation_df["Reference Resistant"].astype(str)
-            )
-
             ref_resistant = True
         except KeyError as e:
             ref_resistant = False
@@ -11462,7 +11458,7 @@ def process_results(wdir,
                                       inplace = True)
 
     if ref_resistant:
-        variant_counts["Reference Resistant"].fillna("False",
+        variant_counts["Reference Resistant"].fillna("No",
                                                 inplace = True)
         # create pivot table for each unique variant
         variant_table = variant_counts.pivot_table(
@@ -11473,12 +11469,17 @@ def process_results(wdir,
                        "Reference Resistant", "Targeted"],
             values = "Barcode Count",
             aggfunc = "sum"
-        ).drop("Temp") # drop the temporary sample place holder
+        )
+        # drop the temporary sample place holder, if any
+        try:
+            variant_table.drop("Temp", inplace = True)
+        except KeyError:
+            pass
         # drop the column with temporary place holders, if any
         try:
             variant_table = variant_table.drop(
                 ("Temp", "Temp", "Temp", "Temp", "Temp", "Temp",
-                 "Temp", "Temp", "Temp", "False", "False"), axis = 1)
+                 "Temp", "Temp", "Temp", "No", "No"), axis = 1)
         except KeyError as e:
             pass
         # if a sample did not have a variant, the table value
@@ -11587,7 +11588,7 @@ def process_results(wdir,
             print("Some loci have lower coverage than mutation calls!")
         # where reference is the variant of interest("Reference Resistant")
         # change mutant count to reference count
-        mutant_aa_table.loc[:, idx[:, :, "True", :]] = ref_aa_table.loc[:, idx[:, :, "True", :]]
+        mutant_aa_table.loc[:, idx[:, :, "Yes", :]] = ref_aa_table.loc[:, idx[:, :, "Yes", :]]
         mutant_aa_table.columns = mutant_aa_table.columns.droplevel("Reference Resistant")
         coverage_aa_table.columns = coverage_aa_table.columns.droplevel("Reference Resistant")
     else:
@@ -11604,7 +11605,7 @@ def process_results(wdir,
         try:
             variant_table = variant_table.drop(
                 ("Temp", "Temp", "Temp", "Temp", "Temp", "Temp",
-                 "Temp", "Temp", "Temp", "False"), axis = 1)
+                 "Temp", "Temp", "Temp", "No"), axis = 1)
         except KeyError as e:
             pass
         # if a sample did not have a variant, the table value
@@ -12551,8 +12552,8 @@ def genotype(settings,
     try:
         all_mutations["Reference Resistant"]
     except KeyError as e:
-        all_mutations["Reference Resistant"] = False
-    resistant_ref_mask = all_mutations["Reference Resistant"]
+        all_mutations["Reference Resistant"] = "No"
+    resistant_ref_mask = all_mutations["Reference Resistant"] == "Yes"
     resistant_ref_mask.fillna(False, inplace = True)
     all_mutations.loc[resistant_ref_mask, "Wildtype AA Count"] = (
         all_mutations.loc[resistant_ref_mask, "Non-reference AA Count"])
