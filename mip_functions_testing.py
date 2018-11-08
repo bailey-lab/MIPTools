@@ -11008,12 +11008,12 @@ def process_results(wdir,
                 "union": "outer",
                 "targets": "right",
                 "data": "left"}
-        targets["Targeted"] = "True"
+        targets["Targeted"] = "Yes"
         variation_df = variation_df.merge(
             targets,
             how = join_dict[target_join]
         )
-        variation_df["Targeted"].fillna("False",
+        variation_df["Targeted"].fillna("No",
                                    inplace = True)
         # If a reference genome locus is a mutation of interest
         # such as dhps-437, this information can be supplied
@@ -11042,7 +11042,7 @@ def process_results(wdir,
                              axis = 1,
                              inplace = True)
     else:
-        variation_df["Targeted"] = "False"
+        variation_df["Targeted"] = "No"
         ref_resistant = False
     # each variant needs to have a name. This should be provided in
     # the target file. For those variant that are not in the target
@@ -11137,7 +11137,7 @@ def process_results(wdir,
     var_counts = variant_counts.groupby("VKEY").agg(
         {"Sample ID": lambda a: len(set(a)),
         "Barcode Count": "sum",
-        "Targeted": np.any}
+        "Targeted": lambda a: "Yes" if "Yes" in set(a) else "No"}
     ).rename(
         columns = {"Sample ID": "Variant Samples",
                    "Barcode Count": "Variant Barcodes"}
@@ -11156,7 +11156,7 @@ def process_results(wdir,
                                  >= variant_min_barcode_filter)
                                &(var_counts["Variant Sample Fraction"]
                                  >= variant_min_sample_fraction_filter))
-                               | (var_counts["Targeted"])]
+                               | (var_counts["Targeted"] == "Yes")]
     print("There were {} total and {} unique variants, ".format(
         variant_counts.shape[0],
         len(variant_counts["VKEY"].unique())
@@ -11450,7 +11450,7 @@ def process_results(wdir,
                                       inplace = True)
     variant_counts["ExonicFunc"].fillna("Temp",
                                       inplace = True)
-    variant_counts["Targeted"].fillna("False",
+    variant_counts["Targeted"].fillna("No",
                                       inplace = True)
 
     if ref_resistant:
