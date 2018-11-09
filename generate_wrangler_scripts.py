@@ -1,4 +1,3 @@
-
 """
 This script generates scripts automating MIP  sequencing set up,
 data download from Basespace (if data is in basespace),
@@ -13,65 +12,66 @@ import pandas as pd
 import argparse
 
 # Read input arguments
-parser = argparse.ArgumentParser(description = """
-    Generate bash scripts to be used for processing
+parser = argparse.ArgumentParser(
+    description=""" Generate bash scripts to be used for processing
     after a MIP sequencing run.
     """)
-parser.add_argument("-e", "--experiment-id",
-                    help = "A Unique id given to each sequencing run by the user.",
-                   required = True)
+parser.add_argument(
+    "-e", "--experiment-id",
+    help=("A Unique id given to each sequencing run by the user."),
+    required=True
+)
 parser.add_argument("-p", "--platform",
-                   help = "Sequencing platform.",
-                   choices = ["nextseq", "miseq"],
-                   required = True)
+                    help="Sequencing platform.",
+                    choices=["nextseq", "miseq"],
+                    required=True)
 parser.add_argument("-n", "--nextseq-id",
-                   help = "A unique id given by nextseq machine.",
-                   default = "")
+                    help="A unique id given by nextseq machine.",
+                    default="")
 parser.add_argument("-c", "--cpu-count",
-                    type = int,
-                    help = "Number of available processors to use.",
-                    default = 1)
+                    type=int,
+                    help="Number of available processors to use.",
+                    default=1)
 parser.add_argument("-s", "--server-num",
-                   type = int,
-                   help = "Starting number for MIP server.",
-                   default = 1)
+                    type=int,
+                    help="Starting number for MIP server.",
+                    default=1)
 parser.add_argument("-x", "--access-token",
-                  help = "Basespace access token for user.",
-                  required = True)
+                    help="Basespace access token for user.",
+                    required=True)
 parser.add_argument("-d", "--raw-data-dir",
-                   help = ("Absolute path to base directory where sequencing "
-                   "files should be saved to."),
-                   default = "/opt/work")
+                    help=("Absolute path to base directory where sequencing "
+                          "files should be saved to."),
+                    default="/opt/work")
 parser.add_argument("--processed-data-dir",
-                   help = ("Absolute path to base directory where "
-                           "MIPWrangler output file should be copied to."),
-                   default = "/opt/work")
+                    help=("Absolute path to base directory where "
+                          "MIPWrangler output file should be copied to."),
+                    default="/opt/work")
 parser.add_argument("-a", "--analysis-data-dir",
-                   help = ("Absolute path to base directory for "
-                           "MIPWrangler working directory."),
-                   default = "/opt/work")
+                    help=("Absolute path to base directory for "
+                          "MIPWrangler working directory."),
+                    default="/opt/work")
 parser.add_argument("-w", "--cluster-script",
-                   help = "MIPWrangler script name. Absolute path if not in $PATH.",
-                   default = "/opt/resources/runMIPWranglerNoCutoffCurrent.sh")
+                    help=("MIPWrangler script name. Absolute path"
+                          "if not in $PATH."),
+                    default="/opt/resources/runMIPWranglerNoCutoffCurrent.sh")
 parser.add_argument("-r", "--resource-dir",
-                   help = ("Path to directory where resources such as "
-                    "barcode dictionary, probe sets, sample sheet templates"
-                    " etc. are."),
-                   default = "/opt/resources")
+                    help=("Path to directory where resources such as "
+                          "barcode dictionary, probe sets, sample sheet "
+                          "templates etc. are."),
+                    default="/opt/resources")
 parser.add_argument("-l", "--sample-list",
-                   help = ("File providing a list of samples with associated "
-                   "information."),
-                   required = True)
+                    help=("File providing a list of samples with associated "
+                          "information."),
+                    required=True)
 parser.add_argument("--new-mip-arms",
-                   help = ("File(s) containing mip-arm information when new "
-                   "mip arms are used."),
-                   nargs='*',
-                    default = [])
+                    help=("File(s) containing mip-arm information when new "
+                          "mip arms are used."),
+                    nargs='*',
+                    default=[])
 parser.add_argument("--new-mip-set",
-                   help = "Flag used when a new mip set is used.",
-                   action = "store_true")
-
-
+                    help="Flag used when a new mip set is used.",
+                    action="store_true")
 # parse arguments from command line
 args = vars(parser.parse_args())
 experiment_id = args["experiment_id"]
@@ -107,27 +107,31 @@ for d in [raw_mip_ids_dir, fastq_dir]:
 # Nextseq data needs to be downloaded from BaseSpace and converted to
 # fastq prior to demultiplexing.
 if platform == "nextseq":
-    download_commands = [["cd", raw_dir],
-     ["python /home/aydemiro/bin/BaseSpaceRunDownloader_v2.py -r",
-     nextseq_id, "-a", access_token]]
+    download_commands = [
+        ["cd", raw_dir],
+        ["python /home/aydemiro/bin/BaseSpaceRunDownloader_v2.py -r",
+            nextseq_id, "-a", access_token]
+        ]
     demux_commands = [
-    ["cd", os.path.join(raw_dir, nextseq_id)],
-    ["ulimit -n 9999"],
-    ["nohup bcl2fastq -o ../fastq --sample-sheet ../mip_ids/SampleSheet.csv --no-lane-splitting"],
-]
+        ["cd", os.path.join(raw_dir, nextseq_id)],
+        ["ulimit -n 9999"],
+        [("nohup bcl2fastq -o ../fastq --sample-sheet "
+          "../mip_ids/SampleSheet.csv --no-lane-splitting")]
+    ]
 # MiSeq run data is received as fastq or bcl (preferred), no download necessary
 # When bcl is received, fastq conversion and demultiplexing is required.
 else:
     download_commands = []
     demux_commands = [
-        ["cd", os.path.join(raw_dir, "run_folder"]),
+        ["cd", os.path.join(raw_dir, "run_folder")],
         ["ulimit -n 9999"],
-        ["nohup bcl2fastq -o ../fastq --sample-sheet ../mip_ids/SampleSheet.csv --no-lane-splitting"],
+        [("nohup bcl2fastq -o ../fastq --sample-sheet"
+            " ../mip_ids/SampleSheet.csv --no-lane-splitting")],
     ]
 # First part of the MIPWrangler process is to extract the sequences and
 # stitch forward and reverse reads. This is done with runGzExtractStitch
 stitch_base = "nohup MIPWrangler runGzExtractStitch"
-#stitch_base = "nohup MIPWrangler mipSetupAndExtractByArm"
+# stitch_base = "nohup MIPWrangler mipSetupAndExtractByArm"
 stitch_commands = {}
 wrangler_commands = {}
 # Load the barcode dictionary which contains sequences of sample barcodes
@@ -154,18 +158,20 @@ with open(sample_list_file) as infile:
             reverse_index = sample_dict["rev"]
             sample_id = "-".join([sample_name, sample_set, replicate_number])
             if sample_id in sample_info:
-                print ("Repeating sample name ", sample_id)
+                print("Repeating sample name ", sample_id)
             if not sample_id.replace("-", "").isalnum():
-                print (("Sample IDs can only contain "
+                print(("Sample IDs can only contain "
                        "alphanumeric characters and '-'. "
                        "{} has invalid characters.").format(sample_id))
                 continue
             if platform == "nextseq":
-                sample_dict.update({"i7": barcode_dic[reverse_index]["index_sequence"],
-                         "i5": barcode_dic[forward_index]["index_sequence"]})
+                sample_dict.update(
+                    {"i7": barcode_dic[reverse_index]["index_sequence"],
+                     "i5": barcode_dic[forward_index]["index_sequence"]})
             elif platform == "miseq":
-                sample_dict.update({"i7": barcode_dic[reverse_index]["index_sequence"],
-                         "i5": barcode_dic[forward_index]["sequence"]})
+                sample_dict.update(
+                    {"i7": barcode_dic[reverse_index]["index_sequence"],
+                     "i5": barcode_dic[forward_index]["sequence"]})
             sample_dict["sample_index"] = linenum
             linenum += 1
             sample_info[sample_id] = sample_dict
@@ -180,17 +186,20 @@ for s1 in sample_info:
     for s2 in sample_info:
         if s1 != s2:
             if ((sample_info[s1]["fw"] == sample_info[s2]["fw"])
-            and (sample_info[s1]["rev"] == sample_info[s2]["rev"])):
+                    and (sample_info[s1]["rev"] == sample_info[s2]["rev"])):
                 samples_sharing.append([s1, s2])
-            elif warnings and ((sample_info[s1]["fw"] == sample_info[s2]["fw"])                               or (sample_info[s1]["rev"] == sample_info[s2]["rev"])):
-                print ("Samples %s and %s share a barcode" % (s1,s2))
+            elif warnings and (
+                (sample_info[s1]["fw"] == sample_info[s2]["fw"])
+                    or (sample_info[s1]["rev"] == sample_info[s2]["rev"])
+            ):
+                print("Samples %s and %s share a barcode" % (s1, s2))
 samples_sharing_set = []
 if len(samples_sharing) > 0:
     for s in samples_sharing:
         samples_sharing_set.extend(s)
     samples_sharing_set = set(samples_sharing_set)
-    print ("There are %d samples sharing the same barcode pair"
-    %len(samples_sharing_set))
+    print("There are %d samples sharing the same barcode pair"
+          % len(samples_sharing_set))
     mip.write_list(
         samples_sharing,
         os.path.join(analysis_data_dir, "samples_sharing_barcodes.tsv")
@@ -205,11 +214,11 @@ with open(sample_sheet_template) as infile, open(sample_sheet, "w") as outfile:
         reverse_index = sample_info[sample_id]["rev"]
         forward_index = sample_info[sample_id]["fw"]
         sample_index = str(sample_info[sample_id]["sample_index"])
-        outlist = [sample_index, sample_id, "","",
+        outlist = [sample_index, sample_id, "", "",
                    "S" + reverse_index,
                    sample_info[sample_id]["i7"],
                    "N" + forward_index,
-                   sample_info[sample_id]["i5"], "",""]
+                   sample_info[sample_id]["i5"], "", ""]
         outfile_list.append(",".join(outlist))
     outfile.write("\n".join(outfile_list))
 with open(os.path.join(raw_mip_ids_dir, "samples.dic"), "w") as outfile:
@@ -226,8 +235,8 @@ for s in sample_info:
         sample_sets[s_set]["sample_names"].append(s)
     except KeyError:
         sample_sets[s_set] = {"sample_names": [s],
-                             "probe_sets": [],
-                             "probe_set_strings": []}
+                              "probe_sets": [],
+                              "probe_set_strings": []}
     for k in sam:
         if k.startswith("probe_set"):
             sample_sets[s_set]["probe_set_strings"].extend(sam[k].split(";"))
@@ -236,25 +245,25 @@ for s_set in sample_sets:
         set(sample_sets[s_set]["probe_set_strings"]))
     for pss in sample_sets[s_set]["probe_set_strings"]:
         sample_sets[s_set]["probe_sets"].append(pss.split(","))
-# If a list of mip arms is not available in mip_ids resource directory it Should
-# be generated as below. The specified mip arms file must be provided.
+# If a list of mip arms is not available in mip_ids resource directory it
+# should be generated as below. The specified mip arms file must be provided.
 if len(new_mip_arms) > 0:
     for mip_arm_file in new_mip_arms:
         mip_arms = pd.read_table(
             resource_dir + mip_arm_file
         ).set_index("mip_id",
-                   drop = False).to_dict(orient = "index")
+                    drop=False).to_dict(orient="index")
         mip_arm_list = mip_arms.values()
         with open(resource_dir + mip_arm_file + "_list", "w") as outfile:
-            json.dump(mip_arm_list, outfile, indent = 1)
+            json.dump(mip_arm_list, outfile, indent=1)
 
 
 # If a new mip set is used, update the mipsets.csv file and run the following
-probe_set_file = os.path.join(resource_dir, "probe_sets.json"
+probe_set_file = os.path.join(resource_dir, "probe_sets.json")
 if new_mip_set:
     mip.update_probe_sets(
-        mipset_table = os.path.join(resource_dir, "mipsets.csv"),
-        mipset_json = probe_set_file
+        mipset_table=os.path.join(resource_dir, "mipsets.csv"),
+        mipset_json=probe_set_file
     )
 with open(probe_set_file) as infile:
     all_probes = json.load(infile)
@@ -280,7 +289,8 @@ for s_set in sample_sets:
                     mip_arms_list.append(m)
         mip_family_names = []
         for m in mip_arms_list:
-            if m["mip_family"] not in mip_family_names and  m["mip_family"] in probes:
+            if (m["mip_family"] not in mip_family_names
+                    and m["mip_family"] in probes):
                 mip_family_names.append(m["mip_family"])
         subset_name = s_set + "_" + "_".join(pset_names)
         # Create MIPWrangler Input files
@@ -288,42 +298,44 @@ for s_set in sample_sets:
             os.path.join(
                 raw_mip_ids_dir,
                 subset_name + "_allMipsSamplesNames.tab.txt"
-                ), "w"
-            ) as outfile:
+            ), "w"
+        ) as outfile:
             outfile_list = ["\t".join(["mips", "samples"])]
-            mips_samples = izip_longest(mip_family_names, sample_subset, fillvalue="")
+            mips_samples = izip_longest(
+                mip_family_names, sample_subset, fillvalue=""
+            )
             for ms in mips_samples:
                 outfile_list.append("\t".join(ms))
             outfile.write("\n".join(outfile_list))
             pd.DataFrame(mip_arms_list).groupby(
                 "mip_id").first().reset_index().dropna(
-                    how = "all", axis = 1
+                    how="all", axis=1
                     ).to_csv(
                         os.path.join(
                             raw_mip_ids_dir,
                             subset_name + "_mipArms.txt"
-                        ), sep = "\t",
-                        index = False
+                        ), sep="\t",
+                        index=False
                     )
         # Create MIPWrangler part I script commands
         stitch_commands[subset_name] = [
+            ["mkdir -p", os.path.join(analysis_dir, subset_name)],
+            ["cd", os.path.join(analysis_dir,  subset_name)],
             [
-                "mkdir -p", os.path.join(analysis_dir, subset_name)
-            ],
-            [
-                "cd", os.path.join(analysis_dir,  subset_name)
-            ],
-            [
-            stitch_base, "--mipArmsFilename",
-            os.path.join(raw_mip_ids_dir, subset_name + "_mipArms.txt"),
-            "--mipSampleFile",
-            os.path.join(raw_mip_ids_dir, subset_name + "_allMipsSamplesNames.tab.txt"),
-             "--numThreads",
-            str(cpu_count),
-             "--masterDir analysis",
-             "--dir",
-            fastq_dir,
-        ]]
+                stitch_base, "--mipArmsFilename",
+                os.path.join(raw_mip_ids_dir, subset_name + "_mipArms.txt"),
+                "--mipSampleFile",
+                os.path.join(
+                    raw_mip_ids_dir,
+                    subset_name + "_allMipsSamplesNames.tab.txt"
+                ),
+                "--numThreads",
+                str(cpu_count),
+                "--masterDir analysis",
+                "--dir",
+                fastq_dir,
+            ]
+        ]
         # Create MIPWrangler part II script commands
         wrangler_commands[subset_name] = [
             ["cd",
@@ -336,13 +348,12 @@ for s_set in sample_sets:
                 analysis_dir,  subset_name +
                 "/analysis/populationClustering/allInfo.tab.txt"
             ), os.path.join(processed_data_dir,
-                experiment_id + "_" + subset_name + ".txt"
-                )
+                            experiment_id + "_" + subset_name + ".txt")
             ]
         ]
         server_num += 1
         if subset_name in subset_names:
-            print ("%s is already in subset_names!" %subset_name)
+            print("%s is already in subset_names!" % subset_name)
         subset_names.append(subset_name)
 # Save all scripts to files.
 all_commands = download_commands + demux_commands
