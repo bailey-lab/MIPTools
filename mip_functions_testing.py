@@ -11141,7 +11141,6 @@ def process_results(wdir,
     var_counts["Variant Sample Fraction"] = var_counts[
         "Variant Samples"
     ].transform(lambda a: a/num_samples)
-    print (var_counts.head())
     # filter variants for specified criteria
     variant_min_barcode_filter = int(settings["minVariantBarcodes"])
     variant_min_sample_filter = int(settings["minVariantSamples"])
