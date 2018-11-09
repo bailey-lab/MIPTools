@@ -110,7 +110,7 @@ for d in [raw_mip_ids_dir, fastq_dir]:
 if platform == "nextseq":
     download_commands = [
         ["cd", raw_dir],
-        ["python /home/aydemiro/bin/BaseSpaceRunDownloader_v2.py -r",
+        ["python /usr/bin/BaseSpaceRunDownloader_v2.py -r",
             nextseq_id, "-a", access_token]
         ]
     demux_commands = [
