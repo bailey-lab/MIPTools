@@ -1,8 +1,3 @@
-"""
-This script generates scripts automating MIP  sequencing set up,
-data download from Basespace (if data is in basespace),
-convert bcl files to fastq and demultiplex, run MIPWrangler program.
-"""
 import mip_functions_testing as mip
 import json
 import pickle
