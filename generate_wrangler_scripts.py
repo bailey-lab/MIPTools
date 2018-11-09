@@ -90,7 +90,7 @@ new_mip_set = args["new_mip_set"]
 new_mip_arms = args["new_mip_arms"]
 experiment_name = experiment_id + "_" + platform
 raw_dir = os.path.join(raw_data_dir, experiment_name)
-    sample_sheet_template = os.path.join(
+sample_sheet_template = os.path.join(
     resource_dir,
     "templates",
     platform + "_sample_sheet_template.csv"
