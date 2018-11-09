@@ -99,7 +99,8 @@ raw_mip_ids_dir = os.path.join(raw_dir, "mip_ids")
 sample_sheet = os.path.join(raw_mip_ids_dir, "SampleSheet.csv")
 fastq_dir = os.path.join(raw_dir, "fastq")
 analysis_dir = os.path.join(analysis_data_dir, experiment_name)
-barcode_dict_file = os.path.join(resource_dir, "barcode_dic")
+barcode_dict_file = os.path.join(
+    resource_dir, "jsons", "barcode_dict.json")
 # create dirs if they do not exist
 for d in [raw_mip_ids_dir, fastq_dir]:
     if not os.path.exists(d):
@@ -135,7 +136,7 @@ stitch_base = "nohup MIPWrangler runGzExtractStitch"
 stitch_commands = {}
 wrangler_commands = {}
 # Load the barcode dictionary which contains sequences of sample barcodes
-with open(barcode_dict_file) as in1:
+with open(barcode_dict_file, "b") as in1:
     barcode_dic = pickle.load(in1)
 # read in sample information
 sample_names = []
