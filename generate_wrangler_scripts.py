@@ -7,7 +7,7 @@ import mip_functions_testing as mip
 import json
 import pickle
 import os
-from itertools import izip_longest
+from itertools import zip_longest
 import pandas as pd
 import argparse
 
@@ -301,7 +301,7 @@ for s_set in sample_sets:
             ), "w"
         ) as outfile:
             outfile_list = ["\t".join(["mips", "samples"])]
-            mips_samples = izip_longest(
+            mips_samples = zip_longest(
                 mip_family_names, sample_subset, fillvalue=""
             )
             for ms in mips_samples:
