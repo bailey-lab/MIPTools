@@ -100,7 +100,7 @@ sample_sheet = os.path.join(raw_mip_ids_dir, "SampleSheet.csv")
 fastq_dir = os.path.join(raw_dir, "fastq")
 analysis_dir = os.path.join(analysis_data_dir, experiment_name)
 barcode_dict_file = os.path.join(
-    resource_dir, "jsons", "barcode_dict.json")
+    resource_dir, "mip_ids", "barcode_dict.json")
 # create dirs if they do not exist
 for d in [raw_mip_ids_dir, fastq_dir]:
     if not os.path.exists(d):
@@ -251,19 +251,25 @@ for s_set in sample_sets:
 if len(new_mip_arms) > 0:
     for mip_arm_file in new_mip_arms:
         mip_arms = pd.read_table(
-            resource_dir + mip_arm_file
+            os.path.join(
+                resource_dir, "mip_ids", mip_arm_file
+            )
         ).set_index("mip_id",
                     drop=False).to_dict(orient="index")
         mip_arm_list = mip_arms.values()
-        with open(resource_dir + mip_arm_file + "_list", "w") as outfile:
+        with open(os.path.join(
+            resource_dir, "mip_ids", mip_arm_file + "_list"
+        ), "w") as outfile:
             json.dump(mip_arm_list, outfile, indent=1)
 
 
 # If a new mip set is used, update the mipsets.csv file and run the following
-probe_set_file = os.path.join(resource_dir, "probe_sets.json")
+probe_set_file = os.path.join(resource_dir,
+                              "mip_ids",
+                              "probe_sets.json")
 if new_mip_set:
     mip.update_probe_sets(
-        mipset_table=os.path.join(resource_dir, "mipsets.csv"),
+        mipset_table=os.path.join(resource_dir, "mip_ids", "mipsets.csv"),
         mipset_json=probe_set_file
     )
 with open(probe_set_file) as infile:
@@ -280,7 +286,9 @@ for s_set in sample_sets:
         probes = []
         mip_arms_list = []
         for p_name in pset_names:
-            arm_file = os.path.join(resource_dir, all_probes[p_name][0])
+            arm_file = os.path.join(resource_dir,
+                                    "mip_ids",
+                                    all_probes[p_name][0])
             probes_included = all_probes[p_name][1:]
             probes.extend(probes_included)
             with open(arm_file) as infile:
