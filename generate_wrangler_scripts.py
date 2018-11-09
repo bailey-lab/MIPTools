@@ -136,7 +136,7 @@ stitch_base = "nohup MIPWrangler runGzExtractStitch"
 stitch_commands = {}
 wrangler_commands = {}
 # Load the barcode dictionary which contains sequences of sample barcodes
-with open(barcode_dict_file, "b") as in1:
+with open(barcode_dict_file, "rb") as in1:
     barcode_dic = pickle.load(in1)
 # read in sample information
 sample_names = []
