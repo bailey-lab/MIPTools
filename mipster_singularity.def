@@ -67,6 +67,11 @@ From: amd64/ubuntu:18.04
     git clone https://github.com/bailey-lab/lastz.git
     cd lastz/src && make lastz_32 && install lastz_32 /usr/bin/
 
+    # copy programs and executables from the resources directory on host
+    # working directory
+    scp -r resources/programs/* /opt/
+    scp -r resources/bin/* /usr/bin
+
     # install bcl2fastq
     cd /opt
     dpkg -i bcl2fastq2_0v2.20.0.422-2_amd64.deb
@@ -81,12 +86,6 @@ From: amd64/ubuntu:18.04
 
     # create work and resources directories in /opt
     mkdir /opt/resources /opt/work
-
-%files
-    # copy programs and executables from the resources directory on host
-    # working directory
-    resources/programs/* /opt/
-    resources/bin/* /usr/bin
 
 %environment
     PATH=/opt/conda/bin:$PATH'
