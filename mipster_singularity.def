@@ -79,6 +79,9 @@ From: amd64/ubuntu:18.04
     ln -sf /opt/unafold-3.6/scripts/* /usr/bin
     ln -sf /opt/annovar-20180416/*.pl /usr/bin
 
+    # create work and resources directories in /opt
+    mkdir /opt/resources /opt/work
+
 %files
     # copy programs and executables from the resources directory on host
     # working directory
