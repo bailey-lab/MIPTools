@@ -72,7 +72,7 @@ From: amd64/ubuntu:18.04
     scp /opt/bin/* /usr/bin
 
     # install bcl2fastq
-    cd /opt
+    cd /opt/programs
     dpkg -i bcl2fastq2_0v2.20.0.422-2_amd64.deb
 
     # create symlinks to executables in /usr/bin so everything will be in
@@ -88,7 +88,7 @@ From: amd64/ubuntu:18.04
 
 %files
     resources/programs /opt/
-    resources/bin /opt 
+    resources/bin /opt
 
 %environment
     PATH=/opt/conda/bin:$PATH'
