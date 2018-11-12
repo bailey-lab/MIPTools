@@ -88,6 +88,7 @@ raw_dir = os.path.join(raw_data_dir, experiment_name)
 sample_sheet_template = os.path.join(
     resource_dir,
     "templates",
+    "sample_sheet_templates",
     platform + "_sample_sheet_template.csv"
 )
 raw_mip_ids_dir = os.path.join(raw_dir, "mip_ids")
