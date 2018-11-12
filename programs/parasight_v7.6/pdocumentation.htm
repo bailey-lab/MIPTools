@@ -1,0 +1,1521 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>c:/perl/bin/parasight74.pl</title>
+<link rev="made" href="mailto:" />
+</head>
+
+<body style="background-color: white">
+
+<p><a name="__index__"></a></p>
+<!-- INDEX BEGIN -->
+
+<ul>
+
+	<li><a href="#name">NAME</a></li>
+	<li><a href="#synopsis">SYNOPSIS</a></li>
+	<li><a href="#description">DESCRIPTION</a></li>
+	<li><a href="#understanding_data_categorization/classification">UNDERSTANDING DATA CATEGORIZATION/CLASSIFICATION</a></li>
+	<li><a href="#command_line_options">COMMAND LINE OPTIONS</a></li>
+	<ul>
+
+		<li><a href="#data_input">DATA INPUT</a></li>
+		<ul>
+
+			<li><a href="#option:_align">Option: -align</a></li>
+			<ul>
+
+				<li><a href="#miropeats_standard_output">Miropeats standard output</a></li>
+				<li><a href="#example_tabdelimited_alignment_file">Example tab-delimited alignment file</a></li>
+			</ul>
+
+			<li><a href="#option:_showseq">Option: -showseq</a></li>
+			<ul>
+
+				<li><a href="#example_showseq_file">Example showseq file</a></li>
+				<li><a href="#example_of_an_tabdelimited_extra_file">Example of an tab-delimited extra file</a></li>
+			</ul>
+
+			<li><a href="#option:_graph1_or_graph2">Option: -graph1 or -graph2</a></li>
+			<ul>
+
+				<li><a href="#example_of_a_graph_file">Example of a graph file</a></li>
+			</ul>
+
+		</ul>
+
+		<li><a href="#reloading_a_saved_parasight_view">RELOADING A SAVED PARASIGHT VIEW</a></li>
+		<ul>
+
+			<li><a href="#option:_in">Option: -in</a></li>
+		</ul>
+
+		<li><a href="#changing_display_options">CHANGING DISPLAY OPTIONS</a></li>
+		<ul>
+
+			<li><a href="#option:_template">Option: -template</a></li>
+			<li><a href="#option:_options">Option: -options</a></li>
+			<li><a href="#option:_showsub">Option: -showsub</a></li>
+			<li><a href="#option:_arrangeseq">Option: -arrangeseq</a></li>
+			<ul>
+
+				<li><a href="#example_arrange_file">Example Arrange File</a></li>
+			</ul>
+
+		</ul>
+
+	</ul>
+
+	<li><a href="#interactive_menus">INTERACTIVE MENUS</a></li>
+	<ul>
+
+		<li><a href="#reshow,_rearrange,_redraw">RESHOW, REARRANGE, REDRAW</a></li>
+		<li><a href="#option_menu">OPTION MENU</a></li>
+		<li><a href="#file_dropdown_menu">FILE DROP-DOWN MENU</a></li>
+		<li><a href="#print_dropdown_menu">PRINT DROP-DOWN MENU</a></li>
+		<li><a href="#order_dropdown_menu">ORDER DROP-DOWN MENU</a></li>
+		<li><a href="#misc_dropdown_menu">MISC DROP-DOWN MENU</a></li>
+	</ul>
+
+	<li><a href="#screen_manipulation">SCREEN MANIPULATION</a></li>
+	<ul>
+
+		<li><a href="#mouse_button_functions">MOUSE BUTTON FUNCTIONS</a></li>
+	</ul>
+
+	<li><a href="#appendix_a:_list_of_valid_options_with_internal_defaults">APPENDIX A: LIST OF VALID OPTIONS WITH INTERNAL DEFAULTS</a></li>
+	<li><a href="#appendix_b:_quick_reference">APPENDIX B: QUICK REFERENCE</a></li>
+	<ul>
+
+		<li><a href="#command_line_summary">COMMAND LINE SUMMARY</a></li>
+		<li><a href="#option_precedence">OPTION PRECEDENCE</a></li>
+		<li><a href="#mouse_functions">MOUSE FUNCTIONS</a></li>
+		<li><a href="#compact_alphabetical_list_of_options_with_defaults">COMPACT ALPHABETICAL LIST OF -OPTIONS WITH DEFAULTS</a></li>
+	</ul>
+
+	<li><a href="#appendix_c:_installation_(windows_or_unix)">APPENDIX C: INSTALLATION (WINDOWS OR UNIX)</a></li>
+	<li><a href="#appendix_d:_precode_hints">APPENDIX D: PRECODE HINTS</a></li>
+	<li><a href="#appendix_e:_additional_examples">APPENDIX E: ADDITIONAL EXAMPLES</a></li>
+	<li><a href="#author">AUTHOR</a></li>
+	<li><a href="#acknowledgements">ACKNOWLEDGEMENTS</a></li>
+	<li><a href="#copyright">COPYRIGHT</a></li>
+	<li><a href="#disclaimer">DISCLAIMER</a></li>
+</ul>
+<!-- INDEX END -->
+
+<hr />
+<p>
+</p>
+<hr />
+<h1><a name="name">NAME</a></h1>
+<p><strong>parasight</strong> (version 7.4)</p>
+<p>
+</p>
+<hr />
+<h1><a name="synopsis">SYNOPSIS</a></h1>
+<pre>
+ parasight -align alignment.table</pre>
+<p>This simply loads the file <em>alignment.table</em> containing either a table of tab-delimited alignments or miropeats standard output (see below).</p>
+<pre>
+ parasight -align AC002038.blast.parse -showseqqueryonly</pre>
+<p>This simply loads the file <em>AC002038.blast.parse</em> containing parse blastdata and displays the hits relative to the query sequence.  This is the number one use in our lab for parasight.</p>
+<pre>
+ parasight -align AC002038.blast.parse -showseq AC002038.1: 
+     -extra repeats -template bacblastview.pst 
+     -options 'seq_color=&gt;red, canvas_width=&gt;1000'</pre>
+<p>This draws the blast output from a search with AC002038.1 formatted with the options contained in the template file <em>bacblastview.pst</em>.  It uses <strong>-options</strong> to modify the screen width and sequence color.</p>
+<pre>
+ parasight -in saved.parasight -showseq AC002304:AC002035: 
+     -arrangeseq sameline -template template.file 
+     -options 'seq_color=&gt;red,extra_arrow_on=&gt;1'</pre>
+<p>This loads a previously saved parasight view (the files <em>saved.parsight.psa</em>, <em>saved.parasight.pse</em> and <em>saved.parasight.pso</em>, shows only 2 of the sequences (AC002034 and AC002035), arranges or places these two sequences on the same line, loads a template file of options to reformat the view, and modifies two options directly (sequence color and turns on arrows for annotation extra).</p>
+<p>
+</p>
+<hr />
+<h1><a name="description">DESCRIPTION</a></h1>
+<p>Parasight is a generalized pairwise alignment viewer originally developed for analyzing segmental duplications (or paralogy) within the human genome. It is designed to display the positions and relationships of pairwise alignments within sequeunce(s).  It provides both interactive analysis as well as publication quality postscript output.  Parasight can arrange and color alignments on the basis of any other included data such as size, percent similarity or even species designation. It can also display the position of any type of simple sequence annotation such as repeats and exons. Finally, it can graph numerical data in relation to the seqeunce such as windows of percentage GC content.  Parasight has been used to analyze output from programs such as <strong>BLAST</strong>, <strong>miropeats</strong>, and <strong>pip maker</strong> from the scale of whole-genomes to (such as segmental duplications in the human genome) to the analysis of a single protein searched against a database of interest.  If it is pairwise data, parasight can display the output.</p>
+<p>Parasight functions on both Unix and Windows platforms. The program is written in Perl using the graphical Perl/Tk module. It was designed to be extremely flexible and thus a price is paid in terms of speed as well as the complexity, i.e. the large number of options). However, the numerous options makes it more likely that parasight can do what you want it to do.  Although not necessary for basic interactive use, an understanding of regular expressions and a familiarity Perl is helpful in order to utilize the program more fully.  Parasight and its options are fully accessible through the GUI interface, the command line, or via loadable templates making anlyses flexible and automatable. Most users of parasight load their data into the program and then format the view interactively using the extensive options menu (and now templates).  Programmers will be the most likely to use command line manipulation of internal options. Parasight has been used and tested extensively on both Linux and MS Windows.  The Unix version is the most extensively tested and all options should be available.  Windows lacks some of the more advanced options due to incompatiblities/inflexabilities of Bill Gates' operating system.</p>
+<p>To extol parasight's strengths:</p>
+<ol>
+<li><strong><a name="item_flexible">Flexible</a></strong><br />
+</li>
+The RAM is the limit when it comes to loading data.  Other than the most basic description of a pairwise alignment or extra sequence feature Parasight makes absolutely no assumptions about your data allowing the user to analyze what they are interested in analyzing. Technically parasight can't tell a bp apart from an inch or DNA from Protein.
+<p></p>
+<li><strong><a name="item_formatible">Formatible</a></strong><br />
+</li>
+Parasight has a pletora of options, if I have ever needed it parasight has it.  Every parasight option is available is availble from the command line, the GUI interface or from a saved template file of options.  Thus, the basic user and the programmer can completely tailor their parasight views to their exact needs.
+<p></p>
+<li><strong><a name="item_interactive">Interactive</a></strong><br />
+</li>
+Parasight can interact with the user and with other programs. The user can interaction format the parasight image via the  GUI option menu as well as edit the data. Parasight allows the user to print screen shots or dump a postscript of the entire image.  Popup windows over alignments and extra sequence features display the objects data.  In addition to scaling with the options menu, users can zoom in and out to gain an appreciation of the detail. Parasight has the ability to link to (or execute) other programs allowing the viewing of web pages or associated sequence alignments at the bp level.
+<p></p>
+<li><strong><a name="item_programmable">Programmable</a></strong><br />
+</li>
+Parasight has the ability to accept additional Perl code from the command line or via a file, which allows for more complex formatting or for the execution of commands such as searching or printing.  Combined with the -die option this allows for powerful batch processes such as generating PostScript images of 30,000 BACs (if you are so inclined).
+<p></p></ol>
+<p>
+</p>
+<hr />
+<h1><a name="understanding_data_categorization/classification">UNDERSTANDING DATA CATEGORIZATION/CLASSIFICATION</a></h1>
+<p>A basic understanding of the logic behind parasight is useful in understanding data input and manipulation.  Data falls into three categories, pairwise alignments, extra sequence annotation and graph data. The graphical option menu is organized on the basis of which data is being manipulated. Alignments, the core of parasight, have two forms of display: pairs and subs.  Pairs are representations of the pairwise alignments that are normally drawn atop the seqeunce.  For each alignment the pairs representing it can be connected by lines to show their relationship.  Thus, for pairs relationships are only visable if the both sequences containing the pairwise are drawn.  Subs are representations of pairwise in relation to only one of the sequences mimicing blast type output.  Sub is for sub-sequence (as they are drawn below the seqeunce) or subjects (if you are examining BLAST results). Extras are simple sequence annotations that have one beginning and one end such as introns, LINEs, SINES, motifs, etc.  In the case of a gene the intron exon structure can not be drawn as one object, but only as individual exons and indvidual introns. (A -gene data structure is planned for the distant future.)  The last data type is graph data Graph data is a plot of sequence positions (x-axis) versus a numerical value (y-axis).</p>
+<p>Below is a crude schematic (the best I could do in POD) of a typical display with Sequence(-), Pairs(P), Subs(S), Extras(E), and <code>Graph(G)</code> data.</p>
+<pre>
+                                                                 G
+                   G                   G         G                   G 
+          G               G     G                               G           
+               G                                          G                 
+               
+           EEE   EEEE          EEEE         EEEE      EEE     EEEEEEE
+    S0001--------PPPPPPPPPPPPP-----------PPPPPPPPPPPPPP--PPPPPPPP-----
+    SEQ04        SSSSSSSSSSSSS                           SSSSSSSS
+    SEQ02        SSSSSS   SSSS           SSSSSSSSS
+    SEQ03           SSSSSSSSSSS              SSSSSSSSSSS  SSSSS</pre>
+<p>
+</p>
+<hr />
+<h1><a name="command_line_options">COMMAND LINE OPTIONS</a></h1>
+<p>The main command line arguments available when parsight is executed can be divided into three main headings:  <a href="#data_input">data input</a>, <a href="#reloading_a_saved_parasight_view">reloading a saved parasight view</a>, and <a href="#changing_display_options">changing view options</a>.</p>
+<p>
+</p>
+<h2><a name="data_input">DATA INPUT</a></h2>
+<p>While many types of data can be loaded and displayed, the absolute minimum input is simply the length of a sequence to be drawn.  The length of a sequence can be provided in <strong>-showseq</strong> file (see below).  Usually the lengths are supplied as part of the pairwise alignment file.  If no alignments are being drawn then the user must supply the lengths with the <strong>-showseq</strong> option.  Of course examining a line representing a sequence is pretty boring--even if it is decorated with tick marks--so parasight has a few other data input options:</p>
+<p>
+</p>
+<h3><a name="option:_align">Option: -align</a></h3>
+<p><strong>-align [<em>filepath1:filepath2:filepath3:etc</em>]</strong> loads  files containing pairwise alignments.  The files must be either the saved standard output for <strong>miropeats</strong> (Jeremy Parsons) or a tab-delimited format akin to miropeats standard output. The tab-delimited format is simply a file where the first 8 columns contain the pairwise coordinates and lengths of the two similar sequences. The align file is assumed to have a descriptive header in the first row.  Hence, the first alignment will be lost (and loaded as the header) if no header actually is present.</p>
+<p>
+</p>
+<h4><a name="miropeats_standard_output">Miropeats standard output</a></h4>
+<p>An example of Jeremy Parson's Miropeats standard output is:</p>
+<pre>
+ ## Minimum repeat length set to 300.
+ 
+ 
+         ICAass  Version 2.1
+         =======
+ 
+ 
+ Indexing all the sequences now. This may take a few minutes.
+ 
+ Total of 1 sequences indexed
+ The sorted index is being saved to the file cluster.index.7507 
+ .AC002038 118 731 161973 AC002038 44681 44068 161973
+ AC002038 1299 1788 161973 AC002038 47175 47664 161973
+ AC002038 22870 23591 161973 AC002038 39920 40641 161973
+ AC002038 46067 46524 161973 AC002038 26363 26820 161973
+ AC002038 46067 47435 161973 AC002038 26363 27731 161973
+ AC002038 46699 47435 161973 AC002038 26995 27731 161973
+ AC002038 47175 47664 161973 AC002038 1299 1788 161973
+ Graphic ready for printing - type the command shown below to print:
+ lp threshold300</pre>
+<p>
+</p>
+<h4><a name="example_tabdelimited_alignment_file">Example tab-delimited alignment file</a></h4>
+<p>An example of a tab-delimited align file consisting of parsed BLAST output with additional data columns is shown below:</p>
+<pre>
+ name1 begin1 end1  len1  name2 begin2 end2  len2  similarity  transversions
+ S001  1322   20001 20001 S002  1      18064 18064 0.945632    125
+ S001  1322   20001 20001 S003  1      21010 21010 0.980581    143
+ S002  1      18064 18064 S003  100    21010 21010 0.999587    7
+ S002  1      18064 18064 S004  1      19041 19041 0.989587    43
+ S002  1      12191 18064 S005  1      12141 18073 0.997548    17
+ S002  12799  18064 18064 S005  12809  18073 18073 0.998548    3</pre>
+<p>The format consists of 2 sequence names, the coordinates of the pairwise similarity, and the overall lengths of the named sequences (<code>name1 begin1 end1 len1 name2 begin2 end2 len2</code>), which must always be in this given order.  The first row of the alignment file contains column header names. For the first 8 rows the header rows are ignored and thus it is necessary to place these eiqht columns in the exact order given above.  The only data from these first 8 rows that may be omitted is the overall lengths of the sequence.  However, these columns must still be present and contain no value (empty cell in Excel).  Also, the lengths of the sequence must then be provided via <strong>-showseq</strong>.  Any additional columns (such as the <code>similarity</code> and <code>transversions</code> columns above) are kept within the internal alignment data table. This additional data can be used to format and filter the parasight views generated. Additional columns that are created if not present in the alignment file are <code>color</code>, <a href="#item_width"><code>width</code></a>, <code>offset</code>, <code>sline</code>, <code>scolor</code>, and <code>hide</code>. These are case sensitive and all lower case. ( <code>color</code> contains the color of the pairwise.  <a href="#item_width"><code>width</code></a> is the width or thickness for the bar representing the pairwise.  <code>offset</code> is the offset of the subject object.  <code>scolor</code> is the color of a subject object. <code>hide</code> does not display a pairwise if it is equal to 1. If the values for these columns are not inputed or blank then teh default values for the options are used.  (NOTE: It is usually simpler to modify these formatting columns in saved parasight tables using programs such as Excel.)</p>
+<p>
+</p>
+<h3><a name="option:_showseq">Option: -showseq</a></h3>
+<p><strong>-showseq [<em>filepath | seqname1[,length,begin,end]:seqname2[,length,begin,end]:etc</em>]</strong> displays only the designated sequences.   With no colon a filename is assumed and the program attempts to load it. If a colon is found in the option then it is assumed that the input is a colon separated group of sequence names.  Optional length and begin and end positions can be designated as well. This information may be given on the command line using commas after the sequence name or be contained within a file (tab-delimited).  For analysis such as BLAST searches where you just want to display the query sequence it is easier to use the short cut option <strong>-showseqqueryonly</strong> in combination with <strong>-showseq</strong> <code>ALL</code>.</p>
+<p>
+</p>
+<h4><a name="example_showseq_file">Example showseq file</a></h4>
+<p>The format of the tab-delimited show file is shown below:</p>
+<pre>
+ seqname    length   begin   end
+ S001       10000    50      1000
+ S002       15432    1000    15432
+ 
+An example of the data above as a command line entry is:</pre>
+<pre>
+ -showseq S001,10000,50,1000:S002,15432,1,15432:</pre>
+<p>Or with just the lengths to display the entire sequence:</p>
+<pre>
+ -showseq S001,10000:S002,15432:
+ 
+Or if the lengths are in the alignment file, just the begin and end positions can be designated (note the double comma to skip the sequence length):</pre>
+<pre>
+ -showseq S001,,50,1000:S002,,1000,15432</pre>
+<p>The only required column is the sequence name. The names must be exactly the same as in the alignment file and extra file. The lengths, begins, and ends, are optional for the sequences to be drawn.  However, if length, begin or end are used, they must appear in the proper columns.  Begin and end must always be found in the 3rd and 4th columns and thus a blank sequence length must be provided for column 2 when sequence length is not designated but begin and end are. If lengths are not supplied in the alignment files or the show file then errors will occur. Lengths designated by -showseq always supercede lengths found in alignments.</p>
+<p><strong>-extra [<em>filepath1:filepath2:etc</em>]</strong> loads any 'extra'  sequence annotation/feature that can be expressed as a continuous block of the displayed sequence (i.e. a simple begin and end position). This can include features such as high copy repeats, introns, exons, and genes (if you don’t care about introns/exon structure).  The simplest extra file contains 3 columns in the given order <code>seqname begin end</code>.</p>
+<p>
+</p>
+<h4><a name="example_of_an_tabdelimited_extra_file">Example of an tab-delimited extra file</a></h4>
+<p>An example of a tab-delimited extra file is shown below:</p>
+<pre>
+ seqname   begin   end    name   color  offset
+ S001      50      1000   exon1  blue   -10
+ S001      5000    5500   exon2  blue   -10
+ S002      5000    9000   LINE1  red    -20</pre>
+<p>Columns added if not present are <code>color</code>, <code>offset</code>, <a href="#item_width"><code>width</code></a>, and <code>orient</code>.
+(Again it is usually simpler to modify formatting data after the fact unless it is generated beforehand (e.g. <code>orient</code>).  In terms of formatting simple color names should work: black, red, green.  Orientation should be either 'F' or 'R' (capitalized). Plus and Minus will <em>NOT</em> work.  However, during the initial loading of the extras they as well as other common designations for orientation are automatically changed to 'F' and 'R'.  Other columns may be added that give additional information such as names and descriptions.</p>
+<p>
+</p>
+<h3><a name="option:_graph1_or_graph2">Option: -graph1 or -graph2</a></h3>
+<p><strong>-graph1 <em>file(:s)</em> and -graph2 <em>file(:s)</em></strong> loads simple graphing data in the form of <code>seqname position value</code>.  The <a href="#item_position"><code>position</code></a> within the sequence in bases and the <code>value</code> must be numerical (floating point). It plots the points and/or a connecting line.  The graph is numerical values of sequence positon on the x-axis versus y-axis numerical values.  -graph1 is used to generate one plot.  -graph2 is used to plot another line or set of data points on the same scales.  The left and right axis can be scaled for different ranges.  Thus, Alu content and GC content can be graphed at the same time. The left axis shows the scale for -graph1 and the right axis the scale for -graph2. No header is required for the input file. An unknown value can be designated with an empty value position. An empty value position causes a discontinuous line to be drawn. Only the first 3 columns are loaded all additional columns are ignored.  Graphing is built for speed-not flexiblity. The only flexibility is in scaling and formating the axes.</p>
+<p>
+</p>
+<h4><a name="example_of_a_graph_file">Example of a graph file</a></h4>
+<pre>
+ seqname  position  value
+ chr1      5000      0.43
+ chr1     10000      0.65
+ chr1     15000      0.73
+ chr1     20000      0.65</pre>
+<p>
+</p>
+<h2><a name="reloading_a_saved_parasight_view">RELOADING A SAVED PARASIGHT VIEW</a></h2>
+<p>Data can be saved directly as parasight formatted files.</p>
+<p>
+</p>
+<h3><a name="option:_in">Option: -in</a></h3>
+<p><strong>-in [<em>base filepath</em>]</strong> loads a previously saved parasight dataset. Data is saved in 4 separate files (<em>basefilename.psa</em>, <em>basefilename.pse</em>, <em>basefilename.pso</em>) and <em>basefilename.psg</em>. Each file is editable text. The <em>.psa</em>, <em>.pse</em>, and <em>.pso</em> are required even if there are no alignments and/or extras. These extensions to the basefilename are automatically searched for in the given path.</p>
+<p>The <em>.psa</em> and <em>.pse</em> are tab-delimited tables containing the alignment and extra data, respectively. These tables are easily edited with any text editor; spreadsheets such as Excel are particularly useful in modifying these tables since the data is separated into columns and calculations can easily be done to modify the data as necessary.</p>
+<p>The <em>.pso</em> file contains all of the current option information. It is saved as text which can be modified by the end user.  It has a similar format to the template files.</p>
+<p>The <em>.psg</em> file contains all of the current data to graph.  The -graph1 data is stored in the first 3 columns and the -graph2 data is stored in the next 3 columns (4 to 6).  The graph file, unlike the alignment and extra files is only created if graph data has been loaded.  Thus, a missing *.psg will will not generate an error.  For each set of 3 columns, column one is the seqeunce, column 2 is the position on the sequence, and column 3 is the value of to plot on the y-axis.</p>
+<p>IMPORTANT:  All data necessary for a parasight view is contained in these files <em>EXCEPT</em> for any <strong>-showseq</strong> files or <strong>-arrangeseq</strong> files.  These files must still be accessible in the same relative path positions in order for the saved file to be loaded properly.  In other words, only the file names to a show and arrange files are saved and that data must be reloaded. If the files get moved then the link will be broken and their paths will need to be altered.</p>
+<p>
+</p>
+<h2><a name="changing_display_options">CHANGING DISPLAY OPTIONS</a></h2>
+<p>Option arguments modify and format the parasight view. All of these options may either be change from the command line, a template file, or interactively within the program OPTION menu. The interactive menu is the easiest way to learn and template files the easiest way to apply a set of options again and again.  Changing options at the command line follows a set order of precedence--whereby old options loaded from a previous parasight view (<strong>-in</strong>) are overridden by an option template file (<strong>-template</strong>), both of which are overridden by any options specified in (<strong>-option</strong>) command. All of these are overridden by direct command line options such as <strong>-arrangeseq</strong>, <strong>-colorsub</strong>, and <strong>-showsub</strong>.</p>
+<p>PRECEDENCE: <strong>internal default ---&gt; -in ---&gt; -template ---&gt; -option ---&gt; commandline</strong></p>
+<p>
+</p>
+<h3><a name="option:_template">Option: -template</a></h3>
+<p><strong>-template [<em>filepath</em>]</strong> loads an option template file.  This allows a user to quickly format future parasight views so that they are just like the saved one.  It is created using the save option template in the file menu.  When loading a template, if the file is not found in the current or specified path, hard-wired default template directories are searched.  For our lab one directory contains templates shared among multiple users.  And a user specific directory for an individuals PARASIGHT files.  The $template_path variable contains the paths.  To modify them you must modify the code. The current setting is '~/.PARASIGHT:/people/PARASIGHT'.  The search is left to right and first one found is first one used.    Template directory as it is currently set does not work for WINDOWS.  The tilde must be removed as it only works on Unix where the HOME directory (~) is designated by the environmental variables..</p>
+<p>The template is an standard text file so a user can modify the values easily. It is created using the save option template in the file menu.  0 and 1 are used for on and off as well as yes and no values.  An empty string is simply a line return right after the (=&gt;)  A line beginning with ### is ignored and is used to give descriptions of the values.  Be careful about adding blank space, it is a good idea to edit with normally unseen characters such as spaces and line breaks visualized.</p>
+<p>
+</p>
+<h3><a name="option:_options">Option: -options</a></h3>
+<p><strong>-options [<em>'opt1=&gt;value1,opt2=&gt;value2'</em>]</strong> is a list of options to modify. All of the underlying options are available; however, there are probably many that you will never have reason to modify, but they are all listed in appendix A for completeness.</p>
+<p>
+</p>
+<h3><a name="option:_showsub">Option: -showsub</a></h3>
+<p><strong>-showsub [<em>filepath | seqname1:seqname2:etc</em>]</strong> This option shows only the designated subs to be drawn under sequences.  Multiple sequence names can be directly entered with colon delimitation.  If no colon is present then the input will be treated as a file containing a list of subs and will be loaded.  Default is <code>ALL</code>, which displays all possible subs.</p>
+<p>
+</p>
+<h3><a name="option:_arrangeseq">Option: -arrangeseq</a></h3>
+<p><strong>-arrangeseq [<em>oneperline | sameline |file:filename</em>]</strong> This option arranges the sequences in a specified manner.</p>
+<p><em>oneperline</em> draws each sequence on a separate line that may wrap if needed.</p>
+<p><em>sameline</em> draws all of the sequences on the same line with a given amount of spacing between them.</p>
+<p><em>file:filename</em> uses the data in the file to arrange the sequences in user defined pattern.  The file consists of two columns <code>seqname</code> and <code> position </code> in current line.  To start a new line <code>NEWLINE</code> is typed alone.  The example below places the chromosomes on 3 lines.</p>
+<p>
+</p>
+<h4><a name="example_arrange_file">Example Arrange File</a></h4>
+<pre>
+        acc     start
+   chr1 400000000       
+   chr6 1668388704      
+   chr7 1870803946      
+   chr8 2057427852      
+   chr9 2230204273      
+   NEWLINE              
+   chr22        1       
+   NEWLINE              
+   chr10        400000000       
+   chr11        565589288       
+   chr12        736372841       
+   chr13        900655330       
+   chr14        1040400228      
+   chr15        1167353549</pre>
+<p><strong>-arrangesub [<em>oneperline|stagger|subscale|cscale</em>]</strong> This option arranges subs below the drawn sequences.  The name came from blast subjects, but you can also think of them in terms of sub (beneath) the sequence.</p>
+<p><em>oneperline</em> = each sub sequence is placed on its own line underneath the drawn sequence.  The ordering of sequences can be altered by choosing a column to sort on (arrangesub_col)</p>
+<p><em>stagger</em> = multiple subjects are placed on same line only when non-overlapping. The spacing required between the beginning and end of two subs can be varied.  This spacing gives room for labels.  The ordering starts in terms of other sequences with hits closest to the beginning of the sequence of interest under which the subs are being drawn</p>
+<p><em>subscaleN</em> = subjects are places on a numerical scale based on given column values. Tricky so avoid setting up from command line--use the GUI and then save a template from that.</p>
+<p><em>subscaleC</em> = subjects are placed on categorical scale based on column values. Tricky so avoid setting up from command line.  Use a template or the GUI.</p>
+<p>Note: the best way to figure the scales out is to experiment with them interactively in the options menu .There are specific modifications of subscaleN and subscaleC that are included as choices.  They are denoted by a preceding asterisk and were developed to display breakdowns of percent similarity and chromosome position (for mostly oudated draft versions of the genome) However,they may be instructive to the new user. New views are now simply done via a template rather than adding adding even more choices.
+=back</p>
+<p><strong>-color </strong>  <em>***not implemented***</em> When implemented it will color the pairwise sequences and connecting lines. Currently, coloring is only based inter and intrachromosomal designation. (As of yet the need hasn't really arisen.)  For consistency this should be called colorseq.</p>
+<p><strong>-colorsub [<em>NONE|RESET|seqrandom|hitrandom|hitconditional</em>]</strong> This option provides color schemes for the subs drawn below the sequence.</p>
+<p><em>NONE</em> does not change the color and leaves hit colors intact. Hit colors are stored within each pairwise in the table.  Subject colors are stored transiently.  Hit colors over-ride subject colors.  To remove hit colors use RESET.</p>
+<p><em>RESET</em> removes hit (individual pairwise) colors, which override any assigned subject colors.  For example, if you use hitrandom and then try to switch to seqrandom, nothing will change.  This is because hitrandom colors are still stored in the internal alignment table and they take precedence over the subject color scheme.  Thus, this intermediate <code>RESET</code> step is required to clear the hit colors. CAUTION: if you use RESET all of your manual coloring will be wiped out. (NOTE: This is because hit colors reside in the same column <code>scolor</code>as manually modified sub colors.  The column <code>color</code> defines the pairwise color--overriding inter and intra colors.)  Sorry, this is part of the program that could be simplified if I ever have a chance to gut it.</p>
+<p><em>seqrandom</em> randomly assigns colors to the various sequences that are displayed as subs. (There is a random set of 20 odd colors that are cycled through.)</p>
+<p><em>hitrandom</em> randomly assigns colors to each individual hit or pairwise alignment. (There is a random set of 20 odd colors that are cycled through.)</p>
+<p><em>hitconditional</em> allows for each pairwise to be assigned a color based on pseudo-Perl code by using a series of conditional statements that test a single alignment column.  Basic syntax is <code>[color] [test] [value];</code>, where color= color to set, test is =, &gt;, or &lt;, and value is some numerical value.</p>
+<p><strong>-minload</strong> is a switch to load only the alignments and extras for the sequences that will be drawn as designated by -showseq. It is very useful for increasing the speed of the program when there are a large number of alignments that will not be drawn in the current view.  Why load the genome if you only want to look at chromosome 22?</p>
+<p><strong>-precode <em>['Perl code']</em></strong> This code is executed after the initial drawing of objects. It allows automation for batch processes when combined with die option. (See Advanced option section below for details.)</p>
+<p><strong>-die</strong> parasight quits after executing the precode option (See Advanced option section below for details.)</p>
+<p>
+</p>
+<hr />
+<h1><a name="interactive_menus">INTERACTIVE MENUS</a></h1>
+<p>
+</p>
+<h2><a name="reshow,_rearrange,_redraw">RESHOW, REARRANGE, REDRAW</a></h2>
+<p>This part is to answer why there is a blue and white button for updating the drawing.  For beginners, I simply suggest using the blue R,R&amp;R (Reshow, Rearrange, and Redraw) button.  For extremely large data sets; however, the Reshow, and Rearrange calculations can take a significant amount of time.  Thus, if you are just changing the spacing of tick marks it is handy to skip the sequence and arrangement calculations.  However, for simple views of BAC BLAST output stick with the blue button.</p>
+<p>
+</p>
+<h2><a name="option_menu">OPTION MENU</a></h2>
+<p>The option menu has popup help (over yellow text) and most options are self-explanatory. If in doubt try changing an option and see what happens.  I have tried to adhere to a semi-logical naming convention when ever possible.  Blue color coding is to show whether a variable will require reshow and rearrangement before taking effect. The menu is subdivided into 6 main parts: MAIN, SEQ/PAIRS, SUBS, EXTRA, GRAPH, FILTER, and MISC.  The organization trys to follow the organization of the data in parasight.</p>
+<p>The MAIN menu allows access to important command line options like <code>-showseq</code> and <code>-showsub</code>.  Also, basic screen properties such as size of the window and the number of bases for the width of the screen.</p>
+<p>The SEQ/PAIRS portion allows manipulation of the sequence and assocaiated tick marks.  Pairs and their designation as inter and intrachromomal as well as connecting lines are controled from this part of the menu as well.</p>
+<p>The SUB portion of course is all about the manipulation of subs.  This is some of the more complex data manipulation.</p>
+<p>The EXTRA portion is about the options relating to the extra data.</p>
+<p>The GRAPH portion is for the graph data.  Try turning everything on when you first test out this feature.</p>
+<p>The FILTER portion allows for the filtering/removal of pairwise and extras based on data in a given column of numerical data.</p>
+<p>The MISC portion allows for the setting of options controling printing, the display of alignments, the extraction of sequence, and the execution of other programs.</p>
+<p>
+</p>
+<h2><a name="file_dropdown_menu">FILE DROP-DOWN MENU</a></h2>
+<p>This is the only place where the save parsight command is found.  All data and options are saved. A few files are not saved--see information about <strong>-in</strong>.  Loading must be done at the command line. Additionally, template files (<em>*.pst</em>) may be saved and loaded through this menu.  After loading a template file the screen must be R,R,&amp; R.</p>
+<p>
+</p>
+<h2><a name="print_dropdown_menu">PRINT DROP-DOWN MENU</a></h2>
+<p>The print menu allows for the generation of a postscript file and its subsequent transmission to a printer if the option print_command is properly set.  The postscript file can consist of the visible screen (screen) or the entire parasight drawing (all).  If the all option is chosen then the number of pages (vertically and horizontally) across which to print the image is set with the option print_multipages_wide and print_multipages_high.  The postcript files are encapsulated and can be easily turned into PDF files with software such as Adobe Distiller or imported into Adobe Illustrator.  Also, word has a special eps import option which was handy when writing my dissertation.</p>
+<p>
+</p>
+<h2><a name="order_dropdown_menu">ORDER DROP-DOWN MENU</a></h2>
+<p>The order menu on the main drop down menu bar allows the order or level of objects in the display to be changed.  You can either send objects all the way to the background or the foreground.</p>
+<p>
+</p>
+<h2><a name="misc_dropdown_menu">MISC DROP-DOWN MENU</a></h2>
+<p>Currently it contains the ability to transfer colors for alignments in order to allow syncing of colors between the pairs and the subs.  It requires a redraw to see the effect after choosing one of these options.  This is really the only way to currently go outside of the inter vs intra coloring schemes for pairs.</p>
+<p>
+</p>
+<hr />
+<h1><a name="screen_manipulation">SCREEN MANIPULATION</a></h1>
+<p>In addition to gazing lovingly at the pretty images after formating them using the option menu, direct manipulation of the display once drawn can be accomplished with various commands.</p>
+<p>
+</p>
+<h2><a name="mouse_button_functions">MOUSE BUTTON FUNCTIONS</a></h2>
+<p>(see APPENDIX B: for table of mouse functions)</p>
+<p>First when you mouse over an object it will shimmer with a number of bright colors. the shimmering object represents the object you will select if you click on it.Most of the mouse commands work on sequence, pairwise, extra, and subjects.  Tick Marks and Labels are immune except for the ALT buttons. The middle mouse button is not used since some systems like my home PC lack them (and I don’t have the dexterity to precisely click both Left and Right at the exact same time which is the usual substitute).</p>
+<p><strong>DATA POPUP WINDOW (Left-Click)</strong> This pops up a simple window displaying all data for an alignment or an extra object.  Use Shift-Drag to move the popup window if it is obscured or obscuring data. Formatting options for this popup window are found under MISC tab of the OPTIONS menu.</p>
+<p><strong>OPTIONS POPUP (Right-Click)</strong> Brings up a popup menu of options, which includes a variety of commands such as choosing colors and editing the underlying data.  If the actual alignments are present in the alignment table, the alignments can be viewed.  If the underlying sequence files are available, subsequences representing objects can be extracted.</p>
+<p><strong>ZOOM IN AND OUT (Control-Left-Click and Control-Right-Click)</strong>
+Zooming can be accomplished with Control held down at the same time as a mouse click. The left mouse clicked in conjunction with the control key will zoom in two fold centered at the point of the click.  The right mouse has the opposite effect and zooms out.  The <strong>DeZoom</strong> button on the main window returns the scaling to normal.</p>
+<p><strong>MOVE OBJECT TO FOREGROUND OR BACKGROUND (Alt-Left-Click and Alt-Right-Click)</strong> This causes the object clicked on to move all the way to the foreground or the background. The left mouse button moves it to the foreground. The right mouse button moves the object to the background.</p>
+<p><strong>MOVE (nonpermanent) ANY OBJECT (Shift-Left Drag)</strong> 
+Allows for the movement of object in the drawing--even tick marks and sequence lines.  It is non-permanent but it is useful for removing tick marks or names before you print or create a PostScript file.</p>
+<p><strong>QUICK COLOR (Shift-Right-Click to color and Shift-Right-Double-Click to uncolor)</strong>
+Allow for rapid coloring of objects.  Shift-Right Click causes the object's color to change to that of the Quick Color Button on the Main Window.  Shift-Double-Click-Button attempts to remove the color and leave the default color.  In the case of Pairs, black is assigned to the object as inter and intra chromosomal colors can not be reassigned until a Redraw.  Coloring of all other objects (i.e. not extras and not alignments) are not saved or stored and consequently revert to normal as soon as the image is redrawn.</p>
+<p><strong>HIDE SEQUENCE OR EXTRA (Alt-Right-Double-Click)</strong> This will hide sequences from view (i.e it will disappear from view). To unhide sequences you must use the pre-filter in the filter options.  (For which I should add a command line!).</p>
+<p>
+</p>
+<hr />
+<h1><a name="appendix_a:_list_of_valid_options_with_internal_defaults">APPENDIX A: LIST OF VALID OPTIONS WITH INTERNAL DEFAULTS</a></h1>
+<ul>
+<li><strong><a name="item_query"><code>alignment_col</code>=&gt;<code>0</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] column for the first query (first sequence) in a parsed pairwise alignment. Blank/zero hides option from popup menu. The sequence will contain dashes for gaps.</a></strong><br />
+</li>
+<li><strong><a name="item_subject"><code>alignment_col2</code>=&gt;<code>0</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] column for subject (second pairwise position) sequence alignment. Blank/zero hides option from popup menu. The sequence will contain dashes for gaps.</a></strong><br />
+</li>
+<li><strong><a name="item_characters"><code>alignment_wrap</code>=&gt;<code>50</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] line width in aligned characters (bases/amino acids/dashes) for displaying any alignments</a></strong><br />
+</li>
+<li><strong><a name="item_arrangeseq%3d%3eoneperline_%5boneperline%7csamelin"><code>arrangeseq</code>=&gt;<code>oneperline</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[oneperline|sameline|file] determines the arrangement of sequences that are currently being shown with -showseq. Choices: oneperline = each sequence placed on a separate line; sameline = sequences are place one after the other on the same line; file = load a file with exact positions in terms of line number and base position within the colorsub_hitcond_tests variable</a></strong><br />
+</li>
+<li><strong><a name="item_arrangesub%3d%3estagger_%5bstagger%7coneperline%7c"><code>arrangesub</code>=&gt;<code>stagger</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[stagger|oneperline|subscaleC|subscaleN] basic</a></strong><br />
+</li>
+<li><strong><a name="item_arrangesub_stagger_spacing%3d%3e40000_%5binteger%5"><code>arrangesub_stagger_spacing</code>=&gt;<code>40000</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] bases of spacing between for sequences placed on the same sub line.  Sequences separated by less than this distance from each other will be placed on separate sub lines). This option is useful for providing space for a label.</a></strong><br />
+</li>
+<li><strong><a name="item_represents"><code>canvas_bpwidth</code>=&gt;<code>250000</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] number of bases that the width of screen represents (not including indentations).  This is the  number of bases per line across</a></strong><br />
+</li>
+<li><strong><a name="item_image"><code>canvas_indent_left</code>=&gt;<code>60</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] pixels to indent from the left-side of screen window image (the drawing areas is the canvas in Tk)</a></strong><br />
+</li>
+<li><strong><code>canvas_indent_right</code>=&gt;<code>30</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] pixels to indent from the right-side of screen window image  (the drawing areas is the canvas in Tk)</strong><br />
+</li>
+<li><strong><a name="item_lines"><code>canvas_indent_top</code>=&gt;<code>40</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] pixels to indent from top of screen before drawing sequence lines (it does not take into account graphs or extras)  (the drawing areas is the canvas in Tk)</a></strong><br />
+</li>
+<li><strong><a name="item_none"><code>color</code>=&gt;<code>None</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(not implemented yet)</a></strong><br />
+</li>
+<li><strong><a name="item_colorsub%3d%3enone_%5bnone%7creset%7chitrandom%7cs"><code> colorsub</code>=&gt;<a href="#item_none"><code>None</code></a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[NONE|RESET|hitrandom|seqrandom|hitconditional] Choices for coloring subs: NONE=no coloring routines; RESET=clear all assigned colors to pairwise; hitrandom=randomly color each hit/pairwise a different color; seqrandom=randomly color each defined seequence; hitconditional=color each hit based on pseudo-perl if than statements found in the variable</a></strong><br />
+</li>
+<li><strong><a name="item_data"><code> colorsub_hitcond_col </code>=&gt;<code>34</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] column against which to test conditional statements in pairwise data (does not work on extra items or graphs)</a></strong><br />
+</li>
+<li><strong><a name="item_colorsub_hitcond_col"><code> colorsub_hitcond_tests</code>=&gt;<code>red if &lt;2; orange if &lt;0.99; yellow if &lt;0.98; green if &lt;0.97; blue if &lt;0.96; purple if &lt;0.95; brown if &lt;0.94; grey if &lt;0.93; black if &lt;0.92; pink if &lt;0.91</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[fake code] conditional statements to color pairwise hits based on the values in the column colorsub_hitcond_col (format for tests: color [= or &lt; or &gt;] value; )</a></strong><br />
+</li>
+<li><strong><a name="item_execute%3d%3e_%5bexternal_system_command%5d_to_exe"><code>execute</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[external system command] to execute on Control-Shift-Click Left Button</a></strong><br />
+</li>
+<li><strong><a name="item_execute2%3d%3e_%5bexternal_system_command%5d_to_ex"><code>execute2</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[external system command] to execute on Control-Shift-Click Middle Button</a></strong><br />
+</li>
+<li><strong><a name="item_execute2_array%3d%3em_%5be%7cm%5d_extra_or_pairwis"><code>execute2_array</code>=&gt;<code>m</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[e|m] extra or pairwise array to use in execute2 command</a></strong><br />
+</li>
+<li><strong><a name="item_execute2_desc%3d%3e_%5btext%5d_description_to_disp"><code>execute2_desc</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[text] description to display in right-click menu for execute2 command</a></strong><br />
+</li>
+<li><strong><a name="item_execute3%3d%3e_%5bexternal_system_command%5d_to_ex"><code>execute3</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[external system command] to execute on Control-Shift-Click Right Button</a></strong><br />
+</li>
+<li><strong><a name="item_execute3_array%3d%3em_%5be%7cm%5d_extra_or_pairwis"><code>execute3_array</code>=&gt;<code>m</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[e|m] extra or pairwise array to use in execute3 command</a></strong><br />
+</li>
+<li><strong><a name="item_execute3_desc%3d%3ewidget_%5btext%5d_description_t"><code>execute3_desc</code>=&gt;<code>widget</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[text] description to display in right-click menu for execute3 command</a></strong><br />
+</li>
+<li><strong><a name="item_execute4%3d%3e_%5bexternal_system_command%5d_to_ex"><code>execute4</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[external system command] to execute from within right-click menu only</a></strong><br />
+</li>
+<li><strong><a name="item_execute4_array%3d%3em_%5be%7cm%5d_extra_or_pairwis"><code>execute4_array</code>=&gt;<code>m</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[e|m] extra or pairwise array to use in execute4 command</a></strong><br />
+</li>
+<li><strong><a name="item_execute4_desc%3d%3e_%5btext%5d_description_to_disp"><code>execute4_desc</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[text] description to display in right-click menu for execute command</a></strong><br />
+</li>
+<li><strong><a name="item_execute_array%3d%3ee_%5be%7cm%5d_extra_or_pairwise"><code>execute_array</code>=&gt;<code>e</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[e|m] extra or pairwise array to use in execute command</a></strong><br />
+</li>
+<li><strong><a name="item_execute_desc%3d%3e_%5btext%5d_description_to_displ"><code>execute_desc</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[text] description to display in right-click menu for execute command</a></strong><br />
+</li>
+<li><strong><a name="item_extra_arrow_diag%3d%3e5_%5binteger%5d_distance_fro"><code>extra_arrow_diag</code>=&gt;<code>5</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] distance from point of arrow to wing/elbow of arrow</a></strong><br />
+</li>
+<li><strong><a name="item_extra_arrow_on%3d%3e1_%5b0%7c1%5d_toggles_arrows_f"><code>extra_arrow_on</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles arrows for extras off and on</a></strong><br />
+</li>
+<li><strong><a name="item_extra_arrow_para%3d%3e5_%5binteger%5d_pixel_distan"><code>extra_arrow_para</code>=&gt;<code>5</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] pixel distance from point of arrow along the line</a></strong><br />
+</li>
+<li><strong><a name="item_extra_arrow_perp%3d%3e4_%5binteger%5d_pixel_distan"><code>extra_arrow_perp</code>=&gt;<code>4</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] pixel distance from base on line to wing of arrow</a></strong><br />
+</li>
+<li><strong><a name="item_extra_color%3d%3epurple_%5bcolor%5d_default_for_ex"><code>extra_color</code>=&gt;<code>purple</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[color] default for extra object</a></strong><br />
+</li>
+<li><strong><a name="item_extra_label_col%3d%3e10_%5binteger%5d_column_to_ta"><code>extra_label_col</code>=&gt;<code>10</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] column to take values to use for extra labels</a></strong><br />
+</li>
+<li><strong><a name="item_match"><code>extra_label_col_pattern</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[regular expression] pattern to match (and extract via parentheses) replacing current value.  Allows display of only part of the data found in a column.</a></strong><br />
+</li>
+<li><strong><a name="item_extra_label_color%3d%3epurple_%5bcolor%5d_default_"><code>extra_label_color</code>=&gt;<code>purple</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[color] default for the labels of extra objects</a></strong><br />
+</li>
+<li><strong><a name="item_size"><code>extra_label_fontsize</code>=&gt;<code>6</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] font size (in points) the labels of extra objects</a></strong><br />
+</li>
+<li><strong><a name="item_labels"><code>extra_label_offset</code>=&gt;<code>2</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] horizontal offset for extra labels (left is negative, right is positive)</a></strong><br />
+</li>
+<li><strong><a name="item_extra_label_on%3d%3e1_%5b0%7c1%5d_toggles_the_text"><code>extra_label_on</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles the text label for extra objects off and on</a></strong><br />
+</li>
+<li><strong><a name="item_extra_label_test_col%3d%3e_%5binteger%5d_column_to"><code>extra_label_test_col</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] column to test for a pattern--if pattern matched then extra not drawn</a></strong><br />
+</li>
+<li><strong><a name="item_extra_label_test_pattern%3d%3e_%5bregular_expressi"><code>extra_label_test_pattern</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[regular expression] pattern to match in order to NOT draw the matching extra object</a></strong><br />
+</li>
+<li><strong><a name="item_object"><code>extra_offset</code>=&gt;<code>-4</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] default vertical offset of extra object (negative = up; positive = down)</a></strong><br />
+</li>
+<li><strong><a name="item_extra_on%3d%3e1_%5b0%7c1%5d_toggles_off_and_on_the"><code>extra_on</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles off and on the display of all extras</a></strong><br />
+</li>
+<li><strong><a name="item_width"><code>extra_width</code>=&gt;<code>6</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] default width (horizontal thickness of extra object</a></strong><br />
+</li>
+<li><strong><a name="item_fasta_blastdb%3d%3ehtg%3ant_%5bdatabase_names%5d_f"><code>fasta_blastdb</code>=&gt;<code>htg:nt</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[database names] for sequence fastacmd lookups</a></strong><br />
+</li>
+<li><strong><a name="item_command"><code> fasta_directory</code>=&gt;<code>.:fastax</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[directories] to search for fasta files corresponding to sequence names in order to extract subsequences on command (names of files must be same as names of sequences)</a></strong><br />
+</li>
+<li><strong><a name="item_fasta_directory"><code>fasta_fragsize</code>=&gt;<code>400000</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] fragment size for sequences in fasta directory.  Useful for quick lookups in long sequences like chromosomes.  If this is non-zero than fragments of files are searched for in the fasta_directory (nomenclature of fragmented files end with _###, e.g. chr1_000, chr1_001, etc.)</a></strong><br />
+</li>
+<li><strong><a name="item_fasta_on%3d%3e1_%5b0%7c1%5d_off%7con_turns_fasta_e"><code>fasta_on</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1]  off|on turns fasta extraction on and off</a></strong><br />
+</li>
+<li><strong><a name="item_fasta_wrap%3d%3e50_%5binteger%5d_line_width_in_cha"><code>fasta_wrap</code>=&gt;<code>50</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] line width in characters for fasta files created</a></strong><br />
+</li>
+<li><strong><a name="item_filename_color%3d%3egrey_%5bcolor%5d_of_text_label"><code>filename_color</code>=&gt;<code>grey</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[color] of text label for the filename</a></strong><br />
+</li>
+<li><strong><a name="item_filename"><code>filename_offset</code>=&gt;<code>-10</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] vertical offset of text label for filename (up is negative, down is positive)</a></strong><br />
+</li>
+<li><strong><code>filename_offset_h</code>=&gt;<code>0</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] horizontal offset of text label for filename (left is negative, right is positive)</strong><br />
+</li>
+<li><strong><a name="item_name"><code>filename_on</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggle off and on display of designated filename/parasight name (initially defined by -in if empty)</a></strong><br />
+</li>
+<li><strong><a name="item_filename_pattern%3d%3e_%5bregular_expression%5d_pa"><code>filename_pattern</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[regular expression]  pattern to match in the filename.  Useful for removing the path.  (Although if using graphical interface, it is easier to change the filename.)</a></strong><br />
+</li>
+<li><strong><a name="item_filename_size%3d%3e10_%5binteger%5d_point_size_of_"><code>filename_size</code>=&gt;<code>10</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] point size of text label shown for the filename</a></strong><br />
+</li>
+<li><strong><a name="item_filter1_col%3d%3e_%5binteger%5d_column_that_contai"><code>filter1_col</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer]  column that contains data with which to filter pairwise</a></strong><br />
+</li>
+<li><strong><a name="item_filter1_max%3d%3e_%5bfloat%5d_limit_for_value_in_f"><code>filter1_max</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[float] limit for value in filter1_col above which pairwise are NOT drawn</a></strong><br />
+</li>
+<li><strong><a name="item_filter1_min%3d%3e_%5bfloat%5d_limit_for_value_in_f"><code>filter1_min</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[float] limit for value in filter1_col below which pairwise are NOT drawn</a></strong><br />
+</li>
+<li><strong><a name="item_filter2_col%3d%3e_%5binteger%5d_column_that_contai"><code>filter2_col</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] column that contains data with which to filter pairwise</a></strong><br />
+</li>
+<li><strong><a name="item_filter2_max%3d%3e_%5bfloat%5d_limit_for_value_in_f"><code>filter2_max</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[float] limit for value in filter2_col above which pairwise are NOT drawn</a></strong><br />
+</li>
+<li><strong><a name="item_filter2_min%3d%3e_%5bfloat%5d_limit_for_value_in_f"><code>filter2_min</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[float] limit for value in filter2_col  below which pairwise are NOT drawn</a></strong><br />
+</li>
+<li><strong><a name="item_filterextra1_col%3d%3e_%5binteger%5d_column_number"><code>filterextra1_col</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer]  column number that contains data with which to filter extra objects--sequences are removed before arrange functions are executed</a></strong><br />
+</li>
+<li><strong><a name="item_filterextra1_max%3d%3e_%5bfloat%5d_limit_for_value"><code>filterextra1_max</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[float] limit for value in filterextra1_col above which extras are NOT drawn</a></strong><br />
+</li>
+<li><strong><a name="item_filterextra1_min%3d%3e_%5bfloat%5d_limit_for_value"><code>filterextra1_min</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[float] limit for value in filterextra1_col below which extras are NOT drawn</a></strong><br />
+</li>
+<li><strong><a name="item_filterextra2_col%3d%3e_%5binteger%5d_column_number"><code>filterextra2_col</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] column number that contains data with which to filter extras</a></strong><br />
+</li>
+<li><strong><a name="item_filterextra2_max%3d%3e_%5bfloat%5d_limit_for_value"><code>filterextra2_max</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[float] limit for value in filterextra2_col above which extras are NOT drawn</a></strong><br />
+</li>
+<li><strong><a name="item_filterextra2_min%3d%3e_%5bfloat%5d_limit_for_value"><code>filterextra2_min</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[float] limit for value in filterextra2_col below which extras are NOT drawn</a></strong><br />
+</li>
+<li><strong><a name="item_arranging"><code>filterpre1_col</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] column that contains data with which to prefilter pairwise--prefiltering removes pairwise before any arranging  (normal filtering removes pairwise after filtering)</a></strong><br />
+</li>
+<li><strong><a name="item_filterpre1_max%3d%3e_%5bfloat%5d_limit_for_value_i"><code>filterpre1_max</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[float] limit for value in filterpre1_col above which pairwise are NOT drawn or arranged</a></strong><br />
+</li>
+<li><strong><a name="item_filterpre1_min%3d%3e_%5bfloat%5d_limit_for_value_i"><code>filterpre1_min</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[float] limit for value in filterpre1_col below which pairwise are NOT drawn or arranged</a></strong><br />
+</li>
+<li><strong><a name="item_filterpre2_col%3d%3e_%5binteger%5d_column_that_con"><code>filterpre2_col</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] column that contains data with which to prefilter pairwise—prefilter removes pairwise before any arranging</a></strong><br />
+</li>
+<li><strong><a name="item_filterpre2_max%3d%3e_%5bfloat%5d_limit_for_value_i"><code>filterpre2_max</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[float] limit for value in filterpre2_col above which pairwise are NOT drawn or arranged</a></strong><br />
+</li>
+<li><strong><a name="item_filterpre2_min%3d%3e_%5bfloat%5d_limit_for_value_i"><code>filterpre2_min</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[float] limit for value in filterpre2_col below which pairwise are NOT drawn or arranged</a></strong><br />
+</li>
+<li><strong><a name="item_gif_anchor%3d%3ecenter_%5bcenter%7cnw%7cne%7csw%7c"><code>gif_anchor</code>=&gt;<code>center</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[center|nw|ne|sw|se|e|w|n] positioning of background gif relative to draw point gif_x and gif_y</a></strong><br />
+</li>
+<li><strong><a name="item_background"><code>gif_on</code>=&gt;<code>0</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;displays a gif image in background (the image will not print out in postscript)</a></strong><br />
+</li>
+<li><strong><a name="item_gif_path%3d%3e_%5bfile_path%5d_of_gif_image_to_dis"><code>gif_path</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[file path] of gif image to display in background--image does not make it into the Postscript file file</a></strong><br />
+</li>
+<li><strong><a name="item_int"><code>gif_x</code>=&gt;<code>int($opt{window_width}/2)</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] background picture pixel x coordinate position (top of image is zero)</a></strong><br />
+</li>
+<li><strong><a name="item_position"><code>gif_y</code>=&gt;<code>0</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] background gif y coordinate position (0 is top of screen)</a></strong><br />
+</li>
+<li><strong><code>graph1_label_color</code>=&gt;<code>blue</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[color] for graph1 labels (left side axis)</strong><br />
+</li>
+<li><strong><code>graph1_label_decimal</code>=&gt;<code>2</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] number of decimal points to round graph1 labels (left side axis)</strong><br />
+</li>
+<li><strong><code>graph1_label_fontsize</code>=&gt;<code>10</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] point size of graph1 labels (left side axis)</strong><br />
+</li>
+<li><strong><code>graph1_label_multiplier</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[float] multiplier for graph1 labels (left side axis)</strong><br />
+</li>
+<li><strong><code>graph1_label_offset</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] horizontal offset for graph1 labels (left side axis)</strong><br />
+</li>
+<li><strong><a name="item_scale"><code>graph1_label_on</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles on labels for graph1 scale (left side axis)</a></strong><br />
+</li>
+<li><strong><a name="item_graph1_line_color%3d%3eblue_%5bcolor%5d_for_graph1"><code>graph1_line_color</code>=&gt;<code>blue</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[color] for graph1 connecting lines</a></strong><br />
+</li>
+<li><strong><a name="item_graph1_line_on%3d%3e1_%5b0%7c1%5d_toggles_graph1_c"><code>graph1_line_on</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles graph1 connecting line off and on</a></strong><br />
+</li>
+<li><strong><a name="item_graph1_line_smooth%3d%3e0_%5b0%7c1%5d_toggles_on_a"><code>graph1_line_smooth</code>=&gt;<code>0</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles on and off smoothing function for connecting line</a></strong><br />
+</li>
+<li><strong><a name="item_graph1_line_width%3d%3e1_%5binteger%5d_width_for_g"><code>graph1_line_width</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] width for graph1 connecting line</a></strong><br />
+</li>
+<li><strong><a name="item_graph1_max%3d%3e100_%5binteger%5d_maximum_value_of"><code>graph1_max</code>=&gt;<code>100</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] maximum value of graph1 scale</a></strong><br />
+</li>
+<li><strong><a name="item_graph1_min%3d%3e%2d5_%5binteger%5d_minimum_value_o"><code>graph1_min</code>=&gt;<code>-5</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] minimum value of graph1 scale</a></strong><br />
+</li>
+<li><strong><a name="item_graph1_on%3d%3e0_%5b0%7c1%5d_toggles_off_and_on_gr"><code>graph1_on</code>=&gt;<code>0</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles off and on graph1</a></strong><br />
+</li>
+<li><strong><a name="item_graph1_point_fill_color%3d%3eblue_%5bcolor%5d_to_f"><code>graph1_point_fill_color</code>=&gt;<code>blue</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[color] to fill points with for graph1</a></strong><br />
+</li>
+<li><strong><a name="item_graph1_point_on%3d%3e1_%5b0%7c1%5d_toggles_point_d"><code>graph1_point_on</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles point drawing on and off for graph1</a></strong><br />
+</li>
+<li><strong><a name="item_graph1_point_outline_color%3d%3eblue_%5bcolor%5d_t"><code>graph1_point_outline_color</code>=&gt;<code>blue</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[color] to outline point with for graph1</a></strong><br />
+</li>
+<li><strong><a name="item_graph1_point_outline_width%3d%3e1_%5binteger%5d_th"><code>graph1_point_outline_width</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] thickness of point outline for graph1</a></strong><br />
+</li>
+<li><strong><a name="item_graph1_point_size%3d%3e2_%5binteger%5d_pixel_radiu"><code>graph1_point_size</code>=&gt;<code>2</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] pixel radius size for drawing graph1 points</a></strong><br />
+</li>
+<li><strong><a name="item_graph1_tick_color%3d%3eblack_%5bcolor%5d_of_tick_m"><code>graph1_tick_color</code>=&gt;<code>black</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[color] of tick marks for graph1 scale</a></strong><br />
+</li>
+<li><strong><a name="item_graph1_tick_length%3d%3e6_%5binteger%5d_length_of_"><code>graph1_tick_length</code>=&gt;<code>6</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] length of tick marks for graph1 scale</a></strong><br />
+</li>
+<li><strong><a name="item_graph1_tick_offset%3d%3e1_%5binteger%5d_horizontal"><code>graph1_tick_offset</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] horizontal offset of tick marks for graph1 scale</a></strong><br />
+</li>
+<li><strong><a name="item_graph1_tick_on%3d%3e1_%5b0%7c1%5d_toggles_tick_mar"><code>graph1_tick_on</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles tick marks for graph1 scale off and on</a></strong><br />
+</li>
+<li><strong><a name="item_graph1_tick_width%3d%3e3_%5binteger%5d_thickness_o"><code>graph1_tick_width</code>=&gt;<code>3</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] thickness of tick marks for graph1 scale</a></strong><br />
+</li>
+<li><strong><a name="item_graph1_vline_color%3d%3eblack_%5bcolor%5d_of_verti"><code>graph1_vline_color</code>=&gt;<code>black</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[color] of vertical line for graph1 scale on left</a></strong><br />
+</li>
+<li><strong><a name="item_graph1_vline_on%3d%3e1_%5b0%7c1%7d_toggles_on_and_"><code>graph1_vline_on</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1} toggles on and off vertical line for graph1 scale on left</a></strong><br />
+</li>
+<li><strong><a name="item_graph1_vline_width%3d%3e2_%5binteger%5d_vertical_l"><code>graph1_vline_width</code>=&gt;<code>2</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] vertical line width for graph1 scale on left</a></strong><br />
+</li>
+<li><strong><a name="item_graph2_label_color%3d%3ered_%5bcolor%5d_of_graph2_"><code>graph2_label_color</code>=&gt;<code>red</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[color] of graph2 scale labels</a></strong><br />
+</li>
+<li><strong><a name="item_graph2_label_decimal%3d%3e2_%5binteger%5d_number_o"><code>graph2_label_decimal</code>=&gt;<code>2</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] number of decimal point to round graph2 scale label</a></strong><br />
+</li>
+<li><strong><a name="item_graph2_label_fontsize%3d%3e10_%5binteger%5d_point_"><code>graph2_label_fontsize</code>=&gt;<code>10</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] point size of graph2 scale labels</a></strong><br />
+</li>
+<li><strong><a name="item_graph2_label_multiplier%3d%3e1_%5bfloat%5d_graph2_"><code>graph2_label_multiplier</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[float] graph2 scale label multiplier</a></strong><br />
+</li>
+<li><strong><a name="item_graph2_label_offset%3d%3e8_%5binteger%5d_horizonta"><code>graph2_label_offset</code>=&gt;<code>8</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] horizontal offset of graph2 scale labels</a></strong><br />
+</li>
+<li><strong><a name="item_graph2_label_on%3d%3e1_%5b0%7c1%5d_toggles_graph2_"><code>graph2_label_on</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles graph2 scale labels off and n</a></strong><br />
+</li>
+<li><strong><a name="item_graph2_line_color%3d%3ered_%5bcolor%5d_of_graph2_c"><code>graph2_line_color</code>=&gt;<code>red</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[color] of graph2 connecting lines</a></strong><br />
+</li>
+<li><strong><a name="item_graph2_line_on%3d%3e1_%5b0%7c1%5d_toggles_graph2_c"><code>graph2_line_on</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles graph2 connecting lines off and on</a></strong><br />
+</li>
+<li><strong><a name="item_graph2_line_smooth%3d%3e0_%5b0%7c1%5d_toggles_grap"><code>graph2_line_smooth</code>=&gt;<code>0</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles graph2 connecting line smoothing off and on</a></strong><br />
+</li>
+<li><strong><a name="item_graph2_line_width%3d%3e1_%5binteger%5d_thickness_o"><code>graph2_line_width</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] thickness of graph2 connecting lines</a></strong><br />
+</li>
+<li><strong><a name="item_graph2_max%3d%3e1000_%5binteger%5d_maximum_value_f"><code>graph2_max</code>=&gt;<code>1000</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] maximum value for graph2 scale</a></strong><br />
+</li>
+<li><strong><a name="item_graph2_min%3d%3e%2d1000_%5binteger%5d_minimum_valu"><code>graph2_min</code>=&gt;<code>-1000</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] minimum value for graph2 scale</a></strong><br />
+</li>
+<li><strong><a name="item_graph2_on%3d%3e0_%5b0%7c1%5d_toggles_graph2_on"><code>graph2_on</code>=&gt;<code>0</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles graph2_on</a></strong><br />
+</li>
+<li><strong><a name="item_graph2_point_fill_color%3d%3ered_%5bcolor%5d_of_in"><code>graph2_point_fill_color</code>=&gt;<code>red</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[color] of interior of graph2 points</a></strong><br />
+</li>
+<li><strong><a name="item_graph2_point_on%3d%3e1_%5b0%7c1%5d_toggles_graph2_"><code>graph2_point_on</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles graph2 point drawing on and off</a></strong><br />
+</li>
+<li><strong><a name="item_graph2_point_outline_color%3d%3ered_%5bcolor%5d_of"><code>graph2_point_outline_color</code>=&gt;<code>red</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[color] of graph2 point outline</a></strong><br />
+</li>
+<li><strong><a name="item_graph2_point_outline_width%3d%3e1_%5binteger%5d_th"><code>graph2_point_outline_width</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] thickness of graph2 point outline</a></strong><br />
+</li>
+<li><strong><a name="item_graph2_point_size%3d%3e2_%5binteger%5d_radius_size"><code>graph2_point_size</code>=&gt;<code>2</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] radius size of graph 2 points</a></strong><br />
+</li>
+<li><strong><a name="item_graph2_tick_color%3d%3eblack_%5bcolor%5d_of_graph2"><code>graph2_tick_color</code>=&gt;<code>black</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[color] of graph2 vertical scale ticks</a></strong><br />
+</li>
+<li><strong><a name="item_graph2_tick_length%3d%3e6_%5binteger%5d_length_of_"><code>graph2_tick_length</code>=&gt;<code>6</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] length of graph2 vertical scale ticks</a></strong><br />
+</li>
+<li><strong><a name="item_graph2_tick_offset%3d%3e5_%5binteger%5d_horizontal"><code>graph2_tick_offset</code>=&gt;<code>5</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] horizontal offset of graph2 vertical scale ticks</a></strong><br />
+</li>
+<li><strong><a name="item_graph2_tick_on%3d%3e1_%5b0%7c1%5d_toggles_graph2_v"><code>graph2_tick_on</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles graph2 vertical scale ticks on and off</a></strong><br />
+</li>
+<li><strong><a name="item_graph2_tick_width%3d%3e3_%5binteger%5d_thickness_o"><code>graph2_tick_width</code>=&gt;<code>3</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] thickness of graph2 vertical scale ticks</a></strong><br />
+</li>
+<li><strong><a name="item_graph2_vline_color%3d%3eblack_%5bcolor%5d_of_graph"><code>graph2_vline_color</code>=&gt;<code>black</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[color] of graph2 vertical scale line</a></strong><br />
+</li>
+<li><strong><a name="item_graph2_vline_on%3d%3e1_%5b0%7c1%5d_toggles_graph2_"><code>graph2_vline_on</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles graph2 vertical scale line off and on</a></strong><br />
+</li>
+<li><strong><a name="item_graph2_vline_width%3d%3e2_%5binteger%5d_thickness_"><code>graph2_vline_width</code>=&gt;<code>2</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] thickness of graph2 vertical scale line</a></strong><br />
+</li>
+<li><strong><a name="item_graph_scale_height%3d%3e80_%5binteger%5d_pixel_hei"><code>graph_scale_height</code>=&gt;<code>80</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] pixel height of shared graph scale</a></strong><br />
+</li>
+<li><strong><a name="item_graph_scale_hline_color%3d%3eblack_%5bcolor%5d_of_"><code>graph_scale_hline_color</code>=&gt;<code>black</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[color] of horizontal shared graph scale lines</a></strong><br />
+</li>
+<li><strong><a name="item_graph_scale_hline_on%3d%3e1_%5b0%7c1%5d_toggles_of"><code>graph_scale_hline_on</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles off and on the shared horizontal interval lines of the graph scales</a></strong><br />
+</li>
+<li><strong><a name="item_graph_scale_hline_width%3d%3e1_%5binteger%5d_width"><code>graph_scale_hline_width</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] width of shared horizontal shared graph scale lines</a></strong><br />
+</li>
+<li><strong><a name="item_above"><code>graph_scale_indent</code>=&gt;<code>-20</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] indentation for placing gscale above (or even below) the sequence line</a></strong><br />
+</li>
+<li><strong><a name="item_graph_scale_interval%3d%3e4_%5binteger%5d_number_o"><code>graph_scale_interval</code>=&gt;<code>4</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] number of intervals</a></strong><br />
+</li>
+<li><strong><a name="item_graph_scale_on%3d%3e0_%5b0%7c1%5d_toggles_off_and_"><code>graph_scale_on</code>=&gt;<code>0</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles off and on the graph scales</a></strong><br />
+</li>
+<li><strong><a name="item_help_on%3d%3e1_%5b0%7c1%5d_toggles_off_and_on_the_"><code>help_on</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles off and on the popup help messages</a></strong><br />
+</li>
+<li><strong><a name="item_help_wrap%3d%3e50_%5binteger%5d_line_width_in_char"><code>help_wrap</code>=&gt;<code>50</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] line width in characters for popup help menus</a></strong><br />
+</li>
+<li><strong><a name="item_mark_advanced%3d%3e_code_for_an_advanced_marking_a"><code>mark_advanced</code>=&gt;<code>     </code>code for an advanced marking algorithm. Allowing for more complex searches.  Data foreach pair or extra is accessed using an array reference \$c.  Therefore to access column 4 \$\$c[4] would work.</a></strong><br />
+</li>
+<li><strong><a name="item_search"><code>mark_array</code>=&gt;<code>m</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[e|m] default array to search (m is alignment/e is extra)(m is historical)</a></strong><br />
+</li>
+<li><strong><a name="item_mark_col%3d%3e_%5binteger%5d_column_to_search_for_"><code>mark_col</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] column to search for given pattern in order to mark matches with a color</a></strong><br />
+</li>
+<li><strong><a name="item_mark_col2%3d%3e_%5binteger%5d_second_column_to_sea"><code>mark_col2</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] second column to search for pattern in order to mark matches with a color</a></strong><br />
+</li>
+<li><strong><a name="item_mark_color%3d%3ered_%5bcolor%5d_to_mark_objects_wi"><code>mark_color</code>=&gt;<code>red</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[color] to  mark objects with</a></strong><br />
+</li>
+<li><strong><a name="item_sub"><code>mark_pairs</code>=&gt;<code>0</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles the coloring/marking of <code>sub(jects)</code> off and on</a></strong><br />
+</li>
+<li><strong><a name="item_mark_pattern%3d%3eac002038_%5bregular_expression%5"><code>mark_pattern</code>=&gt;<code>AC002038</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[regular expression] pattern to search for with mark/find button</a></strong><br />
+</li>
+<li><strong><a name="item_permanently"><code>mark_permanent</code>=&gt;<code>0</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles on and off changing the color of objects permanently (if not permanent then on redraw colors will be erased</a></strong><br />
+</li>
+<li><strong><code>mark_subs</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles the coloring/marking of <code>sub(jects)</code> off and on</strong><br />
+</li>
+<li><strong><a name="item_pair_inter_color%3d%3ered_%5bcolor%5d_default_of_i"><code>pair_inter_color</code>=&gt;<code>red</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[color] default of inter pairwise and connecting lines</a></strong><br />
+</li>
+<li><strong><a name="item_pair_inter_line_on%3d%3e0_%5b0%7c1%5d_toggles_off_"><code>pair_inter_line_on</code>=&gt;<code>0</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles off and on the connecting lines between inter pairwise alignments</a></strong><br />
+</li>
+<li><strong><a name="item_pairwise"><code>pair_inter_offset</code>=&gt;<code>0</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] default offset from sequence line of inter pairwise (up is negative, down is positive)</a></strong><br />
+</li>
+<li><strong><a name="item_pair_inter_on%3d%3e1_%5b0%7c1%5d_toggles_off_and_o"><code>pair_inter_on</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles off and on the inter pairwise alignments normally drawn on top of sequence line</a></strong><br />
+</li>
+<li><strong><a name="item_pair_inter_width%3d%3e13_%5binteger%5d_width_of_in"><code>pair_inter_width</code>=&gt;<code>13</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] width of inter pairwise</a></strong><br />
+</li>
+<li><strong><a name="item_pair_intra_color%3d%3eblue_%5bcolor%5d_default_of_"><code>pair_intra_color</code>=&gt;<code>blue</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[color] default of intra pairwise and connecting lines</a></strong><br />
+</li>
+<li><strong><a name="item_pair_intra_line_on%3d%3e0_%5b0%7c1%5d_toggles_conn"><code>pair_intra_line_on</code>=&gt;<code>0</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles connecting lines between  intra pairwise off and on</a></strong><br />
+</li>
+<li><strong><a name="item_pair_intra_offset%3d%3e0_%5binteger%5d_default_off"><code>pair_intra_offset</code>=&gt;<code>0</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] default offset from seuqence</a></strong><br />
+</li>
+<li><strong><a name="item_pair_intra_on%3d%3e1_%5b0%7c1%5d_toggles_off_and_o"><code>pair_intra_on</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles off and on the intra pairwise</a></strong><br />
+</li>
+<li><strong><a name="item_pair_intra_width%3d%3e9_%5binteger%5d_width_of_int"><code>pair_intra_width</code>=&gt;<code>9</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] width of intra pairwise</a></strong><br />
+</li>
+<li><strong><a name="item_pair_level%3d%3enone_%5bnone%7cinter_over_intra%7c"><code>pair_level</code>=&gt;<code>NONE</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[NONE|inter_over_intra|intra_over_inter] determines which pairwise type appears above the other--NONE leaves the appearance to the order of the pairwise in the inputted alignment or parasight.psa table</a></strong><br />
+</li>
+<li><strong><a name="item_pair_type_col%3d%3e_%5binteger%5d_column_number_to"><code>pair_type_col</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] column number to determine pairwise type for sequence 1, which is checked against sequence 2.  If match then intra if no match then inter.  (Useful on sequence names that contain chromosome assignment.)</a></strong><br />
+</li>
+<li><strong><a name="item_pair_type_col2%3d%3e_%5binteger%5d_column_to_deter"><code>pair_type_col2</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] column to determine pairwise type for sequence 2 in row</a></strong><br />
+</li>
+<li><strong><a name="item_pair_type_col2_pattern%3d%3e_%5bregular_expression"><code>pair_type_col2_pattern</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[regular expression] to extract pairwise type determing value with parentheses</a></strong><br />
+</li>
+<li><strong><a name="item_pair_type_col_pattern%3d%3e_%5bregular_expression%"><code>pair_type_col_pattern</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[regular expression] to extract pairwise type determining value with parentheses</a></strong><br />
+</li>
+<li><strong><a name="item_popup_format%3d%3etext_%5btext%7cnumber%5d_determi"><code>popup_format</code>=&gt;<code>text</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[text|number] determines whether column numbers or text headers are shown in popup window</a></strong><br />
+</li>
+<li><strong><a name="item_menu"><code>popup_max_len</code>=&gt;<code>300</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] character length for fields in the popup menu (allows long definitions or sequences be excluded)</a></strong><br />
+</li>
+<li><strong><a name="item_print_command%3d%3elpr_%2dp_rainbow_%7b%7d_%5bstri"><code>print_command</code>=&gt;<code>lpr -P Rainbow {}</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[string] print command with brackets {} representing file name.  This is a system command executed to drive a printer.  I have never been able to get DOS to work.  This is setup for Unix on our system.  Rainbow is our color printer name.  It will fail in MSWin</a></strong><br />
+</li>
+<li><strong><a name="item_print_multipages_high%3d%3e1_%5binteger%5d_height_"><code>print_multipages_high</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] height in number of pages for the print/postscript all command</a></strong><br />
+</li>
+<li><strong><a name="item_print_multipages_wide%3d%3e1_%5binteger%5d_width_i"><code>print_multipages_wide</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] width in number of pages for print/postscript all command</a></strong><br />
+</li>
+<li><strong><a name="item_length"><code>printer_page_length</code>=&gt;<code>11i</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[special] physical page length (longest dimension of paper) in inches for printer (requires number followed by units with i=inches or c=cm)</a></strong><br />
+</li>
+<li><strong><a name="item_orientation"><code>printer_page_orientation</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles printer page orientation (1=landscape 0=portrait)</a></strong><br />
+</li>
+<li><strong><a name="item_printer"><code>printer_page_width</code>=&gt;<code>8i</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[special] physical page width in inches for printer (requires number followed by units i=inches or c=cm)</a></strong><br />
+</li>
+<li><strong><a name="item_quick_color%3d%3epurple_%5bcolor%5d_for_the_quick_"><code>quick_color</code>=&gt;<code>purple</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[color] for the quick color function Shift-Button3 and Shift-Double Click Button3</a></strong><br />
+</li>
+<li><strong><a name="item_sequence"><code>seq_color</code>=&gt;<code>black</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[color] of sequence (All sequences take this color.  There is currently no way to color sequences individually.)</a></strong><br />
+</li>
+<li><strong><a name="item_seq_label_color%3d%3eblack_%5bcolor%5d_of_sequence"><code>seq_label_color</code>=&gt;<code>black</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[color] of sequence name text</a></strong><br />
+</li>
+<li><strong><code>seq_label_fontsize</code>=&gt;<code>12</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] font size (in points) for all sequence names</strong><br />
+</li>
+<li><strong><a name="item_names"><code>seq_label_offset</code>=&gt;<code>-4</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] vertical offset of sequence names (up is negative, down is positive)</a></strong><br />
+</li>
+<li><strong><a name="item_seq_label_offset_h%3d%3e0_%5binteger%5d_horizontal"><code>seq_label_offset_h</code>=&gt;<code>0</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] horizontal offset of sequence names</a></strong><br />
+</li>
+<li><strong><a name="item_seq_label_on%3d%3e1_%5b0%7c1%5d_toggles_off_and_on"><code>seq_label_on</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles off and on the display of sequence name labels</a></strong><br />
+</li>
+<li><strong><a name="item_seq_label_pattern%3d%3e_%5bregular_expression%5d_t"><code>seq_label_pattern</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[regular expression] to match in sequence name for display purposes--parentheses must be used to denote the part of match to display</a></strong><br />
+</li>
+<li><strong><a name="item_other"><code>seq_line_spacing_btwn</code>=&gt;<code>250</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] pixels to separate  sequence lines from each other (roughly equivalent to spacing between text paragraphs if you consider a wrapping line of sequences to be a paragraph)</a></strong><br />
+</li>
+<li><strong><a name="item_sequences"><code>seq_line_spacing_wrap</code>=&gt;<code>200</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] pixels to space between a wrapping line of sequences (roughly equivaelent to spacing between the lines within a text paragraph)</a></strong><br />
+</li>
+<li><strong><a name="item_line"><code>seq_spacing_btwn_sequences</code>=&gt;<code>10000</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] bases to separate sequences drawn within the same line (roughly equivalent to spacing between words of a text paragraph)</a></strong><br />
+</li>
+<li><strong><a name="item_seq_tick_b_color%3d%3eblack_%5bcolor%5d_for_begin_"><code>seq_tick_b_color</code>=&gt;<code>black</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[color] for begin tick marks</a></strong><br />
+</li>
+<li><strong><a name="item_seq_tick_b_label_anchor%3d%3ene_%5bcenter%7cn%7cw%"><code>seq_tick_b_label_anchor</code>=&gt;<code>ne</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[center|n|w|s|e|nw|ne|sw|se] anchor point for begin tick mark labels</a></strong><br />
+</li>
+<li><strong><a name="item_seq_tick_b_label_color%3d%3eblack_%5bvalid_color%5"><code>seq_tick_b_label_color</code>=&gt;<code>black</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[valid color] of tick mark label at the beginning of sequence</a></strong><br />
+</li>
+<li><strong><code>seq_tick_b_label_fontsize</code>=&gt;<code>9</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] font size (in points) for label at beginning of sequence</strong><br />
+</li>
+<li><strong><a name="item_seq_tick_b_label_multiplier%3d%3e0%2e001_%5bfloat%"><code>seq_tick_b_label_multiplier</code>=&gt;<code>0.001</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[float] scaling factor for begin tick mark labels</a></strong><br />
+</li>
+<li><strong><a name="item_seq_tick_b_label_offset%3d%3e2_%5binteger%5d_verti"><code>seq_tick_b_label_offset</code>=&gt;<code>2</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] vertical offset for begin tick mark label</a></strong><br />
+</li>
+<li><strong><a name="item_seq_tick_b_label_offset_h%3d%3e0_%5binteger%5d_hor"><code>seq_tick_b_label_offset_h</code>=&gt;<code>0</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] horizontal offset for begin tick mark labels</a></strong><br />
+</li>
+<li><strong><a name="item_seq_tick_b_label_on%3d%3e1_%5b0%7c1%5d_toggles_off"><code>seq_tick_b_label_on</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles  off and on the beginning tick mark labels</a></strong><br />
+</li>
+<li><strong><a name="item_seq_tick_b_length%3d%3e10_%5binteger%5d_length_of_"><code>seq_tick_b_length</code>=&gt;<code>10</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] length of begin tick marks</a></strong><br />
+</li>
+<li><strong><a name="item_seq_tick_b_offset%3d%3e0_%5binteger%5d_vertical_of"><code>seq_tick_b_offset</code>=&gt;<code>0</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] vertical offset for begin tick marks</a></strong><br />
+</li>
+<li><strong><a name="item_seq_tick_b_on%3d%3e1_%5b0%7c1%5d_toggles_off_and_o"><code>seq_tick_b_on</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles off and on the begin tick marks</a></strong><br />
+</li>
+<li><strong><a name="item_seq_tick_b_width%3d%3e2_%5binteger%5d_width_of_beg"><code>seq_tick_b_width</code>=&gt;<code>2</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] width of begin tick marks</a></strong><br />
+</li>
+<li><strong><a name="item_seq_tick_bp%3d%3e20000_%5binteger%5d_tick_mark_int"><code>seq_tick_bp</code>=&gt;<code>20000</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] tick mark interval</a></strong><br />
+</li>
+<li><strong><a name="item_seq_tick_color%3d%3eblack_%5bcolor%5d_of_interval_"><code>seq_tick_color</code>=&gt;<code>black</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[color] of interval tick marks</a></strong><br />
+</li>
+<li><strong><a name="item_seq_tick_e_color%3d%3eblack_%5bvalid_color%5d_for_"><code>seq_tick_e_color</code>=&gt;<code>black</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[valid color] for end tick marks</a></strong><br />
+</li>
+<li><strong><a name="item_seq_tick_e_label_anchor%3d%3enw_%5bcenter%7cn%7cw%"><code>seq_tick_e_label_anchor</code>=&gt;<code>nw</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[center|n|w|s|e|nw|ne|se|sw] anchor point for end tick mark labels</a></strong><br />
+</li>
+<li><strong><a name="item_seq_tick_e_label_color%3d%3eblack_%5bvalid_color%5"><code>seq_tick_e_label_color</code>=&gt;<code>black</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[valid color] for end tick mark labels</a></strong><br />
+</li>
+<li><strong><code>seq_tick_e_label_fontsize</code>=&gt;<code>9</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] font size (in points)  for end tick mark labels</strong><br />
+</li>
+<li><strong><a name="item_seq_tick_e_label_multiplier%3d%3e0%2e001_%5bfloat%"><code>seq_tick_e_label_multiplier</code>=&gt;<code>0.001</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[float] scaling factor for end tick mark labels</a></strong><br />
+</li>
+<li><strong><a name="item_seq_tick_e_label_offset%3d%3e2_%5binteger%5d_verti"><code>seq_tick_e_label_offset</code>=&gt;<code>2</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] vertical offset for end tick mark labels</a></strong><br />
+</li>
+<li><strong><a name="item_seq_tick_e_label_offset_h%3d%3e0_%5binteger%5d_hor"><code>seq_tick_e_label_offset_h</code>=&gt;<code>0</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] horizontal offset for end tick mark labels</a></strong><br />
+</li>
+<li><strong><a name="item_seq_tick_e_label_on%3d%3e1_%5b0%7c1%5d_toggles_end"><code>seq_tick_e_label_on</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles end tick labels off and on</a></strong><br />
+</li>
+<li><strong><a name="item_seq_tick_e_length%3d%3e10_%5binteger%5d_length_of_"><code>seq_tick_e_length</code>=&gt;<code>10</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] length of end tick marks</a></strong><br />
+</li>
+<li><strong><a name="item_seq_tick_e_offset%3d%3e0_%5binteger%5d_vertical_of"><code>seq_tick_e_offset</code>=&gt;<code>0</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] vertical offset for ending tick marks</a></strong><br />
+</li>
+<li><strong><a name="item_seq_tick_e_on%3d%3e1_%5b0%7c1%5d_toggles_off_and_o"><code>seq_tick_e_on</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles off and on the ending tick marks</a></strong><br />
+</li>
+<li><strong><a name="item_seq_tick_e_width%3d%3e2_%5binteger%5d_width_of_end"><code>seq_tick_e_width</code>=&gt;<code>2</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] width of end tick marks</a></strong><br />
+</li>
+<li><strong><a name="item_seq_tick_label_anchor%3d%3en_%5bcenter%7cn%7cs%7cw"><code>seq_tick_label_anchor</code>=&gt;<code>n</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[center|n|s|w|e|nw|sw|ne|se] anchor of text from tick mark draw point</a></strong><br />
+</li>
+<li><strong><a name="item_seq_tick_label_color%3d%3eblack_%5bcolor%5d_for_in"><code>seq_tick_label_color</code>=&gt;<code>black</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[color] for interval tick mark</a></strong><br />
+</li>
+<li><strong><code>seq_tick_label_fontsize</code>=&gt;<code>9</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] font size (in points) for interval tick mark label</strong><br />
+</li>
+<li><strong><a name="item_seq_tick_label_multiplier%3d%3e0%2e001_%5bfloat%5d"><code>seq_tick_label_multiplier</code>=&gt;<code>0.001</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[float] scaling factor for the interval tick label</a></strong><br />
+</li>
+<li><strong><a name="item_seq_tick_label_offset%3d%3e2_%5binteger%5d_vertica"><code>seq_tick_label_offset</code>=&gt;<code>2</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] vertical offset of sequence interval tick mark labels</a></strong><br />
+</li>
+<li><strong><a name="item_seq_tick_label_on%3d%3e1_%5b0%7c1%5d_toggles_off_a"><code>seq_tick_label_on</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles off and on the interval tick labels</a></strong><br />
+</li>
+<li><strong><a name="item_seq_tick_length%3d%3e10_%5binteger%5d_length_of_in"><code>seq_tick_length</code>=&gt;<code>10</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] length of interval tick marks</a></strong><br />
+</li>
+<li><strong><a name="item_seq_tick_offset%3d%3e0_%5binteger%5d_vertical_offs"><code>seq_tick_offset</code>=&gt;<code>0</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] vertical offset for interval tick marks</a></strong><br />
+</li>
+<li><strong><a name="item_seq_tick_on%3d%3e1_%5b0%7c1%5d_toggles_off_and_on_"><code>seq_tick_on</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles off and on the interval sequence tick marks</a></strong><br />
+</li>
+<li><strong><code>seq_tick_whole</code>=&gt;<code>0</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles whether numbering is for each individual sequence (0) or continious across multiple accession on same line (useful when analyzing chromosomes in multiple fragments)</strong><br />
+</li>
+<li><strong><a name="item_seq_tick_width%3d%3e2_%5binteger%5d_width_of_inter"><code>seq_tick_width</code>=&gt;<code>2</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] width of interval tick marks</a></strong><br />
+</li>
+<li><strong><a name="item_seq_width%3d%3e3_%5binteger%5d_width_of_sequence_l"><code>seq_width</code>=&gt;<code>3</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] width of sequence line</a></strong><br />
+</li>
+<li><strong><code>showqueryonly</code>=&gt;<code>0</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles the display of just the first sequence in a pairwise data (i.e.first column in an alignment file).  For most parsing this is equivalent to the Blast query position</strong><br />
+</li>
+<li><strong><a name="item_sub_arrow_diag%3d%3e5_%5binteger%5d_distance_betwe"><code>sub_arrow_diag</code>=&gt;<code>5</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] distance between arrow point to wing/edge of arrow</a></strong><br />
+</li>
+<li><strong><a name="item_sub_arrow_on%3d%3e0_%5b0%7c1%5d_toggles_off_and_on"><code>sub_arrow_on</code>=&gt;<code>0</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles off and on the directional/orientation arrows for subjects</a></strong><br />
+</li>
+<li><strong><a name="item_sub_arrow_paral%3d%3e5_%5binteger%5d_distance_betw"><code>sub_arrow_paral</code>=&gt;<code>5</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer]  distance between arrow point to base of arrow</a></strong><br />
+</li>
+<li><strong><a name="item_sub_arrow_perp%3d%3e4_%5binteger%5d_distance_from_"><code>sub_arrow_perp</code>=&gt;<code>4</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] distance from base end to wing tip of arrow</a></strong><br />
+</li>
+<li><strong><code>sub_color</code>=&gt;<code>lightgreen</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[color] default of <code>sub(ject)</code> objects (all other coloring schemes over ride default)</strong><br />
+</li>
+<li><strong><code>sub_initoffset</code>=&gt;<code>30</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] pixel indent from top of subscales to associated sequence line (increasing pushes scales further below associated sequence)</strong><br />
+</li>
+<li><strong><code>sub_labelhit_col</code>=&gt;<code>13</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] column to use for labeling each hit/pairwise (label will be drawn at beginning of each hit sub)</strong><br />
+</li>
+<li><strong><a name="item_sub_labelhit_color%3d%3eblack_color_of_pairwise_hi"><code>sub_labelhit_color</code>=&gt;<code>black</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;color of pairwise hit label text</a></strong><br />
+</li>
+<li><strong><a name="item_sub_labelhit_offset%3d%3e0_%5binteger%5d_horizonta"><code>sub_labelhit_offset</code>=&gt;<code>0</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] horizontal offset for hit label</a></strong><br />
+</li>
+<li><strong><a name="item_sub_labelhit_on%3d%3e0_%5b0%7c1%5d_turns_on_indivi"><code>sub_labelhit_on</code>=&gt;<code>0</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] turns on individual labeling of each pairwise hit</a></strong><br />
+</li>
+<li><strong><a name="item_sub_labelhit_pattern%3d%3e0%3f%28%5b0%2d9%2e%5d%7b"><code>sub_labelhit_pattern</code>=&gt;<code>0?([0-9.]{4})</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[regular expression] to match in data from column</a></strong><br />
+</li>
+<li><strong><code>sub_labelhit_size</code>=&gt;<code>9</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] font size (in points) for hit label</strong><br />
+</li>
+<li><strong><a name="item_sub_labelseq_col%3d%3e0_%5binteger%5d_column_to_us"><code>sub_labelseq_col</code>=&gt;<code>0</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] column to use for the beginning sub label</a></strong><br />
+</li>
+<li><strong><a name="item_sub_labelseq_col2%3d%3e4_%5binteger%5d_column_for_"><code>sub_labelseq_col2</code>=&gt;<code>4</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] column for second position sequence in alignment table pairwise row</a></strong><br />
+</li>
+<li><strong><a name="item_sub_labelseq_col2_pattern%3d%3e_%5bregular_express"><code>sub_labelseq_col2_pattern</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[regular expression] pattern to match in data from sub label sequence column 2</a></strong><br />
+</li>
+<li><strong><a name="item_column"><code>sub_labelseq_col_pattern</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[regular expression] pattern to match in data from sub label sequence column (use parenthesis to denote data within the match to display)</a></strong><br />
+</li>
+<li><strong><a name="item_sub_labelseq_color%3d%3eblack_%5bcolor%5d_of_text_"><code>sub_labelseq_color</code>=&gt;<code>black</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[color] of text label for sub objects</a></strong><br />
+</li>
+<li><strong><a name="item_sub_labelseq_offset%3d%3e0_%5binteger%5d_horizonta"><code>sub_labelseq_offset</code>=&gt;<code>0</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] horizontal offset label</a></strong><br />
+</li>
+<li><strong><code>sub_labelseq_on</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles overall begin sequence label for <code>sub(ject)</code> label off and on</strong><br />
+</li>
+<li><strong><code>sub_labelseq_size</code>=&gt;<code>6</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] font size (in points) for begin label sequence</strong><br />
+</li>
+<li><strong><a name="item_sub_labelseqe_col%3d%3e4_%5binteger%5d_column_to_u"><code>sub_labelseqe_col</code>=&gt;<code>4</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] column to use for the end subject label</a></strong><br />
+</li>
+<li><strong><a name="item_sub_labelseqe_col2%3d%3e0_%5binteger%5d_column_for"><code>sub_labelseqe_col2</code>=&gt;<code>0</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] column for second position in alignment table pairwise row</a></strong><br />
+</li>
+<li><strong><a name="item_sub_labelseqe_col2_pattern%3d%3e_%5bregular_expres"><code>sub_labelseqe_col2_pattern</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[regular expression] pattern to match in data from column</a></strong><br />
+</li>
+<li><strong><a name="item_sub_labelseqe_col_pattern%3d%3e_%5bregular_express"><code>sub_labelseqe_col_pattern</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[regular expression] pattern to match in data from column</a></strong><br />
+</li>
+<li><strong><a name="item_sub_labelseqe_color%3d%3eblack_%5bvalid_color%5d_o"><code>sub_labelseqe_color</code>=&gt;<code>black</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[valid color] of label text</a></strong><br />
+</li>
+<li><strong><a name="item_sub_labelseqe_offset%3d%3e0_%5binteger%5d_horizont"><code>sub_labelseqe_offset</code>=&gt;<code>0</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] horizontal offset for label</a></strong><br />
+</li>
+<li><strong><code>sub_labelseqe_on</code>=&gt;<code>0</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles off and on the overall <code>sub(ject)</code> label at end of last hit/pairwise</strong><br />
+</li>
+<li><strong><code>sub_labelseqe_size</code>=&gt;<code>6</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] font size (in points) for end subject label</strong><br />
+</li>
+<li><strong><a name="item_sub_line_spacing%3d%3e9_%5binteger%5d_pixels_per_l"><code>sub_line_spacing</code>=&gt;<code>9</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] pixels per line determining the spacing between subs placed on different lines</a></strong><br />
+</li>
+<li><strong><code>sub_on</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles <code>sub(ject)</code> display off and on (these are the pairwise representations drawn below the sequence line) For BLAST searches these traditionally represent the subject sequences found in a database search.</strong><br />
+</li>
+<li><strong><a name="item_sub_scale_categoric_string%3d%3e_%5bstring%5d_list"><code>sub_scale_categoric_string</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[string] list of comma delimited category names</a></strong><br />
+</li>
+<li><strong><code>sub_scale_col</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] column for value to arrange pairwise hit on sub scale (subscale)</strong><br />
+</li>
+<li><strong><code>sub_scale_col2</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] column for second position sequence in alignment pairwise (only used if defined)</strong><br />
+</li>
+<li><strong><a name="item_sub_scale_col2_pattern%3d%3e_%5bregular_expression"><code>sub_scale_col2_pattern</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[regular expression] pattern to match in column 2</a></strong><br />
+</li>
+<li><strong><a name="item_sub_scale_col_pattern%3d%3e_%5bregular_expression%"><code>sub_scale_col_pattern</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[regular expression] pattern to match in column</a></strong><br />
+</li>
+<li><strong><a name="item_sub_scale_hline_color%3d%3egrey_%5bvalid_color%5d_"><code>sub_scale_hline_color</code>=&gt;<code>grey</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[valid color] for horizontal sub scale lines</a></strong><br />
+</li>
+<li><strong><a name="item_sub_scale_hline_on%3d%3e1_%5b0%7c1%5d_toggles_off_"><code>sub_scale_hline_on</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles off and on the horizontal scale lines for sub scale</a></strong><br />
+</li>
+<li><strong><a name="item_sub_scale_hline_width%3d%3e1_%5binteger%5d_width_o"><code>sub_scale_hline_width</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] width of horizontal sub scale lines</a></strong><br />
+</li>
+<li><strong><a name="item_sub_scale_label_color%3d%3eblack_%5bcolor%5d_for_s"><code>sub_scale_label_color</code>=&gt;<code>black</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[color] for sub scale axis label</a></strong><br />
+</li>
+<li><strong><code>sub_scale_label_fontsize</code>=&gt;<code>12</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] font size (in points) for sub scale axis label</strong><br />
+</li>
+<li><strong><a name="item_sub_scale_label_multiplier%3d%3e100_%5binteger%5d_"><code>sub_scale_label_multiplier</code>=&gt;<code>100</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] multiplication factor for sub scale label</a></strong><br />
+</li>
+<li><strong><a name="item_sub_scale_label_offset%3d%3e1_%5binteger%5d_horizo"><code>sub_scale_label_offset</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] horizontal offset for sub scale axis tick marks</a></strong><br />
+</li>
+<li><strong><a name="item_sub_scale_label_on%3d%3e1_%5b0%7c1%5d_toggles_off_"><code>sub_scale_label_on</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles off and on sub scale axis tick mark labels</a></strong><br />
+</li>
+<li><strong><a name="item_sub_scale_label_pattern%3d%3e_%5bregular_expressio"><code>sub_scale_label_pattern</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[regular expression] pattern to match in sub scale label</a></strong><br />
+</li>
+<li><strong><code>sub_scale_lines</code>=&gt;<code>10</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] number of lines (or interval steps) to plot for stagger or cscale (automatically set for subscaleC)</strong><br />
+</li>
+<li><strong><code>sub_scale_max</code>=&gt;<code>1.00</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[float] maximum value to place on the sub scale (automatically set for subscaleC)</strong><br />
+</li>
+<li><strong><code>sub_scale_min</code>=&gt;<code>0.80</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[float] minimum value to place on the sub scale (automatically set for subscaleC)</strong><br />
+</li>
+<li><strong><a name="item_sub_scale_on%3d%3e0_%5b0%7c1%5d_toggles_sub_scale_"><code>sub_scale_on</code>=&gt;<code>0</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles sub scale on and off</a></strong><br />
+</li>
+<li><strong><a name="item_step"><code>sub_scale_step</code>=&gt;<code>0.01</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[float] value to increment between each step (automatically set to -1 for subscaleC, 1 reverses subscaleC)</a></strong><br />
+</li>
+<li><strong><a name="item_sub_scale_tick_color%3d%3eblack_%5bcolor%5d_for_su"><code>sub_scale_tick_color</code>=&gt;<code>black</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[color] for sub scale axis tick marks</a></strong><br />
+</li>
+<li><strong><a name="item_sub_scale_tick_length%3d%3e9_%5binteger%5d_length_"><code>sub_scale_tick_length</code>=&gt;<code>9</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] length of sub axis tick marks</a></strong><br />
+</li>
+<li><strong><a name="item_sub_scale_tick_offset%3d%3e4_%5binteger%5d_offset_"><code>sub_scale_tick_offset</code>=&gt;<code>4</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] offset of sub scale axis tick marks</a></strong><br />
+</li>
+<li><strong><a name="item_sub_scale_tick_on%3d%3e1_%5b0%7c1%5d_toggles_off_a"><code>sub_scale_tick_on</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles off and on the sub scale axis at horizontal tick positions</a></strong><br />
+</li>
+<li><strong><a name="item_sub_scale_tick_width%3d%3e3_%5binteger%5d_width_of"><code>sub_scale_tick_width</code>=&gt;<code>3</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] width of sub scale axis tick marks</a></strong><br />
+</li>
+<li><strong><a name="item_sub_scale_vline_color%3d%3eblack_%5bcolor%5d_for_v"><code>sub_scale_vline_color</code>=&gt;<code>black</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[color] for vertical axis line of sub scale</a></strong><br />
+</li>
+<li><strong><a name="item_sub_scale_vline_offset%3d%3e%2d5_%5binteger%5d_hor"><code>sub_scale_vline_offset</code>=&gt;<code>-5</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] horizontal offset for subject axis line</a></strong><br />
+</li>
+<li><strong><a name="item_sub_scale_vline_on%3d%3e1_%5b0%7c1%5d_toggles_off_"><code>sub_scale_vline_on</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles off and on the vertical axis line for sub scale</a></strong><br />
+</li>
+<li><strong><a name="item_sub_scale_vline_width%3d%3e2_%5binteger%5d_width_o"><code>sub_scale_vline_width</code>=&gt;<code>2</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] width of sub scale axis line</a></strong><br />
+</li>
+<li><strong><code>sub_width</code>=&gt;<code>8</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] default width (thickness) of sub objects</strong><br />
+</li>
+<li><strong><a name="item_template_desc_on%3d%3e1_%5b0%7c1%5d_toggles_off_an"><code>template_desc_on</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles off and on wether  descriptions, such as this one, are saved in a template file with each option variable</a></strong><br />
+</li>
+<li><strong><a name="item_text2_anchor%3d%3enw_%5bcenter%7cn%7cw%7cs%7ce%7cn"><code>text2_anchor</code>=&gt;<code>nw</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[center|n|w|s|e|nw|ne|se|sw] anchor point for end tick mark labels</a></strong><br />
+</li>
+<li><strong><a name="item_text2_color%3d%3ered_%5bcolor%5d_for_end_tick_mark"><code>text2_color</code>=&gt;<code>red</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[color] for end tick mark labels</a></strong><br />
+</li>
+<li><strong><a name="item_text2_offset%3d%3e0_%5binteger%5d_vertical_offset_"><code>text2_offset</code>=&gt;<code>0</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] vertical offset for end tick mark labels</a></strong><br />
+</li>
+<li><strong><a name="item_text2_offset_h%3d%3e0_%5binteger%5d_horizontal_off"><code>text2_offset_h</code>=&gt;<code>0</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] horizontal offset for end tick mark labels</a></strong><br />
+</li>
+<li><strong><a name="item_text2_on%3d%3e1_%5b0%7c1%5d_toggles_end_tick_label"><code>text2_on</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles end tick labels off and on</a></strong><br />
+</li>
+<li><strong><code>text2_size</code>=&gt;<code>20</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] font size (in points)  for end tick mark labels</strong><br />
+</li>
+<li><strong><a name="item_view"><code>text2_text</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[text] to display within a parasight view (useful for automation)</a></strong><br />
+</li>
+<li><strong><a name="item_text_anchor%3d%3enw_%5bcenter%7cn%7cw%7cs%7ce%7cnw"><code>text_anchor</code>=&gt;<code>nw</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[center|n|w|s|e|nw|ne|se|sw] anchor point for end tick mark labels</a></strong><br />
+</li>
+<li><strong><a name="item_text_color%3d%3ered_%5bcolor%5d_for_end_tick_mark_"><code>text_color</code>=&gt;<code>red</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[color] for end tick mark labels</a></strong><br />
+</li>
+<li><strong><code>text_fontsize</code>=&gt;<code>20</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] font size (in points)  for end tick mark labels</strong><br />
+</li>
+<li><strong><a name="item_text_offset%3d%3e0_%5binteger%5d_vertical_offset_f"><code>text_offset</code>=&gt;<code>0</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] vertical offset for end tick mark labels</a></strong><br />
+</li>
+<li><strong><a name="item_text_offset_h%3d%3e0_%5binteger%5d_horizontal_offs"><code>text_offset_h</code>=&gt;<code>0</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] horizontal offset for end tick mark labels</a></strong><br />
+</li>
+<li><strong><a name="item_text_on%3d%3e1_%5b0%7c1%5d_toggles_end_tick_labels"><code>text_on</code>=&gt;<code>1</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[0|1] toggles end tick labels off and on</a></strong><br />
+</li>
+<li><strong><code>text_text</code>=&gt;<code></code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[text] to display within a parasight view (useful for automation)</strong><br />
+</li>
+<li><strong><a name="item_general"><code>window_font_size</code>=&gt;<code>9</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] font size for parasight in general (not implemented)</a></strong><br />
+</li>
+<li><strong><a name="item_window_height%3d%3e550_%5binteger%5d_pixel_height_"><code>window_height</code>=&gt;<code>550</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] pixel height of main window on the initial start up</a></strong><br />
+</li>
+<li><strong><a name="item_window_width%3d%3e800_%5binteger%5d_pixel_width_of"><code>window_width</code>=&gt;<code>800</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[integer] pixel width of the main window on the initial start up  ,</a></strong><br />
+</li>
+</ul>
+<p>
+</p>
+<hr />
+<h1><a name="appendix_b:_quick_reference">APPENDIX B: QUICK REFERENCE</a></h1>
+<p>
+</p>
+<h2><a name="command_line_summary">COMMAND LINE SUMMARY</a></h2>
+<p><strong>-align [<em>filepath1:filepath2:etc</em>]</strong> load pairwise alignment <code>table(s)</code> (table must be miropeats format)</p>
+<p><strong>-arrangeseq  [<em>oneperline/sameline/file</em>]</strong>  (default is oneperline)</p>
+<pre>
+ *oneperline = each sequence is placed on a separate wrapping line
+ *sameline = the sequences are placed in alphabetical 
+    order on the same line
+ *<a href="file:filepath">file:filepath</a> = arrange file that allows specification
+    of line/paragraph and position</pre>
+<p><strong>-arrangesub [<em>oneperline/stagger/subscale/cscale</em>]</strong> (default stagger)
+Arrange subs below the sequence.</p>
+<pre>
+ *oneperline = each sequence is placed on its own line
+    underneath sequence
+ *stagger = multiple subjects are placed on same line 
+    only when non-overlapping
+ *subscaleN =  pairwise hits are placed on a numerical scale
+    based on values in chosen column(s)
+ *subscaleC =  pairwise hits are placed on categorical 
+    scale based on hash(s)</pre>
+<p>-color [<em>scheme</em>] <strong>***not implemented yet, no demand yet***</strong> Use other options for determining inter vs intrachromosal***</p>
+<p><strong>-colorsub [<em>NONE/RESET/seqrandom/hitrandom/hitconditional</em>]</strong></p>
+<pre>
+ *NONE = does not add a colorsub and does not remove colors 
+    for pairwise hits
+ *RESET = removes colors for pairwise hits 
+    colors for pairwise hits override colors for sequence hits
+ *seqrandom = color all pairwise comparisons for a subject the same
+ *hitrandom = randomly independently color each pairwise comparison
+ *hitconditional = allows coloring based on a conditional statement</pre>
+<p><strong>-extra [<em>filepath1:filepath2:etc</em>]</strong> loads extra sequence feature <code>table(s)</code> Sequence features are annotation that have single begin and end points (e.g. exons, introns, and repeats). The rows must consist of seqname[tab]begin[tab]end.  Further columns may contain optional data.  Columns named <code>offset</code>, <a href="#item_width"><code>width</code></a>, and <code>color</code> provide extra formatting information.</p>
+<p><strong>-graph1 [<em>filepath1:filepath2:etc</em>]</strong> Graphs a data set of values above the sequence line. such as %GC. The data scale is found on the left.  The data row format is simply seqname[TAB]begin[TAB]value.  No more, no less.  For regions with out a value a blank will cause the graph line to be disrupted.</p>
+<p><strong>-graph2 [<em>filepath1:filepath2:etc</em>]</strong>  Creates another graph using the scale on the right axis.  Same parameters as -graph1</p>
+<p><strong>-in [<em>filepath</em>]</strong>  load a previously saved parasight view. Three files required are *.psa,  *.pse and *.psm  (*.psg needed only if a graph has been used)</p>
+<p><strong>-options [<em>'opt1=&gt;value1,opt2=&gt;value2'</em>]</strong>  *** Allows all of the parasight options to be changed directly ***. One and zero are used for on/off, yes/no and true/false.  Complete access for the programmer using parasight as a displayer   (e.g. 'canvas_width=&gt;500,seq_tick_on=&gt;1,graph_scale_on=&gt;1')</p>
+<p><strong>-showseq [<em>a file or seqname(s):</em>]</strong>  names of sequences to display</p>
+<pre>
+   *ALL = show all files (default) 
+   *no colon = load as file of names 
+     format each line ( seqname[TAB]length[TAB]begin[TAB]end )
+     only sequence name is required other info optional
+   *colon(:) = parse as list of colon-delimited seq names
+     format: (seqname,length,begin,end:seqname2,length2,begin2,end2)</pre>
+<p><strong>-showseqqueryonly</strong> This toggles the display of only the first sequence in a given row.  This is the usually position for a blast query (hence the name of the option).</p>
+<p><strong>-showsub [<em>file | seqnames: | ALL</em>]</strong> names of subjects to display</p>
+<pre>
+   *ALL: displays all subject sequences (default)
+   *no colon = load file containing names (one seqname per line)
+   *colon(:) = parse input as list of colon-delimited sequence names</pre>
+<p><strong>-template [filepath]</strong> loads a saved option template file.  Template files can be stored in default directories for easy loading.</p>
+<p><strong>ADVANCED OPTIONS</strong></p>
+<p><strong>-minload</strong>     
+   *loads only the relevant pairwise that will be displayed 
+   (quicker when just certain sequences are needed from large files)</p>
+<p><strong>-precode <em>'perl code commands to execute after first screen draw'</em></strong>
+   *an advanced option useful for automating initial tasks</p>
+<p><strong>-die</strong>  parasight ends after executing precode
+   *an advanced option useful in automating tasks</p>
+<p>
+</p>
+<h2><a name="option_precedence">OPTION PRECEDENCE</a></h2>
+<p><strong>internal default ---&gt; -in ---&gt; -template ---&gt; -option ---&gt; commandline</strong> 
+
+</p>
+<p>
+</p>
+<h2><a name="mouse_functions">MOUSE FUNCTIONS</a></h2>
+<pre>
+ [DBL]=double click  [DRAG]=button hold down and move mouse 
+ EXECUTE # = Execute Command (User Defined under MISC options)
+ 
+ KEY            LEFT-BUTTON       MIDDLE BUTTON  RIGHT-CLICK                             
+ ---------      -----------       -------------  --------------------
+ NONE           Popup Desc                       Menu
+ CONTROL        Zoom in                          Zoom out
+ SHIFT          Move Object[DRAG]                Quick color; Uncolor[DBL]
+ ALTERNATE      Del  Object [DBL]                Lower Object; Raise Object[DBL]
+ CONTROL-SHIFT  Execute 1         Execute 2      Execute 3
+
+</pre>
+<p>
+</p>
+<h2><a name="compact_alphabetical_list_of_options_with_defaults">COMPACT ALPHABETICAL LIST OF -OPTIONS WITH DEFAULTS</a></h2>
+<p><strong>alignment_col</strong>=&gt;<code>0</code>&nbsp;&nbsp;
+<strong>alignment_col2</strong>=&gt;<code>0</code>&nbsp;&nbsp;
+<strong>alignment_wrap</strong>=&gt;<code>50</code>&nbsp;&nbsp;
+<strong>arrangeseq</strong>=&gt;<code>oneperline</code>&nbsp;&nbsp;
+<strong>arrangesub</strong>=&gt;<code>stagger</code>&nbsp;&nbsp;
+<strong>arrangesub_stagger_spacing</strong>=&gt;<code>40000</code>&nbsp;&nbsp;
+<strong>canvas_bpwidth</strong>=&gt;<code>250000</code>&nbsp;&nbsp;
+<strong>canvas_indent_left</strong>=&gt;<code>60</code>&nbsp;&nbsp;
+<strong>canvas_indent_right</strong>=&gt;<code>30</code>&nbsp;&nbsp;
+<strong>canvas_indent_top</strong>=&gt;<code>40</code>&nbsp;&nbsp;
+<strong>color</strong>=&gt;<code> None</code>&nbsp;&nbsp;
+<strong>colorsub</strong>=&gt;<code> None</code>&nbsp;&nbsp;
+<strong>colorsub_hitcond_col</strong>=&gt;<code>34</code>&nbsp;&nbsp;
+<strong>colorsub_hitcond_tests</strong>=&gt;<code>red if &lt;2; orange if &lt;0.99; yellow if &lt;0.98; green if &lt;0.97; blue if &lt;0.96; purple if &lt;0.95; brown if &lt;0.94; grey if &lt;0.93; black if &lt;0.92; pink if &lt;0.91</code>&nbsp;&nbsp;
+<strong>execute</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>execute2</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>execute2_array</strong>=&gt;<code>m</code>&nbsp;&nbsp;
+<strong>execute2_desc</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>execute3</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>execute3_array</strong>=&gt;<code>m</code>&nbsp;&nbsp;
+<strong>execute3_desc</strong>=&gt;<code>widget</code>&nbsp;&nbsp;
+<strong>execute4</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>execute4_array</strong>=&gt;<code>m</code>&nbsp;&nbsp;
+<strong>execute4_desc</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>execute_array</strong>=&gt;<code>e</code>&nbsp;&nbsp;
+<strong>execute_desc</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>extra_arrow_diag</strong>=&gt;<code>5</code>&nbsp;&nbsp;
+<strong>extra_arrow_on</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>extra_arrow_para</strong>=&gt;<code>5</code>&nbsp;&nbsp;
+<strong>extra_arrow_perp</strong>=&gt;<code>4</code>&nbsp;&nbsp;
+<strong>extra_color</strong>=&gt;<code>purple</code>&nbsp;&nbsp;
+<strong>extra_label_col</strong>=&gt;<code>10</code>&nbsp;&nbsp;
+<strong>extra_label_col_pattern</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>extra_label_color</strong>=&gt;<code>purple</code>&nbsp;&nbsp;
+<strong>extra_label_fontsize</strong>=&gt;<code>6</code>&nbsp;&nbsp;
+<strong>extra_label_offset</strong>=&gt;<code>2</code>&nbsp;&nbsp;
+<strong>extra_label_on</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>extra_label_test_col</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>extra_label_test_pattern</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>extra_offset</strong>=&gt;<code>-4</code>&nbsp;&nbsp;
+<strong>extra_on</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>extra_width</strong>=&gt;<code>6</code>&nbsp;&nbsp;
+<strong>fasta_blastdb</strong>=&gt;<code>htg:nt</code>&nbsp;&nbsp;
+<strong>fasta_directory</strong>=&gt;<code>.:fastax</code>&nbsp;&nbsp;
+<strong>fasta_fragsize</strong>=&gt;<code>400000</code>&nbsp;&nbsp;
+<strong>fasta_on</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>fasta_wrap</strong>=&gt;<code>50</code>&nbsp;&nbsp;
+<strong>filename_color</strong>=&gt;<code>grey</code>&nbsp;&nbsp;
+<strong>filename_offset</strong>=&gt;<code>-10</code>&nbsp;&nbsp;
+<strong>filename_offset_h</strong>=&gt;<code>0</code>&nbsp;&nbsp;
+<strong>filename_on</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>filename_pattern</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>filename_size</strong>=&gt;<code>10</code>&nbsp;&nbsp;
+<strong>filter1_col</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>filter1_max</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>filter1_min</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>filter2_col</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>filter2_max</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>filter2_min</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>filterextra1_col</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>filterextra1_max</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>filterextra1_min</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>filterextra2_col</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>filterextra2_max</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>filterextra2_min</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>filterpre1_col</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>filterpre1_max</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>filterpre1_min</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>filterpre2_col</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>filterpre2_max</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>filterpre2_min</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>gif_anchor</strong>=&gt;<code>center</code>&nbsp;&nbsp;
+<strong>gif_on</strong>=&gt;<code>0</code>&nbsp;&nbsp;
+<strong>gif_path</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>gif_x</strong>=&gt;<a href="#item_int"><code> int($opt{window_width}/2)</code></a>&nbsp;&nbsp;
+<strong>gif_y</strong>=&gt;<code>0</code>&nbsp;&nbsp;
+<strong>graph1_label_color</strong>=&gt;<code>blue</code>&nbsp;&nbsp;
+<strong>graph1_label_decimal</strong>=&gt;<code>2</code>&nbsp;&nbsp;
+<strong>graph1_label_fontsize</strong>=&gt;<code>10</code>&nbsp;&nbsp;
+<strong>graph1_label_multiplier</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>graph1_label_offset</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>graph1_label_on</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>graph1_line_color</strong>=&gt;<code>blue</code>&nbsp;&nbsp;
+<strong>graph1_line_on</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>graph1_line_smooth</strong>=&gt;<code>0</code>&nbsp;&nbsp;
+<strong>graph1_line_width</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>graph1_max</strong>=&gt;<code>100</code>&nbsp;&nbsp;
+<strong>graph1_min</strong>=&gt;<code>-5</code>&nbsp;&nbsp;
+<strong>graph1_on</strong>=&gt;<code>0</code>&nbsp;&nbsp;
+<strong>graph1_point_fill_color</strong>=&gt;<code>blue</code>&nbsp;&nbsp;
+<strong>graph1_point_on</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>graph1_point_outline_color</strong>=&gt;<code>blue</code>&nbsp;&nbsp;
+<strong>graph1_point_outline_width</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>graph1_point_size</strong>=&gt;<code>2</code>&nbsp;&nbsp;
+<strong>graph1_tick_color</strong>=&gt;<code>black</code>&nbsp;&nbsp;
+<strong>graph1_tick_length</strong>=&gt;<code>6</code>&nbsp;&nbsp;
+<strong>graph1_tick_offset</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>graph1_tick_on</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>graph1_tick_width</strong>=&gt;<code>3</code>&nbsp;&nbsp;
+<strong>graph1_vline_color</strong>=&gt;<code>black</code>&nbsp;&nbsp;
+<strong>graph1_vline_on</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>graph1_vline_width</strong>=&gt;<code>2</code>&nbsp;&nbsp;
+<strong>graph2_label_color</strong>=&gt;<code>red</code>&nbsp;&nbsp;
+<strong>graph2_label_decimal</strong>=&gt;<code>2</code>&nbsp;&nbsp;
+<strong>graph2_label_fontsize</strong>=&gt;<code>10</code>&nbsp;&nbsp;
+<strong>graph2_label_multiplier</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>graph2_label_offset</strong>=&gt;<code>8</code>&nbsp;&nbsp;
+<strong>graph2_label_on</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>graph2_line_color</strong>=&gt;<code>red</code>&nbsp;&nbsp;
+<strong>graph2_line_on</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>graph2_line_smooth</strong>=&gt;<code>0</code>&nbsp;&nbsp;
+<strong>graph2_line_width</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>graph2_max</strong>=&gt;<code>1000</code>&nbsp;&nbsp;
+<strong>graph2_min</strong>=&gt;<code>-1000</code>&nbsp;&nbsp;
+<strong>graph2_on</strong>=&gt;<code>0</code>&nbsp;&nbsp;
+<strong>graph2_point_fill_color</strong>=&gt;<code>red</code>&nbsp;&nbsp;
+<strong>graph2_point_on</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>graph2_point_outline_color</strong>=&gt;<code>red</code>&nbsp;&nbsp;
+<strong>graph2_point_outline_width</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>graph2_point_size</strong>=&gt;<code>2</code>&nbsp;&nbsp;
+<strong>graph2_tick_color</strong>=&gt;<code>black</code>&nbsp;&nbsp;
+<strong>graph2_tick_length</strong>=&gt;<code>6</code>&nbsp;&nbsp;
+<strong>graph2_tick_offset</strong>=&gt;<code>5</code>&nbsp;&nbsp;
+<strong>graph2_tick_on</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>graph2_tick_width</strong>=&gt;<code>3</code>&nbsp;&nbsp;
+<strong>graph2_vline_color</strong>=&gt;<code>black</code>&nbsp;&nbsp;
+<strong>graph2_vline_on</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>graph2_vline_width</strong>=&gt;<code>2</code>&nbsp;&nbsp;
+<strong>graph_scale_height</strong>=&gt;<code>80</code>&nbsp;&nbsp;
+<strong>graph_scale_hline_color</strong>=&gt;<code>black</code>&nbsp;&nbsp;
+<strong>graph_scale_hline_on</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>graph_scale_hline_width</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>graph_scale_indent</strong>=&gt;<code>-20</code>&nbsp;&nbsp;
+<strong>graph_scale_interval</strong>=&gt;<code>4</code>&nbsp;&nbsp;
+<strong>graph_scale_on</strong>=&gt;<code>0</code>&nbsp;&nbsp;
+<strong>help_on</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>help_wrap</strong>=&gt;<code>50</code>&nbsp;&nbsp;
+<strong>mark_advanced</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>mark_array</strong>=&gt;<code>m</code>&nbsp;&nbsp;
+<strong>mark_col</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>mark_col2</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>mark_color</strong>=&gt;<code>red</code>&nbsp;&nbsp;
+<strong>mark_pairs</strong>=&gt;<code>0</code>&nbsp;&nbsp;
+<strong>mark_pattern</strong>=&gt;<code>AC002038</code>&nbsp;&nbsp;
+<strong>mark_permanent</strong>=&gt;<code>0</code>&nbsp;&nbsp;
+<strong>mark_subs</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>pair_inter_color</strong>=&gt;<code>red</code>&nbsp;&nbsp;
+<strong>pair_inter_line_on</strong>=&gt;<code>0</code>&nbsp;&nbsp;
+<strong>pair_inter_offset</strong>=&gt;<code>0</code>&nbsp;&nbsp;
+<strong>pair_inter_on</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>pair_inter_width</strong>=&gt;<code>13</code>&nbsp;&nbsp;
+<strong>pair_intra_color</strong>=&gt;<code>blue</code>&nbsp;&nbsp;
+<strong>pair_intra_line_on</strong>=&gt;<code>0</code>&nbsp;&nbsp;
+<strong>pair_intra_offset</strong>=&gt;<code>0</code>&nbsp;&nbsp;
+<strong>pair_intra_on</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>pair_intra_width</strong>=&gt;<code>9</code>&nbsp;&nbsp;
+<strong>pair_level</strong>=&gt;<code>NONE</code>&nbsp;&nbsp;
+<strong>pair_type_col</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>pair_type_col2</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>pair_type_col2_pattern</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>pair_type_col_pattern</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>popup_format</strong>=&gt;<code>text</code>&nbsp;&nbsp;
+<strong>popup_max_len</strong>=&gt;<code>300</code>&nbsp;&nbsp;
+<strong>print_command</strong>=&gt;<code>lpr -P Rainbow {}</code>&nbsp;&nbsp;
+<strong>print_multipages_high</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>print_multipages_wide</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>printer_page_length</strong>=&gt;<code>11i</code>&nbsp;&nbsp;
+<strong>printer_page_orientation</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>printer_page_width</strong>=&gt;<code>8i</code>&nbsp;&nbsp;
+<strong>quick_color</strong>=&gt;<code>purple</code>&nbsp;&nbsp;
+<strong>seq_color</strong>=&gt;<code>black</code>&nbsp;&nbsp;
+<strong>seq_label_color</strong>=&gt;<code>black</code>&nbsp;&nbsp;
+<strong>seq_label_fontsize</strong>=&gt;<code>12</code>&nbsp;&nbsp;
+<strong>seq_label_offset</strong>=&gt;<code>-4</code>&nbsp;&nbsp;
+<strong>seq_label_offset_h</strong>=&gt;<code>0</code>&nbsp;&nbsp;
+<strong>seq_label_on</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>seq_label_pattern</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>seq_line_spacing_btwn</strong>=&gt;<code>250</code>&nbsp;&nbsp;
+<strong>seq_line_spacing_wrap</strong>=&gt;<code>200</code>&nbsp;&nbsp;
+<strong>seq_spacing_btwn_sequences</strong>=&gt;<code>10000</code>&nbsp;&nbsp;
+<strong>seq_tick_b_color</strong>=&gt;<code>black</code>&nbsp;&nbsp;
+<strong>seq_tick_b_label_anchor</strong>=&gt;<code>ne</code>&nbsp;&nbsp;
+<strong>seq_tick_b_label_color</strong>=&gt;<code>black</code>&nbsp;&nbsp;
+<strong>seq_tick_b_label_fontsize</strong>=&gt;<code>9</code>&nbsp;&nbsp;
+<strong>seq_tick_b_label_multiplier</strong>=&gt;<code>0.001</code>&nbsp;&nbsp;
+<strong>seq_tick_b_label_offset</strong>=&gt;<code>2</code>&nbsp;&nbsp;
+<strong>seq_tick_b_label_offset_h</strong>=&gt;<code>0</code>&nbsp;&nbsp;
+<strong>seq_tick_b_label_on</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>seq_tick_b_length</strong>=&gt;<code>10</code>&nbsp;&nbsp;
+<strong>seq_tick_b_offset</strong>=&gt;<code>0</code>&nbsp;&nbsp;
+<strong>seq_tick_b_on</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>seq_tick_b_width</strong>=&gt;<code>2</code>&nbsp;&nbsp;
+<strong>seq_tick_bp</strong>=&gt;<code>20000</code>&nbsp;&nbsp;
+<strong>seq_tick_color</strong>=&gt;<code>black</code>&nbsp;&nbsp;
+<strong>seq_tick_e_color</strong>=&gt;<code>black</code>&nbsp;&nbsp;
+<strong>seq_tick_e_label_anchor</strong>=&gt;<code>nw</code>&nbsp;&nbsp;
+<strong>seq_tick_e_label_color</strong>=&gt;<code>black</code>&nbsp;&nbsp;
+<strong>seq_tick_e_label_fontsize</strong>=&gt;<code>9</code>&nbsp;&nbsp;
+<strong>seq_tick_e_label_multiplier</strong>=&gt;<code>0.001</code>&nbsp;&nbsp;
+<strong>seq_tick_e_label_offset</strong>=&gt;<code>2</code>&nbsp;&nbsp;
+<strong>seq_tick_e_label_offset_h</strong>=&gt;<code>0</code>&nbsp;&nbsp;
+<strong>seq_tick_e_label_on</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>seq_tick_e_length</strong>=&gt;<code>10</code>&nbsp;&nbsp;
+<strong>seq_tick_e_offset</strong>=&gt;<code>0</code>&nbsp;&nbsp;
+<strong>seq_tick_e_on</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>seq_tick_e_width</strong>=&gt;<code>2</code>&nbsp;&nbsp;
+<strong>seq_tick_label_anchor</strong>=&gt;<code>n</code>&nbsp;&nbsp;
+<strong>seq_tick_label_color</strong>=&gt;<code>black</code>&nbsp;&nbsp;
+<strong>seq_tick_label_fontsize</strong>=&gt;<code>9</code>&nbsp;&nbsp;
+<strong>seq_tick_label_multiplier</strong>=&gt;<code>0.001</code>&nbsp;&nbsp;
+<strong>seq_tick_label_offset</strong>=&gt;<code>2</code>&nbsp;&nbsp;
+<strong>seq_tick_label_on</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>seq_tick_length</strong>=&gt;<code>10</code>&nbsp;&nbsp;
+<strong>seq_tick_offset</strong>=&gt;<code>0</code>&nbsp;&nbsp;
+<strong>seq_tick_on</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>seq_tick_whole</strong>=&gt;<code>0</code>&nbsp;&nbsp;
+<strong>seq_tick_width</strong>=&gt;<code>2</code>&nbsp;&nbsp;
+<strong>seq_width</strong>=&gt;<code>3</code>&nbsp;&nbsp;
+<strong>showqueryonly</strong>=&gt;<code>0</code>&nbsp;&nbsp;
+<strong>sub_arrow_diag</strong>=&gt;<code>5</code>&nbsp;&nbsp;
+<strong>sub_arrow_on</strong>=&gt;<code>0</code>&nbsp;&nbsp;
+<strong>sub_arrow_paral</strong>=&gt;<code>5</code>&nbsp;&nbsp;
+<strong>sub_arrow_perp</strong>=&gt;<code>4</code>&nbsp;&nbsp;
+<strong>sub_color</strong>=&gt;<code>lightgreen</code>&nbsp;&nbsp;
+<strong>sub_initoffset</strong>=&gt;<code>30</code>&nbsp;&nbsp;
+<strong>sub_labelhit_col</strong>=&gt;<code>13</code>&nbsp;&nbsp;
+<strong>sub_labelhit_color</strong>=&gt;<code>black</code>&nbsp;&nbsp;
+<strong>sub_labelhit_offset</strong>=&gt;<code>0</code>&nbsp;&nbsp;
+<strong>sub_labelhit_on</strong>=&gt;<code>0</code>&nbsp;&nbsp;
+<strong>sub_labelhit_pattern</strong>=&gt;<code>0?([0-9.]{4})</code>&nbsp;&nbsp;
+<strong>sub_labelhit_size</strong>=&gt;<code>9</code>&nbsp;&nbsp;
+<strong>sub_labelseq_col</strong>=&gt;<code>0</code>&nbsp;&nbsp;
+<strong>sub_labelseq_col2</strong>=&gt;<code>4</code>&nbsp;&nbsp;
+<strong>sub_labelseq_col2_pattern</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>sub_labelseq_col_pattern</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>sub_labelseq_color</strong>=&gt;<code>black</code>&nbsp;&nbsp;
+<strong>sub_labelseq_offset</strong>=&gt;<code>0</code>&nbsp;&nbsp;
+<strong>sub_labelseq_on</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>sub_labelseq_size</strong>=&gt;<code>6</code>&nbsp;&nbsp;
+<strong>sub_labelseqe_col</strong>=&gt;<code>4</code>&nbsp;&nbsp;
+<strong>sub_labelseqe_col2</strong>=&gt;<code>0</code>&nbsp;&nbsp;
+<strong>sub_labelseqe_col2_pattern</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>sub_labelseqe_col_pattern</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>sub_labelseqe_color</strong>=&gt;<code>black</code>&nbsp;&nbsp;
+<strong>sub_labelseqe_offset</strong>=&gt;<code>0</code>&nbsp;&nbsp;
+<strong>sub_labelseqe_on</strong>=&gt;<code>0</code>&nbsp;&nbsp;
+<strong>sub_labelseqe_size</strong>=&gt;<code>6</code>&nbsp;&nbsp;
+<strong>sub_line_spacing</strong>=&gt;<code>9</code>&nbsp;&nbsp;
+<strong>sub_on</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>sub_scale_categoric_string</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>sub_scale_col</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>sub_scale_col2</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>sub_scale_col2_pattern</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>sub_scale_col_pattern</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>sub_scale_hline_color</strong>=&gt;<code>grey</code>&nbsp;&nbsp;
+<strong>sub_scale_hline_on</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>sub_scale_hline_width</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>sub_scale_label_color</strong>=&gt;<code>black</code>&nbsp;&nbsp;
+<strong>sub_scale_label_fontsize</strong>=&gt;<code>12</code>&nbsp;&nbsp;
+<strong>sub_scale_label_multiplier</strong>=&gt;<code>100</code>&nbsp;&nbsp;
+<strong>sub_scale_label_offset</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>sub_scale_label_on</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>sub_scale_label_pattern</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>sub_scale_lines</strong>=&gt;<code>10</code>&nbsp;&nbsp;
+<strong>sub_scale_max</strong>=&gt;<code>1.00</code>&nbsp;&nbsp;
+<strong>sub_scale_min</strong>=&gt;<code>0.80</code>&nbsp;&nbsp;
+<strong>sub_scale_on</strong>=&gt;<code>0</code>&nbsp;&nbsp;
+<strong>sub_scale_step</strong>=&gt;<code>0.01</code>&nbsp;&nbsp;
+<strong>sub_scale_tick_color</strong>=&gt;<code>black</code>&nbsp;&nbsp;
+<strong>sub_scale_tick_length</strong>=&gt;<code>9</code>&nbsp;&nbsp;
+<strong>sub_scale_tick_offset</strong>=&gt;<code>4</code>&nbsp;&nbsp;
+<strong>sub_scale_tick_on</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>sub_scale_tick_width</strong>=&gt;<code>3</code>&nbsp;&nbsp;
+<strong>sub_scale_vline_color</strong>=&gt;<code>black</code>&nbsp;&nbsp;
+<strong>sub_scale_vline_offset</strong>=&gt;<code>-5</code>&nbsp;&nbsp;
+<strong>sub_scale_vline_on</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>sub_scale_vline_width</strong>=&gt;<code>2</code>&nbsp;&nbsp;
+<strong>sub_width</strong>=&gt;<code>8</code>&nbsp;&nbsp;
+<strong>template_desc_on</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>text2_anchor</strong>=&gt;<code>nw</code>&nbsp;&nbsp;
+<strong>text2_color</strong>=&gt;<code>red</code>&nbsp;&nbsp;
+<strong>text2_offset</strong>=&gt;<code>0</code>&nbsp;&nbsp;
+<strong>text2_offset_h</strong>=&gt;<code>0</code>&nbsp;&nbsp;
+<strong>text2_on</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>text2_size</strong>=&gt;<code>20</code>&nbsp;&nbsp;
+<strong>text2_text</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>text_anchor</strong>=&gt;<code>nw</code>&nbsp;&nbsp;
+<strong>text_color</strong>=&gt;<code>red</code>&nbsp;&nbsp;
+<strong>text_fontsize</strong>=&gt;<code>20</code>&nbsp;&nbsp;
+<strong>text_offset</strong>=&gt;<code>0</code>&nbsp;&nbsp;
+<strong>text_offset_h</strong>=&gt;<code>0</code>&nbsp;&nbsp;
+<strong>text_on</strong>=&gt;<code>1</code>&nbsp;&nbsp;
+<strong>text_text</strong>=&gt;<code></code>&nbsp;&nbsp;
+<strong>window_font_size</strong>=&gt;<code>9</code>&nbsp;&nbsp;
+<strong>window_height</strong>=&gt;<code>550</code>&nbsp;&nbsp;
+<strong>window_width</strong>=&gt;<code>800</code>
+
+</p>
+<p>
+</p>
+<hr />
+<h1><a name="appendix_c:_installation_(windows_or_unix)">APPENDIX C: INSTALLATION (WINDOWS OR UNIX)</a></h1>
+<p>Parasight has been tested extensively on Solaris, Linux, and MsWindows. Perl is available from www.perl.org. ActiveState (www.activestate.com) has binary versions available for many platforms--particularly useful for Windows installs.  Follow instructions on the choosen sites for installing Perl. Unix installs should be easier simply because you probably have more experience with Perl or you have a network administrator.  Windows installs are quite easy--just like installing any other program.  Once the install is done put parasight program in the Perl bin directory (usually C:\Perl\bin).  If you need to install any Perl modules such as Tk consult the individual OS.  For Windows Active State binary the <strong>PPM</strong> provides easy searches and installations of modules.  UNIX environments can utilize the <strong>CPAN</strong> module..  
+
+</p>
+<p>If there is a strong need a standalone versionsof the program that are package together with all need Perl functions could be generated using ActiveState's PerlApp program.  All needed components are contained within the ``packed up'' executable for both Linux, Solaris, and Windows.  No installation of Perl is needed.  Note this is not a compiled version, so the run speed will be the same as the non-PerlApp-packaged program.  It is actually just an executable that has collected all of the Perl components required for Parasight to run.
+
+</p>
+<p>
+</p>
+<hr />
+<h1><a name="appendix_d:_precode_hints">APPENDIX D: PRECODE HINTS</a></h1>
+<p>Precode affords the ability to add additional code to further manipulate parasight.  Extensive use of precode is found in the <em>parasight.examples</em> file. The best way to figure out how to manipulate parasight is to study all of the parasight code. Of course even I am trying to forget most of the code so the following are useful subroutines to abuse:
+
+</p>
+<p>First the hash variable containing all of the command line options is %opt.  So, if you want to chance arrangesub you have to use the code $opt{'arrangesub'};
+
+</p>
+<p>Useful commands to use when scripting:
+
+</p>
+<pre>
+ $opt{'x'}
+
+</pre>
+<p>Any normal option can be accessed within the hash %opt.
+
+</p>
+<pre>
+ &amp;reshowNredraw; &amp;update;
+ 
+These two subroutines will cause the any changes in options to be redrawn and updated on the screen.  While update is not normally used in the internal code (as it is called automatically whenever control is returned to the GUI), it is necessary when a script has control of parsight.
+
+</pre>
+<pre>
+ &amp;print_screen(0, &quot;fileoutpath&quot;);
+
+</pre>
+<p>This will print a postscript of the visble screen to the designated file.  If 1 is used for the initial print varaible then the postscript will be sent to the printer. If zero is used only the file is created.
+
+</p>
+<pre>
+ &amp;print_all (1, &quot;fileoutpath&quot;);
+
+</pre>
+<p>This will print a poscript of the entire parasight area to the designated file. If 1 is used for the intial print variable then the postscript will be sent to the printer. If zero is used only the file is created.  Depending upon the multipage options, multiple files may be created.
+
+</p>
+<pre>
+ &amp;save_parasight_table(&quot;basefileoutpath&quot;);
+
+</pre>
+<p>To save as parasight formated files which can be reload with the -in ``basefileoutpath'' name.
+
+</p>
+<pre>
+ &amp;fitlongestline;
+
+</pre>
+<p>This will force the length of the screen in bases to the length of the longest sequence.  This is most useful for BLAST views.
+
+</p>
+<pre>
+ $opt{'die'}=0;
+
+</pre>
+<p>This is useful to turn off the die option if you are subsequently saving the parasight files.  Otherwise when you load the saved parasight it will ``die'' before you get to see it.
+
+</p>
+<pre>
+ &amp;reshowNredraw; &amp;update; print &quot;PAUSED\n&quot;; my $pause=&lt;STDIN&gt;; 
+
+</pre>
+<p>A useful sequence of commands if you want to pause for the user. 
+
+</p>
+<pre>
+ $opt{&quot;text_text&quot;}=&quot;This is displayed text.&quot;; $opt{&quot;text_fontsize&quot;}=16;         $opt{&quot;text_offset_h&quot;}=10;
+
+</pre>
+<p>Allows for a line of text to be printed within the image.  text2_text allows for a second line.
+
+</p>
+<p>
+</p>
+<hr />
+<h1><a name="appendix_e:_additional_examples">APPENDIX E: ADDITIONAL EXAMPLES</a></h1>
+<pre>
+ parasight -showseq show.file -extra repeat.<a href="file:exon.file">file:exon.file</a>
+
+</pre>
+<p>This draws the sequences specified in <code>show.file</code> decorated with the repeats and exons specified in <code>repeat.file</code> and <code>exon.file</code>. Note: this example does not contain any alignments so <code>show.file</code> is required in order to specify the lengths of the sequencesto be displayed.
+
+</p>
+<pre>
+ parasight -in saved  -extra exons:introns 
+     -arrangeseq oneperline
+
+</pre>
+<p>This loads a saved parasight, adds extra annotation from the files <code>exons</code> and <code>introns</code> annotation.  It arranges subjects one per line below the sequence
+
+</p>
+<p>
+</p>
+<hr />
+<h1><a name="author">AUTHOR</a></h1>
+<p>Jeff Bailey (<a href="mailto:jab@cwru.edu">jab@cwru.edu</a>)
+
+</p>
+<p>
+</p>
+<hr />
+<h1><a name="acknowledgements">ACKNOWLEDGEMENTS</a></h1>
+<p>This software was developed in the laboratory of Evan Eichler, Department of Genetics,Case Western Reserve University and University Hosiptals, Cleveland.
+
+</p>
+<p>
+</p>
+<hr />
+<h1><a name="copyright">COPYRIGHT</a></h1>
+<p>Copyright (C) 2001-3 Jeff Bailey. Distribute and modify freely as defined by the GNU General Public License.
+
+</p>
+<p>
+</p>
+<hr />
+<h1><a name="disclaimer">DISCLAIMER</a></h1>
+<p>This software is provided ``as is'' without warranty of any kind.
+
+</p>
+
+</body>
+
+</html>

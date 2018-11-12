@@ -1,0 +1,39 @@
+ANNOVAR Version:
+	$Date: 2016-02-01 00:11:04 -0800 (Mon,  1 Feb 2016) $
+ANNOVAR Information:
+	For questions, comments, documentation, bug reports and program update, please visit http://www.openbioinformatics.org/annovar/
+ANNOVAR Command:
+	/home/aydemiro/bin/annotate_variation.pl -buildver hg19 -downdb -webfrom annovar snp150 humandb/
+ANNOVAR Started:
+	Tue Jul 24 15:41:31 2018
+NOTICE: Web-based checking to see whether ANNOVAR new version is available ... Done
+----------------------------UPDATE AVAILABLE------------------------------
+--------------------------------------------------------------------------
+WARNING: A new version of ANNOVAR (dated 2018-04-16) is available!
+         Download from http://www.openbioinformatics.org/annovar/
+Changes made in the 2018-04-16 version:
+         * added r.spl as a notation for certain indels based on HGVS guidelines
+         * fixed a bug in calculating amino acid sequence when a block substitution covers both exon and intron
+         * fixed a bug in classifying block substitutions as inframe mutations in coding_change.pl
+         * coding_change.pl now handles gene names that contains dash or dot
+         * fixed a bug table_annovar.pl when -dot2underline is used
+         * shortened the protein sequence calculation for nonframeshift mutations in coding_change.pl
+         * add -keepindelref argument in convert2annovar.pl to keep Ref/Alt allelles in VCF file
+         * improved compatibility of coding_change.pl for certain gene names that contain @ and . characters
+Changes made in the 2017-07-16 version:
+         * fixed a bug in calculating upstream distance that print when -separate is specified in annotate_variation.pl
+         * improvements to coding_change.pl to report more stopgain/stoploss and fix use-of-uninitialized-value issue
+         * slight change to convert2annovar.pl to handle mal-formed VCF file
+Changes made in the 2017-06-01 version:
+         * gx operation is added in table_annovar so that xref information for genes can be included
+         * show complete amino acid change in gene annotaion in table_annovar.pl and coding_change.pl
+         * add ability to handle avsnp file in convert2annovar.pl
+         * fixed a bug that misses upstream/downstream variants when -separate is used
+         * added support to use # rather than comma in -argument and -precedance and -avcolumn and -chromosome
+         * upstream variants now show distance to transcriptional start
+         * splice variants at UTR now shows details
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+NOTICE: Downloading annotation database http://www.openbioinformatics.org/annovar/download/hg19_snp150.txt.gz ... Failed
+NOTICE: Downloading annotation database http://www.openbioinformatics.org/annovar/download/hg19_snp150.txt.idx.gz ... Failed
+WARNING: Some files cannot be downloaded, including http://www.openbioinformatics.org/annovar/download/hg19_snp150.txt.idx.gz, http://www.openbioinformatics.org/annovar/download/hg19_snp150.txt.gz

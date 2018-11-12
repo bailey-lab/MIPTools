@@ -1,0 +1,46 @@
+UNAFold v3.6
+
+by Nick Markham & Michael Zuker
+© 2006 Rensselaer Polytechnic Institute
+Troy, NY 12180
+
+The UNAFold package contains several programs for performing energy minimization
+and partition function calculations on nucleic acid sequences.  Among the
+programs is a Perl script, hybrid2.pl, which simulates a one- or two-sequence
+ensemble of species by running other programs as appropriate.  hybrid2.pl is
+thus the recommended command for most purposes.
+
+The software is known to build and run properly on the following platforms:
+
+Linux
+FreeBSD
+SGI IRIX
+Sun Solaris
+IBM AIX
+MS Windows (with MinGW or Cygwin)
+MacOSX 10.3
+
+Building and installing the software should be as simple as typing ./configure,
+make and make install.  By default, the software is installed in /usr/local/bin,
+/usr/local/man and /usr/local/share, but this can easily be modified with the
+--prefix option of the configure script.  For example, ./configure --prefix=~
+will install the software in the user's home directory.
+
+On many systems, performance can be increased significantly if certain compiler
+flags are used.  For example, on a machine with an Intel Pentium III processor,
+type ./configure CFLAGS='-O3 -march=pentium3' to enable Pentium III-specific
+optimizations as well as architecture-independent optimizations.
+
+The file INSTALL for more detailed information about the usage of the configure
+script.  In addition to the options described therein, the configure script for
+UNAFold supports the following options:
+
+--enable-force enables support for force constraints.  Force constraints are
+enabled by default, so there is no reason to use this option.  However, force
+constraints may be *disabled* with --enable-force=no or --disable-force.
+Disabling force constraints causes the software to run faster.
+
+--with-apple-opengl-framework is usually required to build hybrid-plot on MacOS X.
+
+--with-gd can be used to specify a non-standard location for the gd library.
+--without-gd disables the usage of gd even if it would be found otherwise.

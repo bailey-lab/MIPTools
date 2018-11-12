@@ -1,0 +1,197 @@
+VERSION	DATE		COMMENTS
+-------	----		--------
+1.0	2003-06-09	First official version
+
+1.1	2003-06-09	tMin..tMax defaults to 0..100
+
+1.2	2003-06-25	ct-energy reads .ct files with multiple structures
+			hybrid-min & hybrid-ss-min produce valid .ct files when no structure is possible
+			ct-energy parses empty structures correctly
+			Makefile dependencies updated
+
+1.3	2003-07-03	bug fixed: tMax defaults to 100 in hybrid2.pl, hybrid2-min.pl
+			--noisolate in hybrid, hybrid-min, hybrid2-min.pl and hybrid-ss-noml
+			hybrid and hybrid-min use less memory with --energyOnly
+			--enthalpy and --entropy options in concentration(-same) and ensemble-dg(-same)
+			compiler warnings of uninitialized variables eliminated
+			command line arguments standardized across all programs
+			hybrid2.pl and hybrid2-min.pl plot Au and Bu instead of A and B
+
+1.4	2003-07-08	--noisolate in hybrid-ss-simple, hybrid-ss, hybrid2.pl
+			bug fixed: P(i and i+1 SS) corrected in hybrid-ss, hybrid-ss-simple, hybrid-ss-noml
+			compiler warnings about %lg in scanf() eliminated
+			bug fixed: hybrid-ss-min traces bulge/interior loops correctly
+			bug fixed: ct-energy computes exterior dangles of dimers correctly
+
+1.5	2003-07-28	--mfold in hybrid-min
+                        ct-energy displays components of loop energies with two --verbose's
+                        probability cutoff of 1/1000000 in partition function programs
+                        output of ensemble-ext, ensemble-ext-same normalized by sum of concentrations
+                        output of ensemble-dg-same is scaled correctly (was 1/2 of what it should be)
+			concentration and extinction plots have correct temperature range in hybrid2.pl, hybrid2-min.pl
+			Cp2heat and dG2dH are file-based instead of stream-based
+			Cp2heat writes multiple Tm's to TmCp
+			dG2dH produces .H and .dH files
+			dG2dS added to package
+			ensemble-ext(-same) produces TmExt
+			excluding AB disallowed
+			--tracebacks option in hybrid-ss-noml, hybrid-ss-simple, hybrid-ss
+			--quiet option in hybrid-min, hybrid-ss-min
+
+1.6	2003-10-18	--tracebacks option in hybrid
+			ensemble-ext(-same) determines extinction value correctly in TmExt
+			hybrid2(-min).pl use strict, warnings
+			extinctions added to hybrid-min, hybrid-ss-min, hybrid2-min.pl
+			ensemble-ext(-same) produces TmExt1 (max derivative) and TmExt2 (halfway point)
+			hybrid2(-min).pl understands --parallel when sequences are the same
+			--dGscale option eliminated
+			hybrid-ss-min, hybrid-min accept multiple sequences delimited by ;
+			machine-readable energy rules renamed to *._[GH], *._[GH]D for Windows compatibility
+
+1.6a	2003-10-24	machine-readable energy rules changed to *_.D[GH], *_.D[GH]D
+
+1.6b	2003-10-27	machine-readable energy rules changed back to *.D[GH], *.D[GH]D
+			human-readable energy rules moved to Rules subdirectory
+
+1.6c	2003-10-31	bug fixed: --quiet works in hybrid-min
+
+1.7	2003-11-06	extinctions corrected for unfolded strands
+			{0,1,2,3,4} read as {A,C,G,T/U,N}
+
+1.8	2004-02-04	prefilter and postfilter can be disabled separately
+			dangling Ns have energy +infinity
+			extra RT ln 2 term added to free energies of homodimers in hybrid(-min) and ct-energy
+			searching for bulge/interior loops is faster
+			--Vienna option in hybrid, hybrid-min and ct-energy
+			significant speedups in hybrid-min, hybrid-ss-min
+
+1.9	2004-04-27	--maxbp option in hybrid-ss, hybrid-ss-simple, hybrid-ss-noml, hybrid-ss-min, hybrid2.pl
+			--force option in all partition function and energy minimzation programs
+			--tracebacks works with --noisolate in hybrid, hybrid-ss, hybrid-ss-simple, hybrid-ss-noml
+			--mfold in hybrid-ss-min
+			temperature removed from names of .ct, .asc, .edp, .ann files if tMin + tInc > tMax
+			all programs read FASTA format in addition to raw text
+
+1.9b	2004-07-14	removed dependency on -liberty (helps with FreeBSD and MacOSX compatibility)
+
+2.0	2004-11-08	1x1 loops with Watson-Crick or wobble mismatches have energy +infinity
+			2x2 loops with 1 or 2 Watson-Crick or wobble mismatches have energy +infinity
+			extra RT ln 2 term removed from free energies of homodimers
+			individual heat capacities removed
+			--Vienna option in hybrid-ss, hybrid-ss-noml
+			hybrid-ss, hybrid-ss-simple and hybrid-ss-noml use less memory
+			energy minimization programs do traceback correctly when dG = 0
+			man pages written for each program
+			autoconf/automake used to make building on various platforms easier
+			prefilter can filter for helices of any length
+			Postscripts from hybrid-plot-ng are in color and generally better
+			hybrid2.pl uses gnuplot's enhanced postscript mode (subscripts, Greek deltas, etc.)
+			--basepairs option in all PF and EM programs
+
+2.1	2005-03-26	all programs read name from FASTA format
+			--single option works in ensemble-ext-same
+			extended .ct file format (two columns for stacking)
+			tstackm and tstacke replace double dangle
+			NUL, NULD and NULDAT rules created
+			various changes to increase numerical stability
+			concentrations(-same).pl normalizes so sum = 1
+			-z/--zip option in hybrid-min and PF programs replaces -V/--vienna
+			--title option in hybrid2.pl
+			added support for hexaloops (special hairpin loops of size 6)
+			HYBRIDDAT environment variable replaces HYBRIDLIB
+			several bugs fixed
+
+2.2	2005-04-08	1x2 and other interior loops with Watson-Crick mismatches have energy +infinity
+			ensemble-ext(-same) normalizes properly
+			ct-ext and ct-uniq added to package
+			-s/-ss option added to ensemble-ext(-same)
+
+2.2a	2005-05-19	plots are produced even when TmConc is undefined
+
+2.3	2005-05-25	hybrid(-ss)-2s.pl, hybrid2-2s.pl added to package
+			hybrid2.pl only calls gnuplot if it was found by configure
+			ct-prob added to package
+			it's back! RT ln 2 term added (again) for homodimers
+			bug fixed in hybrid-min (multiple pairs of sequences)
+
+2.4	2005-09-15	-q/--quiet works in hybrid-min
+			TmExt2 is halfway between observed min and /theoretical/ max
+			dG2d[HS], Cp2heat do not insist on .dG suffix
+			hybrid-min output includes enthalpy and entropy with -q but not -E
+			dHss based on enthalpy of strand and r.c., not ensemble
+			TmConc defined by concentration of *unfolded* single strands
+			fixed bug in extrapolation of bulge/interior and hairpin loops >= 30 bases
+			prefilter now requires m of n possible pairs
+			melt.pl added to package
+
+2.5	2005-10-27	hybrid-plot-ng uses gd for gif/jpeg/png iff present
+			ensemble-ext-same works correctly
+			concentrations(-same).pl handled degenerate cases
+			EM programs work correctly on platforms that don't understand 'inf'
+
+3.0	2006-03-10	name changed to UNAFold
+			hybrid-min works correctly if no basepairs are possible
+			-C/--circular option added to hybrid-ss-min
+			ct-energy correctly parses circular molecules
+			--mfold works with multiple sequences in hybrid-ss-min
+			ensemble-dg normalizes by max(A0, B0); ensemble-dg-same by A0
+			plot2ann.pl, ss-count.pl added to package
+			modifications to energy rules simplified: sint2.*, sint4.* and stack.DAT only
+			partition function programs are ~70% faster
+			hybrid-select.pl added to package
+			h-num.pl added to package
+			ct2rnaml added to package
+			miscloop.* includes temperature
+			scaling added to partition function programs
+			--stream option added to hybrid(-ss)-min
+			--help and --version work in (almost) all programs
+
+3.1	2006-04-19	sequence files may be in different directories
+			hybrid-plot compiles on MacOSX (configure --with-apple-opengl-framework)
+			bug fixed in hybrid-ss --tracebacks
+			ct-prob works correctly
+			bug fixed: hybrid(-ss)-min --mfold works correctly
+			hybrid-2s.pl works correctly when sequences can't hybridize
+			ITC-plot.pl, vantHoff-plot.pl added to package
+
+3.2	2006-05-25	memory error in ensemble-dg fixed
+			ct-energy reports +infinity for hairpins of < 3 bases
+			Cp2heat renamed to dG2Cp
+			--hyperbolic option added to ITC-plot.pl
+			configure accepts --disable-force
+			standard output flushed in quiet mode after each output
+
+3.3	2006-08-21	UNAFold.pl supports --model=PF
+			--fraction works correctly on RNA in hybrid2.pl
+			eliminated warnings in hybrid2.pl for undefined Tm's
+			ct-uniq works correctly
+			--NA works correctly in UNAFold.pl
+
+3.4	2007-04-25	UNAFold.pl does hybridizations too
+			salt correction added to tstackm and tstacke
+			loops of > 30 bases treated correctly with .DH[D] rules
+			eliminated warnings in plot2ann.pl
+			sequence names > 80 characters don't cause crashes
+			--constraints works in hybrid(-ss)-min
+			infinite loops with stochastic tracebacks fixed
+			melt.pl correctly processes options like --nodangle
+
+3.5	2008-02-14	ct2rnaml outputs stacking information
+			hybrid2.pl uses its name only (not its path) to determine special functionality
+			eliminated an occasional warning in plot2ann.pl
+			fixed bug involving plotting observed data in hybrid2.pl
+			plot2ann.pl now handles mfold-style .plot files
+			added support for prohibit-range constraints of the form "R i-j k-l"
+			bug fixed: $UNAFOLDDAT is searched for extinction file
+			new salt correction in polymer mode
+			eliminated a warning in UNAFold.pl
+
+3.6	2008-06-22	PF and EM programs check tMin/tInc for infinite loops
+			many minor changes to man pages
+			eliminated more warnings in hybrid2.pl for undefined Tm's
+			better support for files in other directories, spaces in paths, etc.
+			absorbances are calculated correctly for unknown bases
+			UNAFold.pl outputs valid XHTML 1.0 Strict
+			Bug fixed: energy details in UNAFold.pl work again
+			UNAFold.pl supports -C/--Ct for dimers
+			Bug fixed: hybrid-min (and thus melt.pl) calculates enthalpies correctly

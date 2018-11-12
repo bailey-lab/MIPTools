@@ -1,0 +1,32 @@
+.TH CT-EXT 1 "February 2008" "UNAFold 3.6" "User Commands"
+.SH NAME
+ct-ext \- compute absorbance for structure(s) in .ct format
+.SH SYNOPSIS
+.B ct-ext
+.RI [ OPTION ]...
+.RI [ FILE ]...
+.SH DESCRIPTION
+\fBct-ext\fR computes the UV absorbance of each structure in each \fIFILE\fR and writes it to standard output.
+.P
+When no \fIFILE\fR is specified, or if \fIFILE\fR is -, \fBct-ext\fR reads standard input.
+.SH OPTIONS
+.TP
+.BR -n ", " --NA =RNA|DNA
+sets nucleic acid type to RNA or DNA.  Default is RNA.
+.TP
+.B --single
+only sum extinctions for each nucelotide, rather than for each dinucleotide.
+.SH REFERENCES
+Markham, N. R. and Zuker, M. (2008) UNAFold: software for nucleic acid folding and hybridization.  In Keith, J. M., editor, \fIBioinformatics, Volume II.  Structure, Functions and Applications\fR, number 453 in \fIMethods in Molecular Biology\fR, chapter 1, pages 3-31.  Humana Press, Totowa, NJ.  ISBN 978-1-60327-428-9.
+.P
+Other references which may be useful may be found at http://dinamelt.bioinfo.rpi.edu/refs.php.
+.SH "SEE ALSO"
+.BR ct-energy (1),
+.BR hybrid-min (1),
+.BR hybrid-ss-min (1)
+.SH AUTHORS
+Nick Markham <markhn@rpi.edu> and Michael Zuker <zukerm@rpi.edu>
+.SH COPYRIGHT
+Copyright (c) 2006-2008, Rensselaer Polytechnic Institute.
+.SH AVAILABILITY
+UNAFold is available from http://dinamelt.bioinfo.rpi.edu/unafold/.  Commercial use requires a license; see http://dinamelt.bioinfo.rpi.edu/commercial.php.

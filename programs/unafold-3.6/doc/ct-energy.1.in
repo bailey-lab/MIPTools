@@ -1,0 +1,60 @@
+.TH CT-ENERGY 1 "@DATE@" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
+.SH NAME
+ct-energy \- evaluate the energy of a .ct file
+.SH SYNOPSIS
+.B ct-energy
+.RI [ OPTION ]...
+.RI [ FILE ]...
+.SH DESCRIPTION
+\fBct-energy\fR evaluates the energy of each structure in each \fIFILE\fR, such as those produced by mfold or by \fBhybrid-min\fR or \fBhybrid-ss-min\fR.  In its default mode it prints the energy of each structure followed by a carriage return (but see the \fB--verbose\fR option below).
+.P
+When no \fIFILE\fR is specified, or if \fIFILE\fR is -, \fBct-energy\fR reads standard input.
+.SH OPTIONS
+.TP
+.BR -n ", " --NA =RNA|DNA
+sets nucleic acid type to RNA or DNA.  Default is RNA.
+.TP
+.BR -t ", " --temperature =\fItemp
+sets temperature to \fItemp\fR.  Default is 37.
+.TP
+.BR -N ", " --sodium =\fIvalue
+sets Sodium ion concentration to \fIvalue\fR molar.  Default is 1.
+.TP
+.BR -M ", " --magnesium =\fIvalue
+sets Magnesium ion concentration to \fIvalue\fR molar.  Default is 0.
+.TP
+.BR -p ", " --polymer
+use salt corrections for polymers instead of oligomers (the default).
+.TP
+.BR -s ", " --suffix =\fIstring
+use energy rules with the suffix \fIstring\fR.  Overrides \fB--temperature\fR, \fB--sodium\fR, \fB--magnesium\fR and \fB--polymer\fR.
+.TP
+.BR -v ", " --verbose
+causes \fBct-energy\fR to output detailed information about each loop in the structure.  Specify twice for even more verbosity.
+.TP
+.BR -L ", " --logarithmic
+make penalty for multibranch loops logarithmic rather than linear.
+.TP
+.BR -V ", " --Vienna
+consider single-base stacking in "Vienna mode", in which a single-stranded base that may stack on an adjacent basepair must always do so.  By default, two states are considered for each such base: dangling and not dangling.
+.SH OBSCURE OPTIONS
+.TP
+.B --nodangle
+removes single-base stacking from consideration.
+.TP
+.B --simple
+makes the penalty for multibranch loops constant rather than affine.
+.SH ENVIRONMENT
+.IP UNAFOLDDAT
+an alternate location from which to read the energy rules.  The default energy rules can be overridden with files in the current directory or in the directory pointed to by UNAFOLDDAT.  \fBct-energy\fR looks for each file first in the current directory, then in the directory specified by UNAFOLDDAT and last in \fI/usr/local/share/unafold\fR (or wherever the energy rules were installed).
+.SH REFERENCES
+@REFERENCES@
+.SH "SEE ALSO"
+.BR hybrid-min (1),
+.BR hybrid-ss-min (1)
+.SH AUTHORS
+Nick Markham <markhn@rpi.edu> and Michael Zuker <zukerm@rpi.edu>
+.SH COPYRIGHT
+Copyright (c) 2006-2008, Rensselaer Polytechnic Institute.
+.SH AVAILABILITY
+UNAFold is available from http://dinamelt.bioinfo.rpi.edu/unafold/.  Commercial use requires a license; see http://dinamelt.bioinfo.rpi.edu/commercial.php.

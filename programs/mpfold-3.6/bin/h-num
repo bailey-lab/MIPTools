@@ -1,0 +1,30 @@
+#!/bin/bash
+export _POSIX2_VERSION=0
+
+if [ $# -lt 1 ]; then
+    echo -e " *** Usage: h-num input_file o\n\t(suffix .plot is assumed for the input_file and o is optional\n\t- (o)verwrite output file input_file.h-num if it exists)\n"
+    exit 1
+elif [ -s $1.plot ]; then
+    if [ $# -lt 2 ]; then
+        overw=null
+    else
+        overw=$2
+    fi
+    if [ -s $1.h-num -a $overw != "o" ]; then
+        echo -e " *** A file named  $1.h-num  already exists.\nUse: h-num $1 o  to overwrite this file.\n"
+	exit 1
+    else
+        cp $1.plot fort.21
+        h_num
+        mv fort.22 $1.h-num
+        rm -f fort.21
+        echo -e "    ====>  Output file is $1.h-num\n"
+	exit 0
+    fi
+else
+    echo -e " *** Input dataset $1.plot does not exist or is empty.\n"
+    exit 1
+fi
+
+
+

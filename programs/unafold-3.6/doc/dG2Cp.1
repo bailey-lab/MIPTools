@@ -1,0 +1,28 @@
+.TH DG2CP 1 "February 2008" "UNAFold 3.6" "User Commands"
+.SH NAME
+dG2Cp \- compute heat capacity based on free energy
+.SH SYNOPSIS
+.B dG2Cp
+.RI [ OPTION ]...
+.I FILE
+.SH DESCRIPTION
+\fBdG2Cp\fR computes (actually estimates) the heat capacity corresponding to a given free energy.  The free energy is read from the \fIFILE\fR, and the heat capacity is computed as -T * d^2G / dT^2 - that is, the negation of the temperature (in Kelvins) times the second derivative of free energy with respect to temeprature.  The computed heat capacity at each temperature is written to \fIprefix.Cp\fR and the observed maximum value is written to \fIprefix.TmCp\fR.  \fIprefix\fR is \fIFILE\fR with a trailing \fI.dG\fR removed, if applicable.
+.P
+Typically, the \fI.dG\fR file used as input should come from \fBensemble-dg\fR or \fBensemble-dg-same\fR.
+.SH OPTIONS
+.TP
+.BR -p ", " --points =\fInumber
+use \fInumber\fR points on either side of each point when performing numerical differentiation.  Default is 1.
+.SH REFERENCES
+Markham, N. R. and Zuker, M. (2008) UNAFold: software for nucleic acid folding and hybridization.  In Keith, J. M., editor, \fIBioinformatics, Volume II.  Structure, Functions and Applications\fR, number 453 in \fIMethods in Molecular Biology\fR, chapter 1, pages 3-31.  Humana Press, Totowa, NJ.  ISBN 978-1-60327-428-9.
+.P
+Other references which may be useful may be found at http://dinamelt.bioinfo.rpi.edu/refs.php.
+.SH "SEE ALSO"
+.BR ensemble-dg (1),
+.BR ensemble-dg-same (1)
+.SH AUTHORS
+Nick Markham <markhn@rpi.edu> and Michael Zuker <zukerm@rpi.edu>
+.SH COPYRIGHT
+Copyright (c) 2006-2008, Rensselaer Polytechnic Institute.
+.SH AVAILABILITY
+UNAFold is available from http://dinamelt.bioinfo.rpi.edu/unafold/.  Commercial use requires a license; see http://dinamelt.bioinfo.rpi.edu/commercial.php.

@@ -1,0 +1,22 @@
+0.999 0.000 0.000  #0  not used
+0.999 0.999 0.999  #1  Background Color
+0.000 0.000 0.000  #2  Bases
+0.000 0.000 0.125  #3  Text
+0.188 0.188 0.188  #4  Main Circle in Circle Graph
+0.999 0.000 0.000  #5  Connecting GC
+0.251 0.188 0.651  #6  Connecting AU
+0.063 0.500 0.063  #7  Connecting GU
+0.813 0.804 0.097  #8  Connecting Other base pairs
+0.000 0.000 0.313  #9  Copyright color
+0.000 0.000 0.125  #10 color for label number of circle graph
+0.140 0.140 0.140  #11 color for label line of c.g and label of structure
+0.000 0.000 0.000  #12 Centers of connecting arcs
+0.000 0.000 0.000  #13 Annotation text color Black
+0.999 0.999 0.999  #14 Annotation text color white
+# The 15 above lines must exist and start with 3 floating point values
+# Nothing beyond the 3rd value or 15th line is examined by the program.
+# The # symbol indicates a comment for the user's benefit.
+# The 3 values must be from 0 to .999 and indicate red, green, blue
+# You may edit the values with the above restrictions
+# sir_graph.col
+# Use from the command line with -col sir_graph.col

@@ -1,0 +1,27 @@
+visit ANNOVAR website at http://www.openbioinformatics.org/annovar for more exmaple.
+
+Please cite ANNOVAR if you use it in your research (Wang K, Li M, Hakonarson H. ANNOVAR: Functional annotation of genetic variants from next-generation sequencing data, Nucleic Acids Research, 38:e164, 2010). I spent tremendous amount of time and effort to maintain this tool, and your citation really means a lot to me.
+
+ex1.avinput: a simple ANNOVAR input example with a few variants (in hg19 coordinate)
+
+ex2.vcf: a simple VCF file with genotype information for 3 samples
+
+gene_xref.txt: an example gene cross-reference file to be used on 'gx' operation in table_annovar.pl
+
+example.simple_region: a file containing a list of genomic regions in sample format (for use in retrieve_seq_from_fasta.pl)
+
+example.tab_region: a flie containing a list of genomic regions in tab-delimited format (for use in retrieve_seq_from_fasta.pl)
+
+snplist.txt: a text file listing several dbSNP rs identifiers, one per line
+
+humandb/hg19_example_db_generic.txt: an example file for generic database
+
+humandb/hg19_example_db_gff3.txt: an example file for GFF3 database
+
+grantham.matrix: a matrix file containing GRANTHAM scores for gene-based annotation
+
+humandb/genometrax-sample-files-gff: a directory containing several "sample" GFF files provided by BioBase
+
+humandb/hg19_MT_ensGene.txt and humandb/hg19_MT_ensGene.fa: mitochondria sequence for the NC_001807 contig used by UCSC Genome Browser. Even if you align your sequence data with reference sequences from UCSC, you should still use these files, not the ENSEMBLE file, for mitochondria annotation, because the ENSEMBLE annotations have some errors.
+
+humandb/GRCh37_MT_ensGene.txt and humandb/GRCh37_MT_ensGene.fa: mitochondria sequence for the NC_012920 contig. If you align your sequence data using 1000 Genomes Project reference FASTA file, then you should use this file for annotating mitochondria variants.

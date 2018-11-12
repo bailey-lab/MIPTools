@@ -1,0 +1,35 @@
+MOTIVATION FOR TEST SUITE
+
+On or about January 6, 2007 (based on file access times) Nick started writing a test suite for UNAFold.  There are three main uses for this test suite:
+
+1. To verify that a particular build is successful.  For example, when the software is built on a new platform, the test suite can offer some confidence that the port was successful.
+
+2. To verify the effects of a change to the source code.  After any change is introduced, re-running the test suite should make clear what effects the change has had (and what effects it *hasn't* had.)
+
+3. To verify that what the software already does and what we think it already does are the same.  In addition to cutting down on future bugs, the test suite might uncover bugs we already have and don't know about.  (This applies particularly when used with valgrind -- see #4 below.)
+
+STRUCTURE OF TEST SUITE
+
+The test suite consists of the test.pl driver and multiple .tml files.  "TML" is intended to stand for "Test Markup Language", a dialect of XML Nick created for this test suite.
+
+Each .tml file specifies one or more tests.  A test, in this context, is a command to run, input to feed to it on standard input, and the expected return value, output and error.  test.pl takes a .tml file describing what *should* happen, runs the tests specified and writes output describing what *did* happen.  If this output is the same as the .tml file, the tests were successful.  Therefore, 'make check' is wired up to generate a .to ("test output") file for each .tml file and then compare the .tml and the .to using diff.
+
+FUTURE PLANS
+
+As of January 21, 2007 when Nick wrote this file, he has several ideas to improve the test suite:
+
+1. Finish writing it. :)  Currently, the test suite exercises a little of the functionality of hybrid and none of that of the other programs.  Worse yet, the functionality of hybrid that is exercised is rather uninteresting.  Just to be worthy of the name, this test suite should at least perform a realistic run of hybrid, hybrid-ss, hybrid-min and hybrid-ss-min.  Obviously, much more could and should be done.
+
+2. Extend it to OligoArrayAux as well.  Since UNAFold is a superset of OligoArrayAux, a proper test suite for UNAFold would be a superset of a proper test suite for OligoArrayAux, so this should require little extra work.
+
+3. Include support for valgrind.  That is, create a way to run every command of every test under valgrind, to verify that there are no memory errors.
+
+4. Include support for gprof.  That is, create a way to compile and run every command of every test with support for profiling.  This will be useful in the event we need to further optimize some part of the software, and will also give more information about the effects of any changes to the source.
+
+5. Include support for gcov.  Similar to #4, compile and run the test suite with support for coverage testing, and then analyze the coverage.  This would enable us to get closer to 100% coverage (where every line of code is exercised at least once), which in turn would make the test suite do a better job of all the other things it does.  (But note that coverage of every line of code does not necessarily imply true coverage of all of the functionality.)
+
+OTHER NOTES
+
+- Support for gprof or gcov is really an attribute of the software itself, not just the test suite.  For example, profiling requires (1) locating a gprof executable, (2) compiling with appropriate options and (3) running gprof after the tests have been run.  Likewise for gcov.  Thus, the right thing to do is probably to add --with-gprof and --with-gcov options to configure, and have 'make check' do the appropriate extra work if one of them was used.
+
+- gcov and gprof won't work on Perl scripts at all, and if valgrind works, it will end up testing the perl executable rather than the scripts themselves.  It may not make sense to do these things for scripts anyway, but it might be worth investigating whether there are mechanisms for profiling and coverage testing with Perl.  (As though this to-do list weren't wildly optimistic already.)

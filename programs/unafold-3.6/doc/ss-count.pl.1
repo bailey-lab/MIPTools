@@ -1,0 +1,37 @@
+.TH SS-COUNT.PL 1 "February 2008" "UNAFold 3.6" "User Commands"
+.SH NAME
+ss-count.pl \- compute ss-count from a .ct file
+.SH SYNOPSIS
+.B ss-count.pl
+.RI [ OPTION ]...
+.I file.ct
+.RI [ file.ext ]
+.SH DESCRIPTION
+\fBss-count.pl\fR computes the ss-count of each base for a set of structures in \fI.ct\fR format.  The ss-count is the number of structures in which the base appears single-stranded.
+.P
+The output from \fBss-count.pl\fR is suitable for structure annotation with \fBsir_graph\fR.
+.P
+If a \fI.ext\fR file is given, it is assumed to contain the correct probabilities.  The output is expanded to include for each base the expected probability of being single-stranded, the standard deviation, the observed probability and the relative error (the observed probability minus the expected probability, divided by the standard deviation).
+.SH OPTIONS
+.TP
+.BR -n ", " --normalized
+divides the ss-count for each base by the number of structures, to obtain a value in the range [0, 1].  Normalization is automatic when a \fI.ext\fR file is supplied.
+.TP
+.BR -w ", " --weighted
+computes a weighted sum or average, where the weights are the Boltzmann factors for each structure.  Each Boltzmann factor is computed from a header line in the \fI.ct\fR file.
+.TP
+.BR -t ", " --temperature =\fItemp
+sets the temperature for Boltzmann-weighting to \fItemp\fR.  Default is 37.
+.SH REFERENCES
+Markham, N. R. and Zuker, M. (2008) UNAFold: software for nucleic acid folding and hybridization.  In Keith, J. M., editor, \fIBioinformatics, Volume II.  Structure, Functions and Applications\fR, number 453 in \fIMethods in Molecular Biology\fR, chapter 1, pages 3-31.  Humana Press, Totowa, NJ.  ISBN 978-1-60327-428-9.
+.P
+Other references which may be useful may be found at http://dinamelt.bioinfo.rpi.edu/refs.php.
+.SH "SEE ALSO"
+.BR hybrid-ss-min (1),
+.BR hybrid-min (1)
+.SH AUTHORS
+Nick Markham <markhn@rpi.edu> and Michael Zuker <zukerm@rpi.edu>
+.SH COPYRIGHT
+Copyright (c) 2006-2008, Rensselaer Polytechnic Institute.
+.SH AVAILABILITY
+UNAFold is available from http://dinamelt.bioinfo.rpi.edu/unafold/.  Commercial use requires a license; see http://dinamelt.bioinfo.rpi.edu/commercial.php.

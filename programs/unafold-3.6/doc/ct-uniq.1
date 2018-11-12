@@ -1,0 +1,25 @@
+.TH CT-UNIQ 1 "February 2008" "UNAFold 3.6" "User Commands"
+.SH NAME
+ct-uniq \- print unique structures from a .ct file
+.SH SYNOPSIS
+.B ct-uniq
+.RI [ FILE ]...
+.SH DESCRIPTION
+\fBct-uniq\fR reads a set of stuctures in \fI.ct\fR format from each \fIFILE\fR, sorts them, and writes the unique structures to standard output.  All structures should be on the same sequence(s) or \fBct-uniq\fR may not function correctly.
+.P
+When no \fIFILE\fR is specified, or if \fIFILE\fR is -, \fBct-uniq\fR reads standard input.
+.P
+\fBct-uniq\fR is generally used to eliminate duplicates from sets of stochastic tracebacks produced by \fBhybrid\fR or \fBhybrid-ss\fR.
+.SH REFERENCES
+Markham, N. R. and Zuker, M. (2008) UNAFold: software for nucleic acid folding and hybridization.  In Keith, J. M., editor, \fIBioinformatics, Volume II.  Structure, Functions and Applications\fR, number 453 in \fIMethods in Molecular Biology\fR, chapter 1, pages 3-31.  Humana Press, Totowa, NJ.  ISBN 978-1-60327-428-9.
+.P
+Other references which may be useful may be found at http://dinamelt.bioinfo.rpi.edu/refs.php.
+.SH "SEE ALSO"
+.BR hybrid (1),
+.BR hybrid-ss (1)
+.SH AUTHORS
+Nick Markham <markhn@rpi.edu> and Michael Zuker <zukerm@rpi.edu>
+.SH COPYRIGHT
+Copyright (c) 2006-2008, Rensselaer Polytechnic Institute.
+.SH AVAILABILITY
+UNAFold is available from http://dinamelt.bioinfo.rpi.edu/unafold/.  Commercial use requires a license; see http://dinamelt.bioinfo.rpi.edu/commercial.php.

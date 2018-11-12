@@ -1,0 +1,52 @@
+# color map for overlay_boxplot  Feb. 25, 1999: Define colors with rgb.
+0.0 0.05 0.20   # blue-black is color for text & outline     color 0
+0.00 0.00  0.00 # black is plot, optimal                     color 1
+0.19 0.23 0.18  # gray1 is plot 2nd darkest                  color 2
+0.41 0.36 0.36  # gray2 is plot 3rd darkest                  color 3
+0.55 0.55 0.65  # gray3 is plot 4th darkest                  color 4
+0.05 0.90 0.05  # green is ct, overlap with optimal          color 5 
+0.75 0.70 0.00  # yellow is ct, overlap with near optimal    color 6
+0.95 0.15 0.15  # red is ct, overlap with nonoptimal         color 7
+0.99 0.99 0.99  # white for background (gif and screen only).color 8
+0.00 0.00 0.80  # blue used for blue label dots              color 9
+0.55 0.65 0.75  # grid line color                            color 10
+0.00 0.65 0.65  # color for optimal plot mode for ct that miss optimal color 11
+# define size of dots. 1.0 causes no overlap and no space between
+# Adjusting the dots below may not make much difference.
+0.90  # size of dots from plot file   size 0
+1.70  # size of green dot             size 4
+1.65  # size of yellow dot            size 5
+1.65  # size of red dot               size 6
+# Define how close as a percentage to use overlap near optimal for color 6
+0.10  #Try .10 for now, use this value * (highest-optimal energy);
+# Define lower limit in kcal/mol for overlap near optimal question
+0.5 # If a value less than .5 kcal/mol is entered, it will be increased
+# to this value. (Above .5 is not used yet )
+#
+# Use 0.0 at line 20 for no yellow (0 to 1.0 is allowed above)
+# Lines 1,13, 14,22 must exist as comments
+# Lines 2-12 must exist as rgb colors
+# Lines 15-18 must exist as dot sizes.
+# Line 20 must exist to define close to optimal 
+# Line 22 must exist to define close to optimal, valid range
+# 
+# To change colors
+# Any floating point number of the form 0<=0.xx<1.00 may be altered.
+# The comment text  following the # may be altered to describe changes.
+# Every line above is required.  The program is stupid.
+# The # symbol indicates comments, but the program does not look for it. 
+#
+# The dot sizes can be altered. Use values greater than zero and
+# Less than 25. Use float type values.
+#
+# These colors are used for the screen, postscript, and gif files.
+# Format of this file must match the format expected by
+#  overlay_boxplot_setcolor.h
+#
+# This file is read at run time, not at compile time.
+#
+# Normal mode uses colors 0 to 10, as described above.
+# In opt-mode, colors 0,2-5,8-10 same
+# color 11 is for ct_dots that miss plot dots.
+# color 7 is for optimal dots that miss ct dots.
+# color 6 is for optimal within a described distance of plot dots.

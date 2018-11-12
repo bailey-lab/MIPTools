@@ -1,0 +1,9 @@
+<!ELEMENT tests (test+)>
+<!ELEMENT test (stdin, stdout, stderr)>
+<!ATTLIST test
+    command CDATA #REQUIRED
+    return CDATA #REQUIRED
+>
+<!ELEMENT stdin (#PCDATA)>
+<!ELEMENT stdout (#PCDATA)>
+<!ELEMENT stderr (#PCDATA)>
