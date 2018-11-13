@@ -4,6 +4,7 @@ import pickle
 import os
 from itertools import zip_longest
 import pandas as pd
+import numpy as np
 import argparse
 
 # Read input arguments
@@ -31,9 +32,9 @@ parser.add_argument("-s", "--server-num",
                     type=int,
                     help="Starting number for MIP server.",
                     default=1)
-parser.add_argument("-x", "--access-token",
+parser.add_argument("-x", "--access-token-file",
                     help="Basespace access token for user.",
-                    required=True)
+                    default="/opt/resources/access_token.txt")
 parser.add_argument("-d", "--raw-data-dir",
                     help=("Absolute path to base directory where sequencing "
                           "files should be saved to."),
@@ -49,24 +50,20 @@ parser.add_argument("-a", "--analysis-data-dir",
 parser.add_argument("-w", "--cluster-script",
                     help=("MIPWrangler script name. Absolute path"
                           "if not in $PATH."),
-                    default="/opt/resources/runMIPWranglerNoCutoffCurrent.sh")
-parser.add_argument("-r", "--resource-dir",
-                    help=("Path to directory where resources such as "
-                          "barcode dictionary, probe sets, sample sheet "
+                    default="runMIPWranglerNoCutoffCurrent.sh")
+parser.add_argument("-r", "--project-resource-dir",
+                    help=("Path to directory where project specific resources "
+                          "such as probe sets used, mip arm info etc. are"),
+                    default="/opt/project_resources")
+parser.add_argument("-r", "--base-resource-dir",
+                    help=("Path to directory where general resources such as "
+                          "barcode dictionary, sample sheet "
                           "templates etc. are."),
-                    default="/opt/resources")
+                    default="/opt/base_resources")
 parser.add_argument("-l", "--sample-list",
                     help=("File providing a list of samples with associated "
                           "information."),
                     required=True)
-parser.add_argument("--new-mip-arms",
-                    help=("File(s) containing mip-arm information when new "
-                          "mip arms are used."),
-                    nargs='*',
-                    default=[])
-parser.add_argument("--new-mip-set",
-                    help="Flag used when a new mip set is used.",
-                    action="store_true")
 # parse arguments from command line
 args = vars(parser.parse_args())
 experiment_id = args["experiment_id"]
@@ -75,18 +72,19 @@ nextseq_id = args["nextseq_id"]
 cluster_script = args["cluster_script"]
 cpu_count = args["cpu_count"]
 server_num = args["server_num"]
-access_token = args["access_token"]
+access_token_file = args["access_token_file"]
 raw_data_dir = os.path.abspath(args["raw_data_dir"])
 analysis_data_dir = os.path.abspath(args["analysis_data_dir"])
 processed_data_dir = os.path.abspath(args["processed_data_dir"])
-resource_dir = os.path.abspath(args["resource_dir"])
+project_resource_dir = os.path.abspath(args["project_resource_dir"])
+base_resource_dir = os.path.abspath(args["base_resource_dir"])
 sample_list_file = args["sample_list"]
 new_mip_set = args["new_mip_set"]
 new_mip_arms = args["new_mip_arms"]
 experiment_name = experiment_id + "_" + platform
 raw_dir = os.path.join(raw_data_dir, experiment_name)
 sample_sheet_template = os.path.join(
-    resource_dir,
+    base_resource_dir,
     "templates",
     "sample_sheet_templates",
     platform + "_sample_sheet_template.csv"
@@ -96,7 +94,7 @@ sample_sheet = os.path.join(raw_mip_ids_dir, "SampleSheet.csv")
 fastq_dir = os.path.join(raw_dir, "fastq")
 analysis_dir = os.path.join(analysis_data_dir, experiment_name)
 barcode_dict_file = os.path.join(
-    resource_dir, "barcode_dict.json")
+    base_resource_dir, "barcode_dict.json")
 # create dirs if they do not exist
 for d in [raw_mip_ids_dir, fastq_dir]:
     if not os.path.exists(d):
@@ -107,7 +105,7 @@ if platform == "nextseq":
     download_commands = [
         ["cd", raw_dir],
         ["python /usr/bin/BaseSpaceRunDownloader_v2.py -r",
-            nextseq_id, "-a", access_token]
+            nextseq_id, "-a", '"$(< ' + access_token_file + ')"']
         ]
     demux_commands = [
         ["cd", os.path.join(raw_dir, nextseq_id)],
@@ -197,9 +195,9 @@ if len(samples_sharing) > 0:
     samples_sharing_set = set(samples_sharing_set)
     print("There are %d samples sharing the same barcode pair"
           % len(samples_sharing_set))
-    mip.write_list(
-        samples_sharing,
-        os.path.join(analysis_data_dir, "samples_sharing_barcodes.tsv")
+    pd.DataFrame(samples_sharing).to_csv(
+        os.path.join(analysis_data_dir, "samples_sharing_barcodes.tsv"),
+        sep="\t"
     )
 # create sample sheet
 with open(sample_sheet_template) as infile, open(sample_sheet, "w") as outfile:
@@ -242,34 +240,27 @@ for s_set in sample_sets:
         set(sample_sets[s_set]["probe_set_strings"]))
     for pss in sample_sets[s_set]["probe_set_strings"]:
         sample_sets[s_set]["probe_sets"].append(pss.split(","))
-# If a list of mip arms is not available in mip_ids resource directory it
-# should be generated as below. The specified mip arms file must be provided.
-if len(new_mip_arms) > 0:
-    for mip_arm_file in new_mip_arms:
-        mip_arms = pd.read_table(
-            os.path.join(
-                resource_dir, "mip_ids", mip_arm_file
-            )
-        ).set_index("mip_id",
-                    drop=False).to_dict(orient="index")
-        mip_arm_list = mip_arms.values()
-        with open(os.path.join(
-            resource_dir, "mip_ids", mip_arm_file + "_list"
-        ), "w") as outfile:
-            json.dump(mip_arm_list, outfile, indent=1)
-
-
 # If a new mip set is used, update the mipsets.csv file and run the following
-probe_set_file = os.path.join(resource_dir,
-                              "mip_ids",
-                              "probe_sets.json")
-if new_mip_set:
-    mip.update_probe_sets(
-        mipset_table=os.path.join(resource_dir, "mip_ids", "mipsets.csv"),
-        mipset_json=probe_set_file
-    )
-with open(probe_set_file) as infile:
-    all_probes = json.load(infile)
+mipset_table = os.path.join(project_resource_dir, "mip_ids", "mipsets.csv")
+mipsets = pd.read_csv(mipset_table)
+mipset_list = mipsets.to_dict(orient="list")
+# convert the mip sets dataframe to dict for easy access
+all_probes = {}
+# keep mip arm files for each mip set in a dictionary
+mip_arms_dict = {}
+for mipset in mipset_list:
+    list_m = mipset_list[mipset]
+    # the file name should be the second line in the mipsets.csv
+    mip_arms_dict[mipset] = list_m[0]
+    # rest of the lines have probe names in the set
+    set_m = set(list_m[1:])
+    set_m.remove(np.nan)
+    all_probes[mipset] = set_m
+# save probe dictionary to file
+probe_set_file = os.path.join(project_resource_dir,
+                              "mip_ids", "probe_sets.json")
+with open(probe_set_file, "w") as outfile:
+    json.dump(all_probes, outfile)
 subset_names = []
 # For each sample and probe set create
 # 1) MIPWrangler input files (samples etc.)
@@ -279,24 +270,25 @@ for s_set in sample_sets:
     sample_subset = sample_sets[s_set]["sample_names"]
     probe_sets = sample_sets[s_set]["probe_sets"]
     for pset_names in probe_sets:
-        probes = []
+        probes = set()
         mip_arms_list = []
         for p_name in pset_names:
-            arm_file = os.path.join(resource_dir,
+            probes.update(all_probes[p_name])
+            arm_file = os.path.join(project_resource_dir,
                                     "mip_ids",
-                                    all_probes[p_name][0])
-            probes_included = all_probes[p_name][1:]
-            probes.extend(probes_included)
-            with open(arm_file) as infile:
-                all_arm_list = json.load(infile)
-            for m in all_arm_list:
-                if m["mip_family"] in probes_included:
-                    mip_arms_list.append(m)
-        mip_family_names = []
-        for m in mip_arms_list:
-            if (m["mip_family"] not in mip_family_names
-                    and m["mip_family"] in probes):
-                mip_family_names.append(m["mip_family"])
+                                    mip_arms_dict[p_name])
+            try:
+                with open(arm_file) as infile:
+                    mip_arms_list.append(pd.read_table(infile))
+            except IOError:
+                print(("MIP arm file {} is required but missing for "
+                      "the probe set {}").format(arm_file, p_name))
+        mip_arms_table = pd.concat(mip_arms_list,
+                                   ignore_index=True).drop_duplicates()
+        mip_arms_table = mip_arms_table.loc[
+            mip_arms_table["mip_id"].isin(probes)
+        ]
+        mip_family_names = mip_arms_table["mip_family"].tolist()
         subset_name = s_set + "_" + "_".join(pset_names)
         # Create MIPWrangler Input files
         with open(
@@ -312,7 +304,7 @@ for s_set in sample_sets:
             for ms in mips_samples:
                 outfile_list.append("\t".join(ms))
             outfile.write("\n".join(outfile_list))
-            pd.DataFrame(mip_arms_list).groupby(
+            pd.DataFrame(mip_arms_table).groupby(
                 "mip_id").first().reset_index().dropna(
                     how="all", axis=1
                     ).to_csv(

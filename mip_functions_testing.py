@@ -11085,7 +11085,7 @@ def process_results(wdir,
     used_probes = set()
     for psk in probe_set_keys:
         with open(probe_sets_file) as infile:
-            used_probes.update(json.load(infile)[psk][1:])
+            used_probes.update(json.load(infile)[psk])
     probe_cop = []
     for m in used_probes:
         g = m.split("_")[0]
