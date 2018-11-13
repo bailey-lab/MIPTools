@@ -63,9 +63,8 @@ From: amd64/ubuntu:18.04
     conda clean -tipsy
 
     # install lastZ
-    cd /opt
-    git clone https://github.com/bailey-lab/lastz.git
-    cd lastz/src && make lastz_32 && install lastz_32 /usr/bin/
+    cd /opt/programs/lastz
+    src && make lastz_32 && install lastz_32 /usr/bin/
 
     # copy programs and executables from the resources directory on host
     # working directory
