@@ -91,7 +91,7 @@ From: amd64/ubuntu:18.04
     resources/bin /opt
 
 %environment
-    PATH=/opt/conda/bin:$PATH'
+    PATH=/opt/conda/bin:$PATH
     XDG_RUNTIME_DIR=""
 
 %apprun jupyter
