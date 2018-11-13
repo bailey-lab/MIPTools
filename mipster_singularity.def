@@ -83,7 +83,7 @@ From: amd64/ubuntu:18.04
     ln -sf /opt/programs/annovar-20180416/*.pl /usr/bin
 
     # create work and resources directories in /opt
-    mkdir /opt/resources /opt/work
+    mkdir /opt/resources /opt/work /opt/project_resources
 
 %files
     resources/programs /opt/
