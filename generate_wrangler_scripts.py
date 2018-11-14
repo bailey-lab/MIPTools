@@ -58,7 +58,7 @@ parser.add_argument("-b", "--base-resource-dir",
                     help=("Path to directory where general resources such as "
                           "barcode dictionary, sample sheet "
                           "templates etc. are."),
-                    default="/opt/base_resources")
+                    default="/opt/resources")
 parser.add_argument("-l", "--sample-list",
                     help=("File providing a list of samples with associated "
                           "information."),
