@@ -30,4 +30,16 @@ This should generate a new directory in your "analysis_dir" named "experiment_id
 analysis_directory must have 2 more files in addition to the sample_list.tsv for post-wrangler analysis.
 wrangler_output: MIPWrangler output file (can be gzipped or regular text file).
 settings.txt: analysis settings file
-
+```bash
+singularity run --app jupyter -B base_resources(on-host):/opt/resources -B project_resources(on-host):/opt/project_resources -B analysis_dir(on-host):/opt/work mipmaker.sif
+```
+[I 16:14:14.762 NotebookApp] The port 8888 is already in use, trying another port.
+[I 16:14:14.799 NotebookApp] Serving notebooks from local directory: /opt/work
+[I 16:14:14.799 NotebookApp] The Jupyter Notebook is running at:
+[I 16:14:14.799 NotebookApp] http://localhost:8889/?token=cc1231d9d32839526b068a5fb1c09a503775cb480ed5bf0d
+[I 16:14:14.799 NotebookApp] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
+[C 16:14:14.800 NotebookApp] 
+    
+    Copy/paste this URL into your browser when you connect for the first time,
+    to login with a token:
+        http://localhost:8889/?token=cc1231d9d32839526b068a5fb1c09a503775cb480ed5bf0d
