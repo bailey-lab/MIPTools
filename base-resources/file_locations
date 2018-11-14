@@ -1,0 +1,30 @@
+# Locations
+all	primer3_settings_DIR	/opt/resources/primer3_settings/
+all	script_DIR	/opt/work/
+####################################################################################################
+##################################    pf 3d7 v3 files  #############################################
+pf	fasta_genome	/opt/project_resources/genomes/Pf_3D7_v3-PDB9.3/genome.fa
+pf	unmasked_fasta_genome	/opt/project_resources/genomes/Pf_3D7_v3-PDB9.3/unmasked_genome.fa
+pf	bowtie2_genome	/opt/project_resources/genomes/Pf_3D7_v3-PDB9.3/genome
+pf	bwa_genome	/opt/project_resources/genomes/Pf_3D7_v3-PDB9.3/genome
+pf	snps	/opt/project_resources/SNPs/AFR_QualityPF.vcf.gz
+pf	refgene	/opt/project_resources/genomes/Pf_3D7_v3-PDB9.3/refGene.txt
+pf	refgene_tabix	/opt/project_resources/genomes/Pf_3D7_v3-PDB9.3/refGene.txt.sorted.gz
+pf	refgene_dic	/opt/project_resources/genomes/Pf_3D7_v3-PDB9.3/refGene.dic
+pf	alias	/opt/project_resources/genomes/Pf_3D7_v3-PDB9.3/alias.dic
+pf	annotation_db_dir	/opt/project_resources/annovar-db/pfdb
+####################################################################################################
+####################################################################################################
+####################################################################################################
+####################################################################################################
+##################################    pv Sal1 files  #############################################
+pv	fasta_genome	/opt/project_resources/genomes/Pv_Sal1-PDB24/genome.fa
+pv	unmasked_fasta_genome	/opt/project_resources/genomes/Pv_Sal1-PDB24/genome.fa
+pv	bowtie2_genome	/opt/project_resources/genomes/Pv_Sal1-PDB24/bowtie2_indexed/genome
+pv	bwa_genome	/opt/project_resources/genomes/Pv_Sal1-PDB24/fasta/genome
+pv	snps	/opt/project_resources/SNPs/pv_snps_sorted.gz
+pv	refgene	/opt/project_resources/genomes/Pv_Sal1-PDB24/refGene.txt
+pv	refgene_dic	/opt/project_resources/genomes/Pv_Sal1-PDB24/refGene.dic
+pv	refgene_tabix	/opt/project_resources/genomes/Pv_Sal1-PDB24/refGene.txt.sorted.gz
+pv	alias	/opt/project_resources/genomes/Pv_Sal1-PDB24/alias.dic
+pv	annotation_db_dir	/opt/project_resources/annovar-db/pvdb

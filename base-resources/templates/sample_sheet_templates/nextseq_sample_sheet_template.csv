@@ -1,0 +1,22 @@
+[Header]
+IEMFileVersion,4
+Investigator Name,Bailey
+Experiment Name,nextseq
+Date,11/10/2016
+Workflow,GenerateFASTQ
+Application,FASTQ OnlyAssay,Nextera
+Description
+Chemistry,Amplicon
+
+[Reads]
+151
+151
+
+[Settings]
+CustomRead1PrimerMix,C1
+CustomIndexPrimerMix,C2
+CustomRead2PrimerMix,C3
+ReverseComplement,0
+
+[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description

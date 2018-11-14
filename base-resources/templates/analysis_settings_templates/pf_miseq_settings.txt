@@ -1,0 +1,128 @@
+##############################################################################
+##############################################################################
+##############  SETTINGS THAT CHANGE PER RUN #################################
+##############################################################################
+##############################################################################
+workingDir	analysis/pf/DRC_170828/
+runID	170828
+mipsterFile	170828_allinfo
+filteredMipsterFile	170828_allinfo_filtered
+existingData	na
+rawDataFile	170828_raw_data.json
+##############################################################################
+##############################################################################
+##############  SETTINGS THAT CHANGE FOR FIRST RUN OF A PROJECT ##############  
+##############################################################################
+##############################################################################
+haplotypeDictionary	unique_haplotype.dic
+sequenceToHaplotypeDictionary	sequence_to_haplotype.dic
+variationDictionary	variation.dic
+variationKeyToUniqueKey	variation_key_to_unique_key.dic
+##############################################################################
+##############################################################################
+##############  SETTINGS THAT CHANGE PER PROJECT
+##############################################################################
+##############################################################################
+species	pf
+resourceDir	na
+callInfoDictionary	resources/mip_dictionaries/pf/pf_all_call_info_crt.json
+mipSetsDictionary	resources/mip_ids/probe_sets.json
+mipSetKey	DR1,CSP
+annotationScript	table_annovar_pf.pl
+annotationBuildVersion	3d7
+annotationProtocol	refGene
+annotationOperation	g
+annotationNaString	.
+annotationOutput	myanno
+annotationKeys	AAChange.refGene;ExonicFunc.refGene;Gene.refGene
+annotationIdKey	na
+caseControlStats	False
+##############################################################################
+##############################################################################
+############# SETTINGS THAT CHANGE LESS FREQUENTLY ###########################
+##############################################################################
+##############################################################################
+psvPriority	1
+psvMultiplier	50
+bwaOptions	mem,-t 30,-L 500,-T 80
+# minimum barcode information for a haplotype to be considered valid, fraction to all barcodes of all haplotypes for that copy in that sample
+minBarcodeCount	0
+minBarcodeFraction	0
+# minSnpBarcodeCount is for filtering data for SNP analysis
+# haplotypes with less barcodes than this will not be considered valid
+minSnpBarcodeCount	0
+minSnpBarcodeFraction	0
+minSnpQuality	20
+# Data normalization settings per probe
+# Per probe data across samples will be normalized to normalizationPercentiles
+# Mean of the values at lower and upper specified percentiles will be considered
+# to represent the copy count specified in averageCopyCount parameter.
+# This is similar to saying the median barcode count for a given probe
+# likely represent the diploid copy state (2) for human genes, if values of
+# normalizationPercentiles and averageCopyCount are set to 2 and 0.5,0.5, respectively.
+normalizationPercentiles	0.4,0.6
+averageCopyCount	1
+# mutations with less frequency than minMutationFraction will be set to zero frequency
+minMutationFraction	0.005
+# Merge nucleotide changes happening on the same codon to convert to amino acid change
+mergeSNPs	1
+# median normalized barcode number for filtering probes used
+minimumProbeMedian	10
+# median raw barcode number for filtering samples used for a given gene
+minimumSampleMedian	10
+##############################################################################
+##############################################################################
+##############  SETTINGS THAT ARE UNLIKELY TO CHANGE #########################
+##############################################################################
+##############################################################################
+colNames	p_targetName,p_geneName,s_Sample,h_popUID,h_seq,h_qual,c_qual,c_readCnt,c_barcodeCnt
+givenNames	mip_name,gene_name,sample_name,haplotype_ID,haplotype_sequence,haplotype_quality_scores,sequence_quality,read_count,barcode_count
+colTypes	str,str,str,str,str,str,str,int,int
+mipInfoDictionary	resources/mip_dictionaries/human/hsu_call_info.json
+mipDesignDictionary	resources/mip_dictionaries/human/human_mips_updated.dic
+alignmentDir	alignments/
+processorNumber	50
+copyStableGenes	na
+########################################################################
+########################################################################
+###############   FILE NAMES THAT DO NOT CHANGE ########################  
+########################################################################
+#########################################################################
+caseFile	case_file
+haplotypesSamFile	haplotypes_bwa.sam
+haplotypesFastqFile	haplotypes.fq
+filteredDataFile	filtered_data.json
+normalizedDataFile	normalized_data.json
+tempHaplotypesFile	haplotypes.tmp
+tempOffTargetsFile	off_targets.tmp
+tempAlignmentStdOut	alignment_out.tmp
+tempAlignmentsFile	alignments.tmp
+tempMappedHaplotypesFile	mapped_haplotypes.tmp
+mipCountFile	mip_counts
+barcodeCountFile	barcode_counts
+rawVcfFile	raw.vcf
+normalizedVcfFile	norm.vcf
+variationTableFile	variation_table
+sampleVariationFile	sample_diffs
+sampleInfoFile	sample_info_out.dic
+rawProblemData	problem_raw_data
+normalizedProblemData	problem_normalized_data
+perSampleResults	sample_results
+perProbeResults	probe_results
+uniqueProbeFile	unique_probes
+tablesFile	tables
+filteredTablesFile	filtered_tables
+clusterOutputFile	cluster_output
+# plotting options
+dpi	96
+ymax	6
+figsize	10,40
+snpResultsFile	clinical_snp_results
+##########################
+# dbscan cluster parameters
+tsneKey	V
+tsnePlotKey	Y
+minClusterSamples	5
+maxUnclusteredFrac	0.01
+maxClusterCount	9
+dbScanOutputFile	dbscan_clusters

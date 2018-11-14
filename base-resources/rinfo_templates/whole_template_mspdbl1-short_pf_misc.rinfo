@@ -1,0 +1,28 @@
+######################################
+#name of the locus
+NAME	NAME
+DESC	DESC
+#####################################################################
+SPECIES	pf_misc
+HOST_SPECIES	hg38
+DESIGN_DIR	DESIGN_DIR
+#####################################################################
+COL:MUST	name	snp_id	copy	chrom	begin	end	ref_base	snp_bases
+#MUST	testing_must_3	rs28465143	C1	chr14	21903270	21903270	G	A
+# comment here
+#####################################################################
+COL:SELECTION	type	low	high	mip_limit	trim_size	trim_increment	trim_limit	same_strand_overlap	opposite_strand_overlap	chain
+# comment here
+SELECTION:	compatibility	400	30000	150	10	10	200	30	10	1
+#####################################################################
+COL:CAPTURE	segment	flank	capture_type	target_snp_functions	score_snp_functions	target_diffs	score_target_diffs	mask_penalty	unique_copy_bonus	alternative_copy_penalty	technical_score_coefficient	chain_bonus	chain_coverage	must_bonus	set_copy_bonus	maf_for_arm_design	mta_for_arm_design	maf_for_targeting	mta_for_targeting	min_mips	max_mips	mask_diffs_lig	mask_diffs_ext	mask_snps_lig	mask_snps_ext
+CAPTURE:	S0	250	whole	none	none	must,pdiffs	1,1	50	0	300	1	20000	0.9	1	1	0.001	200	0.001	200	0	50	1	1	1	1
+# comment here
+#####################################################################
+COL:SETTINGS	settings_for	settings_file	Na	Mg	oligo_conc	tm	hit_threshold	lower_tm	lower_hit_threshold	alt_tm_diff	tm_diff	3p_identity	primer3_output_name	update_primers	filtered	bin_size	pick_size	hairpin_tm	dg	size_min	size_max	backbone	alternative_arms	seed_len	bowtie_mode	hit_limit	upper_hit_limit	local	processors
+# comment here
+SETTINGS	extension	extension_pf_non_td_500	0.025	0.01	4e-10	500	10	450	30	3	0	0	none	none	none	3	1	none	1	none	none	none	1	16	-k 2000	500	500	0	60
+SETTINGS	ligation	ligation_pf_non_td_500	0.025	0.01	4e-10	500	10	450	30	3	0	0	none	none	none	3	1	none	1	none	none	none	1	16	-k 2000	500	500	0	60
+SETTINGS	mip	none	0.025	0.01	4e-10	500	3	450	3	none	none	none	none	none	none	none	none	50	1	140	270	hybrid_split	any	18	-k 2000	500	500	1	60
+# comment here
+#####################################################################

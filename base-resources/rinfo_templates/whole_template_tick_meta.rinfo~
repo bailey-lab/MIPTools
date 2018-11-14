@@ -1,0 +1,87 @@
+#########################################################
+NAME	crt
+SPECIES	pf
+HOST_SPECIES	hg38
+DESIGN_DIR	designs/pf-redesign/
+#########################################################
+############### SELECTION CRITERIA ######################
+SELECTION	settings_for	compatibility
+SELECTION	low	400
+SELECTION	high	30000
+SELECTION	mip_limit	150
+SELECTION	trim_size	2
+SELECTION	trim_increment	3
+SELECTION	trim_limit	50
+SELECTION	same_strand_overlap	10
+SELECTION	opposite_strand_overlap	0
+SELECTION	max_same_strand_overlap	30
+SELECTION	max_opposite_strand_overlap	20
+SELECTION	chain	1
+SELECTION	skip	0
+#########################################################
+############### CAPTURE CRITERIA ########################
+CAPTURE	settings_for	S0
+CAPTURE	flank	250
+CAPTURE	capture_type	whole
+CAPTURE	target_snp_functions	none
+CAPTURE	score_snp_functions	none
+CAPTURE	target_diffs	must,pdiffs
+CAPTURE	score_target_diffs	2000,0
+CAPTURE	mask_penalty	100
+CAPTURE	unique_copy_bonus	200
+CAPTURE	alternative_copy_penalty	100
+CAPTURE	technical_score_coefficient	1
+CAPTURE	chain_bonus	5000
+CAPTURE	chain_coverage	1
+CAPTURE	must_bonus	100
+CAPTURE	set_copy_bonus	20
+CAPTURE	maf_for_arm_design	0.01
+CAPTURE	mta_for_arm_design	200
+CAPTURE	maf_for_targeting	0.01
+CAPTURE	mta_for_targeting	200
+CAPTURE	maf_for_indels	0.005
+CAPTURE	min_mips	0
+CAPTURE	max_mips	50
+CAPTURE	mask_diffs_lig	0
+CAPTURE	mask_diffs_ext	0
+CAPTURE	mask_snps_lig	0
+CAPTURE	mask_snps_ext	0
+CAPTURE	arms	capture
+#########################################################
+############### PIPELINE SETTINGS ######################
+#########################################################
+SETTINGS	settings_for	extension	ligation	mip
+SETTINGS	settings_file	extension_pf_non_td_5000	ligation_pf_non_td_5000	none
+SETTINGS	Na	0.025	0.025	0.025
+SETTINGS	Mg	0.01	0.01	0.01
+SETTINGS	oligo_conc	4.00E-10	4.00E-10	4.00E-10
+SETTINGS	tm	50	50	50
+SETTINGS	hit_threshold	0	0	3
+SETTINGS	lower_tm	45	45	45
+SETTINGS	lower_hit_threshold	5	5	3
+SETTINGS	tm_diff	2	2	none
+SETTINGS	3p_identity	5	5	none
+SETTINGS	primer3_output_name	none	none	none
+SETTINGS	update_primers	none	none	none
+SETTINGS	filtered	none	none	none
+SETTINGS	bin_size	1	1	none
+SETTINGS	pick_size	1	1	none
+SETTINGS	hairpin_tm	none	none	50
+SETTINGS	dg	1	1	1
+SETTINGS	umi_length	10	4	none
+SETTINGS	read_length	150	150	none
+SETTINGS	minimum_read_overlap	none	none	16
+SETTINGS	maximum_read_overlap	none	none	56
+SETTINGS	minimum_trim	10	20	none
+SETTINGS	size_min	none	none	none
+SETTINGS	size_max	none	none	none
+SETTINGS	backbone	none	none	hybrid_split
+SETTINGS	alternative_arms	0	0	none
+SETTINGS	seed_len	16	16	18
+SETTINGS	bowtie_mode	-k 500	-k 500	-k 500
+SETTINGS	hit_limit	15	15	15
+SETTINGS	upper_hit_limit	100	100	100
+SETTINGS	local	0	0	1
+SETTINGS	processors	2	2	2
+#########################################################
+################### TARGETS #############################
