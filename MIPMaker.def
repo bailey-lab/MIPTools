@@ -1,0 +1,97 @@
+Bootstrap: docker
+From: amd64/ubuntu:18.04
+
+%post
+    # set build environment
+    export DEBIAN_FRONTEND=noninteractive \
+        CONDA_DIR=/opt/conda \
+        SHELL=/bin/bash \
+        LANG=en_US.UTF-8 \
+        LANGUAGE=en_US.UTF-8 \
+        MINICONDA_VERSION=4.5.4
+    export PATH=$CONDA_DIR/bin:$PATH
+
+    # install system packages
+    apt update \
+    && apt -yq dist-upgrade \
+    && apt install -yq --no-install-recommends \
+    wget \
+    bzip2 \
+    ca-certificates \
+    sudo \
+    locales \
+    fonts-liberation \
+    fonts-dejavu \
+    git \
+    build-essential \
+    gcc \
+    openssh-client \
+    nano \
+    libtbb-dev \
+    libz-dev \
+    libxrender1
+
+    # install conda
+    cd /tmp && \
+        wget --quiet https://repo.continuum.io/miniconda/Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh && \
+        echo "a946ea1d0c4a642ddf0c3a26a18bb16d *Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh" | md5sum -c - && \
+        /bin/bash Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh -f -b -p $CONDA_DIR && \
+        rm Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh && \
+        $CONDA_DIR/bin/conda config --system --prepend channels conda-forge && \
+        $CONDA_DIR/bin/conda config --system --set auto_update_conda false && \
+        $CONDA_DIR/bin/conda config --system --set show_channel_urls true && \
+        $CONDA_DIR/bin/conda install --quiet --yes conda="${MINICONDA_VERSION%.*}.*" && \
+        $CONDA_DIR/bin/conda update --all --quiet --yes && \
+        conda clean -tipsy
+
+    # install conda packages
+    conda config --add channels bioconda
+    conda install -qy "notebook=5.7.0" \
+    "bcftools=1.9" \
+    "samtools=1.9" \
+    "bwa=0.7.17" \
+    "bowtie2=2.3.4.3" \
+    "primer3=2.4.0" \
+    "numpy=1.15" \
+    "scipy=1.1" \
+    "biopython=1.70" \
+    "pysam=0.15" \
+    "pandas=0.23" \
+    "matplotlib=3.0" \
+    "seaborn=0.9" \
+    "scikit-learn=0.20"
+    conda clean -tipsy
+
+    # install lastZ
+    cd /opt/programs/lastz
+    src && make lastz_32 && install lastz_32 /usr/bin/
+
+    # copy programs and executables from the resources directory on host
+    # working directory
+    scp /opt/bin/* /usr/bin
+
+    # install bcl2fastq
+    cd /opt/programs
+    dpkg -i bcl2fastq2_0v2.20.0.422-2_amd64.deb
+
+    # create symlinks to executables in /usr/bin so everything will be in
+    # $PATH for users.
+    ln -sf /opt/programs/parasight_v7.6/parasight.pl /usr/bin/parasight76.pl
+    ln -sf /opt/programs/mpfold-3.6/bin/* /usr/bin
+    ln -s /opt/programs/mpfold-3.6/share /usr/bin
+    ln -sf /opt/programs/unafold-3.6/scripts/* /usr/bin
+    ln -sf /opt/programs/annovar-20180416/*.pl /usr/bin
+
+    # create work and resources directories in /opt
+    mkdir /opt/resources /opt/work /opt/project_resources
+
+%files
+    resources/programs /opt/
+    resources/bin /opt
+
+%environment
+    PATH=/opt/conda/bin:$PATH
+    XDG_RUNTIME_DIR=""
+
+%apprun jupyter
+    jupyter notebook --notebook-dir=/opt/work --port=8888 --no-browser
