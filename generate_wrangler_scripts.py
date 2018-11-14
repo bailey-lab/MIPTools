@@ -1,4 +1,3 @@
-import mip_functions_testing as mip
 import json
 import pickle
 import os
