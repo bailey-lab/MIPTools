@@ -50,11 +50,11 @@ parser.add_argument("-w", "--cluster-script",
                     help=("MIPWrangler script name. Absolute path"
                           "if not in $PATH."),
                     default="runMIPWranglerNoCutoffCurrent.sh")
-parser.add_argument("-p", "--project-resource-dir",
+parser.add_argument("-r", "--project-resource-dir",
                     help=("Path to directory where project specific resources "
                           "such as probe sets used, mip arm info etc. are"),
                     default="/opt/project_resources")
-parser.add_argument("-r", "--base-resource-dir",
+parser.add_argument("-b", "--base-resource-dir",
                     help=("Path to directory where general resources such as "
                           "barcode dictionary, sample sheet "
                           "templates etc. are."),
