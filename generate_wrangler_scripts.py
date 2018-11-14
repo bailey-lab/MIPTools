@@ -251,7 +251,7 @@ for mipset in mipset_list:
     mip_arms_dict[mipset] = list_m[0]
     # rest of the lines have probe names in the set
     set_m = set(list_m[1:])
-    set_m.remove(np.nan)
+    set_m.discard(np.nan)
     all_probes[mipset] = set_m
 # save probe dictionary to file
 probe_set_file = os.path.join(project_resource_dir,

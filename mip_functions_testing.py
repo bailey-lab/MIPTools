@@ -3930,12 +3930,7 @@ def get_exons (gene_list):
     chrom_set = list(set(chrom_list))
     if len(chrom_set) == 0:
         return {}
-    while_counter = 0
-    while (len(chrom_set)>1) and (while_counter < 50):
-        for c in chrom_set:
-            if len(c)>5:
-                chrom_set.remove(c)
-        while_counter += 1
+    chrom_set = [c for c in chrom_set if len(c) < 6]
     if len(chrom_set) > 1:
         print(("More than one chromosomes, ",
                chrom_set,
