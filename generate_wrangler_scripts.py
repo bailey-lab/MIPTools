@@ -257,7 +257,7 @@ for mipset in mipset_list:
 probe_set_file = os.path.join(project_resource_dir,
                               "mip_ids", "probe_sets.json")
 with open(probe_set_file, "w") as outfile:
-    json.dump(all_probes, outfile)
+    json.dump({k: list(v) for k, v in all_probes.items()}, outfile)
 subset_names = []
 # For each sample and probe set create
 # 1) MIPWrangler input files (samples etc.)
