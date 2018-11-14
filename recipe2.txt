@@ -1,0 +1,95 @@
+singularity build --sandbox mipster docker://amd64/ubuntu:18.04
+sudo singularity exec  --writable mipster mkdir /opt/resources /opt/work
+sudo singularity shell -B /home/oaydemir/big_data/base-resources:/opt/resources --writable mipster/
+echo "LC_ALL=en_US.UTF-8" >> /etc/environment
+echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
+echo "LANG=en_US.UTF-8" > /etc/locale.conf
+source /etc/locale.g_en
+source /etc/locale.conf
+source /etc/environment
+export DEBIAN_FRONTEND=noninteractive \
+    CONDA_DIR=/opt/conda \
+    SHELL=/bin/bash \
+    LANG=en_US.UTF-8 \
+    LANGUAGE=en_US.UTF-8 \
+    MINICONDA_VERSION=4.5.4
+export PATH=$CONDA_DIR/bin:$PATH
+echo export PATH=$CONDA_DIR/bin:$PATH >> /etc/profile
+apt update \
+&& apt -yq dist-upgrade \
+&& apt install -yq --no-install-recommends \
+wget \
+bzip2 \
+ca-certificates \
+sudo \
+locales \
+fonts-liberation \
+fonts-dejavu \
+git \
+build-essential \
+gcc \
+openssh-client \
+nano \
+libtbb-dev \
+libz-dev \
+libxrender1
+
+
+
+cd /tmp && \
+    wget --quiet https://repo.continuum.io/miniconda/Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh && \
+    echo "a946ea1d0c4a642ddf0c3a26a18bb16d *Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh" | md5sum -c - && \
+    /bin/bash Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh -f -b -p $CONDA_DIR && \
+    rm Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh && \
+    $CONDA_DIR/bin/conda config --system --prepend channels conda-forge && \
+    $CONDA_DIR/bin/conda config --system --set auto_update_conda false && \
+    $CONDA_DIR/bin/conda config --system --set show_channel_urls true && \
+    $CONDA_DIR/bin/conda install --quiet --yes conda="${MINICONDA_VERSION%.*}.*" && \
+    $CONDA_DIR/bin/conda update --all --quiet --yes && \
+    conda clean -tipsy
+conda config --add channels bioconda
+conda install -qy "notebook=5.7.0" \
+"bcftools=1.9" \
+"samtools=1.9" \
+"bwa=0.7.17" \
+"bowtie2=2.3.4.3" \
+"primer3=2.4.0" \
+"numpy=1.15" \
+"scipy=1.1" \
+"biopython=1.70" \
+"pysam=0.15" \
+"pandas=0.23" \
+"matplotlib=3.0" \
+"seaborn=0.9" \
+"scikit-learn=0.20"
+
+conda clean -tipsy
+cd /opt
+git clone https://github.com/bailey-lab/lastz.git
+cd lastz/src && make lastz_32 && install lastz_32 /usr/bin/
+
+scp -r /opt/resources/programs/* /opt/
+dpkg -i bcl2fastq2_0v2.20.0.422-2_amd64.deb
+ln -sf /opt/parasight_v7.6/parasight.pl /usr/bin/parasight76.pl
+ln -sf /opt/mpfold-3.6/bin/* /usr/bin
+ln -s /opt/mpfold-3.6/share /usr/bin
+ln -sf /opt/unafold-3.6/scripts/* /usr/bin
+ln -sf /opt/annovar-20180416/*.pl /usr/bin
+scp resources/bin/* /usr/bin
+
+echo 'PATH=/opt/conda/bin:$PATH' >> /.singularity.d/env/90-environment.sh
+echo 'XDG_RUNTIME_DIR=""'' >> /.singularity.d/env/90-environment.sh
+
+
+#symlink resources in cwd to /opt/resources
+singularity exec -B /srv/data/aydemiro/data/code:/opt/work -B\
+ /home/oaydemir/big_data/plasmodium-resources:/opt/resources --writable mipster/ \
+ jupyter notebook --notebook-dir=/opt/work --port=8887 --no-browser
+
+
+ singularity shell -B /srv/data/aydemiro/data/code:/opt/work -B\
+  /home/oaydemir/big_data/plasmodium-resources:/opt/resources --writable mipster/
+
+singularity exec -B /srv/data/aydemiro/data/code:/opt/work \
+ -B /home/oaydemir/big_data/plasmodium-resources:/opt/resources mipster.simg \
+ jupyter notebook --notebook-dir=/opt/work --port=8887 --no-browser
