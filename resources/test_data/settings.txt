@@ -7,10 +7,10 @@
 ##############################################################################
 ##############################################################################
 species	pf
-callInfoDictionary	resources/mip_ids/pf_all_call_info_crt.json
-mipSetsDictionary	resources/mip_ids/probe_sets.json
+callInfoDictionary	/opt/project_resources/mip_ids/pf_all_call_info_crt.json
+mipSetsDictionary	./probe_sets.json
 # If only  one mip set was used, end with a trailing comma
-mipSetKey	DR1,VAR4
+mipSetKey	DR1,CSP
 ##############################################################################
 ##############################################################################
 ### Annotation settings below are species specific, so do dot change
