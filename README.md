@@ -23,7 +23,11 @@ Analysis directory must have **sample_list.tsv** file (see test_data for an exam
 #### Pre-wrangler
 Set up a MIPWrangler workspace and scripts to run MIPWrangler. Although currently the container does not include MIPWrangler itself, this  first step is necessary to generate some files used in "post wrangler" analysis. User needs to specify the sequencing **sequencing_platform** used (miseq or nextseq) and **experiment_id** (we use sequencing date in the format "YYMMDD", but it can be any name for the current experiment.
 ```bash
-singularity run --app wrangler -B base_resources(on-host):/opt/resources -B project_resources(on-host):/opt/project_resources -B analysis_dir(on-host):/opt/work mipmaker.sif sequencing_platform experiment_id
+singularity run --app wrangler \
+    -B base_resources(on-host):/opt/resources \
+    -B project_resources(on-host):/opt/project_resources \
+    -B analysis_dir(on-host):/opt/work \
+    mipmaker.sif sequencing_platform experiment_id
 ```
 This should generate a new directory in your "analysis_dir" named "experiment_id" that contains a few files to use for MIPWrangler program.
 #### Post-wrangler
@@ -31,7 +35,11 @@ analysis_directory must have 2 more files in addition to the sample_list.tsv for
 wrangler_output: MIPWrangler output file (can be gzipped or regular text file).
 settings.txt: analysis settings file
 ```bash
-singularity run --app jupyter -B base_resources(on-host):/opt/resources -B project_resources(on-host):/opt/project_resources -B analysis_dir(on-host):/opt/work mipmaker.sif
+singularity run --app jupyter \
+    -B base_resources(on-host):/opt/resources \
+    -B project_resources(on-host):/opt/project_resources \
+    -B analysis_dir(on-host):/opt/work \
+    mipmaker.sif
 ```
 ```bash
 [I 16:14:14.762 NotebookApp] The port 8888 is already in use, trying another port.
