@@ -50,7 +50,7 @@ def get_file_locations():
     the location of the file, either relative to script working directory, or
     the absolute path."""
     file_locations = {}
-    with open("resources/file_locations", "r") as infile:
+    with open("/opt/resources/file_locations", "r") as infile:
         for line in infile:
             if not line.startswith("#"):
                 newline = line.strip().split("\t")
@@ -11583,7 +11583,10 @@ def process_results(wdir,
             print("Some loci have lower coverage than mutation calls!")
         # where reference is the variant of interest("Reference Resistant")
         # change mutant count to reference count
-        mutant_aa_table.loc[:, idx[:, :, "Yes", :]] = ref_aa_table.loc[:, idx[:, :, "Yes", :]]
+        try:
+            mutant_aa_table.loc[:, idx[:, :, "Yes", :]] = ref_aa_table.loc[:, idx[:, :, "Yes", :]]
+        except KeyError:
+            pass
         mutant_aa_table.columns = mutant_aa_table.columns.droplevel("Reference Resistant")
         coverage_aa_table.columns = coverage_aa_table.columns.droplevel("Reference Resistant")
     else:
@@ -11848,8 +11851,8 @@ def combine_info_files(wdir,
     run_meta.to_csv(wdir + "samples.tsv",
                            sep = "\t",
                           index = False)
-def update_probe_sets(mipset_table = "resources/mip_ids/mipsets.csv",
-                     mipset_json = "resources/mip_ids/probe_sets.json"):
+def update_probe_sets(mipset_table = "/opt/resources/mip_ids/mipsets.csv",
+                     mipset_json = "/opt/resources/mip_ids/probe_sets.json"):
     mipsets = pd.read_csv(mipset_table)
     mipset_list = mipsets.to_dict(orient="list")
     mipset_dict = {}

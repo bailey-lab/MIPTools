@@ -3212,7 +3212,6 @@ sub translateDNA {
 	while ($seq =~ m/(...)/g) {
 		defined $codon1{$1} or printerr "WARNING: invalid triplets found in DNA sequence to be translated: <$1>\n";
 		$protein .= $codon1{$1};
-		}
 	}
 	return $protein;
 }

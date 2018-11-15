@@ -8,6 +8,7 @@ From: amd64/ubuntu:18.04
         SHELL=/bin/bash \
         LANG=en_US.UTF-8 \
         LANGUAGE=en_US.UTF-8 \
+        LC_ALL=en_US.UTF-8 \
         MINICONDA_VERSION=4.5.4
     export PATH=$CONDA_DIR/bin:$PATH
 
@@ -63,8 +64,8 @@ From: amd64/ubuntu:18.04
     conda clean -tipsy
 
     # install lastZ
-    cd /opt/programs/lastz
-    src && make lastz_32 && install lastz_32 /usr/bin/
+    cd /opt/programs/lastz/src
+    make lastz_32 && install lastz_32 /usr/bin/
 
     # copy programs and executables from the resources directory on host
     # working directory
@@ -83,15 +84,29 @@ From: amd64/ubuntu:18.04
     ln -sf /opt/programs/annovar-20180416/*.pl /usr/bin
 
     # create work and resources directories in /opt
-    mkdir /opt/resources /opt/work /opt/project_resources
+    mkdir /opt/resources /opt/work /opt/project_resources /opt/extras
 
+    # set environment locale
+    echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
+    echo "LANG=en_US.UTF-8" > /etc/locale.conf
+    echo "LC_ALL=en_US.UTF-8" >> /etc/environment
+    echo "LANGUAGE=en_US.UTF-8" >> /etc/environment
+    locale-gen en_US.UTF-8
 %files
-    resources/programs /opt/
-    resources/bin /opt
-
+    programs /opt
+    bin /opt
+    src /opt
+    notebooks /opt/notebooks
 %environment
-    PATH=/opt/conda/bin:$PATH
-    XDG_RUNTIME_DIR=""
+    export PATH=/opt/conda/bin:$PATH
+    export XDG_RUNTIME_DIR=""
+    export DEBIAN_FRONTEND=noninteractive
+    export LANG=en_US.UTF-8
+    export LANGUAGE="en_US.UTF-8"
+    export LC_ALL="en_US.UTF-8"
 
 %apprun jupyter
-    jupyter notebook --notebook-dir=/opt/work --port=8888 --no-browser
+    jupyter notebook --notebook-dir=/opt --port=8888 --no-browser
+%apprun wrangler
+    python /opt/src/generate_wrangler_scripts.py \
+    -p $1 -e $2 -l /opt/work/sample_list.tsv
