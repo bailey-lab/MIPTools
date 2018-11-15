@@ -33,7 +33,7 @@ settings.txt: analysis settings file
 ```bash
 singularity run --app jupyter -B base_resources(on-host):/opt/resources -B project_resources(on-host):/opt/project_resources -B analysis_dir(on-host):/opt/work mipmaker.sif
 ```
-```
+```bash
 [I 16:14:14.762 NotebookApp] The port 8888 is already in use, trying another port.
 [I 16:14:14.799 NotebookApp] Serving notebooks from local directory: /opt/work
 [I 16:14:14.799 NotebookApp] The Jupyter Notebook is running at:
@@ -44,4 +44,8 @@ singularity run --app jupyter -B base_resources(on-host):/opt/resources -B proje
     Copy/paste this URL into your browser when you connect for the first time,
     to login with a token:
         http://localhost:8889/?token=cc1231d9d32839526b068a5fb1c09a503775cb480ed5bf0d
+```
+
+```bash
+ssh -N -f -L localhost:8888:localhost:8888 username@serveraddress
 ```
