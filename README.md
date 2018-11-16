@@ -63,4 +63,5 @@ If the host is a remote server, e.g. HPC, forward the notebook port to your comp
 ssh -N -f -L localhost:8888:localhost:8888 username@serveraddress
 ```
 
-Finally, open a web browser (Chrome, Chromium, Firefox works in my experience), paste the address from your terminal (http://localhost:8888/?token=600be64ca79ef74ebe4fbd3698bc8a0d049e01d4e28b30ec in this example)
+Finally, open a web browser (Chrome, Chromium, Firefox works in my experience), paste the address from your terminal (http://localhost:8888/?token=600be64ca79ef74ebe4fbd3698bc8a0d049e01d4e28b30ec in this example)  
+Navigate to **resources/analysis.ipyn** and follow the instructions contained in the notebook.
