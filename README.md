@@ -34,9 +34,10 @@ singularity run --app wrangler \
 ```
 This should generate a new directory in your "analysis_dir" named "experiment_id" that contains a few files to use for MIPWrangler program.
 #### Post-wrangler usage
-analysis_dir must have 2 more files in addition to the sample_list.tsv for post-wrangler analysis.
-wrangler_output: MIPWrangler output file (can be gzipped or regular text file).
-settings.txt: analysis settings file
+**analysis_dir** must have 2 more files in addition to the sample_list.tsv for post-wrangler analysis.
+**wrangler_output**: MIPWrangler output file (can be gzipped or regular text file).
+**settings.txt**: analysis settings file  
+Run the following command, changing only the **host** part of the binding arguments (-B) to fit your directory structure.
 ```bash
 singularity run --app jupyter \
     -B base_resources(on-host):/opt/resources \
@@ -44,6 +45,8 @@ singularity run --app jupyter \
     -B analysis_dir(on-host):/opt/work \
     mipmaker.sif
 ```
+
+This starts a jupyter notebook on the host computer: 
 ```bash
 [I 09:31:00.231 NotebookApp] Serving notebooks from local directory: /opt
 [I 09:31:00.231 NotebookApp] The Jupyter Notebook is running at:
@@ -55,7 +58,9 @@ singularity run --app jupyter \
     to login with a token:
         http://localhost:8888/?token=600be64ca79ef74ebe4fbd3698bc8a0d049e01d4e28b30ec
 ```
-
+If the host is a remote server, e.g. HPC, forward the notebook port to your computer. Skip this if the host is a computer where you have access to the GUI, specifically a web browser. Make sure the port number matches the one you see in the notebook address above (8888 for this example).
 ```bash
 ssh -N -f -L localhost:8888:localhost:8888 username@serveraddress
 ```
+
+Finally, open a web browser (Chrome, Chromium, Firefox works in my experience), paste the address from your terminal (http://localhost:8888/?token=600be64ca79ef74ebe4fbd3698bc8a0d049e01d4e28b30ec in this example)
