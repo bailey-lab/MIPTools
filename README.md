@@ -65,3 +65,5 @@ ssh -N -f -L localhost:8888:localhost:8888 username@serveraddress
 
 Finally, open a web browser (Chrome, Chromium, Firefox works in my experience), paste the address from your terminal (http://localhost:8888/?token=600be64ca79ef74ebe4fbd3698bc8a0d049e01d4e28b30ec in this example)  
 Navigate to **resources/analysis.ipyn** and follow the instructions contained in the notebook.
+### Test run
+A test_data folder is included in the base_resources directory. Use this as your analysis_dir and the plasmodium_resources (not in the repo) as project_resources to start the jupyter notebook. Make a copy of the analysis.ipynb and compare if your results are the same as the one in the provided copy.
