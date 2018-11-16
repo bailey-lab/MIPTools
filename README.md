@@ -45,16 +45,15 @@ singularity run --app jupyter \
     mipmaker.sif
 ```
 ```bash
-[I 16:14:14.762 NotebookApp] The port 8888 is already in use, trying another port.
-[I 16:14:14.799 NotebookApp] Serving notebooks from local directory: /opt/work
-[I 16:14:14.799 NotebookApp] The Jupyter Notebook is running at:
-[I 16:14:14.799 NotebookApp] http://localhost:8889/?token=cc1231d9d32839526b068a5fb1c09a503775cb480ed5bf0d
-[I 16:14:14.799 NotebookApp] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
-[C 16:14:14.800 NotebookApp] 
+[I 09:31:00.231 NotebookApp] Serving notebooks from local directory: /opt
+[I 09:31:00.231 NotebookApp] The Jupyter Notebook is running at:
+[I 09:31:00.231 NotebookApp] http://localhost:8888/?token=600be64ca79ef74ebe4fbd3698bc8a0d049e01d4e28b30ec
+[I 09:31:00.231 NotebookApp] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
+[C 09:31:00.232 NotebookApp] 
     
     Copy/paste this URL into your browser when you connect for the first time,
     to login with a token:
-        http://localhost:8889/?token=cc1231d9d32839526b068a5fb1c09a503775cb480ed5bf0d
+        http://localhost:8888/?token=600be64ca79ef74ebe4fbd3698bc8a0d049e01d4e28b30ec
 ```
 
 ```bash
