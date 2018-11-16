@@ -96,7 +96,6 @@ From: amd64/ubuntu:18.04
     programs /opt
     bin /opt
     src /opt
-    notebooks /opt/notebooks
 %environment
     export PATH=/opt/conda/bin:$PATH
     export XDG_RUNTIME_DIR=""
