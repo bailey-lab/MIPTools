@@ -1,1 +1,2 @@
-e0d0aecb9b3a44568ffc4ad01ad2cbf0
+change_this_with_illumina_access_token
+https://help.basespace.illumina.com/articles/tutorials/using-the-python-run-downloader/
