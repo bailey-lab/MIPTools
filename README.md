@@ -16,34 +16,46 @@ sudo singularity build mipmaker.sif MIPMaker.def
 ```
 mipmaker.sif is a single **portable** file which has all the programs needed for MIP data analysis and a lot more.  
 More information about its uses will be added over time.
+### Directory Structure
+Following directories are needed for MIP data analysis.
+*  **base_resources:** Included in the repository, contains common resources across projects.
+*  **species_resources:** Contains resources shared by projects using the same target species (Pf, human, etc.)
+*  **project_resources:** Contains project specific files.
+*  **data_dir:** Contains data to be analyzed (see below).
+*  **analysis_dir:** Where analysis will be carried out and all output files will be saved.
 ### Usage
 The computer on which the container is running on is called the **host**. So if you're running this on your laptop, your laptop is the host. If you're connected to a HPC cluster and running the container there, the HPC is the **host**.  
 
-In addition to **base_resources** included in the repository, each project requires a **project_resources** directory with project specific files in it; and an **analysis_dir** where MIP analysis will be carried out.  
-
-These 3 directories must be on the host computer. Here, these 3 directories are referred to as base_resources, project_resources, and analysis_dir; but they can be paths to any directory on the host where you have +w permission.  
-Analysis directory must have **sample_list.tsv** file (see test_data for an example).
+The directories  listed above must be on the host computer. They can be paths to any directory on the host where you have +w permission.  
 #### Pre-wrangler usage
-Set up a MIPWrangler workspace and scripts to run MIPWrangler. Although currently the container does not include MIPWrangler itself, this  first step is necessary to generate some files used in "post wrangler" analysis. User needs to specify the sequencing **sequencing_platform** used (miseq or nextseq) and **experiment_id** (we use sequencing date in the format "YYMMDD", but it can be any name for the current experiment.
+Set up a MIPWrangler workspace and scripts to run MIPWrangler. Although currently the container does not include MIPWrangler itself, this  first step is necessary to generate some files used in "post wrangler" analysis. User needs to specify the **sequencing_platform** used (miseq or nextseq) and **experiment_id** (we use sequencing date in the format "YYMMDD", but it can be any name for the current experiment. The **data** directory must have **sample_list.tsv** file (see test_data for an example).  
+
+Run the following command, changing only the **host** part of the binding arguments (-B) to fit your directory structure.
 ```bash
 singularity run --app wrangler \
     -B base_resources(on-host):/opt/resources \
     -B project_resources(on-host):/opt/project_resources \
-    -B analysis_dir(on-host):/opt/work \
-    mipmaker.sif sequencing_platform experiment_id
+    -B data_dir(on-host):/opt/data \
+    -B analysis_dir(on-host):/opt/analysis \
+    mipmaker.sif -p sequencing_platform -e experiment_id -l /opt/data/samaple_list.tsv
 ```
-This should generate a new directory in your "analysis_dir" named "experiment_id" that contains a few files to use for MIPWrangler program.
+This should generate a new directory in your "data_dir" named "experiment_id" that contains a few files to use for MIPWrangler program.
 #### Post-wrangler usage
-**analysis_dir** must have 2 more files in addition to the sample_list.tsv for post-wrangler analysis.
-**wrangler_output**: MIPWrangler output file (can be gzipped or regular text file).
-**settings.txt**: analysis settings file  
-Run the following command, changing only the **host** part of the binding arguments (-B) to fit your directory structure.
+**data_dir** must have 2 more files in addition to the sample_list.tsv for post-wrangler analysis.  
+*  **wrangler_output**: MIPWrangler output file (can be gzipped or regular text file).
+*  **settings.txt**: analysis settings file  
+
+Run the following command, changing only the **host** part of the binding arguments (-B) to fit your directory structure. Two optional arguments can set the notebook server port (default 8888) and notebook directory where the server is started (default /opt, **this is relative to the container and NOT the host**, so do not change from the default if you're not absolutely sure it is called for).  
+
+Note that we are binding an additional directory now (species_resources) that we did not need for the *wrangler* app.
 ```bash
 singularity run --app jupyter \
     -B base_resources(on-host):/opt/resources \
+    -B species_resources(on-host):/opt/species_resources \
     -B project_resources(on-host):/opt/project_resources \
-    -B analysis_dir(on-host):/opt/work \
-    mipmaker.sif
+    -B data_dir(on-host):/opt/data \
+    -B analysis_dir(on-host):/opt/analysis \
+    mipmaker.sif -p port_to_use -d notebook_directory
 ```
 
 This starts a jupyter notebook on the host computer: 
