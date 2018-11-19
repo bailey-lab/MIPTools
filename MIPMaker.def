@@ -111,7 +111,20 @@ From: amd64/ubuntu:18.04
     export LC_ALL="en_US.UTF-8"
 
 %apprun jupyter
-    jupyter notebook --notebook-dir=$1 --port=$2 --no-browser
+    nb_port=8888
+    nb_dir=/opt
+    while getopts p:d: OPT; do
+        case "$OPT" in
+            p)
+              nb_port="$OPTARG";;
+            d)
+              nb_dir="$OPTARG";;
+            [?])
+              echo "Usage: $0 [-p notebook-port] [-d notebook-directory]" >&2
+              exit 1
+        esac
+    done
+    jupyter notebook --notebook-dir=nb_dir --port=nb_port --no-browser
 %apprun wrangler
     python /opt/src/generate_wrangler_scripts.py \
     -p $1 -e $2 -l /opt/work/sample_list.tsv
