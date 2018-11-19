@@ -120,11 +120,12 @@ From: amd64/ubuntu:18.04
             d)
               nb_dir="$OPTARG";;
             [?])
-              echo "Usage: $0 [-p notebook-port] [-d notebook-directory]" >&2
-              exit 1
+              echo "Invalid option. Use -p to specify notebook port \
+                   -d to specify notebook directory. \
+                   Using default port 8888 and default dir /opt.]"
         esac
     done
-    jupyter notebook --notebook-dir=nb_dir --port=nb_port --no-browser
+    jupyter notebook --notebook-dir=$nb_dir --port=$nb_port --no-browser
 %apprun wrangler
     python /opt/src/generate_wrangler_scripts.py \
     -p $1 -e $2 -l /opt/work/sample_list.tsv
