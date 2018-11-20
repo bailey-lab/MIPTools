@@ -41,8 +41,9 @@ singularity run --app wrangler \
 ```
 This should generate a new directory in your "data_dir" named "experiment_id" that contains a few files to use for MIPWrangler program.
 #### Post-wrangler usage
-**data_dir** must have 2 more files in addition to the sample_list.tsv for post-wrangler analysis.  
+**data_dir** must have 1 more file in addition to the sample_list.tsv for post-wrangler analysis.  
 *  **wrangler_output**: MIPWrangler output file (can be gzipped or regular text file).
+**analysis_dir** must contain the analysis settings file.
 *  **settings.txt**: analysis settings file  
 
 Run the following command, changing only the **host** part of the binding arguments (-B) to fit your directory structure. Two optional arguments can set the notebook server port (default 8888) and notebook directory where the server is started (default /opt, **this is relative to the container and NOT the host**, so do not change from the default if you're not absolutely sure it is called for).  
@@ -57,7 +58,7 @@ singularity run --app jupyter \
     -B analysis_dir(on-host):/opt/analysis \
     mipmaker.sif -p port_to_use -d notebook_directory
 ```
-
+**port_to_use** and **notebook_directory** are optional arguments defaulting to **8888** and **/opt**, respectively.
 This starts a jupyter notebook on the host computer: 
 ```bash
 [I 09:31:00.231 NotebookApp] Serving notebooks from local directory: /opt
@@ -78,4 +79,4 @@ ssh -N -f -L localhost:8888:localhost:8888 username@serveraddress
 Finally, open a web browser (Chrome, Chromium, Firefox works in my experience), paste the address from your terminal (http://localhost:8888/?token=600be64ca79ef74ebe4fbd3698bc8a0d049e01d4e28b30ec in this example)  
 Navigate to **resources/analysis.ipyn** and follow the instructions contained in the notebook.
 ### Test run
-A test_data folder is included in the base_resources directory. Use this as your analysis_dir and the plasmodium_resources (not in the repo) as project_resources to start the jupyter notebook. Make a copy of the analysis.ipynb and compare if your results are the same as the one in the provided copy.
+A test_data folder and test_analysis folder are included in the base_resources directory. Use them as your data_dir and analysis_dir, respectively. You'll need 2 additional directories for project_resources and species_resources to start the jupyter notebook. Make a copy of the analysis.ipynb and compare if your results are the same as the one in the provided copy.
