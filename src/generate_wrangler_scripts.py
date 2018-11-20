@@ -36,16 +36,16 @@ parser.add_argument("-x", "--access-token-file",
                     default="/opt/resources/access_token.txt")
 parser.add_argument("-d", "--raw-data-dir",
                     help=("Absolute path to base directory where sequencing "
-                          "files should be saved to."),
-                    default="/opt/work")
+                          " (.bcl) files should be saved to."),
+                    default="/opt/data")
 parser.add_argument("--processed-data-dir",
                     help=("Absolute path to base directory where "
                           "MIPWrangler output file should be copied to."),
-                    default="/opt/work")
+                    default="/opt/data")
 parser.add_argument("-a", "--analysis-data-dir",
                     help=("Absolute path to base directory for "
                           "MIPWrangler working directory."),
-                    default="/opt/work")
+                    default="/opt/analysis")
 parser.add_argument("-w", "--cluster-script",
                     help=("MIPWrangler script name. Absolute path"
                           "if not in $PATH."),
@@ -255,7 +255,8 @@ for mipset in mipset_list:
     all_probes[mipset] = set_m
 # save probe dictionary to file
 probe_set_file = os.path.join(project_resource_dir,
-                              "mip_ids", "probe_sets.json")
+                              "mip_ids",
+                              "probe_sets.json")
 with open(probe_set_file, "w") as outfile:
     json.dump({k: list(v) for k, v in all_probes.items()}, outfile)
 subset_names = []

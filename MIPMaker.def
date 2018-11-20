@@ -119,7 +119,7 @@ From: amd64/ubuntu:18.04
               nb_port="$OPTARG";;
             d)
               nb_dir="$OPTARG";;
-            [?])
+            *)
               echo "Invalid option. Use -p to specify notebook port \
                    -d to specify notebook directory. \
                    Using default port 8888 and default dir /opt.]"
@@ -127,5 +127,21 @@ From: amd64/ubuntu:18.04
     done
     jupyter notebook --notebook-dir=$nb_dir --port=$nb_port --no-browser
 %apprun wrangler
+    sample_list=/opt/data/sample_list.tsv
+    while getopts p:e:l: OPT; do
+        case "$OPT" in
+            p)
+              platform="$OPTARG";;
+            e)
+              experiment_id="$OPTARG";;
+            l)
+              sample_list="$OPTARG";;
+            *)
+              echo "Invalid option. Use 'wrangler -p {miseq, nexseq} \
+              -e experiment_id -l sample_list.file' \
+              to specify the sequencing platform,\
+              the experiment ID and a sample list file. "
+        esac
+    done
     python /opt/src/generate_wrangler_scripts.py \
-    -p $1 -e $2 -l /opt/work/sample_list.tsv
+    -p $platform -e $experiment_id -l /opt/analysis/$sample_list
