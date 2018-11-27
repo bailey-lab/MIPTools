@@ -35,14 +35,14 @@ parser.add_argument("-x", "--access-token-file",
                     help="Basespace access token for user.",
                     default="/opt/resources/access_token.txt")
 parser.add_argument("-d", "--raw-data-dir",
-                    help=("Absolute path to base directory where sequencing "
+                    help=("Absolute path to the directory where sequencing "
                           " (.bcl) files should be saved to."),
                     default="/opt/data")
 parser.add_argument("--processed-data-dir",
                     help=("Absolute path to base directory where "
                           "MIPWrangler output file should be copied to."),
                     default="/opt/data")
-parser.add_argument("-a", "--analysis-data-dir",
+parser.add_argument("-a", "--analysis-dir",
                     help=("Absolute path to base directory for "
                           "MIPWrangler working directory."),
                     default="/opt/analysis")
@@ -72,14 +72,12 @@ cluster_script = args["cluster_script"]
 cpu_count = args["cpu_count"]
 server_num = args["server_num"]
 access_token_file = args["access_token_file"]
-raw_data_dir = os.path.abspath(args["raw_data_dir"])
-analysis_data_dir = os.path.abspath(args["analysis_data_dir"])
+raw_dir = os.path.abspath(args["raw_data_dir"])
+analysis_dir = os.path.abspath(args["analysis_dir"])
 processed_data_dir = os.path.abspath(args["processed_data_dir"])
 project_resource_dir = os.path.abspath(args["project_resource_dir"])
 base_resource_dir = os.path.abspath(args["base_resource_dir"])
 sample_list_file = args["sample_list"]
-experiment_name = experiment_id + "_" + platform
-raw_dir = os.path.join(raw_data_dir, experiment_name)
 sample_sheet_template = os.path.join(
     base_resource_dir,
     "templates",
@@ -89,7 +87,6 @@ sample_sheet_template = os.path.join(
 raw_mip_ids_dir = os.path.join(raw_dir, "mip_ids")
 sample_sheet = os.path.join(raw_mip_ids_dir, "SampleSheet.csv")
 fastq_dir = os.path.join(raw_dir, "fastq")
-analysis_dir = os.path.join(analysis_data_dir, experiment_name)
 barcode_dict_file = os.path.join(
     base_resource_dir, "barcode_dict.json")
 # create dirs if they do not exist
@@ -193,7 +190,7 @@ if len(samples_sharing) > 0:
     print("There are %d samples sharing the same barcode pair"
           % len(samples_sharing_set))
     pd.DataFrame(samples_sharing).to_csv(
-        os.path.join(analysis_data_dir, "samples_sharing_barcodes.tsv"),
+        os.path.join(analysis_dir, "samples_sharing_barcodes.tsv"),
         sep="\t"
     )
 # create sample sheet
@@ -265,7 +262,12 @@ for s_set in sample_sets:
         probes = set()
         mip_arms_list = []
         for p_name in pset_names:
-            probes.update(all_probes[p_name])
+            try:
+                probes.update(all_probes[p_name])
+            except KeyError:
+                print(("Probe set name {} is not present in the mipsets "
+                       "file.").format(p_name))
+                continue
             arm_file = os.path.join(project_resource_dir,
                                     "mip_ids",
                                     mip_arms_dict[p_name])
@@ -275,6 +277,12 @@ for s_set in sample_sets:
             except IOError:
                 print(("MIP arm file {} is required but missing for "
                       "the probe set {}").format(arm_file, p_name))
+        if len(mip_arms_list) == 0:
+            print(("No MIP arms file were found for the probe sets {}"
+                   " scripts will not be generated for them. Make sure "
+                   "relevant files are present in the {} directory").format(
+                   pset_names, project_resource_dir))
+            continue
         mip_arms_table = pd.concat(mip_arms_list,
                                    ignore_index=True).drop_duplicates()
         mip_arms_table = mip_arms_table.loc[

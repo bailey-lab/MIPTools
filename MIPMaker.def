@@ -30,8 +30,11 @@ From: amd64/ubuntu:18.04
     nano \
     libtbb-dev \
     libz-dev \
-    libxrender1
-
+    libxrender1 \
+    cmake \
+    automake \
+    autoconf \
+    software-properties-common
     # install conda
     cd /tmp && \
         wget --quiet https://repo.continuum.io/miniconda/Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh && \
@@ -67,6 +70,13 @@ From: amd64/ubuntu:18.04
     cd /opt/programs/lastz/src
     make lastz_32 && install lastz_32 /usr/bin/
 
+    # install MIPWrangler
+    cd /opt/programs
+    git clone https://github.com/bailey-lab/MIPWrangler
+    cd MIPWrangler
+    #./configure.py -CC gcc-7 -CXX g++-7
+    #./setup.py --compfile compfile.mk --outMakefile makefile-common.mk
+    ./install.sh 20
     # copy programs and executables from the resources directory on host
     # working directory
     scp /opt/bin/* /usr/bin
@@ -103,7 +113,7 @@ From: amd64/ubuntu:18.04
     bin /opt
     src /opt
 %environment
-    export PATH=/opt/conda/bin:$PATH
+    export PATH=/opt/conda/bin:/opt/programs/MIPWrangler/bin:$PATH
     export XDG_RUNTIME_DIR=""
     export DEBIAN_FRONTEND=noninteractive
     export LANG=en_US.UTF-8
@@ -111,6 +121,8 @@ From: amd64/ubuntu:18.04
     export LC_ALL="en_US.UTF-8"
 
 %apprun jupyter
+    set -e
+    set -u
     nb_port=8888
     nb_dir=/opt
     while getopts p:d: OPT; do
@@ -127,8 +139,10 @@ From: amd64/ubuntu:18.04
     done
     jupyter notebook --notebook-dir=$nb_dir --port=$nb_port --no-browser
 %apprun wrangler
+    set -e
+    set -u
     sample_list=/opt/data/sample_list.tsv
-    while getopts p:e:l: OPT; do
+    while getopts p:l:e: OPT; do
         case "$OPT" in
             p)
               platform="$OPTARG";;
@@ -145,3 +159,39 @@ From: amd64/ubuntu:18.04
     done
     python /opt/src/generate_wrangler_scripts.py \
     -p $platform -e $experiment_id -l /opt/analysis/$sample_list
+%apprun download
+    set -e
+    set -u
+    while getopts r: opt; do
+        case $opt in
+            r)  run_id=$opt;;
+            ?)  echo "Usage: singularity run --app download \\"
+                            "-B /path_to_output_dir:/opt/data \\"
+                            "-B /path_to_base_resources:/opt/resources \\"
+                            "mycontainer.sif -r my_Illumina_run_ID"
+                exit 1;;
+        esac
+    done
+    echo "Downloading NextSeq run $run_id from BaseSpace."
+    echo "An 'access_token.txt' file with a valid access token"
+    echo " is required. It must be present in base_resources directory."
+    echo "Data will be downloaded to /opt/data in the container. "
+    echo "A data directory must be mounted to /opt/data for running this app."
+    echo "Usage: singularity run --app download \\"
+                    "-B /path_to_output_dir:/opt/data \\"
+                    "-B /path_to_base_resources:/opt/resources \\"
+                    "mycontainer.sif -r my_Illumina_run_ID"
+    echo "Check nohup.txt file in your output directory for download status."
+    nohup python /usr/bin/BaseSpaceRunDownloader_v2.py \
+     -r $run_id -a "$(< ' + /opt/resources/access_token.txt + ')"
+    echo "Download finished."
+
+    %apprun demultiplex
+        set -e
+        set -u
+        echo "Testing demultiplexing."
+
+    %apprun wrangle
+            set -e
+            set -u
+            echo "Testing wrangler."
