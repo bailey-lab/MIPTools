@@ -74,8 +74,6 @@ From: amd64/ubuntu:18.04
     cd /opt/programs
     git clone https://github.com/bailey-lab/MIPWrangler
     cd MIPWrangler
-    #./configure.py -CC gcc-7 -CXX g++-7
-    #./setup.py --compfile compfile.mk --outMakefile makefile-common.mk
     ./install.sh 20
     # copy programs and executables from the resources directory on host
     # working directory
@@ -164,26 +162,25 @@ From: amd64/ubuntu:18.04
     set -u
     while getopts r: opt; do
         case $opt in
-            r)  run_id=$opt;;
+            r)  run_id=$OPTARG;;
             ?)  echo "Usage: singularity run --app download \\"
-                            "-B /path_to_output_dir:/opt/data \\"
-                            "-B /path_to_base_resources:/opt/resources \\"
-                            "mycontainer.sif -r my_Illumina_run_ID"
+                echo "           -B /path_to_output_dir:/opt/data \\"
+                echo "           -B /path_to_base_resources:/opt/resources \\"
+                echo "            mycontainer.sif -r my_Illumina_run_ID"
+                echo "An 'access_token.txt' file with a valid access token is "
+                echo "required. It must be present in base_resources directory."
+                echo "A data directory where the data will be downloaded to"
+                echo "must be mounted to /opt/data."
                 exit 1;;
         esac
     done
     echo "Downloading NextSeq run $run_id from BaseSpace."
-    echo "An 'access_token.txt' file with a valid access token"
-    echo " is required. It must be present in base_resources directory."
-    echo "Data will be downloaded to /opt/data in the container. "
-    echo "A data directory must be mounted to /opt/data for running this app."
-    echo "Usage: singularity run --app download \\"
-                    "-B /path_to_output_dir:/opt/data \\"
-                    "-B /path_to_base_resources:/opt/resources \\"
-                    "mycontainer.sif -r my_Illumina_run_ID"
-    echo "Check nohup.txt file in your output directory for download status."
+    echo "Depending on the data size, this can take very long (up to 10 h)"
+    echo "It is recommended to run this app in a screen (GNU screen)."
+    echo "A message indicating the end of download will be printed when done."
+    echo "Check nohup.out file in your output directory for the download log."
     nohup python /usr/bin/BaseSpaceRunDownloader_v2.py \
-     -r $run_id -a "$(< ' + /opt/resources/access_token.txt + ')"
+     -r $run_id -a "$(cat /opt/resources/access_token.txt)"
     echo "Download finished."
 
     %apprun demultiplex
