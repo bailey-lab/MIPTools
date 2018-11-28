@@ -108,7 +108,7 @@ def rinfo_converter(rinfo_file, output_file, flank, species="hs", host_species="
                 else:
                     try:
                         settings[newline[0]][newline[1]] = evaluate(newline[2])
-                    except Exception as e:
+                    except Exception:
                         settings[newline[0]][newline[1]] = newline[2]
     """
     segment_capture = {
@@ -285,7 +285,7 @@ def rinfo_converter(rinfo_file, output_file, flank, species="hs", host_species="
                         try:
                             set_line.append(target_dic[k])
                             continue
-                        except KeyError as e:
+                        except KeyError:
                             pass
                     if k in j:
                         set_line.append(j[k])
@@ -311,7 +311,7 @@ def merge_coordinates(coordinates, capture_size, min_region_size = 0):
         try:
             chroms[chrom].append([coordinates[c]["begin"],
                                   coordinates[c]["end"]])
-        except KeyError as e:
+        except KeyError:
             chroms[chrom] = [[coordinates[c]["begin"],
                               coordinates[c]["end"]]]
     # merge snps that are too close to get separate regions
@@ -364,7 +364,7 @@ def coordinate_to_target(coordinates, snp_locations, capture_size):
         try:
             snp_chroms[chrom].append([rsl[r]["begin"],
                                   rsl[r]["end"]])
-        except KeyError as e:
+        except KeyError:
             snp_chroms[chrom] = [[rsl[r]["begin"],
                                   rsl[r]["end"]]]
     # merge snps that are too close to get separate regions
@@ -459,7 +459,7 @@ def rsid_to_target(resource_dir, snp_file):
                     # add the snp dict if the location is different than what is present
                     # in the location dict.
                     snp_locations[rsid].append(temp_dic)
-            except KeyError as e:
+            except KeyError:
                 # add the new rsid to location dict if it is not already present
                 snp_locations[rsid] = [temp_dic]
                 capture_types[rsid] = newline[6]
@@ -492,7 +492,7 @@ def gene_to_target(gene_list, species):
             target_coordinates[gene] = {"chrom":e["chrom"],
                                         "begin": e["begin"],
                                         "end": e["end"]}
-        except KeyError as e:
+        except KeyError:
             target_coordinates[gene] = {"chrom": np.nan,
                                         "begin": np.nan,
                                         "end": np.nan}
@@ -523,7 +523,7 @@ def gene_to_target_exons(gene_list, species, exon_list):
                     target_coordinates[tar_name] = {"chrom":gene_exons["chrom"],
                                                     "begin": e[0],
                                                     "end": e[1]}
-                except IndexError as e:
+                except IndexError:
                     print(("Exon ", j, " does not exist for gene ", gene))
     return target_coordinates
 def parse_alignment(reg_file):
@@ -1157,7 +1157,7 @@ def parse_aligned_haplotypes(settings):
                     exact_match = (ref_seq == hap_seq)
                     try:
                         snp_dict = call_info[gene_name][m]["snps"]
-                    except KeyError as e:
+                    except KeyError:
                         snp_dict = {}
                     copy_dict = call_info[gene_name][m]["copies"][c_name]
                     copy_ori = copy_dict["orientation"]
@@ -1361,7 +1361,7 @@ def parse_aligned_haplotypes(settings):
                                     if snp_copy["begin"] == diff_begin or                                          snp_copy["end"] == diff_end:
                                         pdiff = True
                                         break
-                            except KeyError as e:
+                            except KeyError:
                                 continue
                         # update diff dictionary
                         d["clinical"] = False
@@ -1385,10 +1385,10 @@ def parse_aligned_haplotypes(settings):
                         problem_alignments.append(al_dict)
                     try:
                         alignments[hap_name][ref_copy].append(al_dict)
-                    except KeyError as e:
+                    except KeyError:
                         try:
                             alignments[hap_name][ref_copy] = [al_dict]
-                        except KeyError as e:
+                        except KeyError:
                             alignments[hap_name] = {ref_copy: [al_dict]}
     # pick top alignment by the score for rare cases where a capture sequence
     # can align to a reference in multiple ways
@@ -1407,7 +1407,7 @@ def parse_aligned_haplotypes(settings):
                         best_al = copy_als[i]
             try:
                 cleaned_alignments[h][c] = best_al
-            except KeyError as e:
+            except KeyError:
                 cleaned_alignments[h] = {c: best_al}
     alignments = cleaned_alignments
     # check if problem alignments and inverted alignments have a better alignment in
@@ -1426,7 +1426,7 @@ def parse_aligned_haplotypes(settings):
                         # replace alignment in the list with string "remove"
                         probs[j] = "remove"
                         break
-            except KeyError as e:
+            except KeyError:
                 continue
         # replace the problem dictionary with the updated version
         temp_dict = {}
@@ -1435,7 +1435,7 @@ def parse_aligned_haplotypes(settings):
                 hap_name = a["haplotype_ID"]
                 try:
                     temp_dict[hap_name].append(a)
-                except KeyError as e:
+                except KeyError:
                     temp_dict[hap_name] = [a]
         problem_dicts[i] = temp_dict
         if len(temp_dict) > 0:
@@ -1489,7 +1489,7 @@ def update_aligned_haplotypes (settings):
         # find how many paralog specific variant the mip covers
         try:
             mip_psv_count = call_info[gene_name][m]["psv_count"]
-        except KeyError as e:
+        except KeyError:
             mip_psv_count = 0
         for h in haplotypes[m]:
             # create a copy dict for each haplotype for each possible
@@ -1498,7 +1498,7 @@ def update_aligned_haplotypes (settings):
             # get the alignment for this haplotype from alignment dict
             try:
                 align = alignments[h]
-            except KeyError as e:
+            except KeyError:
                 haplotypes[m][h]["mapped"] = False
                 continue
             # update copies dict with alignment information
@@ -1555,7 +1555,7 @@ def update_aligned_haplotypes (settings):
             # 2: use psv score, break ties with alignment scores
             try:
                 f,s  = [[4,1], [5,1], [3,4]][psv_priority]
-            except IndexError as e:
+            except IndexError:
                 continue
             # sort copies for the first and second priority keys
             copy_keys_sorted = sorted(copy_sort, key = itemgetter(f, s))
@@ -1603,12 +1603,12 @@ def update_unique_haplotypes (settings):
     try:
         with open(unique_haplotype_file) as infile:
             unique_haplotypes = json.load(infile)
-    except IOError as e:
+    except IOError:
         unique_haplotypes = {}
     try:
         with open(sequence_to_haplotype_file) as infile:
             sequence_to_haplotype = json.load(infile)
-    except IOError as e:
+    except IOError:
         sequence_to_haplotype = {}
     temp_mapped_hap_file = wdir + settings["tempMappedHaplotypesFile"]
     with open(temp_mapped_hap_file) as infile:
@@ -1629,7 +1629,7 @@ def update_unique_haplotypes (settings):
                     unique_haplotypes[m][uniq_id] = haplotypes[m][h]
                 else:
                     unique_haplotypes[m][uniq_id] = haplotypes[m][h]
-            except KeyError as e:
+            except KeyError:
                 unique_haplotypes[m] = {uniq_id: haplotypes[m][h]}
 
     # update unique_haplotypes with off target haplotypes
@@ -1645,7 +1645,7 @@ def update_unique_haplotypes (settings):
                 unique_haplotypes[m][uniq_id] = off_target_haplotypes[h]
             else:
                 unique_haplotypes[m][uniq_id] = off_target_haplotypes[h]
-        except KeyError as e:
+        except KeyError:
             unique_haplotypes[m] = {uniq_id: off_target_haplotypes[h]}
     # update sequence_to_haplotype with new haplotypes
     for u in unique_haplotypes:
@@ -1672,13 +1672,13 @@ def update_variation(settings):
     try:
         with open(variation_file) as infile:
             variation = json.load(infile)
-    except IOError as e:
+    except IOError:
         variation = {}
     var_key_to_uniq_file = wdir +  settings["variationKeyToUniqueKey"]
     try:
         with open(var_key_to_uniq_file) as infile,             open(var_key_to_uniq_file + id_generator(6), "w") as outfile:
             var_key_to_uniq = json.load(infile)
-    except IOError as e:
+    except IOError:
         var_key_to_uniq = {}
     #
     outfile_list = ["##fileformat=VCFv4.1"]
@@ -1689,7 +1689,7 @@ def update_variation(settings):
             if haplotypes[m][h]["mapped"]:
                 try:
                     haplotypes[m][h]["left_normalized"]
-                except KeyError as e:
+                except KeyError:
                     left_normalized = True
                     for c in haplotypes[m][h]["mapped_copies"]:
                         differences = haplotypes[m][h]["mapped_copies"][c]["differences"]
@@ -1699,7 +1699,7 @@ def update_variation(settings):
                                 uniq_var_key = var_key_to_uniq[var_key]
                                 d["annotation"] = variation[uniq_var_key]
                                 d["vcf_normalized"] = uniq_var_key
-                            except KeyError as e:
+                            except KeyError:
                                 left_normalized = False
                                 temp_variations.append(var_key)
                     if left_normalized:
@@ -1731,7 +1731,7 @@ def update_variation(settings):
     ann_out = settings["annotationOutput"]
     try:
         ann_script = settings["annotationScript"]
-    except KeyError as e:
+    except KeyError:
         ann_script = "table_annovar.pl"
     ann_command = [ann_script,
                     norm_vcf_file,
@@ -1780,7 +1780,7 @@ def update_variation(settings):
             if haplotypes[m][h]["mapped"]:
                 try:
                     haplotypes[m][h]["left_normalized"]
-                except KeyError as e:
+                except KeyError:
                     for c in haplotypes[m][h]["mapped_copies"]:
                         differences = haplotypes[m][h]["mapped_copies"][c]["differences"]
                         for d in differences:
@@ -2486,7 +2486,7 @@ def generate_clusters(settings):
                            "collapsed_medians": np.median(collapsed_counts[my_members], axis=0)
                            }
             cluster_output[g] = cluster_dict
-        except Exception as e:
+        except Exception:
             problem_clusters.append([g, e])
     cluster_output_file = wdir + settings["clusterOutputFile"]
     with open(cluster_output_file, "wb") as outfile:
@@ -5504,7 +5504,7 @@ def cleanest_bowtie (primer_file, primer_out,primer3_output_DIR,                
                             para[k]["ALT_TM_DIFF"] = 100
                             para[k]["ALT_BOUND"] = False
 
-        except KeyError as e:
+        except KeyError:
             #print str(e)
 
             continue
@@ -5852,17 +5852,17 @@ def alternative(primer_file, output_file, primer3_output_DIR, tm_diff, outp = 1)
                         primer["ALT_BINDS"].append(c)
                         para[c].update(alts[sorted_alts[0]])
                     para[c].pop("ALTERNATIVES")
-                except KeyError as e:
+                except KeyError:
                     try:
                         para[c].pop("ALTERNATIVES")
-                    except KeyError as e:
+                    except KeyError:
                         pass
                 except IndexError:
                     try:
                         para[c].pop("ALTERNATIVES")
-                    except KeyError as e:
+                    except KeyError:
                         pass
-    except KeyError as e:
+    except KeyError:
         pass
     if outp:
         with open(primer3_output_DIR + output_file, "w") as outfile:
@@ -6152,7 +6152,7 @@ def add_bowtie_multi (primer_file, bowtie_out_file, output_file,                
                     primer_chr = primers['primer_information']                                        [primer_name]["CHR"]
                     coord.append(primer_start)
                     coord.append(primer_end)
-            except KeyError as e:
+            except KeyError:
                 continue
             # check if the hit is on intended target
             # no specific hit should remain after using cleaner_bowtie function
@@ -6234,7 +6234,7 @@ def filter_bowtie (primer_file,
                         if lhc > lower_hit_threshold:
                             primers["primer_information"].pop(primer)
                             break
-                except KeyError as e:
+                except KeyError:
                     continue
 
             if primer in list(primers["primer_information"].keys()):
@@ -6292,7 +6292,7 @@ def filter_bowtie_hits (primer_file, output_file, primer3_output_DIR, species, T
                             if lhc > lower_hit_threshold:
                                 primers["pair_information"].pop(primer)
                                 break
-                    except TypeError as e:
+                    except TypeError:
                         if ("TM" in list(hit.keys())) and (hit["TM"] >= TM)                            and (primer in list(primers["pair_information"].keys())):
                             hc += 1
                             if hc > hit_threshold:
@@ -6337,7 +6337,7 @@ def filter_bowtie_hits (primer_file, output_file, primer3_output_DIR, species, T
                                 primers["primer_information"].pop(primer)
                                 break
 
-                    except TypeError as e:
+                    except TypeError:
                         if ("TM" in list(hit.keys())) and (float(hit["TM"]) >= TM)                            and (primer in list(primers["primer_information"].keys())):
                             hc += 1
                             if hc > hit_threshold:
@@ -6393,7 +6393,7 @@ def filter_bowtie_hits_dup (primer_file, output_file, species, primer3_output_DI
                             # remove primers with TM higher than specified
                             primers["pair_information"].pop(primer)
                             break
-                    except TypeError as e:
+                    except TypeError:
                         # if TM is a list and not a string, TypeError is raised
                         if ("TM" in list(hit.keys())) and (float(hit["TM"][0]) >= TM)                            and (primer in list(primers["pair_information"].keys())):
                             primers["pair_information"].pop(primer)
@@ -6421,7 +6421,7 @@ def filter_bowtie_hits_dup (primer_file, output_file, species, primer3_output_DI
                         if ("TM" in list(hit.keys())) and (float(hit["TM"]) >= TM)                            and (primer in list(primers["primer_information"].keys())):
                             primers["primer_information"].pop(primer)
                             break
-                    except TypeError as e:
+                    except TypeError:
                         if ("TM" in list(hit.keys())) and (float(hit["TM"][0]) >= TM)                            and (primer in list(primers["primer_information"].keys())):
                             primers["primer_information"].pop(primer)
                             break
@@ -6559,7 +6559,7 @@ def pick_paralog_primer_pairs (ext_file,
                                                  }
 
 
-                        except KeyError as e:
+                        except KeyError:
                             continue
                     # check if any pairs' product is within size limits
                     pair_found = 0
@@ -6635,7 +6635,7 @@ def pick_paralog_primer_pairs (ext_file,
                                         ep_start = ep_info[a]["ALT_START"]
                                         ep_end = ep_info[a]["ALT_END"]
                                         alt_arms.append("extension")
-                                    except KeyError as e:
+                                    except KeyError:
                                         continue
                                 ep_ori = ep_end > ep_start
                                 if lp_info[a]["BOWTIE_BOUND"]:
@@ -6646,7 +6646,7 @@ def pick_paralog_primer_pairs (ext_file,
                                         lp_start = lp_info[a]["ALT_START"]
                                         lp_end = lp_info[a]["ALT_END"]
                                         alt_arms.append("ligation")
-                                    except KeyError as e:
+                                    except KeyError:
                                         continue
                                 lp_ori = lp_end < lp_start
                                 lp_chrom = lp_info[a]["CHR"]
@@ -6668,7 +6668,7 @@ def pick_paralog_primer_pairs (ext_file,
                                                     "capture_end":p_coord[2]-1, "chrom":lp_chrom,
                                                     "orientation":pair_ori, "alternative_arms":alt_arms
                                                      }
-                            except KeyError as e:
+                            except KeyError:
                                 continue
                         # check if any pairs' product is within size limits
                         captured_copies = []
@@ -7530,9 +7530,9 @@ def filter_mips (mip_dic, bin_size, mip_limit):
                             else:
                                 mip_dic.pop(m)
                                 break
-                except KeyError as e:
+                except KeyError:
                     continue
-        except KeyError as e:
+        except KeyError:
             continue
     return
 def remove_mips (mip_dic):
@@ -7578,9 +7578,9 @@ def remove_mips (mip_dic):
                             else:
                                 mip_dic.pop(m)
                                 break
-                except KeyError as e:
+                except KeyError:
                     continue
-        except KeyError as e:
+        except KeyError:
             continue
     return
 def score_mips (mip_file, primer3_output_DIR, output_file):
@@ -8470,7 +8470,7 @@ def aa_converter(aa_name):
         gencode3[gencode3[a]] = a
     try:
         return gencode3[aa_name.capitalize()]
-    except KeyError as e:
+    except KeyError:
         return "%s is not a valid amino acid name" %a
 def compatible_mip_check(m1, m2, overlap_same, overlap_opposite):
     d = m1.mip_dic
@@ -8501,7 +8501,7 @@ def compatible_chains (primer_file, primer3_output_DIR, primer_out, output_file,
     try:
         with open (primer3_output_DIR + primer_file, "r") as infile:
             scored_mips = json.load(infile)
-    except IOError as e:
+    except IOError:
         print("Primer file does not exist.")
         return 1
     else:
@@ -8672,7 +8672,7 @@ def compatible_mips(primer_file, primer3_output_DIR, primer_out, output_file,
     try:
         with open (primer3_output_DIR + primer_file, "r") as infile:
             scored_mips = json.load(infile)
-    except IOError as e:
+    except IOError:
         print("Primer file does not exist.")
         return 1
     else:
@@ -9048,7 +9048,7 @@ def get_haplotypes(settings):
     species = settings["species"]
     try:
         tol = int(settings["alignmentTolerance"])
-    except KeyError as e:
+    except KeyError:
         tol = 50
 
     #wdir = settings["workingDir"]
@@ -9058,7 +9058,7 @@ def get_haplotypes(settings):
     try:
         with open(sequence_to_haplotype_file) as infile:
             sequence_to_haplotype = json.load(infile)
-    except IOError as e:
+    except IOError:
         sequence_to_haplotype = {}
     with open(call_info_file) as infile:
         call_info = json.load(infile)
@@ -9102,7 +9102,7 @@ def get_haplotypes(settings):
         mip_name = h.split(".")[0]
         try:
             haplotypes[mip_name][h] = {"sequence": haps[h]["sequence"]}
-        except KeyError as e:
+        except KeyError:
             haplotypes[mip_name] = {h: {"sequence": haps[h]["sequence"]}}
     # run bwa
     bwa(haplotypes_fq_file, haplotypes_sam_file, "sam", "", "",
@@ -9122,7 +9122,7 @@ def get_haplotypes(settings):
                         score = int(newline[13].split(":")[-1])
                     else:
                         score = -5000
-                except IndexError as e:
+                except IndexError:
                     if newline[11].startswith("AS"):
                         score = int(newline[11].split(":")[-1])
                     else:
@@ -9162,7 +9162,7 @@ def get_haplotypes(settings):
                         ):
                             haplotypes[m][h]["mapped"] = True
                             break
-        except KeyError as e:
+        except KeyError:
             for h in list(haplotypes[m].keys()):
                 haplotypes[m][h]["mapped"] = False
     # remove haplotypes that mapped best to an untargeted location on genome
@@ -9231,7 +9231,7 @@ def rename_mipster_haplotypes(settings):
                     hapname = sequence_to_haplotype[hapseq]
                     newline[hap_index] = hapname
                     outfile.write("\t".join(newline))
-                except KeyError as e:
+                except KeyError:
                     problem_sequences.append(hapseq)
     return problem_sequences
 def get_summary_table(settings):
@@ -9454,7 +9454,7 @@ def get_summary_table(settings):
                             continue
                         try:
                             qual = f["sequence_quality"]
-                        except KeyError as e:
+                        except KeyError:
                             qual = f["seqence_quality"]
                         hap = haplotypes[m][hid]
                         if not haplotypes[m][hid]["mapped"]:
@@ -9483,7 +9483,7 @@ def get_summary_table(settings):
                                 var = normalized_key.split(":")
                                 try:
                                     annotation_id = d["annotation"][annotation_id_key]
-                                except KeyError as e:
+                                except KeyError:
                                     annotation_id = "."
                                 hap_index = d["hap_index"]
                                 start_index = min(hap_index)
@@ -9492,7 +9492,7 @@ def get_summary_table(settings):
                                 for hi in range(start_index, end_index):
                                     try:
                                         hap_qual_list.append(ord(qual[hi]) - 33)
-                                    except IndexError as e:
+                                    except IndexError:
                                         hap_qual_list = [-1]
                                         break
                                 hap_qual = np.mean(hap_qual_list)
@@ -9521,7 +9521,7 @@ def get_summary_table(settings):
                                             d["annotation"]]
                                 try:
                                     all_diff_locations[normalized_key].append(location)
-                                except KeyError as e:
+                                except KeyError:
                                     all_diff_locations[normalized_key]  = [location]
                                 all_diffs[normalized_key] = sam_diff[:12] +                                                                          [sam_diff[-1]]
                                 if not normalized_key in sample_diffs[s]:
@@ -9536,7 +9536,7 @@ def get_summary_table(settings):
     try:
         with open(wdir + settings["caseFile"]) as infile:
             case = {line.split("\t")[0] : line.strip().split("\t")[1] for line in infile}
-    except IOError as e:
+    except IOError:
         case = {}
 
     for a in all_diff_locations:
@@ -9584,7 +9584,7 @@ def get_summary_table(settings):
                 diff = sample_diffs[s][d][12:19]
                 try:
                     diff[2] = np.mean(diff[2])
-                except ValueError as e:
+                except ValueError:
                     diff[2] = "."
                 for i in range(3,7):
                     diff[i] = ",".join(map(str, diff[i]))
@@ -9596,7 +9596,7 @@ def get_summary_table(settings):
                             hom_case += 1
                         elif case[s] == "control":
                             hom_control += 1
-                    except KeyError as e:
+                    except KeyError:
                         pass
                 else:
                     GT = "0/1"
@@ -9606,17 +9606,17 @@ def get_summary_table(settings):
                             het_case += 1
                         elif case[s] == "control":
                             het_control += 1
-                    except KeyError as e:
+                    except KeyError:
                         pass
                 diff = [GT] + diff
                 try:
                     diff.append(case[s])
-                except KeyError as e:
+                except KeyError:
                     diff.append(".")
                 sam_diff = ":".join(map(str, diff))
                 diff_depth += diff[2]
                 allele_depth += diff[1]
-            except KeyError as e:
+            except KeyError:
                 total_depth = 0
                 for l in diff_locs:
                     total_depth += sample_barcode_counts[s][l]
@@ -9630,14 +9630,14 @@ def get_summary_table(settings):
                             wt_case += 1
                         elif case[s] == "control":
                             wt_control += 1
-                    except KeyError as e:
+                    except KeyError:
                         pass
                 else:
                     GT = "./."
                 diff = [GT] + diff
                 try:
                     diff.append(case[s])
-                except KeyError as e:
+                except KeyError:
                     diff.append(".")
                 sam_diff = ":".join(map(str, diff))
             sdiffs.append(sam_diff)
@@ -9823,7 +9823,7 @@ def filter_variation(variation_json,
         updated_var = [uv for uv in updated_var if uv != "remove"]
         try:
             AF = (het + hom)/float(NS)
-        except ZeroDivisionError as e:
+        except ZeroDivisionError:
             AF = 0
         updated_var.extend([NS, DP, AD, AF, hom, het,
                            hom_case, hom_control,
@@ -9896,7 +9896,7 @@ def variation_filter(variation_json, min_barcode_count, min_barcode_fraction):
         updated_var = [uv for uv in updated_var if uv != "remove"]
         try:
             AF = (het + hom)/float(NS)
-        except ZeroDivisionError as e:
+        except ZeroDivisionError:
             AF = 0
         updated_var.extend([NS, DP, AD, AF, hom, het])
         updated_var.append(var[24])
@@ -9908,7 +9908,7 @@ def variation_filter(variation_json, min_barcode_count, min_barcode_fraction):
 def map_str(s):
     try:
         return str(s).encode("utf-8")
-    except UnicodeEncodeError as e:
+    except UnicodeEncodeError:
         return s.encode("utf-8")
 def write_list(alist, outfile_name):
     """ Convert values of a list to strings and save to file."""
@@ -10152,7 +10152,7 @@ def parasight_mod (resource_dir,
             with open(showname) as infile:
                 sln = infile.readlines()[-1].strip().split("\t")
                 show_region = sln[0] + ":" + sln[2] + "-" + sln[3]
-        except IOError as e:
+        except IOError:
             continue
         reg_snps = get_snps(show_region,
                            get_file_locations()[species]["snps"])
@@ -10215,7 +10215,7 @@ def parasight_mod (resource_dir,
                         ol.extend([snp_type, col, ofs, "4",
                                   ""])
                         outfile.write("\t".join(ol) + "\n")
-        except IOError as e:
+        except IOError:
             continue
         psname = basename + ".01.01.ps"
         pdfname = basename + ".mod.pdf"
@@ -10291,7 +10291,7 @@ def parasight_shift (resource_dir,
             with open(showname) as infile:
                 sln = infile.readlines()[-1].strip().split("\t")
                 show_region = sln[0] + ":" + sln[2] + "-" + sln[3]
-        except IOError as e:
+        except IOError:
             continue
         backup_name = basename + ".extra"
         try:
@@ -10313,7 +10313,7 @@ def parasight_shift (resource_dir,
                     else:
                         outfile.write(line)
                 outfile.write("\n")
-        except IOError as e:
+        except IOError:
             continue
         psname = basename + ".01.01.ps"
         pdfname = basename + ".mod.pdf"
@@ -10604,12 +10604,14 @@ def process_haplotypes(settings_file):
     update_unique_haplotypes(settings)
     update_variation(settings)
     return
+
+
 def process_results(wdir,
-                   settings_file,
+                    settings_file,
                     sample_sheets = None,
-                    meta_files = [],
-                    targets_file = None,
-                    target_join = "union"
+                    meta_files=[],
+                    targets_file=None,
+                    target_join="union"
                    ):
     settings = get_analysis_settings(wdir + settings_file)
     if sample_sheets is None:
@@ -10625,7 +10627,7 @@ def process_results(wdir,
     run_meta = pd.concat(
         [pd.read_table(s)
          for s in sample_sheets],
-         ignore_index = True
+         ignore_index=True
     )
     # if only a subset of the run is to be used for this analysis
     # create a sample/probe sets dataframe for used
@@ -10638,15 +10640,15 @@ def process_results(wdir,
     run_meta["Sample ID"] = run_meta[["sample_name",
                                       "sample_set",
                                       "replicate"]].apply(
-        lambda a: "-".join(map(str, a)), axis = 1
+        lambda a: "-".join(map(str, a)), axis=1
     )
     # Sample Set key is reserved for meta data
     # but sometimes erroneously included in the
     # sample sheet. It should be removed.
     try:
         run_meta.drop("Sample Set",
-                 inplace = True,
-                 axis = 1)
+                 inplace=True,
+                 axis=1)
     except (ValueError, KeyError):
         pass
     # drop duplicate values originating from
@@ -10661,10 +10663,10 @@ def process_results(wdir,
     try:
         sample_meta = pd.concat(
             [pd.read_table(f) for f in meta_files],
-            join = "outer",
-            ignore_index = True
+            join="outer",
+            ignore_index=True
         )
-    except ValueError as e:
+    except ValueError:
         # if no meta files were provided, create a dummy
         # meta dataframe
         sample_meta = copy.deepcopy(run_meta[["Sample Name"]])
@@ -10673,8 +10675,8 @@ def process_results(wdir,
     sample_meta = sample_meta.groupby(["Sample Name"]).first().reset_index()
     # Merge Sample meta data and run data
     merged_meta = pd.merge(run_meta, sample_meta,
-                           on = "Sample Name",
-                           how = "inner")
+                           on="Sample Name",
+                           how="inner")
     merged_meta.to_csv(wdir + "merged_meta.csv")
     print(("{} out of {} samples has meta information and"
            " will be used for analysis.").format(
@@ -10753,7 +10755,7 @@ def process_results(wdir,
                     # get the annotation id if any, such as rsID
                     try:
                         annotation_id = d["annotation"][annotation_id_key]
-                    except KeyError as e:
+                    except KeyError:
                         annotation_id = "."
                     # get the location of variation relative
                     # to haplotype sequence
@@ -10777,7 +10779,7 @@ def process_results(wdir,
                     try:
                         for ak in annotation_keys:
                             temp_list.append(d["annotation"][ak])
-                    except NameError as e:
+                    except NameError:
                         annotation_keys = list(d["annotation"].keys())
                         for ak in annotation_keys:
                             temp_list.append(d["annotation"][ak])
@@ -10799,10 +10801,10 @@ def process_results(wdir,
             clean_annotation_keys.append(ak)
     colnames = colnames + clean_annotation_keys
     variation_df = pd.DataFrame(variation_list,
-                               columns = colnames)
+                               columns=colnames)
     # create pandas dataframe for reference haplotypes
     reference_df = pd.DataFrame(reference_list,
-                               columns = ["Haplotype ID",
+                               columns=["Haplotype ID",
                                           "Copy",
                                           "Multi Mapping"])
 
@@ -10815,10 +10817,10 @@ def process_results(wdir,
                                "Copy",
                               "Multi Mapping"]],
          reference_df],
-        ignore_index = True)
+        ignore_index=True)
     print("There are {mh.shape[0]} mapped and {um} unmapped (off target) haplotypes.".format(
-        mh = mapped_haplotype_df,
-        um = unmapped
+        mh=mapped_haplotype_df,
+        um=unmapped
     ))
     ##########################################################
     ##########################################################
@@ -10838,20 +10840,20 @@ def process_results(wdir,
         raw_results["sample_name"].isin(sample_ids)
     ]
     mapped_results = raw_results.merge(mapped_haplotype_df,
-                                         how = "inner")
+                                         how="inner")
     print(("There are {rr.shape[0]} data points in raw data,"
             " {mr.shape[0]} are mapped to genome.").format(
-        rr = raw_results,
-        mr = mapped_results
+        rr=raw_results,
+        mr=mapped_results
     ))
     # rename some columns for better visualization
     mapped_results.rename(
-        columns = {"sample_name": "Sample ID",
+        columns={"sample_name": "Sample ID",
                   "mip_name": "MIP",
                   "gene_name": "Gene",
                   "barcode_count": "Barcode Count",
                   "read_count": "Read Count"},
-        inplace = True
+        inplace=True
     )
     # Try to estimate the distribution of data that is mapping
     # to multiple places in the genome.
@@ -10859,33 +10861,33 @@ def process_results(wdir,
     # 1) Get uniquely mapping haplotypes and barcode counts
     unique_df = mapped_results.loc[~mapped_results["Multi Mapping"]]
     unique_table = pd.pivot_table(unique_df,
-               index = "Sample ID",
-              columns = ["Gene", "MIP", "Copy"],
-              values = ["Barcode Count"],
-              aggfunc = np.sum)
+               index="Sample ID",
+              columns=["Gene", "MIP", "Copy"],
+              values=["Barcode Count"],
+              aggfunc=np.sum)
     # 2) Estimate the copy number of each paralog gene
     # for each sample from the uniquely mapping data
     try:
         average_copy_count = float(settings["averageCopyCount"])
         norm_percentiles = list(map(float,
                               settings["normalizationPercentiles"]))
-    except KeyError as e:
+    except KeyError:
         average_copy_count = 2
         norm_percentiles = [0.4, 0.6]
     unique_df.loc[:, "CA"] = average_copy_count
     unique_df.loc[:, "Copy Average"] = average_copy_count
     unique_df.loc[:, "Adjusted Barcode Count"] = unique_df["Barcode Count"]
     unique_df.loc[:, "Adjusted Read Count"] = unique_df["Read Count"]
-    unique_table.fillna(0, inplace = True)
+    unique_table.fillna(0, inplace=True)
     copy_counts = get_copy_counts(unique_table,
                             average_copy_count,
                             norm_percentiles)
     # 3) Estimate the copy number of each "Gene"
     # from the average copy count of uniquely mapping
     # data for all MIPs within the gene
-    cc = copy_counts.groupby(level = ["Gene",
-                                 "Copy"], axis = 1).sum()
-    gc = copy_counts.groupby(level = ["Gene"], axis = 1).sum()
+    cc = copy_counts.groupby(level=["Gene",
+                                 "Copy"], axis=1).sum()
+    gc = copy_counts.groupby(level=["Gene"], axis=1).sum()
     ac = cc/gc
     multi_df = mapped_results.loc[mapped_results["Multi Mapping"]]
     # 4) Distribute multi mapping data proportional to
@@ -10894,7 +10896,7 @@ def process_results(wdir,
     if not multi_df.empty:
         mca = multi_df.apply(
             lambda r: get_copy_average(r, ac),
-            axis = 1)
+            axis=1)
         multi_df.loc[mca.index, "Copy Average"] = mca
         mca = multi_df.groupby(["Sample ID",
                          "Gene"])["Copy Average"].transform(
@@ -10912,15 +10914,15 @@ def process_results(wdir,
     # Combine unique and multimapping data
     combined_df = pd.concat([unique_df,
                            multi_df],
-                           ignore_index = True)
+                           ignore_index=True)
     combined_df.rename(
-        columns = {
+        columns={
             "Barcode Count": "Raw Barcode Count",
             "Adjusted Barcode Count": "Barcode Count",
             "Read Count": "Raw Read Count",
             "Adjusted Read Count": "Read Count"
         },
-        inplace = True
+        inplace=True
     )
     # print total read and barcode counts
     print(("Total number of reads and barcodes were {0[0]} and {0[1]}."
@@ -10946,16 +10948,18 @@ def process_results(wdir,
     ####### Haplotype Filters #############
     haplotype_min_barcode_filter = int(settings["minHaplotypeBarcodes"])
     haplotype_min_sample_filter = int(settings["minHaplotypeSamples"])
-    haplotype_min_sample_fraction_filter = float(settings["minHaplotypeSampleFraction"])
+    haplotype_min_sample_fraction_filter = float(
+        settings["minHaplotypeSampleFraction"]
+    )
     ####### Haplotype Filters #############
     hap_counts = combined_df.groupby(
         "Haplotype ID"
     )["Barcode Count"].sum().reset_index().rename(
-        columns = {"Barcode Count": "Haplotype Barcodes"})
+        columns={"Barcode Count": "Haplotype Barcodes"})
     hap_sample_counts = combined_df.groupby("Haplotype ID")["Sample ID"].apply(
         lambda a: len(set(a))
     ).reset_index(
-    ).rename(columns = {"Sample ID": "Haplotype Samples"})
+    ).rename(columns={"Sample ID": "Haplotype Samples"})
     num_samples = float(combined_df["Sample ID"].unique().size)
     hap_sample_counts["Haplotype Sample Fraction"] = (
         hap_sample_counts["Haplotype Samples"] /num_samples
@@ -10968,7 +10972,7 @@ def process_results(wdir,
                                &(hap_counts["Haplotype Barcodes"]
                                 >= haplotype_min_barcode_filter)]
     variation_df = variation_df.merge(hap_counts,
-                                     how = "inner")
+                                     how="inner")
     # Rename or remove some columns for downstream analysis
     variation_df["AA Change"] = variation_df["AAChangeClean"].apply(
         split_aa
@@ -10978,9 +10982,9 @@ def process_results(wdir,
     )
     try:
         variation_df.drop(["Chr", "Ref", "Alt"],
-                         axis = 1,
-                         inplace = True)
-    except ValueError as e:
+                         axis=1,
+                         inplace=True)
+    except ValueError:
         pass
 
     # if there is a targets file, observed variation can be filtered
@@ -11007,20 +11011,20 @@ def process_results(wdir,
         targets["Targeted"] = "Yes"
         variation_df = variation_df.merge(
             targets,
-            how = join_dict[target_join]
+            how=join_dict[target_join]
         )
         variation_df["Targeted"].fillna("No",
-                                   inplace = True)
+                                   inplace=True)
         # If a reference genome locus is a mutation of interest
         # such as dhps-437, this information can be supplied
         # in targets file. The rest of the variants will be
         # assinged a False value for this.
         try:
             variation_df["Reference Resistant"].fillna(
-                "No", inplace = True
+                "No", inplace=True
             )
             ref_resistant = True
-        except KeyError as e:
+        except KeyError:
             ref_resistant = False
             #variant_counts["Reference Resistant"] = False
 
@@ -11029,10 +11033,10 @@ def process_results(wdir,
             target_keys = ["Vkey", "Chrom", "Pos", "Id", "Ref", "Alt"]
             for dk, tk in zip(data_keys, target_keys):
                 variation_df[dk].fillna(variation_df[tk],
-                                       inplace = True)
+                                       inplace=True)
             variation_df.drop(target_keys,
-                             axis = 1,
-                             inplace = True)
+                             axis=1,
+                             inplace=True)
     else:
         variation_df["Targeted"] = "No"
         ref_resistant = False
@@ -11042,15 +11046,15 @@ def process_results(wdir,
     try:
         variation_df["Mutation Name"].fillna(variation_df["Gene"] + "-"
                                              + variation_df["AA Change"],
-                                     inplace = True)
-    except KeyError as e:
+                                     inplace=True)
+    except KeyError:
         variation_df["Mutation Name"] = (variation_df["Gene"] + "-"
                                              + variation_df["AA Change"])
     variation_df.loc[variation_df["AA Change"] == ".",
             "Mutation Name"] = variation_df.loc[
                         variation_df["AA Change"] == "."].apply(
                                                 rename_noncoding,
-                                                axis = 1)
+                                                axis=1)
 
     # remove columns that will not be used after this point
     variation_df.drop(
@@ -11059,15 +11063,15 @@ def process_results(wdir,
          "Haplotype Barcodes",
          "Haplotype Samples",
          "Haplotype Sample Fraction"],
-        axis = 1,
-        inplace = True
+        axis=1,
+        inplace=True
     )
 
     # Create a chrom, pos tuple to use for the location
     # of a given variant, to be used in coverage calculations
     variation_df["Coverage Key"] = variation_df.apply(
         lambda a: (a["CHROM"], a["POS"]),
-        axis = 1
+        axis=1
     )
 
     # load the "call info" dictionary that has
@@ -11088,26 +11092,26 @@ def process_results(wdir,
         try:
             for c in call_info[g][m]["copies"]:
                 probe_cop.append([m,c])
-        except KeyError as e:
+        except KeyError:
             continue
     probe_cop = pd.DataFrame(probe_cop,
-                            columns = ["MIP", "Copy"])
+                            columns=["MIP", "Copy"])
     # add a place holder column for merging probe information
     probe_cop["Temp"] = "Temp"
     # perform outer merge on results and used probes
     # to include probes that had no coverage in the results
     combined_df = combined_df.merge(probe_cop,
-                                    how = "outer").drop("Temp",
-                                                       axis = 1)
+                                    how="outer").drop("Temp",
+                                                       axis=1)
     # Fill NA values for probes with no coverage
     combined_df["Sample ID"].fillna("Temp",
-                                   inplace = True)
+                                   inplace=True)
     combined_df["Haplotype ID"].fillna(
         combined_df["MIP"] + ".0-0",
-        inplace = True
+        inplace=True
     )
     combined_df["Barcode Count"].fillna(
-        0, inplace = True
+        0, inplace=True
     )
 
     # Add sample and barcode depth information for each
@@ -11116,13 +11120,13 @@ def process_results(wdir,
                 "sequence_quality",
                 "Sample ID",
                 "Barcode Count",
-                "Copy"]].merge(variation_df, how = "right")
+                "Copy"]].merge(variation_df, how="right")
     # For unobserved variants, we need a place holder for
     # Sample ID
     variant_counts["Sample ID"].fillna("Temp",
-                                       inplace = True)
+                                       inplace=True)
     variant_counts["Barcode Count"].fillna(0,
-                                          inplace = True)
+                                          inplace=True)
 
     # Get the sample and barcode depth stats for each variant
     # and filter for given thresholds.
@@ -11131,7 +11135,7 @@ def process_results(wdir,
         "Barcode Count": "sum",
         "Targeted": lambda a: "Yes" if "Yes" in set(a) else "No"}
     ).rename(
-        columns = {"Sample ID": "Variant Samples",
+        columns={"Sample ID": "Variant Samples",
                    "Barcode Count": "Variant Barcodes"}
     ).fillna(0).reset_index()
     var_counts["Variant Sample Fraction"] = var_counts[
@@ -11153,11 +11157,11 @@ def process_results(wdir,
         len(variant_counts["VKEY"].unique())
     ))
     variant_counts = variant_counts.merge(var_counts,
-                                         how = "inner").drop(
+                                         how="inner").drop(
         ["Variant Samples",
         "Variant Barcodes",
         "Variant Sample Fraction"],
-        axis = 1
+        axis=1
     )
     print(("{} total and {} unique variants remain after "
            "filtering variants for "
@@ -11183,7 +11187,7 @@ def process_results(wdir,
                     # get phred quality of each base in variation
                     # and convert the phred score to number
                     hap_qual_list.append(ord(qual[hi]) - 33)
-                except IndexError as e:
+                except IndexError:
                     continue
                     break
             # calculate quality as the mean for multi base variation
@@ -11194,14 +11198,15 @@ def process_results(wdir,
         except:
             return np.nan
     variant_counts["Variation Quality"] = variant_counts.apply(
-        get_qual, axis = 1
+        get_qual, axis=1
     )
 
     # filter variants for sequence quality
     variant_min_quality = int(settings["minVariantQuality"])
-    variant_counts = variant_counts.loc[(variant_counts["Variation Quality"].isnull())
-                      |(variant_counts["Variation Quality"]
-                       >= variant_min_quality)]
+    variant_counts = variant_counts.loc[
+        (variant_counts["Variation Quality"].isnull())
+        | (variant_counts["Variation Quality"] >= variant_min_quality)
+    ]
     print(("{} total and {} unique variants remained after "
            "quality filtering for phred scores >= {}.").format(
         variant_counts.shape[0],
@@ -11217,8 +11222,10 @@ def process_results(wdir,
     # create a position to MIP dictionary for each variant
     # that holds which MIPs cover a given position for
     # coverage calculations
-    cpos = variant_counts.groupby(["CHROM", "POS"]).first().reset_index()[["CHROM", "POS"]]
-    cpos = cpos.apply(lambda a: (a["CHROM"], a["POS"]), axis = 1).values.tolist()
+    cpos = variant_counts.groupby(
+        ["CHROM", "POS"]
+    ).first().reset_index()[["CHROM", "POS"]]
+    cpos = cpos.apply(lambda a: (a["CHROM"], a["POS"]), axis=1).values.tolist()
     position_to_mip = {}
     # go through found variants and add any MIP associated
     # with a given variant
@@ -11248,7 +11255,7 @@ def process_results(wdir,
                             position_to_mip[var_pos].add(
                                 (m, c)
                             )
-                        except KeyError as e:
+                        except KeyError:
                             position_to_mip[var_pos] = set()
                             position_to_mip[var_pos].add(
                                 (m, c)
@@ -11262,13 +11269,12 @@ def process_results(wdir,
                         ch = call_info[g][m]["copies"][c]["chrom"]
                         cs = call_info[g][m]["copies"][c]["capture_start"]
                         ce = call_info[g][m]["copies"][c]["capture_end"]
-                        if ((var_pos[0] == ch)
-                            and (cs <= var_pos[1] <= ce)):
+                        if ((var_pos[0] == ch) and (cs <= var_pos[1] <= ce)):
                             try:
                                 position_to_mip[var_pos].add(
                                     (m, c)
                                 )
-                            except KeyError as e:
+                            except KeyError:
                                 position_to_mip[var_pos] = set()
                                 position_to_mip[var_pos].add(
                                     (m, c)
@@ -11277,11 +11283,11 @@ def process_results(wdir,
     # This is a per MIP per sample barcode count table
     # of the samples with sequencing data
     barcode_counts = pd.pivot_table(combined_df,
-                                    index = "Sample ID",
-                                    columns = ["MIP",
-                                               "Copy"],
-                                    values = ["Barcode Count"],
-                                    aggfunc = np.sum)
+                                    index="Sample ID",
+                                    columns=["MIP",
+                                             "Copy"],
+                                    values=["Barcode Count"],
+                                    aggfunc=np.sum)
     print("There are {} samples with sequence data".format(
         barcode_counts.shape[0]
     ))
@@ -11291,70 +11297,73 @@ def process_results(wdir,
     bc_cols = barcode_counts.columns
     bc_cols = [bc[1:] for bc in bc_cols]
     temp_meta = merged_meta[["Sample ID",
-                 "replicate"]].append({"Sample ID": "Temp",
-                                     "replicate": 1},
-                                     ignore_index = True)
+                             "replicate"]].append({"Sample ID": "Temp",
+                                                   "replicate": 1},
+                                                  ignore_index=True)
     barcode_counts = pd.merge(temp_meta.set_index("Sample ID"),
-                         barcode_counts,
-                         left_index = True,
-                         right_index = True,
-                         how = "left").drop("Temp")
-    barcode_counts.drop("replicate", axis = 1, inplace = True)
+                              barcode_counts,
+                              left_index=True,
+                              right_index=True,
+                              how="left").drop("Temp")
+    barcode_counts.drop("replicate", axis=1, inplace=True)
     barcode_counts.columns = pd.MultiIndex.from_tuples(bc_cols,
-                                                      names = ["MIP",
-                                                              "Copy"])
-    barcode_counts.fillna(0, inplace = True)
+                                                       names=["MIP", "Copy"])
+    barcode_counts.fillna(0, inplace=True)
     print("There are {} total samples.".format(barcode_counts.shape[0] - 1))
-
+    combined_df.to_csv(wdir + "haplotype_counts.csv",
+                       index=False)
+    barcode_counts.to_csv(wdir + "barcode_counts.csv")
+    with open(wdir + "position_to_mip.json", "w") as outfile:
+        json.dump(position_to_mip, outfile, indent=1)
     # create a coverage dictionary for each variant position
     # for each sample
-    bc_dict = barcode_counts.to_dict(orient = "index")
+    bc_dict = barcode_counts.to_dict(orient="index")
     cov_dict = {}
     for ch, po in position_to_mip:
-        for m, cp in position_to_mip[(ch,po)]:
+        for m, cp in position_to_mip[(ch, po)]:
             for s in bc_dict:
                 try:
-                    cov_dict[(s, ch, po)] +=  bc_dict[s][(m,cp)]
-                except KeyError as e:
-                    cov_dict[(s, ch, po)] =  bc_dict[s][(m,cp)]
+                    cov_dict[(s, ch, po)] += bc_dict[s][(m, cp)]
+                except KeyError:
+                    cov_dict[(s, ch, po)] = bc_dict[s][(m, cp)]
     # Include samples with no variants (probably no sequence data)
     # in the variant counts
-    variant_counts = variant_counts.merge(
+    variant_counts=variant_counts.merge(
         temp_meta,
-        how = "outer"
+        how="outer"
     ).drop("replicate",
-           axis = 1)
+           axis=1)
     # Columns that will be used for pivoting cannot
     # have NA values, so for samples with no data
     # we need to fill those values with a place holder
     for c in ["CHROM", "POS", "ID", "REF", "ALT"]:
-        variant_counts[c].fillna("Temp", inplace = True)
+        variant_counts[c].fillna("Temp", inplace=True)
     variant_counts["Barcode Count"].fillna(
-        0, inplace = True
+        0, inplace=True
     )
     # define a function that returns coverage at given
     # coverage key (sample, chromosome, position)
     def return_coverage(k):
         try:
             return cov_dict[k]
-        except KeyError as e:
+        except KeyError:
             return 0
     # create a vcf file for all variants
     # create pivot table with each variant having its own column
     vcf_table = variant_counts.pivot_table(
-        index = "Sample ID",
-        columns = ["CHROM", "POS", "ID", "REF", "ALT"],
-        values = "Barcode Count",
-        aggfunc = "sum",
+        index="Sample ID",
+        columns=["CHROM", "POS", "ID", "REF", "ALT"],
+        values="Barcode Count",
+        aggfunc="sum",
     ).drop("Temp")
     # remove place holder values for samples with no data
     try:
         vcf_table.drop(("Temp", "Temp", "Temp", "Temp", "Temp"),
-                      axis = 1,
-                      inplace = True)
-    except KeyError as e:
+                      axis=1,
+                      inplace=True)
+    except KeyError:
         pass
-    vcf_table.fillna(0, inplace = True)
+    vcf_table.fillna(0, inplace=True)
     # create coverage table for the vcf_table
     v_cols = vcf_table.columns
     v_index = vcf_table.index
@@ -11362,28 +11371,28 @@ def process_results(wdir,
         [return_coverage((s, c[0], c[1]))
          for c in v_cols]
         for s in v_index],
-        index = v_index,
-        columns = v_cols)
+        index=v_index,
+        columns=v_cols)
     # merge variants on position to get non-reference
     # allele count
-    vcf_non_ref = vcf_table.groupby(level = ["CHROM", "POS"],
-                     axis = 1).transform("sum")
+    vcf_non_ref = vcf_table.groupby(level=["CHROM", "POS"],
+                     axis=1).transform("sum")
     # calculate reference allele counts
     vcf_ref = vcf_co - vcf_non_ref
     # get variant qualities
     try:
         vcf_quals = variant_counts.pivot_table(
-            index = "Sample ID",
-            columns = ["CHROM", "POS", "ID", "REF", "ALT"],
-            values = "Variation Quality",
-            aggfunc = "mean",
+            index="Sample ID",
+            columns=["CHROM", "POS", "ID", "REF", "ALT"],
+            values="Variation Quality",
+            aggfunc="mean",
         ).drop("Temp").fillna(".")
     except KeyError:
         vcf_quals = variant_counts.pivot_table(
-            index = "Sample ID",
-            columns = ["CHROM", "POS", "ID", "REF", "ALT"],
-            values = "Variation Quality",
-            aggfunc = "mean",
+            index="Sample ID",
+            columns=["CHROM", "POS", "ID", "REF", "ALT"],
+            values="Variation Quality",
+            aggfunc="mean",
         ).fillna(".")
     # calculate allele frequencies and
     # create genotype calls from frequencies
@@ -11402,7 +11411,7 @@ def process_results(wdir,
      + ":" + vcf_co.applymap(int).applymap(str)
      + ":" + vcf_quals.applymap(str)
     ).fillna(".:0,0:0:.").T.sort_index(
-        level = ["CHROM", "POS"]
+        level=["CHROM", "POS"]
     )
     vcf_samples = vcf.columns.tolist()
     vcf.columns = vcf_samples
@@ -11420,8 +11429,8 @@ def process_results(wdir,
     vcf_file = "variants.vcf"
     with open(wdir + vcf_file, "w") as outfile:
         outfile.write("\n".join(vcf_header) + "\n")
-        vcf.reset_index().rename(columns = {"CHROM": "#CHROM"}).to_csv(
-            outfile, index = False, sep = "\t"
+        vcf.reset_index().rename(columns={"CHROM": "#CHROM"}).to_csv(
+            outfile, index=False, sep="\t"
         )
 
     # create a variant table from the variant counts
@@ -11430,69 +11439,69 @@ def process_results(wdir,
     # must be non-NA so fill them with a temporary
     # value
     variant_counts["Mutation Name"].fillna("Temp",
-                                      inplace = True)
+                                      inplace=True)
     variant_counts["CHROM"].fillna("Temp",
-                                      inplace = True)
+                                      inplace=True)
     variant_counts["POS"].fillna("Temp",
-                                      inplace = True)
+                                      inplace=True)
     variant_counts["ID"].fillna("Temp",
-                                      inplace = True)
+                                      inplace=True)
     variant_counts["REF"].fillna("Temp",
-                                      inplace = True)
+                                      inplace=True)
     variant_counts["ALT"].fillna("Temp",
-                                      inplace = True)
+                                      inplace=True)
     variant_counts["Gene"].fillna("Temp",
-                                      inplace = True)
+                                      inplace=True)
     variant_counts["Mutation Name"].fillna("Temp",
-                                      inplace = True)
+                                      inplace=True)
     variant_counts["AA Change Position"].fillna("Temp",
-                                      inplace = True)
+                                      inplace=True)
     variant_counts["ExonicFunc"].fillna("Temp",
-                                      inplace = True)
+                                      inplace=True)
     variant_counts["Targeted"].fillna("No",
-                                      inplace = True)
+                                      inplace=True)
 
     if ref_resistant:
         variant_counts["Reference Resistant"].fillna("No",
-                                                inplace = True)
+                                                inplace=True)
         # create pivot table for each unique variant
         variant_table = variant_counts.pivot_table(
-            index = "Sample ID",
-            columns = ["CHROM", "POS", "ID", "REF", "ALT",
+            index="Sample ID",
+            columns=["CHROM", "POS", "ID", "REF", "ALT",
                        "Gene", "Mutation Name", "AA Change Position",
                        "ExonicFunc",
                        "Reference Resistant", "Targeted"],
-            values = "Barcode Count",
-            aggfunc = "sum"
+            values="Barcode Count",
+            aggfunc="sum"
         )
         # drop the temporary sample place holder, if any
         try:
-            variant_table.drop("Temp", inplace = True)
+            variant_table.drop("Temp", inplace=True)
         except KeyError:
             pass
         # drop the column with temporary place holders, if any
         try:
             variant_table = variant_table.drop(
                 ("Temp", "Temp", "Temp", "Temp", "Temp", "Temp",
-                 "Temp", "Temp", "Temp", "No", "No"), axis = 1)
-        except KeyError as e:
+                 "Temp", "Temp", "Temp", "No", "No"), axis=1)
+        except KeyError:
             pass
         # if a sample did not have a variant, the table value
         # will be NA. Change those to 0.
-        variant_table.fillna(0, inplace = True)
+        variant_table.fillna(0, inplace=True)
         # add amino acid positions and sort table
         col_list = []
         for c in variant_table.columns:
             pos = c[7].split("-")[-1].split("_")[0]
             if pos != ".":
                 positions = []
-                num_found = False
+                num_found=False
                 for dig in pos:
                     try:
                         int(dig)
                         positions.append(dig)
-                        num_found = True
-                    except ValueError as e:
+                        num_found=True
+                    except ValueError:
                         if num_found:
                             break
                 pos = int("".join(positions))
@@ -11500,30 +11509,32 @@ def process_results(wdir,
         column_names = variant_table.columns.names
         new_cols = pd.MultiIndex.from_tuples(
             col_list,
-            names = column_names[:7] + ["AA Position"] + column_names[7:]
+            names=column_names[:7] + ["AA Position"] + column_names[7:]
         )
         variant_table.columns = new_cols
-        variant_table.sort_index(level = ["Gene",
-                                         "AA Position"],
-                                axis = 1)
-        variant_table.columns = variant_table.columns.droplevel(level = "AA Position")
+        variant_table.sort_index(level=["Gene", "AA Position"],
+                                 axis=1)
+        variant_table.columns = variant_table.columns.droplevel(
+            level="AA Position"
+        )
         # get coverage table with same indexes as
         # the variant table
         v_cols = variant_table.columns
         v_index = variant_table.index
-        variant_cov_df = pd.DataFrame([
-            [return_coverage(
-                (s, c[0], c[1])
-            )
-            for c in v_cols]
-            for s in v_index],
-            index = v_index,
-            columns = v_cols)
+        variant_cov_df = pd.DataFrame(
+            [
+                [return_coverage((s, c[0], c[1])) for c in v_cols]
+                for s in v_index
+            ],
+            index=v_index,
+            columns=v_cols)
         # define nonsynonamous changes to aggregate all non-reference
         # amino acids and get to all reference amino acid calls from
         # there
         nonsyn = list(
-            set(variant_counts["ExonicFunc"]).difference([".", "synonymous SNV", "Temp"])
+            set(variant_counts["ExonicFunc"]).difference(
+                [".", "synonymous SNV", "Temp"]
+            )
         )
         idx = pd.IndexSlice
         # aggregate all nonsyn calls for each amino acid position
@@ -11531,10 +11542,12 @@ def process_results(wdir,
         # used for loci where reference genome is actually mutant
         # that is so far only dhps-437 and there are no common indels
         # in the vicinity.
-        non_ref_aa_table = variant_table.loc[: , idx[:,:,:,:,:,:,:,:,
-                                  nonsyn, :,:]].groupby(level = ["Gene",
-                                                         "AA Change Position"],
-                                                       axis = 1).transform("sum")
+        non_ref_aa_table = variant_table.loc[
+            :, idx[:, :, :, :, :, :, :, :, nonsyn, :, :]
+        ].groupby(
+            level=["Gene", "AA Change Position"],
+            axis=1
+        ).transform("sum")
         # non_ref_aa_table loses the synonymous variants in the
         # previous step. We create an all-zero table with
         # variant table indexes by subtracting it from itself
@@ -11543,115 +11556,116 @@ def process_results(wdir,
                             - variant_table
                             + non_ref_aa_table).fillna(0)
         non_ref_aa_table = non_ref_aa_table.groupby(
-            level = ["Gene",
-                     "AA Change Position"],
-            axis = 1).transform(max)
+            level=["Gene", "AA Change Position"], axis=1
+        ).transform(max)
         non_ref_aa_table = non_ref_aa_table.groupby(
-            level = [
+            level=[
                 "Gene",
                 "Mutation Name",
                 "Reference Resistant",
                 "Targeted",
                 "ExonicFunc"],
-            axis = 1).max()
+            axis=1).max()
         # create a like-indexed coverage table
         coverage_aa_table = variant_cov_df.groupby(
-            level = [
+            level=[
                 "Gene",
                 "Mutation Name",
                 "Reference Resistant",
                 "Targeted",
                 "ExonicFunc"],
-            axis = 1).max()
+            axis=1).max()
         # calculate reference amino acid counts
         ref_aa_table = coverage_aa_table - non_ref_aa_table
         # aggregate all variants that lead to the
         # same amino acid change
         mutant_aa_table = variant_table.groupby(
-            level = [
-                "Gene",
-                "Mutation Name",
-                 "Reference Resistant",
-                 "Targeted",
-                 "ExonicFunc"],
-            axis = 1).sum()
+            level=["Gene",
+                   "Mutation Name",
+                   "Reference Resistant",
+                   "Targeted",
+                   "ExonicFunc"],
+            axis=1).sum()
         # do a sanity check for all the grouping and coverage calculations
         # none of the table values for mutant or reference tables can be
         # larger than the coverage for a given locus.
         if (((mutant_aa_table - coverage_aa_table) > 0).sum().sum()
-            + ((ref_aa_table - coverage_aa_table) > 0).sum().sum()) > 0:
+              + ((ref_aa_table - coverage_aa_table) > 0).sum().sum()) > 0:
             print("Some loci have lower coverage than mutation calls!")
         # where reference is the variant of interest("Reference Resistant")
         # change mutant count to reference count
         try:
-            mutant_aa_table.loc[:, idx[:, :, "Yes", :]] = ref_aa_table.loc[:, idx[:, :, "Yes", :]]
+            mutant_aa_table.loc[
+                :, idx[:, :, "Yes", :]
+            ] = ref_aa_table.loc[:, idx[:, :, "Yes", :]]
         except KeyError:
             pass
-        mutant_aa_table.columns = mutant_aa_table.columns.droplevel("Reference Resistant")
-        coverage_aa_table.columns = coverage_aa_table.columns.droplevel("Reference Resistant")
+        mutant_aa_table.columns = mutant_aa_table.columns.droplevel(
+            "Reference Resistant"
+        )
+        coverage_aa_table.columns = coverage_aa_table.columns.droplevel(
+            "Reference Resistant"
+        )
     else:
         # create pivot table for each unique variant
         variant_table = variant_counts.pivot_table(
-            index = "Sample ID",
-            columns = ["CHROM", "POS", "ID", "REF", "ALT",
+            index="Sample ID",
+            columns=["CHROM", "POS", "ID", "REF", "ALT",
                        "Gene", "Mutation Name", "AA Change Position",
                        "ExonicFunc", "Targeted"],
-            values = "Barcode Count",
-            aggfunc = "sum"
-        ).drop("Temp") # drop the temporary sample place holder
+            values="Barcode Count",
+            aggfunc="sum"
+        ).drop("Temp")  # drop the temporary sample place holder
         # drop the column with temporary place holders, if any
         try:
             variant_table = variant_table.drop(
                 ("Temp", "Temp", "Temp", "Temp", "Temp", "Temp",
-                 "Temp", "Temp", "Temp", "No"), axis = 1)
-        except KeyError as e:
+                 "Temp", "Temp", "Temp", "No"), axis=1)
+        except KeyError:
             pass
         # if a sample did not have a variant, the table value
         # will be NA. Change those to 0.
-        variant_table.fillna(0, inplace = True)
+        variant_table.fillna(0, inplace=True)
         # get coverage table with same indexes as
         # the variant table
         v_cols = variant_table.columns
         v_index = variant_table.index
-        variant_cov_df = pd.DataFrame([
-            [return_coverage(
-                (s, c[0], c[1])
-            )
-            for c in v_cols]
-            for s in v_index],
-            index = v_index,
-            columns = v_cols)
+        variant_cov_df = pd.DataFrame(
+            [
+                [return_coverage((s, c[0], c[1])) for c in v_cols]
+                for s in v_index
+            ],
+            index=v_index,
+            columns=v_cols)
         # aggregate all variants that lead to the
         # same amino acid change
         mutant_aa_table = variant_table.groupby(
-            level = [
+            level=[
                 "Gene",
                 "Mutation Name",
-                 "Targeted",
-                 "ExonicFunc"],
-            axis = 1).sum()
+                "Targeted",
+                "ExonicFunc"
+            ],
+            axis=1).sum()
         # create a like-indexed coverage table
         coverage_aa_table = variant_cov_df.groupby(
-            level = [
+            level=[
                 "Gene",
                 "Mutation Name",
                 "Targeted",
                 "ExonicFunc"],
-            axis = 1).max()
+            axis=1).max()
         # do a sanity check for all the grouping and coverage calculations
         # none of the table values for mutant or reference tables can be
         # larger than the coverage for a given locus.
         if (((mutant_aa_table - coverage_aa_table) > 0).sum().sum()) > 0:
             print("Some loci have lower coverage than mutation calls!")
 
-    combined_df.to_csv(wdir + "haplotype_counts.csv",
-                      index = False)
     variant_counts.to_csv(wdir + "variants.csv",
-                         index = False)
-    barcode_counts.to_csv(wdir + "barcode_counts.csv")
+                          index=False)
     plot_performance(barcode_counts,
-                    wdir = wdir,
-                    save = True)
+                     wdir=wdir,
+                     save=True)
     variant_table.to_csv(wdir + "variant_table.csv")
     variant_cov_df.to_csv(wdir + "variant_coverage_table.csv")
     mutant_aa_table.to_csv(wdir + "mutant_table.csv")
@@ -11693,21 +11707,21 @@ def process_results(wdir,
     sample_counts = combined_df.groupby("Sample ID")[["Read Count",
                                         "Barcode Count"]].sum()
     target_cov = pd.concat(
-        [(barcode_counts>= 1).sum(axis = 1),
-         (barcode_counts>= 5).sum(axis = 1),
-         (barcode_counts>= 10).sum(axis = 1)],
-        axis = 1,
+        [(barcode_counts>= 1).sum(axis=1),
+         (barcode_counts>= 5).sum(axis=1),
+         (barcode_counts>= 10).sum(axis=1)],
+        axis=1,
     ).rename(
-        columns = {
+        columns={
             0: "targets_with_1_barcodes",
             1: "targets_with_5_barcodes",
             2: "targets_with_10_barcodes"
     }
     )
     sample_counts = sample_counts.merge(target_cov,
-                                       how = "outer",
-                                       left_index = True,
-                                       right_index = True).fillna(0)
+                                       how="outer",
+                                       left_index=True,
+                                       right_index=True).fillna(0)
     sample_counts.to_csv(wdir + "sample_summary.csv")
 
     return
@@ -11716,7 +11730,7 @@ def combine_sample_data(gr):
     result["barcode_count"] = gr["barcode_count"].sum()
     result["read_count"] = gr["read_count"].sum()
     result["sequence_quality"] = gr.sort_values("barcode_count",
-                       ascending = False)["sequence_quality"].iloc[0]
+                       ascending=False)["sequence_quality"].iloc[0]
     result["mip_name"] = gr["mip_name"].iloc[0]
     result["gene_name"] = gr["gene_name"].iloc[0]
     return pd.Series(result)
@@ -11725,7 +11739,7 @@ def combine_info_files(wdir,
                        info_files,
                        sample_sheets,
                        combined_file,
-                       sample_sets = None):
+                       sample_sets=None):
     settings = get_analysis_settings(wdir + settings_file)
     colnames = dict(list(zip(settings["colNames"],
                         settings["givenNames"])))
@@ -11744,16 +11758,16 @@ def combine_info_files(wdir,
         current_run_meta["Original SID"] = current_run_meta[["sample_name",
                                       "sample_set",
                                       "replicate"]].apply(
-            lambda a: "-".join(a), axis = 1
+            lambda a: "-".join(a), axis=1
         )
         run_meta.append(current_run_meta)
     run_meta = pd.concat(run_meta,
-                        ignore_index = True)
+                        ignore_index=True)
     if sample_sets is not None:
         for s in sample_sets:
             s.append("Temp")
         sps = pd.DataFrame(sample_sets,
-                          columns = ["sample_set",
+                          columns=["sample_set",
                                     "probe_set",
                                     "Temp"])
     else:
@@ -11761,8 +11775,8 @@ def combine_info_files(wdir,
             ["sample_set", "probe_set"]
         ).first().reset_index()[["sample_set", "probe_set"]]
         sps["Temp"] = "Temp"
-    run_meta = run_meta.merge(sps, how = "inner").drop(
-        "Temp", axis = 1
+    run_meta = run_meta.merge(sps, how="inner").drop(
+        "Temp", axis=1
     )
     run_meta_collapsed = run_meta.groupby(
         ["sample_name",
@@ -11779,7 +11793,7 @@ def combine_info_files(wdir,
     run_meta["Sample ID"] = run_meta[["sample_name",
                                   "capital_set",
                                   "new_replicate"]].apply(
-        lambda a: "-".join(a), axis = 1
+        lambda a: "-".join(a), axis=1
     )
     for i in range(len(info_files)):
         i_file = info_files[i]
@@ -11791,7 +11805,7 @@ def combine_info_files(wdir,
         try:
             dump = gzip.open(i_file, "rb").readline()
             inf_file = gzip.open(i_file, "rb")
-        except IOError as e:
+        except IOError:
             inf_file = open(i_file, "rb")
         with inf_file as infile:
             for line in infile:
@@ -11813,7 +11827,7 @@ def combine_info_files(wdir,
                         d = ([newline[ci] if ci != si_index else sample_id
                               for ci in col_indexes] + [library])
                         data.append(d)
-                    except KeyError as e:
+                    except KeyError:
                         continue
     info = pd.DataFrame(data,
                         columns = c_vals + ["Library Prep"])
@@ -11989,7 +12003,7 @@ def make_vcf(settings):
                 wd = dp - ad
                 ad = str(wd) + "," + str(ad)
                 gen[1] = ad
-            except ValueError as e:
+            except ValueError:
                 pass
             gen = ":".join(gen)
             vd.append(gen)
@@ -12044,7 +12058,7 @@ def convert_to_int(n):
     """
     try:
         return int(n)
-    except ValueError as e:
+    except ValueError:
         return np.nan
 def get_ternary_genotype(gen):
     """
@@ -12053,7 +12067,7 @@ def get_ternary_genotype(gen):
     """
     try:
         g = sum(map(int, gen.split(":")[0].split("/")))
-    except ValueError as e:
+    except ValueError:
         g = np.nan
     return g
 def variation_to_geno(settings, var_file, output_prefix):
@@ -12106,7 +12120,7 @@ def variation_to_geno(settings, var_file, output_prefix):
                                              sam_name,
                                              affected])
                         samples_used.append(s)
-                    except KeyError as e:
+                    except KeyError:
                         continue
                 used_sample_mask = np.array([s in samples_used for s in sample_ids])
             else:
@@ -12124,7 +12138,7 @@ def variation_to_geno(settings, var_file, output_prefix):
                                      alt, gene_name, aa_change])
                 try:
                     genes[gene_name].append(rsid)
-                except KeyError as e:
+                except KeyError:
                     genes[gene_name] = [rsid]
                     ordered_genes.append(gene_name)
                 genotypes = np.array(newline[sample_start_index:])[used_sample_mask]
@@ -12333,16 +12347,16 @@ def plot_coverage(barcode_counts,
 def split_aa(aa):
     try:
         return aa.split(";")[0].split(":")[4][2:]
-    except IndexError as e:
+    except IndexError:
         return "."
-    except AttributeError as e:
+    except AttributeError:
         return np.nan
 def split_aa_pos(aa):
     try:
         return aa.split(";")[0].split(":")[4][2:-1]
-    except IndexError as e:
+    except IndexError:
         return "."
-    except AttributeError as e:
+    except AttributeError:
         return np.nan
 def get_mutation_counts(col):
     return col.apply(lambda gen: int(gen.split(":")[1]))
@@ -12471,7 +12485,7 @@ def genotype(settings,
     try:
         var["Mutation Name"].fillna(var["AA Change"],
                                      inplace = True)
-    except KeyError as e:
+    except KeyError:
         var["Mutation Name"] = var["AA Change"]
     var.loc[var["AA Change"] == ".",
             "Mutation Name"] = var.loc[
@@ -12549,7 +12563,7 @@ def genotype(settings,
     all_mutations["Wildtype AA Count"] = all_mutations["Reference AA Count"]
     try:
         all_mutations["Reference Resistant"]
-    except KeyError as e:
+    except KeyError:
         all_mutations["Reference Resistant"] = "No"
     resistant_ref_mask = all_mutations["Reference Resistant"] == "Yes"
     resistant_ref_mask.fillna(False, inplace = True)
@@ -12617,17 +12631,17 @@ def call_microsats(settings, sim = None, freq_cutoff = 0.005,
                                                          "MS size adjustment"])
                             try:
                                 ms_types[ms_len] += bcc
-                            except KeyError as e:
+                            except KeyError:
                                 ms_types[ms_len] = bcc
                         for ml in list(ms_types.keys()):
                             if (ms_types[ml]/total_bcs) < freq_cutoff:
                                 ms_types.pop(ml)
                         try:
                             sam_freq[g][m][c] = ms_types
-                        except KeyError as e:
+                        except KeyError:
                             try:
                                 sam_freq[g][m] = {c : ms_types}
-                            except KeyError as e:
+                            except KeyError:
                                 sam_freq[g] = {m : {c : ms_types}}
         strain_freqs[sample_name] = sam_freq
     ms_calls = []
@@ -12700,7 +12714,7 @@ def get_copy_average(r, ac):
         return ac.loc[r["Sample ID"],
                        (r["Gene"],
                        r["Copy"])]
-    except KeyError as e:
+    except KeyError:
         return np.nan
 def normalize_copies(a):
     if a.isnull().all():
@@ -12775,7 +12789,7 @@ def repool(
     data_summary = copy.deepcopy(data_summary)
     try:
         data_summary["total_barcode_count"]
-    except KeyError as e:
+    except KeyError:
         data_summary["total_barcode_count"] = data_summary["Barcode Count"]
         data_summary["total_read_count"] = data_summary["Read Count"]
     # mark samples that reached the desired outcome
@@ -12795,7 +12809,7 @@ def repool(
     # They will be re-captured if more data is needed.
     try:
         data_summary["Barcode Coverage"]
-    except KeyError as e:
+    except KeyError:
         data_summary["Barcode Coverage"] = (
             data_summary["total_read_count"]
             /data_summary["total_barcode_count"]
@@ -12861,7 +12875,7 @@ def repool(
     try:
         data_summary.to_csv(wdir + output_file,
                            index = False)
-    except TypeError as e:
+    except TypeError:
         # in an older version of this function, settings dict
         # was passed instead of wdir, for backwards compatibility
         # we'll catch that error and use wdir from the settings dict
@@ -12894,7 +12908,7 @@ def aa_to_coordinate(gene, species, aa_number, alias = False):
             alias_dic = json.load(infile)
         try:
             gene = alias_dic[gene]
-        except KeyError as e:
+        except KeyError:
             pass
     cds = get_cds(gene, species)
     if len(cds) == 0:
@@ -12975,9 +12989,9 @@ def merge_snps(settings):
                             try:
                                 # add the aa change position to the changes dict.
                                 aa_changes[aa_pos].append(i)
-                            except KeyError as e:
+                            except KeyError:
                                 aa_changes[aa_pos] = [i]
-                        except (IndexError, ValueError) as e:
+                        except (IndexError, ValueError):
                             continue
                     # after going through all diffs, look for mutliple diffs
                     # affecting single aminoacid
@@ -13024,7 +13038,7 @@ def merge_snps(settings):
                                 try:
                                     cdna_pos = int(cdna[1:-1])
                                     # raises value error if not a SNP
-                                except ValueError as e:
+                                except ValueError:
                                     multi_indels.append(c)
                                     mindel = True
                                     break
@@ -13197,7 +13211,7 @@ def vcf_to_df(vcf_file):
     try:
         op = gzip.open(vcf_file).readline()
         op = gzip.open(vcf_file)
-    except IOError as e:
+    except IOError:
         op = open(vcf_file).readline()
         op = open(vcf_file)
     # create a list of variants that behave unexpectedly
@@ -13235,7 +13249,7 @@ def vcf_to_df(vcf_file):
                     try:
                         info_dict[split_info[0]] = split_info[1].split(",")
                     # if field is a flag
-                    except IndexError as e:
+                    except IndexError:
                         info_dict[split_info[0]] = [True]
                 # sum of all allele counts will be used as allele count
                 ac = info_dict["AC"]
@@ -13262,9 +13276,9 @@ def vcf_to_df(vcf_file):
                         for col in info_cols:
                             try:
                                 var_info.append(info_dict[col][i])
-                            except KeyError as e:
+                            except KeyError:
                                 var_info.append(np.nan)
-                            except IndexError as e:
+                            except IndexError:
                                 var_info.append(info_dict[col][0])
                         outlist = outlist + var_info
                         outfile_list.append(outlist)
@@ -13297,7 +13311,7 @@ def vcf_to_df(vcf_file):
                                 for col in info_cols:
                                     try:
                                         var_info.append(info_dict[col][0])
-                                    except KeyError as e:
+                                    except KeyError:
                                         var_info.append(np.nan)
                                 outlist = outlist + var_info
                                 outfile_list.append(outlist)
@@ -13314,7 +13328,7 @@ def vcf_to_df(vcf_file):
                                 for col in info_cols:
                                     try:
                                         var_info.append(info_dict[col][0])
-                                    except KeyError as e:
+                                    except KeyError:
                                         var_info.append(np.nan)
                                 outlist = outlist + var_info
                                 outfile_list.append(outlist)
@@ -13393,26 +13407,26 @@ def header_to_primer (seq_to_bc_dict,
     if platform == "miseq":
         try:
             fw = seq_to_bc_dict[split_string[0]]
-        except KeyError as e:
+        except KeyError:
             fw = 999
         try:
             rev = seq_to_bc_dict[
                 reverse_complement(split_string[1])
         ]
-        except KeyError as e:
+        except KeyError:
             rev = 999
     elif platform == "nextseq":
         try:
             fw = seq_to_bc_dict[
                 reverse_complement(split_string[1])
             ]
-        except KeyError as e:
+        except KeyError:
             fw = 999
         try:
             rev = seq_to_bc_dict[
                 reverse_complement(split_string[0])
             ]
-        except KeyError as e:
+        except KeyError:
             rev = 999
     return fw, rev
 def primer_to_header(bc_dict, primers, platform):
@@ -13472,7 +13486,7 @@ def filter_vcf(in_vcf, out_vcf, filters_to_remove):
         input_vcf = gzip.open(in_vcf).readline()
         input_vcf = gzip.open(in_vcf)
         output_vcf = gzip.open(out_vcf, "w")
-    except IOError as e:
+    except IOError:
         input_vcf = open(in_vcf)
         output_vcf = open(out_vcf, "w")
     with input_vcf as infile, output_vcf as outfile:
@@ -13513,7 +13527,7 @@ def iupac_converter(iupac_code):
     }
     try:
         return list(iupac_dict[iupac_code.upper()])
-    except KeyError as e:
+    except KeyError:
         print((("Non-IUPAC nucleotide code {}."
                " Code must be one of {}").format(
             iupac_code,
