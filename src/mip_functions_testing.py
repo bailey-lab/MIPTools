@@ -10608,11 +10608,10 @@ def process_haplotypes(settings_file):
 
 def process_results(wdir,
                     settings_file,
-                    sample_sheets = None,
+                    sample_sheets=None,
                     meta_files=[],
                     targets_file=None,
-                    target_join="union"
-                   ):
+                    target_join="union"):
     settings = get_analysis_settings(wdir + settings_file)
     if sample_sheets is None:
         sample_sheets = [wdir + "samples.tsv"]
@@ -10620,35 +10619,28 @@ def process_results(wdir,
     ##########################################################
     # Process 1: use sample sheets, sample sets and meta files
     # to determine which data points from the mipster file
-    # should be used, print some statistics
+    # should be used, print relevant statistics.
     ##########################################################
     ##########################################################
     # process sample sheets
     run_meta = pd.concat(
-        [pd.read_table(s)
-         for s in sample_sheets],
-         ignore_index=True
+        [pd.read_table(s) for s in sample_sheets],
+        ignore_index=True
     )
-    # if only a subset of the run is to be used for this analysis
-    # create a sample/probe sets dataframe for used
-    # samples and probes , otherwise
-    # use all samples in the sample sheets
+    # create a unique sample ID for each sample using sample name,
+    # sample set and replicate fields from the sample list file.
     run_meta["sample_name"] = (
             run_meta["sample_name"].astype(str)
         )
     run_meta["Sample Name"] = run_meta["sample_name"]
-    run_meta["Sample ID"] = run_meta[["sample_name",
-                                      "sample_set",
-                                      "replicate"]].apply(
-        lambda a: "-".join(map(str, a)), axis=1
-    )
+    run_meta["Sample ID"] = run_meta[
+        ["sample_name", "sample_set", "replicate"]
+    ].apply(lambda a: "-".join(map(str, a)), axis=1)
     # Sample Set key is reserved for meta data
     # but sometimes erroneously included in the
     # sample sheet. It should be removed.
     try:
-        run_meta.drop("Sample Set",
-                 inplace=True,
-                 axis=1)
+        run_meta.drop("Sample Set", inplace=True, axis=1)
     except (ValueError, KeyError):
         pass
     # drop duplicate values originating from
@@ -10658,8 +10650,7 @@ def process_results(wdir,
         ["Sample ID", "Library Prep"]
     ).first().reset_index()
     run_meta.to_csv(wdir + "run_meta.csv")
-    # load meta data for samples
-    sample_meta_list = []
+    # load meta data for samples, if given. Use a mock field if not given.
     try:
         sample_meta = pd.concat(
             [pd.read_table(f) for f in meta_files],
@@ -10671,6 +10662,8 @@ def process_results(wdir,
         # meta dataframe
         sample_meta = copy.deepcopy(run_meta[["Sample Name"]])
         sample_meta["Meta"] = "Meta"
+    # Pandas reads sample names that are numbers as numbers
+    # these should be converted to string for consistency across samples.
     sample_meta["Sample Name"] = sample_meta["Sample Name"].astype(str)
     sample_meta = sample_meta.groupby(["Sample Name"]).first().reset_index()
     # Merge Sample meta data and run data
@@ -10682,7 +10675,7 @@ def process_results(wdir,
            " will be used for analysis.").format(
         merged_meta.shape[0], run_meta.shape[0]
     ))
-    # get used sample's ids
+    # get used sample ids
     sample_ids = merged_meta["Sample ID"].unique().tolist()
     ##########################################################
     ##########################################################
@@ -10696,11 +10689,10 @@ def process_results(wdir,
     hap_file = settings["haplotypeDictionary"]
     with open(wdir + hap_file) as infile:
         haplotypes = json.load(infile)
-    # keep all variant in all haplotypes in
-    # variation list
+    # keep all variant in all haplotypes in a list
     variation_list = []
-    # keep haplotypes that are the same as reference
-    # genome in the reference list
+    # keep haplotypes that are the same as reference genome
+    # in the reference list
     reference_list = []
     # annotation ID Key specifies if there is and ID field in the vcf
     # which has a database ID of the variation at hand. For example,
@@ -10763,19 +10755,18 @@ def process_results(wdir,
                     start_index = min(hap_index)
                     end_index = max(hap_index) + 1
                     temp_list = [normalized_key,
-                                            var[0],
-                                            int(var[1]),
-                                            annotation_id,
-                                            var[3],
-                                            var[4],
-                                            d["psv"],
-                                            g, m, c, hid,
-                                           raw_key,
-                                           original_pos,
-                                           start_index,
-                                           end_index,
-                                           multi_mapping,
-                                            ]
+                                 var[0],
+                                 int(var[1]),
+                                 annotation_id,
+                                 var[3],
+                                 var[4],
+                                 d["psv"],
+                                 g, m, c, hid,
+                                 raw_key,
+                                 original_pos,
+                                 start_index,
+                                 end_index,
+                                 multi_mapping]
                     try:
                         for ak in annotation_keys:
                             temp_list.append(d["annotation"][ak])
@@ -10801,27 +10792,25 @@ def process_results(wdir,
             clean_annotation_keys.append(ak)
     colnames = colnames + clean_annotation_keys
     variation_df = pd.DataFrame(variation_list,
-                               columns=colnames)
+                                columns=colnames)
     # create pandas dataframe for reference haplotypes
     reference_df = pd.DataFrame(reference_list,
-                               columns=["Haplotype ID",
-                                          "Copy",
-                                          "Multi Mapping"])
+                                columns=["Haplotype ID",
+                                         "Copy",
+                                         "Multi Mapping"])
 
     # create a dataframe for all mapped haplotypes
     mapped_haplotype_df = pd.concat(
-        [variation_df.groupby(["Haplotype ID",
-                               "Copy",
-                              "Multi Mapping"]).first(
-            ).reset_index()[["Haplotype ID",
-                               "Copy",
-                              "Multi Mapping"]],
+        [variation_df.groupby(
+            ["Haplotype ID", "Copy", "Multi Mapping"]
+        ).first().reset_index()[["Haplotype ID", "Copy", "Multi Mapping"]],
          reference_df],
-        ignore_index=True)
-    print("There are {mh.shape[0]} mapped and {um} unmapped (off target) haplotypes.".format(
-        mh=mapped_haplotype_df,
-        um=unmapped
-    ))
+        ignore_index=True
+    )
+    print(
+        ("There are {mh.shape[0]} mapped and {um} unmapped (off target)"
+         " haplotypes.").format(mh=mapped_haplotype_df, um=unmapped)
+    )
     ##########################################################
     ##########################################################
     # Process 3: load the MIPWrangler output which has
@@ -10839,20 +10828,19 @@ def process_results(wdir,
     raw_results = raw_results.loc[
         raw_results["sample_name"].isin(sample_ids)
     ]
-    mapped_results = raw_results.merge(mapped_haplotype_df,
-                                         how="inner")
+    mapped_results = raw_results.merge(mapped_haplotype_df, how="inner")
     print(("There are {rr.shape[0]} data points in raw data,"
-            " {mr.shape[0]} are mapped to genome.").format(
+           " {mr.shape[0]} are mapped to genome.").format(
         rr=raw_results,
         mr=mapped_results
     ))
-    # rename some columns for better visualization
+    # rename some columns for better visualization in tables
     mapped_results.rename(
         columns={"sample_name": "Sample ID",
-                  "mip_name": "MIP",
-                  "gene_name": "Gene",
-                  "barcode_count": "Barcode Count",
-                  "read_count": "Read Count"},
+                 "mip_name": "MIP",
+                 "gene_name": "Gene",
+                 "barcode_count": "Barcode Count",
+                 "read_count": "Read Count"},
         inplace=True
     )
     # Try to estimate the distribution of data that is mapping
@@ -10861,60 +10849,74 @@ def process_results(wdir,
     # 1) Get uniquely mapping haplotypes and barcode counts
     unique_df = mapped_results.loc[~mapped_results["Multi Mapping"]]
     unique_table = pd.pivot_table(unique_df,
-               index="Sample ID",
-              columns=["Gene", "MIP", "Copy"],
-              values=["Barcode Count"],
-              aggfunc=np.sum)
+                                  index="Sample ID",
+                                  columns=["Gene", "MIP", "Copy"],
+                                  values=["Barcode Count"],
+                                  aggfunc=np.sum)
     # 2) Estimate the copy number of each paralog gene
     # for each sample from the uniquely mapping data
+    # Two values from the settings are used to determine the copy number
+    # in a given gene. Average copy count is the ploidy of the organism
+    # and the normalization percentile is what percentile is used for
+    # normalizing data. For example, for human genes ACC is 2 and
+    # if the percentiles are given as 0.4, 0.6: we would calculate the
+    # take the 40th and 60th percentile of them barcode counts for each probe
+    # across the samples and assume that the average of 40th and 60 pctl values
+    # to represent the average copy count of 2. Then caluculate this value
+    # for each probe and each sample.
     try:
         average_copy_count = float(settings["averageCopyCount"])
         norm_percentiles = list(map(float,
-                              settings["normalizationPercentiles"]))
+                                settings["normalizationPercentiles"]))
     except KeyError:
         average_copy_count = 2
         norm_percentiles = [0.4, 0.6]
     unique_df.loc[:, "CA"] = average_copy_count
     unique_df.loc[:, "Copy Average"] = average_copy_count
+    # Adjusted barcode count will represent the estimated barcode count
+    # for multimapping haplotypes. For example, if hap1 is mapping to 2
+    # places in the genome and its barcode count for a sample containing this
+    # haplotype is 100. If we determined the copy numbers of the two mapping
+    # regions to be 1 and 1, the adjusted barcode count for each region
+    # would be 50. We'll set this value for uniquely mapping haplotypes
+    # to the Barcode Count, as they are not multi mapping.
     unique_df.loc[:, "Adjusted Barcode Count"] = unique_df["Barcode Count"]
     unique_df.loc[:, "Adjusted Read Count"] = unique_df["Read Count"]
     unique_table.fillna(0, inplace=True)
+    # calculate the copy counts using the get_copy_counts function.
+    # this function normalizes data for each probe across samples
+    # and estimates copy counts using the percentile values as mentioned.
     copy_counts = get_copy_counts(unique_table,
-                            average_copy_count,
-                            norm_percentiles)
+                                  average_copy_count,
+                                  norm_percentiles)
     # 3) Estimate the copy number of each "Gene"
     # from the average copy count of uniquely mapping
-    # data for all MIPs within the gene
-    cc = copy_counts.groupby(level=["Gene",
-                                 "Copy"], axis=1).sum()
+    # data for all MIPs within the gene.
+    cc = copy_counts.groupby(level=["Gene", "Copy"], axis=1).sum()
     gc = copy_counts.groupby(level=["Gene"], axis=1).sum()
     ac = cc/gc
-    multi_df = mapped_results.loc[mapped_results["Multi Mapping"]]
     # 4) Distribute multi mapping data proportional to
     # Paralog's copy number determined from the
     # uniquely mapping data
+    multi_df = mapped_results.loc[mapped_results["Multi Mapping"]]
     if not multi_df.empty:
-        mca = multi_df.apply(
-            lambda r: get_copy_average(r, ac),
-            axis=1)
+        # get the average copy count for the gene the haplotype belongs to
+        mca = multi_df.apply(lambda r: get_copy_average(r, ac), axis=1)
         multi_df.loc[mca.index, "Copy Average"] = mca
-        mca = multi_df.groupby(["Sample ID",
-                         "Gene"])["Copy Average"].transform(
-            normalize_copies
-        )
+        mca = multi_df.groupby(
+            ["Sample ID", "Gene"]
+        )["Copy Average"].transform(normalize_copies)
         multi_df.loc[mca.index, "CA"] = mca
-        multi_df.loc[: , "Adjusted Barcode Count"] = (
+        multi_df.loc[:, "Adjusted Barcode Count"] = (
             multi_df.loc[:, "Barcode Count"]
             * multi_df.loc[:, "CA"]
         )
-        multi_df.loc[: , "Adjusted Read Count"] = (
+        multi_df.loc[:, "Adjusted Read Count"] = (
             multi_df.loc[:, "Read Count"]
             * multi_df.loc[:, "CA"]
         )
     # Combine unique and multimapping data
-    combined_df = pd.concat([unique_df,
-                           multi_df],
-                           ignore_index=True)
+    combined_df = pd.concat([unique_df, multi_df], ignore_index=True)
     combined_df.rename(
         columns={
             "Barcode Count": "Raw Barcode Count",
@@ -10925,14 +10927,15 @@ def process_results(wdir,
         inplace=True
     )
     # print total read and barcode counts
-    print(("Total number of reads and barcodes were {0[0]} and {0[1]}."
-          " On target number of reads and barcodes were {1[0]} and {1[1]}.").format(
-        raw_results[["read_count",
-                     "barcode_count"]].sum(),
-         combined_df[["Read Count",
-                     "Barcode Count"]].sum().astype(int)
-    ))
-
+    print(
+        (
+         "Total number of reads and barcodes were {0[0]} and {0[1]}."
+         " On target number of reads and barcodes were {1[0]} and {1[1]}."
+        ).format(
+            raw_results[["read_count", "barcode_count"]].sum(),
+            combined_df[["Read Count", "Barcode Count"]].sum().astype(int)
+        )
+    )
     ##########################################################
     ##########################################################
     # Process 4: Combine per sample information from process 3
