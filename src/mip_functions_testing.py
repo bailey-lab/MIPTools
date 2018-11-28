@@ -11178,6 +11178,7 @@ def process_results(wdir,
         variant_min_sample_fraction_filter
     ))
     # Add variant sequence quality
+
     def get_qual(row):
         try:
             # get start of the variation relative to haplotype sequence
@@ -11198,7 +11199,7 @@ def process_results(wdir,
                 return np.nan
             else:
                 return np.mean(hap_qual_list)
-        except:
+        except Exception:
             return np.nan
     variant_counts["Variation Quality"] = variant_counts.apply(
         get_qual, axis=1
@@ -11316,8 +11317,8 @@ def process_results(wdir,
     combined_df.to_csv(wdir + "haplotype_counts.csv",
                        index=False)
     barcode_counts.to_csv(wdir + "barcode_counts.csv")
-    with open(wdir + "position_to_mip.json", "w") as outfile:
-        json.dump(position_to_mip, outfile, indent=1)
+    with open(wdir + "position_to_mip.json", "wb") as outfile:
+        pickle.dump(position_to_mip, outfile)
     # create a coverage dictionary for each variant position
     # for each sample
     bc_dict = barcode_counts.to_dict(orient="index")
