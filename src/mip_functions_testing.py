@@ -13588,3 +13588,104 @@ def save_fasta_dict(fasta_dict, fasta_file, linewidth = 60):
             fasta_seq = fasta_dict[header]
             for i in range(0, len(fasta_seq), linewidth):
                 outfile.write(fasta_seq[i: i + linewidth] + "\n")
+
+
+def generate_sample_sheet(sample_list_file,
+                          barcode_dict_file,
+                          sample_sheet_template,
+                          platform,
+                          output_dir,
+                          warnings=False):
+    """
+    Create a sample sheet to be used by bcl2fasq file from sample list.
+    """
+    with open(barcode_dict_file, "rb") as in1:
+        barcode_dic = pickle.load(in1)
+    # read in sample information
+    sample_names = []
+    sample_info = {}
+    with open(sample_list_file) as infile:
+        linenum = 0
+        for line in infile:
+            newline = line.strip().split("\t")
+            # first line is the header with column names
+            if linenum == 0:
+                colnames = newline
+                linenum += 1
+            else:
+                sample_dict = {colname: colvalue for colname, colvalue
+                               in zip(colnames, newline)}
+                sample_set = sample_dict["sample_set"]
+                sample_name = sample_dict["sample_name"]
+                replicate_number = sample_dict["replicate"]
+                forward_index = sample_dict["fw"]
+                reverse_index = sample_dict["rev"]
+                sample_id = "-".join([sample_name,
+                                      sample_set,
+                                      replicate_number])
+                if sample_id in sample_info:
+                    print("Repeating sample name ", sample_id)
+                if not sample_id.replace("-", "").isalnum():
+                    print(("Sample IDs can only contain "
+                           "alphanumeric characters and '-'. "
+                           "{} has invalid characters.").format(sample_id))
+                    continue
+                # nextseq and miseq barcodes are handled differently
+                if platform == "nextseq":
+                    sample_dict.update(
+                        {"i7": barcode_dic[reverse_index]["index_sequence"],
+                         "i5": barcode_dic[forward_index]["index_sequence"]})
+                elif platform == "miseq":
+                    sample_dict.update(
+                        {"i7": barcode_dic[reverse_index]["index_sequence"],
+                         "i5": barcode_dic[forward_index]["sequence"]})
+                sample_dict["sample_index"] = linenum
+                linenum += 1
+                sample_info[sample_id] = sample_dict
+                sample_names.append(sample_id)
+    # Check for samples sharing one or both barcodes. One barcode sharing is
+    # allowed but a warning can be printed if desired by setting the warning
+    #  to True. If both barcodes are shared among two samples, those samples
+    # will be ignored and a message will be broadcast.
+    samples_sharing = []
+    for s1 in sample_info:
+        for s2 in sample_info:
+            if s1 != s2:
+                if ((sample_info[s1]["fw"] == sample_info[s2]["fw"])
+                   and (sample_info[s1]["rev"] == sample_info[s2]["rev"])):
+                    samples_sharing.append([s1, s2])
+                elif warnings and (
+                    (sample_info[s1]["fw"] == sample_info[s2]["fw"])
+                    or (sample_info[s1]["rev"] == sample_info[s2]["rev"])
+                ):
+                    print("Samples %s and %s share a barcode" % (s1, s2))
+    samples_sharing_set = []
+    if len(samples_sharing) > 0:
+        for s in samples_sharing:
+            samples_sharing_set.extend(s)
+        samples_sharing_set = set(samples_sharing_set)
+        print("There are %d samples sharing the same barcode pair"
+              % len(samples_sharing_set))
+        pd.DataFrame(samples_sharing).to_csv(
+            os.path.join(output_dir, "samples_sharing_barcodes.tsv"),
+            sep="\t"
+        )
+    # create sample sheet
+    sample_sheet = os.path.join(output_dir, "SampleSheet.csv")
+    with open(sample_sheet_template) as infile, \
+         open(sample_sheet, "w") as outfile:
+        outfile_list = infile.readlines()
+        outfile_list = [o.strip() for o in outfile_list]
+        for sample_id in sample_names:
+            if sample_id in samples_sharing_set:
+                continue
+            reverse_index = sample_info[sample_id]["rev"]
+            forward_index = sample_info[sample_id]["fw"]
+            sample_index = str(sample_info[sample_id]["sample_index"])
+            outlist = [sample_index, sample_id, "", "",
+                       "S" + reverse_index,
+                       sample_info[sample_id]["i7"],
+                       "N" + forward_index,
+                       sample_info[sample_id]["i5"], "", ""]
+            outfile_list.append(",".join(outlist))
+        outfile.write("\n".join(outfile_list))
