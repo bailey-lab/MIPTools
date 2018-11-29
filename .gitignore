@@ -2,3 +2,4 @@
 *.simg
 *.img
 miptools/
+src/__pycache__/
