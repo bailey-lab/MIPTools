@@ -11895,7 +11895,7 @@ def generate_mock_fastqs(settings_file):
                                 fastq_lines = "\n".join([read_name, seq, "+", qual]) + "\n"
                                 outfile.write(fastq_lines)
     return
-def generate_fastqs(wdir, mipster_files, min_bc_count, min_bc_frac):
+ generate_fastqs(wdir, mipster_files, min_bc_count, min_bc_frac):
     """
     Generate fastq files for each sample. These files will have stitched and
     barcode corrected reads.
@@ -11910,13 +11910,13 @@ def generate_fastqs(wdir, mipster_files, min_bc_count, min_bc_frac):
                                               "h_seq",
                                               'c_qual',
                                               'c_barcodeCnt',
-                                              "c_barcodeFrac"
+                                              "c_barcorac"
                                           ])
                              for mfile in mipster_files],
                            axis = 0,
                            ignore_index = True)
     mipster = mipster_dfs.loc[(mipster_dfs["c_barcodeCnt"] >= min_bc_count)
-                              &(mipster_dfs["c_barcodeFrac"] >= min_bc_frac)].groupby(
+                              &(mipster_dfs["c_barcorac"] >= min_bc_frac)].groupby(
         "s_Sample").apply(lambda x: pd.DataFrame.to_dict(
         x, orient = "index"
     )).to_dict()
