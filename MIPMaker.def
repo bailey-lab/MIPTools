@@ -106,10 +106,12 @@ From: amd64/ubuntu:18.04
     echo "LC_ALL=en_US.UTF-8" >> /etc/environment
     echo "LANGUAGE=en_US.UTF-8" >> /etc/environment
     locale-gen en_US.UTF-8
+
 %files
     programs /opt
     bin /opt
     src /opt
+
 %environment
     export PATH=/opt/conda/bin:/opt/programs/MIPWrangler/bin:$PATH
     export XDG_RUNTIME_DIR=""
@@ -136,6 +138,7 @@ From: amd64/ubuntu:18.04
         esac
     done
     jupyter notebook --notebook-dir=$nb_dir --port=$nb_port --no-browser
+
 %apprun wrangler
     set -e
     set -u
@@ -157,6 +160,7 @@ From: amd64/ubuntu:18.04
     done
     python /opt/src/generate_wrangler_scripts.py \
     -p $platform -e $experiment_id -l /opt/analysis/$sample_list
+
 %apprun download
     set -e
     set -u
@@ -183,12 +187,46 @@ From: amd64/ubuntu:18.04
      -r $run_id -a "$(cat /opt/resources/access_token.txt)"
     echo "Download finished."
 
-    %apprun demultiplex
+%apprun demux
+    set -e
+    set -u
+    while getopts s:p: opt; do
+        case $opt in
+            s)  sample_list=$OPTARG;;
+            p)  platform=$OPTARG;;
+            ?)  echo "Usage: singularity run --app demux \\"
+                echo "           -B /path_to_run_dir:/opt/data \\"
+                echo "           -B /path_to_output_dir:/opt/analysis \\"
+                echo "           -B /path_to_base_resources:/opt/resources \\"
+                echo "            mycontainer.sif -s sample_list_file \\"
+                echo "            -p sequencing_platform (nextseq or miseq) \\"
+                echo "The sample list file must be present in the output"
+                echo "directory mounted to /opt/analysis."
+                exit 1;;
+        esac
+    done
+    # create a sample sheet for demultiplexing
+    cd /opt/src
+    template_dir="/opt/resources/templates/sample_sheet_templates/"
+    platform_template="$platform"_sample_sheet_template.csv
+    template="$template_dir$platform_template"
+    bc_dict="/opt/resources/barcode_dict.json"
+    output_dir="/opt/analysis"
+    sample_list="/opt/analysis/$sample_list"
+    python -c 'import mip_functions as mip; mip.generate_sample_sheet(
+        "'"$sample_list"'", "'"$bc_dict"'", "'"$template"'", "'"$platform"'",
+        "'"$output_dir"'")'
+    # cd to where bcl files are.
+    cd /opt/data
+    # create a fastq directory for saving fastqs
+    mkdir -p /opt/analysis/fastq
+    # increase limit of open number of files.
+    ulimit -n 9999
+    nohup bcl2fastq -o /opt/analysis/fastq \
+        --sample-sheet /opt/analysis/SampleSheet.csv \
+        --no-lane-splitting
+
+%apprun wrangle
         set -e
         set -u
-        echo "Testing demultiplexing."
-
-    %apprun wrangle
-            set -e
-            set -u
-            echo "Testing wrangler."
+        echo "Testing wrangler."

@@ -10,7 +10,7 @@ import os
 import subprocess
 from operator import itemgetter
 import ast
-import mip_functions_testing as mip
+import mip_functions as mip
 import copy
 import numpy as np
 import math

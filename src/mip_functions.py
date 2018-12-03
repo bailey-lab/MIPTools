@@ -23,7 +23,7 @@ from scipy.stats import chi2_contingency, fisher_exact
 from itertools import cycle
 from functools import partial
 import pysam
-import mip_mod_testing as mod
+import mip_classes as mod
 import pandas as pd
 import gzip
 print("functions reloading")
@@ -10828,9 +10828,11 @@ def process_results(wdir,
     raw_results = raw_results.loc[
         raw_results["sample_name"].isin(sample_ids)
     ]
+    # use only the data corresponding to mapped haplotypes
+    # filtering the off target haplotypes.
     mapped_results = raw_results.merge(mapped_haplotype_df, how="inner")
     print(("There are {rr.shape[0]} data points in raw data,"
-           " {mr.shape[0]} are mapped to genome.").format(
+           " {mr.shape[0]} are mapped to genome and their targets.").format(
         rr=raw_results,
         mr=mapped_results
     ))
@@ -10948,13 +10950,14 @@ def process_results(wdir,
     # and how many barcodes supported a given haplotype
     # Filter the haplotypes for those criteria to
     # remove possible noise and infrequent haplotypes
-    ####### Haplotype Filters #############
+    ##########################################################
+    # Haplotype Filters from the settings file
     haplotype_min_barcode_filter = int(settings["minHaplotypeBarcodes"])
     haplotype_min_sample_filter = int(settings["minHaplotypeSamples"])
     haplotype_min_sample_fraction_filter = float(
         settings["minHaplotypeSampleFraction"]
     )
-    ####### Haplotype Filters #############
+    # Gather per haplotype data across samples
     hap_counts = combined_df.groupby(
         "Haplotype ID"
     )["Barcode Count"].sum().reset_index().rename(
@@ -10965,17 +10968,16 @@ def process_results(wdir,
     ).rename(columns={"Sample ID": "Haplotype Samples"})
     num_samples = float(combined_df["Sample ID"].unique().size)
     hap_sample_counts["Haplotype Sample Fraction"] = (
-        hap_sample_counts["Haplotype Samples"] /num_samples
+        hap_sample_counts["Haplotype Samples"] / num_samples
     )
     hap_counts = hap_counts.merge(hap_sample_counts)
     hap_counts = hap_counts.loc[(hap_counts["Haplotype Samples"]
-                                >= haplotype_min_sample_filter)
-                               &(hap_counts["Haplotype Sample Fraction"]
-                                >= haplotype_min_sample_fraction_filter)
-                               &(hap_counts["Haplotype Barcodes"]
-                                >= haplotype_min_barcode_filter)]
-    variation_df = variation_df.merge(hap_counts,
-                                     how="inner")
+                                 >= haplotype_min_sample_filter)
+                                & (hap_counts["Haplotype Sample Fraction"]
+                                   >= haplotype_min_sample_fraction_filter)
+                                & (hap_counts["Haplotype Barcodes"]
+                                   >= haplotype_min_barcode_filter)]
+    variation_df = variation_df.merge(hap_counts, how="inner")
     # Rename or remove some columns for downstream analysis
     variation_df["AA Change"] = variation_df["AAChangeClean"].apply(
         split_aa
@@ -10984,10 +10986,8 @@ def process_results(wdir,
         split_aa_pos
     )
     try:
-        variation_df.drop(["Chr", "Ref", "Alt"],
-                         axis=1,
-                         inplace=True)
-    except ValueError:
+        variation_df.drop(["Chr", "Ref", "Alt"], axis=1, inplace=True)
+    except KeyError:
         pass
 
     # if there is a targets file, observed variation can be filtered
@@ -11008,38 +11008,37 @@ def process_results(wdir,
     if targets_file is not None:
         targets = pd.read_table(targets_file)
         join_dict = {"intersection": "inner",
-                "union": "outer",
-                "targets": "right",
-                "data": "left"}
+                     "union": "outer",
+                     "targets": "right",
+                     "data": "left"}
         targets["Targeted"] = "Yes"
         variation_df = variation_df.merge(
             targets,
             how=join_dict[target_join]
         )
-        variation_df["Targeted"].fillna("No",
-                                   inplace=True)
+        variation_df["Targeted"].fillna("No", inplace=True)
         # If a reference genome locus is a mutation of interest
         # such as dhps-437, this information can be supplied
         # in targets file. The rest of the variants will be
         # assinged a False value for this.
         try:
-            variation_df["Reference Resistant"].fillna(
-                "No", inplace=True
-            )
+            variation_df["Reference Resistant"].fillna("No", inplace=True)
             ref_resistant = True
         except KeyError:
             ref_resistant = False
-            #variant_counts["Reference Resistant"] = False
-
+        # if target join method will be "union" or "targets"
+        # the target variants will be kept even if they are not observed
+        # in the entire data set. Since they are not observed, we do not have
+        # information about their properties required in vcf and other formats.
+        # These minimum columns must be present in the targets file.
+        # They must be prosent as "Title Case" of their corresponding
+        # "UPPERCASE" values in vcf: "CHROM" must be supplied as "Chrom"
         if target_join in ["union", "targets"]:
             data_keys = ["VKEY", "CHROM", "POS", "ID", "REF", "ALT"]
             target_keys = ["Vkey", "Chrom", "Pos", "Id", "Ref", "Alt"]
             for dk, tk in zip(data_keys, target_keys):
-                variation_df[dk].fillna(variation_df[tk],
-                                       inplace=True)
-            variation_df.drop(target_keys,
-                             axis=1,
-                             inplace=True)
+                variation_df[dk].fillna(variation_df[tk], inplace=True)
+            variation_df.drop(target_keys, axis=1, inplace=True)
     else:
         variation_df["Targeted"] = "No"
         ref_resistant = False
@@ -11049,15 +11048,20 @@ def process_results(wdir,
     try:
         variation_df["Mutation Name"].fillna(variation_df["Gene"] + "-"
                                              + variation_df["AA Change"],
-                                     inplace=True)
+                                             inplace=True)
     except KeyError:
         variation_df["Mutation Name"] = (variation_df["Gene"] + "-"
-                                             + variation_df["AA Change"])
-    variation_df.loc[variation_df["AA Change"] == ".",
-            "Mutation Name"] = variation_df.loc[
-                        variation_df["AA Change"] == "."].apply(
-                                                rename_noncoding,
-                                                axis=1)
+                                         + variation_df["AA Change"])
+    # "AA Change" field for noncoding variants are ".", so they will
+    # not serve well as unique mutation names. These will be changed
+    # by chromosome position and the base change using the "rename_noncoding"
+    # function.
+    variation_df.loc[
+        variation_df["AA Change"] == ".",
+        "Mutation Name"
+    ] = variation_df.loc[
+        variation_df["AA Change"] == "."
+    ].apply(rename_noncoding, axis=1)
 
     # remove columns that will not be used after this point
     variation_df.drop(
@@ -11068,13 +11072,6 @@ def process_results(wdir,
          "Haplotype Sample Fraction"],
         axis=1,
         inplace=True
-    )
-
-    # Create a chrom, pos tuple to use for the location
-    # of a given variant, to be used in coverage calculations
-    variation_df["Coverage Key"] = variation_df.apply(
-        lambda a: (a["CHROM"], a["POS"]),
-        axis=1
     )
 
     # load the "call info" dictionary that has
@@ -11094,52 +11091,46 @@ def process_results(wdir,
         g = m.split("_")[0]
         try:
             for c in call_info[g][m]["copies"]:
-                probe_cop.append([m,c])
+                probe_cop.append([m, c])
         except KeyError:
             continue
-    probe_cop = pd.DataFrame(probe_cop,
-                            columns=["MIP", "Copy"])
+    probe_cop = pd.DataFrame(probe_cop, columns=["MIP", "Copy"])
     # add a place holder column for merging probe information
     probe_cop["Temp"] = "Temp"
     # perform outer merge on results and used probes
     # to include probes that had no coverage in the results
-    combined_df = combined_df.merge(probe_cop,
-                                    how="outer").drop("Temp",
-                                                       axis=1)
+    combined_df = combined_df.merge(probe_cop, how="outer").drop(
+        "Temp", axis=1
+    )
     # Fill NA values for probes with no coverage
-    combined_df["Sample ID"].fillna("Temp",
-                                   inplace=True)
+    combined_df["Sample ID"].fillna("Temp", inplace=True)
     combined_df["Haplotype ID"].fillna(
         combined_df["MIP"] + ".0-0",
         inplace=True
     )
-    combined_df["Barcode Count"].fillna(
-        0, inplace=True
-    )
+    combined_df["Barcode Count"].fillna(0, inplace=True)
 
     # Add sample and barcode depth information for each
     # variant
     variant_counts = combined_df[["Haplotype ID",
-                "sequence_quality",
-                "Sample ID",
-                "Barcode Count",
-                "Copy"]].merge(variation_df, how="right")
-    # For unobserved variants, we need a place holder for
-    # Sample ID
-    variant_counts["Sample ID"].fillna("Temp",
-                                       inplace=True)
-    variant_counts["Barcode Count"].fillna(0,
-                                          inplace=True)
+                                  "sequence_quality",
+                                  "Sample ID",
+                                  "Barcode Count",
+                                  "Copy"]].merge(variation_df, how="right")
+    # For unobserved variants, we need a place holder for Sample ID
+    variant_counts["Sample ID"].fillna("Temp", inplace=True)
+    variant_counts["Barcode Count"].fillna(0, inplace=True)
 
     # Get the sample and barcode depth stats for each variant
     # and filter for given thresholds.
+    # First, get the "per variant" statistics
     var_counts = variant_counts.groupby("VKEY").agg(
         {"Sample ID": lambda a: len(set(a)),
-        "Barcode Count": "sum",
-        "Targeted": lambda a: "Yes" if "Yes" in set(a) else "No"}
+         "Barcode Count": "sum",
+         "Targeted": lambda a: "Yes" if "Yes" in set(a) else "No"}
     ).rename(
         columns={"Sample ID": "Variant Samples",
-                   "Barcode Count": "Variant Barcodes"}
+                 "Barcode Count": "Variant Barcodes"}
     ).fillna(0).reset_index()
     var_counts["Variant Sample Fraction"] = var_counts[
         "Variant Samples"
@@ -11147,23 +11138,25 @@ def process_results(wdir,
     # filter variants for specified criteria
     variant_min_barcode_filter = int(settings["minVariantBarcodes"])
     variant_min_sample_filter = int(settings["minVariantSamples"])
-    variant_min_sample_fraction_filter = float(settings["minVariantSampleFraction"])
+    variant_min_sample_fraction_filter = float(
+        settings["minVariantSampleFraction"]
+    )
     var_counts = var_counts.loc[((var_counts["Variant Samples"]
-                                 >= variant_min_sample_filter)
-                               &(var_counts["Variant Barcodes"]
-                                 >= variant_min_barcode_filter)
-                               &(var_counts["Variant Sample Fraction"]
-                                 >= variant_min_sample_fraction_filter))
-                               | (var_counts["Targeted"] == "Yes")]
+                                  >= variant_min_sample_filter)
+                                & (var_counts["Variant Barcodes"]
+                                   >= variant_min_barcode_filter)
+                                & (var_counts["Variant Sample Fraction"]
+                                   >= variant_min_sample_fraction_filter))
+                                | (var_counts["Targeted"] == "Yes")]
     print("There were {} total and {} unique variants, ".format(
         variant_counts.shape[0],
         len(variant_counts["VKEY"].unique())
     ))
     variant_counts = variant_counts.merge(var_counts,
-                                         how="inner").drop(
+                                          how="inner").drop(
         ["Variant Samples",
-        "Variant Barcodes",
-        "Variant Sample Fraction"],
+         "Variant Barcodes",
+         "Variant Sample Fraction"],
         axis=1
     )
     print(("{} total and {} unique variants remain after "
@@ -11177,9 +11170,12 @@ def process_results(wdir,
         variant_min_sample_filter,
         variant_min_sample_fraction_filter
     ))
-    # Add variant sequence quality
 
     def get_qual(row):
+        """ Calculate the sequence quality of a variant from the sequence
+        quality of its parent haplotype and the variants position in the
+        haplotype.
+        """
         try:
             # get start of the variation relative to haplotype sequence
             start_index = int(row["Start Index"])
@@ -11201,6 +11197,8 @@ def process_results(wdir,
                 return np.mean(hap_qual_list)
         except Exception:
             return np.nan
+
+    # calculate variant qualities using the above function
     variant_counts["Variation Quality"] = variant_counts.apply(
         get_qual, axis=1
     )
@@ -11225,7 +11223,8 @@ def process_results(wdir,
     ##########################################################
     # create a position to MIP dictionary for each variant
     # that holds which MIPs cover a given position for
-    # coverage calculations
+    # coverage calculations.
+    # First, get all variant positions in the data.
     cpos = variant_counts.groupby(
         ["CHROM", "POS"]
     ).first().reset_index()[["CHROM", "POS"]]
@@ -11264,7 +11263,7 @@ def process_results(wdir,
                             position_to_mip[var_pos].add(
                                 (m, c)
                             )
-    # add any additional MIP that covers the variant positions
+    # add any additional MIP that covers the variant positions.
     for var_pos in cpos:
         for g in call_info:
             for m in call_info[g]:
@@ -11295,32 +11294,36 @@ def process_results(wdir,
     print("There are {} samples with sequence data".format(
         barcode_counts.shape[0]
     ))
+    # After pivot table is created, the column names have an extra
+    # row with the name "Barcode Count". Remove that from column names.
+    bc_cols = barcode_counts.columns
+    bc_cols = [bc[1:] for bc in bc_cols]
     # barcode count data is only available for samples with data
     # so if a sample has not produced any data, it will be missing
     # these samples should be added with 0 values for each probe
-    bc_cols = barcode_counts.columns
-    bc_cols = [bc[1:] for bc in bc_cols]
-    temp_meta = merged_meta[["Sample ID",
-                             "replicate"]].append({"Sample ID": "Temp",
-                                                   "replicate": 1},
-                                                  ignore_index=True)
-    barcode_counts = pd.merge(temp_meta.set_index("Sample ID"),
-                              barcode_counts,
-                              left_index=True,
-                              right_index=True,
-                              how="left").drop("Temp")
-    barcode_counts.drop("replicate", axis=1, inplace=True)
+    all_barcode_counts = pd.merge(merged_meta[
+                                    ["Sample ID",
+                                     "replicate"]
+                                  ].set_index("Sample ID"),
+                                  barcode_counts,
+                                  left_index=True,
+                                  right_index=True,
+                                  how="left")
+    all_barcode_counts.drop("replicate", axis=1, inplace=True)
+    # fix column names
+    all_barcode_counts.columns = pd.MultiIndex.from_tuples(
+        bc_cols, names=["MIP", "Copy"]
+    )
+    all_barcode_counts.fillna(0, inplace=True)
+    print("There are {} total samples.".format(all_barcode_counts.shape[0]))
+    # save barcode and haplotype count files
+    combined_df.to_csv(os.path.join(wdir, "haplotype_counts.csv"), index=False)
+    all_barcode_counts.to_csv(os.path.join(wdir, "barcode_counts.csv"))
+    # Continue working with the barcode counts that does not include the
+    # samples which did not have any data.
     barcode_counts.columns = pd.MultiIndex.from_tuples(bc_cols,
                                                        names=["MIP", "Copy"])
-    barcode_counts.fillna(0, inplace=True)
-    print("There are {} total samples.".format(barcode_counts.shape[0] - 1))
-    combined_df.to_csv(wdir + "haplotype_counts.csv",
-                       index=False)
-    barcode_counts.to_csv(wdir + "barcode_counts.csv")
-    with open(wdir + "position_to_mip.json", "wb") as outfile:
-        pickle.dump(position_to_mip, outfile)
-    # create a coverage dictionary for each variant position
-    # for each sample
+    # Calculate coverage for each variant position for each sample
     bc_dict = barcode_counts.to_dict(orient="index")
     cov_dict = {}
     for ch, po in position_to_mip:
@@ -11329,94 +11332,80 @@ def process_results(wdir,
                 try:
                     cov_dict[(s, ch, po)] += bc_dict[s][(m, cp)]
                 except KeyError:
-                    cov_dict[(s, ch, po)] = bc_dict[s][(m, cp)]
-    # Include samples with no variants (probably no sequence data)
-    # in the variant counts
-    variant_counts=variant_counts.merge(
-        temp_meta,
-        how="outer"
-    ).drop("replicate",
-           axis=1)
-    # Columns that will be used for pivoting cannot
-    # have NA values, so for samples with no data
-    # we need to fill those values with a place holder
-    for c in ["CHROM", "POS", "ID", "REF", "ALT"]:
-        variant_counts[c].fillna("Temp", inplace=True)
-    variant_counts["Barcode Count"].fillna(
-        0, inplace=True
-    )
-    # define a function that returns coverage at given
-    # coverage key (sample, chromosome, position)
+                        cov_dict[(s, ch, po)] = bc_dict[s][(m, cp)]
+
     def return_coverage(k):
+        """ Return coverage of a variant position for a sample if the sample
+        has any coverage. Return zero if no coverage for that sample.
+        """
         try:
             return cov_dict[k]
         except KeyError:
             return 0
+
     # create a vcf file for all variants
     # create pivot table with each variant having its own column
     vcf_table = variant_counts.pivot_table(
-        index="Sample ID",
-        columns=["CHROM", "POS", "ID", "REF", "ALT"],
+        columns="Sample ID",
+        index=["CHROM", "POS", "ID", "REF", "ALT"],
         values="Barcode Count",
         aggfunc="sum",
-    ).drop("Temp")
-    # remove place holder values for samples with no data
+    )
+    # remove place holder sample for unobserved variants
     try:
-        vcf_table.drop(("Temp", "Temp", "Temp", "Temp", "Temp"),
-                      axis=1,
-                      inplace=True)
+        vcf_table.drop("Temp", axis=1)
     except KeyError:
         pass
     vcf_table.fillna(0, inplace=True)
-    # create coverage table for the vcf_table
     v_cols = vcf_table.columns
     v_index = vcf_table.index
+    # Calculate coverage for each variant and position in the vcf table
     vcf_co = pd.DataFrame([
-        [return_coverage((s, c[0], c[1]))
-         for c in v_cols]
-        for s in v_index],
+        [return_coverage((s, v[0], v[1]))
+         for s in v_cols]
+        for v in v_index],
         index=v_index,
-        columns=v_cols)
-    # merge variants on position to get non-reference
-    # allele count
-    vcf_non_ref = vcf_table.groupby(level=["CHROM", "POS"],
-                     axis=1).transform("sum")
+        columns=v_cols).fillna(0)
+    # merge variants on position to get non-reference allele count.
+    # Transforming the groups by the column is extremely slow in python3 for
+    # some reason. So we'll transpose the table temporarily.
+    vcf_non_ref = vcf_table.groupby(
+        level=["CHROM", "POS"],
+        axis=0
+    ).transform("sum")
     # calculate reference allele counts
     vcf_ref = vcf_co - vcf_non_ref
-    # get variant qualities
+    # get variant qualities for each variant in each sample.
+    vcf_quals = variant_counts.pivot_table(
+            columns="Sample ID",
+            index=["CHROM", "POS", "ID", "REF", "ALT"],
+            values="Variation Quality",
+            aggfunc="mean",
+    ).fillna(-1)
+    # convert quality values to string for vcf file.
+    vcf_quals = vcf_quals.astype(int).astype(str)
+    vcf_quals = vcf_quals.replace("-1", ".")
     try:
-        vcf_quals = variant_counts.pivot_table(
-            index="Sample ID",
-            columns=["CHROM", "POS", "ID", "REF", "ALT"],
-            values="Variation Quality",
-            aggfunc="mean",
-        ).drop("Temp").fillna(".")
+        vcf_quals.drop("Temp", axis=1)
     except KeyError:
-        vcf_quals = variant_counts.pivot_table(
-            index="Sample ID",
-            columns=["CHROM", "POS", "ID", "REF", "ALT"],
-            values="Variation Quality",
-            aggfunc="mean",
-        ).fillna(".")
-    # calculate allele frequencies and
-    # create genotype calls from frequencies
-    # no filtering will be applied here so
-    # even low frequency non-refs mixed with ref
-    # will be a HET call. This is only for vcf file
-    # to be filtered by proper vcf tools later.
+        pass
+    # calculate allele frequencies and create genotype calls from frequencies
+    # no filtering will be applied here so even low frequency non-refs mixed
+    # with ref will be a HET call. This is only for vcf file to be filtered
+    # by proper vcf tools later.
     vcf_freq = vcf_table/vcf_co
-    vcf_gen = vcf_freq.applymap(lambda a: "0/0" if a == 0
-                     else "." if (np.isnan(a) or np.isinf(a))
-                      else "0/1" if a <1
-                      else "1/1")
+    vcf_gen = vcf_freq.applymap(lambda a:
+                                "0/0" if a == 0
+                                else "." if (np.isnan(a) or np.isinf(a))
+                                else "0/1" if a < 1
+                                else "1/1")
     # merge all vcf tables to create the merged vcf
-    vcf = (vcf_gen + ":" + vcf_ref.applymap(int).applymap(str)
-           + "," + vcf_table.applymap(int).applymap(str)
-     + ":" + vcf_co.applymap(int).applymap(str)
-     + ":" + vcf_quals.applymap(str)
-    ).fillna(".:0,0:0:.").T.sort_index(
-        level=["CHROM", "POS"]
+    vcf = (vcf_gen + ":" + vcf_ref.astype(int).astype(str)
+           + "," + vcf_table.astype(int).astype(str)
+           + ":" + vcf_co.astype(int).astype(str)
+           + ":" + vcf_quals
     )
+    # Add vcf header
     vcf_samples = vcf.columns.tolist()
     vcf.columns = vcf_samples
     vcf["QUAL"] = "."
@@ -11424,57 +11413,31 @@ def process_results(wdir,
     vcf["INFO"] = "."
     vcf["FORMAT"] = "GT:AD:DP:SQ"
     vcf = vcf[["QUAL", "FILTER", "INFO", "FORMAT"] + vcf_samples]
-    vcf_header = ["##fileformat=VCFv4.2",
-    '##ALT=<ID=NON_REF,Description="Represents a possible alternative allele at this location">"',
-    '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">',
-    '##FORMAT=<ID=AD,Number=R,Type=Integer,Description="Allelic depths for the ref and alt alleles in that order">',
-     '##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Approximate read depth (reads with MQ=255 or with bad mates are filtered)">',
-     '##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype Quality">']
-    vcf_file = "variants.vcf"
-    with open(wdir + vcf_file, "w") as outfile:
+    vcf_header = [
+        "##fileformat=VCFv4.2",
+        '##ALT=<ID=NON_REF,Description="Represents a possible alternative '
+        'allele at this location">"',
+        '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">',
+        '##FORMAT=<ID=AD,Number=R,Type=Integer,Description='
+        '"Allelic depths for the ref and alt alleles in that order">',
+        '##FORMAT=<ID=DP,Number=1,Type=Integer,Description='
+        '"Total read depth (coverage) at this position.>',
+        '##FORMAT=<ID=SQ,Number=1,Type=Integer,Description='
+        '"Phred scale sequence quality of the variant.">']
+    vcf_file = os.path.join(wdir, "variants.vcf")
+    with open(vcf_file, "w") as outfile:
         outfile.write("\n".join(vcf_header) + "\n")
         vcf.reset_index().rename(columns={"CHROM": "#CHROM"}).to_csv(
             outfile, index=False, sep="\t"
         )
-
-    # create a variant table from the variant counts
-    # this will create a samples by variants table
-    # all keys that will be used in the pivot table
-    # must be non-NA so fill them with a temporary
-    # value
-    variant_counts["Mutation Name"].fillna("Temp",
-                                      inplace=True)
-    variant_counts["CHROM"].fillna("Temp",
-                                      inplace=True)
-    variant_counts["POS"].fillna("Temp",
-                                      inplace=True)
-    variant_counts["ID"].fillna("Temp",
-                                      inplace=True)
-    variant_counts["REF"].fillna("Temp",
-                                      inplace=True)
-    variant_counts["ALT"].fillna("Temp",
-                                      inplace=True)
-    variant_counts["Gene"].fillna("Temp",
-                                      inplace=True)
-    variant_counts["Mutation Name"].fillna("Temp",
-                                      inplace=True)
-    variant_counts["AA Change Position"].fillna("Temp",
-                                      inplace=True)
-    variant_counts["ExonicFunc"].fillna("Temp",
-                                      inplace=True)
-    variant_counts["Targeted"].fillna("No",
-                                      inplace=True)
-
     if ref_resistant:
-        variant_counts["Reference Resistant"].fillna("No",
-                                                inplace=True)
+        variant_counts["Reference Resistant"].fillna("No", inplace=True)
         # create pivot table for each unique variant
         variant_table = variant_counts.pivot_table(
             index="Sample ID",
-            columns=["CHROM", "POS", "ID", "REF", "ALT",
-                       "Gene", "Mutation Name", "AA Change Position",
-                       "ExonicFunc",
-                       "Reference Resistant", "Targeted"],
+            columns=["CHROM", "POS", "ID", "REF", "ALT", "Gene",
+                     "Mutation Name", "AA Change Position", "ExonicFunc",
+                     "Reference Resistant", "Targeted", "Multi Mapping"],
             values="Barcode Count",
             aggfunc="sum"
         )
@@ -11483,28 +11446,26 @@ def process_results(wdir,
             variant_table.drop("Temp", inplace=True)
         except KeyError:
             pass
-        # drop the column with temporary place holders, if any
-        try:
-            variant_table = variant_table.drop(
-                ("Temp", "Temp", "Temp", "Temp", "Temp", "Temp",
-                 "Temp", "Temp", "Temp", "No", "No"), axis=1)
-        except KeyError:
-            pass
         # if a sample did not have a variant, the table value
         # will be NA. Change those to 0.
         variant_table.fillna(0, inplace=True)
         # add amino acid positions and sort table
+        # this is to convert an AA Change Position such as Arg59Glu to 59
+        # other possible values, for example, 144delGlu for a deletion.
+        # we'll just try to get the first number from all possible strings.
         col_list = []
         for c in variant_table.columns:
             pos = c[7].split("-")[-1].split("_")[0]
+            # pos is something like Arg59Glu for mutations causing AA changes
+            # or "." for intronic or intergenic changes.
             if pos != ".":
                 positions = []
-                num_found=False
+                num_found = False
                 for dig in pos:
                     try:
                         int(dig)
                         positions.append(dig)
-                        num_found=True
+                        num_found = True
                     except ValueError:
                         if num_found:
                             break
@@ -11533,8 +11494,7 @@ def process_results(wdir,
             index=v_index,
             columns=v_cols)
         # define nonsynonamous changes to aggregate all non-reference
-        # amino acids and get to all reference amino acid calls from
-        # there
+        # amino acids and get to all reference amino acid calls from there
         nonsyn = list(
             set(variant_counts["ExonicFunc"]).difference(
                 [".", "synonymous SNV", "Temp"]
@@ -11545,12 +11505,16 @@ def process_results(wdir,
         # this is not ideal, as it ignores indels but this is only
         # used for loci where reference genome is actually mutant
         # that is so far only dhps-437 and there are no common indels
-        # in the vicinity.
+        # in the vicinity. We're also temporarily transpose the
+        # dataframe because transform operation is taking much longer
+        # on the columns compared to rows.
+        variant_table = variant_table.T
+        variant_cov_df = variant_cov_df.T
         non_ref_aa_table = variant_table.loc[
-            :, idx[:, :, :, :, :, :, :, :, nonsyn, :, :]
+            :, idx[:, :, :, :, :, :, :, :, nonsyn, :, :, :]
         ].groupby(
             level=["Gene", "AA Change Position"],
-            axis=1
+            axis=0
         ).transform("sum")
         # non_ref_aa_table loses the synonymous variants in the
         # previous step. We create an all-zero table with
@@ -11560,7 +11524,7 @@ def process_results(wdir,
                             - variant_table
                             + non_ref_aa_table).fillna(0)
         non_ref_aa_table = non_ref_aa_table.groupby(
-            level=["Gene", "AA Change Position"], axis=1
+            level=["Gene", "AA Change Position"], axis=0
         ).transform(max)
         non_ref_aa_table = non_ref_aa_table.groupby(
             level=[
@@ -11569,7 +11533,7 @@ def process_results(wdir,
                 "Reference Resistant",
                 "Targeted",
                 "ExonicFunc"],
-            axis=1).max()
+            axis=0).max()
         # create a like-indexed coverage table
         coverage_aa_table = variant_cov_df.groupby(
             level=[
@@ -11578,7 +11542,7 @@ def process_results(wdir,
                 "Reference Resistant",
                 "Targeted",
                 "ExonicFunc"],
-            axis=1).max()
+            axis=0).max()
         # calculate reference amino acid counts
         ref_aa_table = coverage_aa_table - non_ref_aa_table
         # aggregate all variants that lead to the
@@ -11589,13 +11553,18 @@ def process_results(wdir,
                    "Reference Resistant",
                    "Targeted",
                    "ExonicFunc"],
-            axis=1).sum()
+            axis=0).sum()
         # do a sanity check for all the grouping and coverage calculations
         # none of the table values for mutant or reference tables can be
         # larger than the coverage for a given locus.
         if (((mutant_aa_table - coverage_aa_table) > 0).sum().sum()
-              + ((ref_aa_table - coverage_aa_table) > 0).sum().sum()) > 0:
+           + ((ref_aa_table - coverage_aa_table) > 0).sum().sum()) > 0:
             print("Some loci have lower coverage than mutation calls!")
+        # Revert transposed dataframes
+        variant_table = variant_table.T
+        variant_cov_df = variant_cov_df.T
+        mutant_aa_table = mutant_aa_table.T
+        coverage_aa_table = coverage_aa_table.T
         # where reference is the variant of interest("Reference Resistant")
         # change mutant count to reference count
         try:
@@ -11614,21 +11583,19 @@ def process_results(wdir,
         # create pivot table for each unique variant
         variant_table = variant_counts.pivot_table(
             index="Sample ID",
-            columns=["CHROM", "POS", "ID", "REF", "ALT",
-                       "Gene", "Mutation Name", "AA Change Position",
-                       "ExonicFunc", "Targeted"],
+            columns=["CHROM", "POS", "ID", "REF", "ALT", "Gene",
+                     "Mutation Name", "AA Change Position",
+                     "ExonicFunc", "Targeted", "Multi Mapping"],
             values="Barcode Count",
             aggfunc="sum"
-        ).drop("Temp")  # drop the temporary sample place holder
-        # drop the column with temporary place holders, if any
+        )
         try:
-            variant_table = variant_table.drop(
-                ("Temp", "Temp", "Temp", "Temp", "Temp", "Temp",
-                 "Temp", "Temp", "Temp", "No"), axis=1)
+            # drop the temporary sample place holder
+            variant_table.drop("Temp")
         except KeyError:
             pass
-        # if a sample did not have a variant, the table value
-        # will be NA. Change those to 0.
+        # if a sample did not have a variant, the table value will be NA.
+        # Change those to 0.
         variant_table.fillna(0, inplace=True)
         # get coverage table with same indexes as
         # the variant table
@@ -11643,6 +11610,8 @@ def process_results(wdir,
             columns=v_cols)
         # aggregate all variants that lead to the
         # same amino acid change
+        variant_table = variant_table.T
+        variant_cov_df = variant_cov_df.T
         mutant_aa_table = variant_table.groupby(
             level=[
                 "Gene",
@@ -11650,7 +11619,7 @@ def process_results(wdir,
                 "Targeted",
                 "ExonicFunc"
             ],
-            axis=1).sum()
+            axis=0).sum()
         # create a like-indexed coverage table
         coverage_aa_table = variant_cov_df.groupby(
             level=[
@@ -11658,75 +11627,93 @@ def process_results(wdir,
                 "Mutation Name",
                 "Targeted",
                 "ExonicFunc"],
-            axis=1).max()
+            axis=0).max()
+        variant_table = variant_table.T
+        variant_cov_df = variant_cov_df.T
+        mutant_aa_table = mutant_aa_table.T
+        coverage_aa_table = coverage_aa_table.T
         # do a sanity check for all the grouping and coverage calculations
         # none of the table values for mutant or reference tables can be
-        # larger than the coverage for a given locus.
+        # larger than the coverage for a given locus. However, this is only
+        # relevant when the analysis is limited to coding changes.
         if (((mutant_aa_table - coverage_aa_table) > 0).sum().sum()) > 0:
-            print("Some loci have lower coverage than mutation calls!")
+            print(("Some loci have lower coverage than mutation calls!"
+                   "This warning is only relevant if the analysis is limited "
+                   "to single amino acid changes, excluding indels and "
+                   "noncoding changes."))
+    variant_counts.to_csv(os.path.join(wdir, "variants.csv"), index=False)
+    plot_performance(barcode_counts, wdir=wdir, save=True)
+    variant_table.to_csv(os.path.join(wdir, "variant_table.csv"))
+    variant_cov_df.to_csv(os.path.join(wdir, "variant_coverage_table.csv"))
+    mutant_aa_table.to_csv(os.path.join(wdir, "mutant_table.csv"))
+    coverage_aa_table.to_csv(os.path.join(wdir, "mutant_coverage.csv"))
 
-    variant_counts.to_csv(wdir + "variants.csv",
-                          index=False)
-    plot_performance(barcode_counts,
-                     wdir=wdir,
-                     save=True)
-    variant_table.to_csv(wdir + "variant_table.csv")
-    variant_cov_df.to_csv(wdir + "variant_coverage_table.csv")
-    mutant_aa_table.to_csv(wdir + "mutant_table.csv")
-    coverage_aa_table.to_csv(wdir + "mutant_coverage.csv")
-
+    # Create genotype calls for amino acid changes
     min_mutation_count = int(settings["minMutationCount"])
     min_mutation_fraction = float(settings["minMutationFraction"])
     min_coverage = int(settings["minCoverage"])
-
+    # filter mutants based on the filters from the settings file.
     mutant_aa_table = mutant_aa_table.applymap(
         lambda a: 0 if a < min_mutation_count else a
     )
     coverage_aa_table = coverage_aa_table.applymap(
         lambda a: 0 if a < min_coverage else a
     )
-
+    # Call genotypes from within sample frequency
     mutant_freq_table = (
         mutant_aa_table/coverage_aa_table
     ).replace(np.inf, np.nan)
     mutant_freq_table.to_csv(wdir + "mutation_frequencies.csv")
-
     genotypes = mutant_freq_table.applymap(
         lambda x: 2 if x >= (1 - min_mutation_fraction)
         else 1 if x >= min_mutation_fraction else np.nan if np.isnan(x) else 0
     )
-    genotypes.to_csv(wdir + "genotypes.csv")
+    genotypes_file = os.path.join(wdir, "genotypes.csv")
+    genotypes.to_csv(genotypes_file)
     print(("Per sample mutation frequencies have been "
-          "calculated for mutants with at least {} supporting "
-          "barcodes and loci with at least {} coverage. "
-          "Loci with less coverage will have NA frequencies "
-          "and mutants with less supporting barcodes have been "
-          "reset to zero frequency.\n Genotypes have been called "
-          " using the frequency values. Genotypes with <{} "
+           "calculated for mutants with at least {} supporting "
+           "barcodes and loci with at least {} coverage. "
+           "Loci with less coverage will have NA frequencies "
+           "and mutants with less supporting barcodes have been "
+           "reset to zero frequency.\n Genotypes have been called "
+           " using the frequency values. Genotypes with <{} "
            "frequency have been reset to 0 (WT).").format(
         min_mutation_count,
         min_coverage,
         min_mutation_fraction
     ))
+
+    # Create an overview statistics file for samples including
+    # total read count, barcode count, and how well they cover each MIP.
     sample_counts = combined_df.groupby("Sample ID")[["Read Count",
-                                        "Barcode Count"]].sum()
+                                                      "Barcode Count"]].sum()
     target_cov = pd.concat(
-        [(barcode_counts>= 1).sum(axis=1),
-         (barcode_counts>= 5).sum(axis=1),
-         (barcode_counts>= 10).sum(axis=1)],
+        [(barcode_counts >= 1).sum(axis=1),
+         (barcode_counts >= 5).sum(axis=1),
+         (barcode_counts >= 10).sum(axis=1)],
         axis=1,
     ).rename(
         columns={
             0: "targets_with_1_barcodes",
             1: "targets_with_5_barcodes",
             2: "targets_with_10_barcodes"
-    }
+        }
     )
     sample_counts = sample_counts.merge(target_cov,
-                                       how="outer",
-                                       left_index=True,
-                                       right_index=True).fillna(0)
-    sample_counts.to_csv(wdir + "sample_summary.csv")
+                                        how="outer",
+                                        left_index=True,
+                                        right_index=True).fillna(0)
+    target_cov_file = os.path.join(wdir, "sample_summary.csv")
+    sample_counts.to_csv(target_cov_file)
+
+    # Create a file with meta data for samples without any data
+    no_data = merged_meta.loc[
+        ~merged_meta["Sample ID"].isin(sample_counts.index)
+    ]
+    print(("{} out of {} samples had no data and they were excluded from the"
+           " variant calls.").format(no_data.shape[0], merged_meta.shape[0]))
+    no_data_file = os.path.join(wdir, "samples_without_data.csv")
+    no_data.to_csv(no_data_file)
 
     return
 def combine_sample_data(gr):
@@ -11738,6 +11725,8 @@ def combine_sample_data(gr):
     result["mip_name"] = gr["mip_name"].iloc[0]
     result["gene_name"] = gr["gene_name"].iloc[0]
     return pd.Series(result)
+
+
 def combine_info_files(wdir,
                        settings_file,
                        info_files,
@@ -11746,7 +11735,7 @@ def combine_info_files(wdir,
                        sample_sets=None):
     settings = get_analysis_settings(wdir + settings_file)
     colnames = dict(list(zip(settings["colNames"],
-                        settings["givenNames"])))
+                         settings["givenNames"])))
     c_keys = list(colnames.keys())
     c_vals = [colnames[k] for k in c_keys]
     data = []
@@ -11759,21 +11748,17 @@ def combine_info_files(wdir,
         current_run_meta["capital_set"] = current_run_meta[
             "sample_set"
         ].apply(str.upper)
-        current_run_meta["Original SID"] = current_run_meta[["sample_name",
-                                      "sample_set",
-                                      "replicate"]].apply(
-            lambda a: "-".join(a), axis=1
-        )
+        current_run_meta["Original SID"] = current_run_meta[
+            ["sample_name", "sample_set", "replicate"]
+        ].apply(lambda a: "-".join(a), axis=1)
         run_meta.append(current_run_meta)
-    run_meta = pd.concat(run_meta,
-                        ignore_index=True)
+    run_meta = pd.concat(run_meta, ignore_index=True)
     if sample_sets is not None:
         for s in sample_sets:
             s.append("Temp")
-        sps = pd.DataFrame(sample_sets,
-                          columns=["sample_set",
-                                    "probe_set",
-                                    "Temp"])
+        sps = pd.DataFrame(sample_sets, columns=["sample_set",
+                                                 "probe_set",
+                                                 "Temp"])
     else:
         sps = run_meta.groupby(
             ["sample_set", "probe_set"]
@@ -11783,20 +11768,18 @@ def combine_info_files(wdir,
         "Temp", axis=1
     )
     run_meta_collapsed = run_meta.groupby(
-        ["sample_name",
-          "capital_set",
-          "replicate",
-          "Library Prep"]).first().reset_index()[["sample_name",
-                                  "capital_set",
-                                  "replicate",
-                                  "Library Prep"]]
+        ["sample_name", "capital_set", "replicate", "Library Prep"]
+    ).first().reset_index()[["sample_name", "capital_set",
+                             "replicate", "Library Prep"]]
     run_meta_collapsed["new_replicate"] = run_meta_collapsed.groupby(
         "sample_name"
-    )["replicate"].transform(lambda g: list(map(str, list(range(1, len(g) + 1)))))
+    )["replicate"].transform(
+        lambda g: list(map(str, list(range(1, len(g) + 1))))
+    )
     run_meta = run_meta.merge(run_meta_collapsed)
     run_meta["Sample ID"] = run_meta[["sample_name",
-                                  "capital_set",
-                                  "new_replicate"]].apply(
+                                      "capital_set",
+                                      "new_replicate"]].apply(
         lambda a: "-".join(a), axis=1
     )
     for i in range(len(info_files)):
@@ -11804,10 +11787,10 @@ def combine_info_files(wdir,
         current_run_meta = run_meta.loc[run_meta["sheet_order"] == i]
         current_run_dict = current_run_meta.set_index(
             "Original SID"
-        ).to_dict(orient = "index")
+        ).to_dict(orient="index")
         line_number = 0
         try:
-            dump = gzip.open(i_file, "rb").readline()
+            gzip.open(i_file, "rb").readline()
             inf_file = gzip.open(i_file, "rb")
         except IOError:
             inf_file = open(i_file, "rb")
@@ -11826,49 +11809,48 @@ def combine_info_files(wdir,
                 else:
                     ori_sample_id = newline[si_index]
                     try:
-                        library = current_run_dict[ori_sample_id]["Library Prep"]
-                        sample_id = current_run_dict[ori_sample_id]["Sample ID"]
+                        library = current_run_dict[
+                            ori_sample_id
+                        ]["Library Prep"]
+                        sample_id = current_run_dict[
+                            ori_sample_id
+                        ]["Sample ID"]
                         d = ([newline[ci] if ci != si_index else sample_id
                               for ci in col_indexes] + [library])
                         data.append(d)
                     except KeyError:
                         continue
-    info = pd.DataFrame(data,
-                        columns = c_vals + ["Library Prep"])
+    info = pd.DataFrame(data, columns=c_vals + ["Library Prep"])
     info["barcode_count"] = info["barcode_count"].astype(int)
     info["read_count"] = info["read_count"].astype(int)
     info = info.groupby(
-        ["sample_name",
-        "haplotype_sequence",
-        "Library Prep"]
-    ).apply(
-        combine_sample_data
-    ).reset_index()
+        ["sample_name", "haplotype_sequence", "Library Prep"]
+    ).apply(combine_sample_data).reset_index()
     m_groups = info.groupby("mip_name")
     h_list = []
     for m, g in m_groups:
         md = pd.DataFrame(g.groupby(["mip_name",
                                     "haplotype_sequence"]).size().sort_values(
-        ascending = False).reset_index()).reset_index()
+            ascending=False
+        ).reset_index()).reset_index()
         md["index"] = md["index"].astype(str)
         md["haplotype_ID"] = md["mip_name"] + "." + md["index"]
         h_list.append(md[["haplotype_sequence", "haplotype_ID"]])
-    hap_ids = pd.concat(h_list, ignore_index = True)
+    hap_ids = pd.concat(h_list, ignore_index=True)
     info = info.merge(hap_ids)
-    info.to_csv(wdir + combined_file,
-               index = False,
-               sep = "\t")
+    info.to_csv(wdir + combined_file, index=False, sep="\t")
     run_meta = run_meta.groupby("Sample ID").first().reset_index()
     run_meta = run_meta.drop(["Sample ID",
                               "sample_set",
-                             "sheet_order",
-                             "replicate"],
-                            axis = 1).rename(
-            columns = {"capital_set": "sample_set",
-                      "new_replicate": "replicate"})
-    run_meta.to_csv(wdir + "samples.tsv",
-                           sep = "\t",
-                          index = False)
+                              "sheet_order",
+                              "replicate"],
+                             axis=1).rename(
+        columns={"capital_set": "sample_set",
+                 "new_replicate": "replicate"}
+    )
+    run_meta.to_csv(wdir + "samples.tsv", sep="\t", index=False)
+
+
 def update_probe_sets(mipset_table = "/opt/resources/mip_ids/mipsets.csv",
                      mipset_json = "/opt/resources/mip_ids/probe_sets.json"):
     mipsets = pd.read_csv(mipset_table)
@@ -12418,188 +12400,6 @@ def get_aminotype(row, cutoff):
 def rename_noncoding(row):
     return "-".join([row["Gene"],
                      row["VKEY"]])
-def genotype(settings,
-             vt = None,
-             known_targets = None,
-            output_file = None):
-    """
-    Call genotypes, calculate genotype stats.
-    """
-    wdir = settings["workingDir"]
-    # load dataframe containing all counts and mutations
-    if vt is None:
-        vt = pd.read_csv(wdir + "combined_info.csv")
-    # remove reference haplotypes
-    vt = vt.loc[~vt["VKEY"].isnull()]
-    # split mutation names and positions
-    vt["AA Change"] = vt["AAChangeClean"].apply(split_aa)
-    vt["AA Change Position"] = vt["AAChangeClean"].apply(split_aa_pos)
-    vt.drop(["AAChangeClean"],
-       inplace = True,
-       axis = 1)
-    # combine same variation from different haplotypes within a sample
-    vt = pd.DataFrame(vt.groupby(([ 'Sample ID', 'Gene',  'VKEY', 'CHROM',
-                      'POS', 'ID',  'REF', 'ALT',
-                  'Original Position',  'Multi Mapping',
-                     'RefGene', 'ExonicFunc', 'Func.refGene',
-                  'GeneDetail.refGene', 'Alt',
-                  'AA Change', 'AA Change Position'])).agg({
-        "Barcode Count": np.sum,
-        "Variation Quality": np.max
-    })
-                 ).reset_index()
-
-    # get the complete set of variants in the data
-    var = vt.groupby([ 'Gene',  'VKEY', 'CHROM',
-                      'POS', 'ID',  'REF', 'ALT',
-                      'Original Position',  'Multi Mapping',
-                      'RefGene', 'ExonicFunc', 'Func.refGene',
-                      'GeneDetail.refGene', 'Alt',
-                      'AA Change', 'AA Change Position'],
-                     as_index = False).first().drop(
-        ["Variation Quality",
-         "Sample ID",
-         "Barcode Count"],
-         axis = 1
-    )
-    # load barcode counts and meta data
-    processed_data = load_processed_data(settings)
-    barcode_counts = processed_data["Barcode Counts"]
-    merged_meta = processed_data["Meta Data"]
-    # add known variant information
-    if known_targets is not None:
-        targets = pd.read_csv(known_targets,
-                         sep = "\t")
-        targets["known"] = "known"
-        used_targets = targets.loc[targets["Gene"].isin(
-            barcode_counts.columns.levels[
-                barcode_counts.columns.names.index("Gene")
-                ].tolist())]
-        var = var.merge(used_targets, how = "outer")
-        var["Chrom"].fillna(var["CHROM"], inplace = True)
-        var["CHROM"].fillna(var["Chrom"], inplace = True)
-        var["Original Position"].fillna(var["Start"], inplace = True)
-        var["POS"].fillna(var["Start"], inplace = True)
-        var["ID"].fillna(".", inplace = True)
-        var["VKEY"].fillna(var["CHROM"] + ":.:" + var["POS"].astype(str)
-                  + ":" + var["Codon"] + ":" + var["Codon"], inplace = True)
-    else:
-        var["Chrom"] = var["CHROM"]
-        var["Start"] = var["POS"]
-    try:
-        var["Mutation Name"].fillna(var["AA Change"],
-                                     inplace = True)
-    except KeyError:
-        var["Mutation Name"] = var["AA Change"]
-    var.loc[var["AA Change"] == ".",
-            "Mutation Name"] = var.loc[
-                        var["AA Change"] == "."].apply(
-                                                rename_noncoding,
-                                                axis = 1)
-    var["Mutation"] = var[["Gene", "Mutation Name"]].apply(
-        lambda a: "-".join(a), axis = 1)
-    # merge variant information with count information
-    # add sample ids to var so that every sample has a row for every variation
-    # even if the sample does not have that variation
-    var["Temp Key"] = "Temp"
-    merged_meta["Temp Key"] = "Temp"
-    var_sam = merged_meta[["Sample ID", "Temp Key"]].drop_duplicates().merge(
-        var, how = "outer").drop("Temp Key", axis = 1)
-    # deletions have no variation quality
-    # combined_df["Variation Quality"].fillna(99, inplace = True)
-    # Calculate per base coverage from barcode counts
-    mutation_counts = var_sam.merge(vt, how = "outer")
-    mutation_counts["Coverage Key"] = mutation_counts.apply(
-        lambda a: (a["Sample ID"], a["Chrom"], a["Original Position"]),
-        axis = 1
-    )
-    with open(wdir + "coverage.pkld") as infile:
-        coverage = pickle.load(infile)
-    mutation_counts["Coverage"] = mutation_counts["Coverage Key"].map(coverage)
-    all_mutations = mutation_counts
-    all_mutations["Barcode Count"].fillna(0, inplace = True)
-    all_mutations["Barcode Fraction"] = (all_mutations["Barcode Count"]
-                                     /all_mutations["Coverage"])
-    #all_mutations = all_mutations.merge(merged_meta)
-    min_snp_qual = int(settings["minSnpQuality"])
-    min_snp_frac = float(settings["minSnpBarcodeFraction"])
-    qual_filter_mask = ((all_mutations["Variation Quality"] >= min_snp_qual)
-                     &(all_mutations["Barcode Fraction"] >= min_snp_frac))
-    all_mutations.loc[qual_filter_mask, "Filtered Barcode Count"] = (
-        all_mutations.loc[qual_filter_mask, "Barcode Count"]
-    )
-    all_mutations["Filtered Barcode Count"].fillna(0, inplace = True)
-    all_mutations["Mutation Count"] = all_mutations.groupby(
-        ["Sample ID", "Mutation"])["Filtered Barcode Count"].transform(sum)
-    all_mutations["Filtered Barcode Fraction"] = (
-        all_mutations["Filtered Barcode Count"]
-        /all_mutations["Coverage"])
-    # sum mutation counts per position, then determine reference
-    # nucleotide counts for that position
-    all_mutations = all_mutations.merge(
-        pd.DataFrame(all_mutations.groupby(["Sample ID",
-                                            "CHROM",
-                                           "POS"])
-                    .agg({"Barcode Count": np.sum,
-                         "Coverage": np.max})).rename(columns = {
-            "Barcode Count": "Non-reference Base Count",
-            "Coverage": "POS Coverage"
-        }).reset_index()
-    )
-    all_mutations["Reference Base Count"] = (
-        all_mutations["POS Coverage"]
-        - all_mutations["Non-reference Base Count"]
-    )
-    # group all mutations per sample per amino acid position
-    # find reference amino acid counts by checking the exonicFunc
-    # field. If this is "." (used for noncoding changes)
-    # or nonsynonymous SNV, it is considered reference AA.
-    all_mutations = all_mutations.merge(
-        pd.DataFrame(all_mutations.groupby(["Sample ID",
-                                            "Gene",
-                                           "AA Change Position"])
-                    .apply(find_ref_total)).rename(columns = {
-            0: "Reference AA Count"
-        }).reset_index()
-    )
-    all_mutations["Non-reference AA Count"] = (all_mutations["POS Coverage"]
-                                            - all_mutations["Reference AA Count"])
-    all_mutations["Wildtype AA Count"] = all_mutations["Reference AA Count"]
-    try:
-        all_mutations["Reference Resistant"]
-    except KeyError:
-        all_mutations["Reference Resistant"] = "No"
-    resistant_ref_mask = all_mutations["Reference Resistant"] == "Yes"
-    resistant_ref_mask.fillna(False, inplace = True)
-    all_mutations.loc[resistant_ref_mask, "Wildtype AA Count"] = (
-        all_mutations.loc[resistant_ref_mask, "Non-reference AA Count"])
-    all_mutations.loc[
-        resistant_ref_mask, "Mutation Count"
-    ] = all_mutations.loc[resistant_ref_mask, "Reference AA Count"]
-    all_mutations.loc[
-        resistant_ref_mask, "Wildtype AA Count"
-    ] = all_mutations.loc[resistant_ref_mask, "Non-reference AA Count"]
-    all_mutations["Mutation Fraction"] = (all_mutations["Mutation Count"]
-                                      /all_mutations["Coverage"])
-    min_frac_cutoff = float(settings["minMutationFraction"])
-    all_mutations["Genotype"] = all_mutations.apply(get_genotype,
-                                                    axis = 1,
-                                                   cutoff = min_frac_cutoff)
-    all_mutations["Aminotype"] = all_mutations.apply(get_aminotype,
-                                                     axis = 1,
-                                                   cutoff = min_frac_cutoff)
-    all_mutations["Binary Genotype Call"] = all_mutations["Genotype"]
-    all_mutations.loc[all_mutations["Genotype"] == "MIX",
-                 "Binary Genotype Call"] = "MUT"
-    all_mutations["Binary Aminotype Call"] = all_mutations["Aminotype"]
-    all_mutations.loc[all_mutations["Aminotype"] == "MIX",
-                 "Binary Aminotype Call"] = "MUT"
-    if output_file is None:
-        output_file = "mutation_summary.tsv"
-    all_mutations.to_csv(wdir + output_file,
-                        sep = "\t",
-                        index = False)
-    return
 def call_microsats(settings, sim = None, freq_cutoff = 0.005,
                    min_bc_cutoff = 0,
                   use_filtered_mips = True,
