@@ -11041,6 +11041,9 @@ def process_results(wdir,
         # assinged a False value for this.
         try:
             variation_df["Reference Resistant"].fillna("No", inplace=True)
+            variation_df["Reference Resistant"] = variation_df[
+                "Reference Resistant"
+            ].apply(str.capitalize)
             ref_resistant = True
         except KeyError:
             ref_resistant = False
@@ -11139,7 +11142,7 @@ def process_results(wdir,
     variant_counts["Sample ID"].fillna("Temp", inplace=True)
     variant_counts["Barcode Count"].fillna(0, inplace=True)
     variant_counts["Multi Mapping"] = variant_counts["Multi Mapping"].apply(
-        lambda a: "Yes" if a is  True else "No"
+        lambda a: "Yes" if a is True else "No"
     )
     # Get the sample and barcode depth stats for each variant
     # and filter for given thresholds.
