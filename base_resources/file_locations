@@ -3,28 +3,41 @@ all	primer3_settings_DIR	/opt/resources/primer3_settings/
 all	script_DIR	/opt/work/
 ####################################################################################################
 ##################################    pf 3d7 v3 files  #############################################
-pf	fasta_genome	/opt/species_resources/genomes/Pf_3D7_v3-PDB9.3/genome.fa
-pf	unmasked_fasta_genome	/opt/species_resources/genomes/Pf_3D7_v3-PDB9.3/unmasked_genome.fa
-pf	bowtie2_genome	/opt/species_resources/genomes/Pf_3D7_v3-PDB9.3/genome
-pf	bwa_genome	/opt/species_resources/genomes/Pf_3D7_v3-PDB9.3/genome
+pf	fasta_genome	/opt/species_resources/genomes/genome.fa
+pf	unmasked_fasta_genome	/opt/species_resources/genomes/unmasked_genome.fa
+pf	bowtie2_genome	/opt/species_resources/genomes/genome
+pf	bwa_genome	/opt/species_resources/genomes/genome
 pf	snps	/opt/species_resources/SNPs/AFR_QualityPF.vcf.gz
-pf	refgene	/opt/species_resources/genomes/Pf_3D7_v3-PDB9.3/refGene.txt
-pf	refgene_tabix	/opt/species_resources/genomes/Pf_3D7_v3-PDB9.3/refGene.txt.sorted.gz
-pf	refgene_dic	/opt/species_resources/genomes/Pf_3D7_v3-PDB9.3/refGene.dic
-pf	alias	/opt/species_resources/genomes/Pf_3D7_v3-PDB9.3/alias.dic
-pf	annotation_db_dir	/opt/species_resources/annovar-db/pfdb
+pf	refgene	/opt/species_resources/genomes/refGene.txt
+pf	refgene_tabix	/opt/species_resources/genomes/refGene.txt.sorted.gz
+pf	refgene_dic	/opt/species_resources/genomes/refGene.dic
+pf	alias	/opt/species_resources/genomes/alias.dic
+pf	annotation_db_dir	/opt/species_resources/annovar-db/
 ####################################################################################################
 ####################################################################################################
 ####################################################################################################
 ####################################################################################################
 ##################################    pv Sal1 files  #############################################
-pv	fasta_genome	/opt/species_resources/genomes/Pv_Sal1-PDB24/genome.fa
-pv	unmasked_fasta_genome	/opt/species_resources/genomes/Pv_Sal1-PDB24/genome.fa
-pv	bowtie2_genome	/opt/species_resources/genomes/Pv_Sal1-PDB24/bowtie2_indexed/genome
-pv	bwa_genome	/opt/species_resources/genomes/Pv_Sal1-PDB24/fasta/genome
+pv	fasta_genome	/opt/species_resources/genomes/genome.fa
+pv	unmasked_fasta_genome	/opt/species_resources/genomes/genome.fa
+pv	bowtie2_genome	/opt/species_resources/genomes/genome
+pv	bwa_genome	/opt/species_resources/genomes/genome
 pv	snps	/opt/species_resources/SNPs/pv_snps_sorted.gz
-pv	refgene	/opt/species_resources/genomes/Pv_Sal1-PDB24/refGene.txt
-pv	refgene_dic	/opt/species_resources/genomes/Pv_Sal1-PDB24/refGene.dic
-pv	refgene_tabix	/opt/species_resources/genomes/Pv_Sal1-PDB24/refGene.txt.sorted.gz
-pv	alias	/opt/species_resources/genomes/Pv_Sal1-PDB24/alias.dic
-pv	annotation_db_dir	/opt/species_resources/annovar-db/pvdb
+pv	refgene	/opt/species_resources/genomes/refGene.txt
+pv	refgene_dic	/opt/species_resources/genomes/refGene.dic
+pv	refgene_tabix	/opt/species_resources/genomes/refGene.txt.sorted.gz
+pv	alias	/opt/species_resources/genomes/alias.dic
+pv	annotation_db_dir	/opt/species_resources/annovar-db/
+####################################################################################################
+####################################################################################################
+####################################################################################################
+####################################################################################################
+##################################    hg38 Files      #############################################
+hg38	fasta_genome	/opt/species_resources/genomes/genome.fa
+hg38	unmasked_fasta_genome	/opt/species_resources/genomes/genome.fa
+hg38	bowtie2_genome	/opt/species_resources/genomes/genome
+hg38	bwa_genome	/opt/species_resources/genomes/genome
+hg38	snps	/opt/species_resources/SNPs/snp146_hg38.txt.gz
+hg38	refgene	/opt/species_resources/genomes/gencode_v24_basic
+hg38	refgene_tabix	/opt/species_resources/genomes/gencode_v24_basic_sorted.gz
+hg38	annotation_db_dir	/opt/species_resources/annovar-db/

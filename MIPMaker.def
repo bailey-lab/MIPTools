@@ -51,6 +51,7 @@ From: amd64/ubuntu:18.04
     # install conda packages
     conda config --add channels bioconda
     conda install -qy "notebook=5.7.0" \
+    "xlrd=1.1.0" \
     "bcftools=1.9" \
     "samtools=1.9" \
     "bwa=0.7.17" \

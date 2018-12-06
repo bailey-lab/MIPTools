@@ -8969,6 +8969,8 @@ def best_mip_set (compatible_mip_sets, compatible_mip_dic, num_para, diff_score_
         else:
             print(("No mips available for target region ", gene[0]))
         return
+
+
 def get_analysis_settings(settings_file):
     """ Convert analysis settings file to dictionary"""
     settings = {}
@@ -8982,6 +8984,22 @@ def get_analysis_settings(settings_file):
                 else:
                     settings[newline[0]] = [v for v in value if v != ""]
     return settings
+
+
+def write_analysis_settings(settings, settings_file):
+    """ Create a settings file from a settings dictionary."""
+    outfile_list = [["# Setting Name", "Setting Value"]]
+    for k, v in settings.items():
+        if isinstance(v, list):
+            val = ",".join(map(str, v))
+        else:
+            val = str(v)
+        outfile_list.append([k, val])
+    with open(settings_file, "w") as outfile:
+        outfile.write("\n".join(["\t".join(o) for o in outfile_list]) + "\n")
+    return
+
+
 def filter_mipster (settings):
     """
     Import data from Mipster pipeline, filter and save to filtered_file
@@ -11102,7 +11120,7 @@ def process_results(wdir,
     combined_df = combined_df.merge(probe_cop, how="outer").drop(
         "Temp", axis=1
     )
-    # Fill NA values for probes with no coverage
+    # Fill NA values for probes with no coverage in any sample
     combined_df["Sample ID"].fillna("Temp", inplace=True)
     combined_df["Haplotype ID"].fillna(
         combined_df["MIP"] + ".0-0",
@@ -11120,7 +11138,9 @@ def process_results(wdir,
     # For unobserved variants, we need a place holder for Sample ID
     variant_counts["Sample ID"].fillna("Temp", inplace=True)
     variant_counts["Barcode Count"].fillna(0, inplace=True)
-
+    variant_counts["Multi Mapping"] = variant_counts["Multi Mapping"].apply(
+        lambda a: "Yes" if a is  True else "No"
+    )
     # Get the sample and barcode depth stats for each variant
     # and filter for given thresholds.
     # First, get the "per variant" statistics
@@ -11291,6 +11311,10 @@ def process_results(wdir,
                                              "Copy"],
                                     values=["Barcode Count"],
                                     aggfunc=np.sum)
+    try:
+        barcode_counts.drop("Temp", inplace=True)
+    except KeyError:
+        pass
     print("There are {} samples with sequence data".format(
         barcode_counts.shape[0]
     ))
@@ -11317,12 +11341,16 @@ def process_results(wdir,
     all_barcode_counts.fillna(0, inplace=True)
     print("There are {} total samples.".format(all_barcode_counts.shape[0]))
     # save barcode and haplotype count files
-    combined_df.to_csv(os.path.join(wdir, "haplotype_counts.csv"), index=False)
-    all_barcode_counts.to_csv(os.path.join(wdir, "barcode_counts.csv"))
+    combined_df.loc[combined_df["Sample ID"] != "Temp"].to_csv(
+        os.path.join(wdir, "haplotype_counts.csv"), index=False
+    )
+    all_barcode_counts.to_csv(os.path.join(wdir, "all_barcode_counts.csv"))
     # Continue working with the barcode counts that does not include the
     # samples which did not have any data.
     barcode_counts.columns = pd.MultiIndex.from_tuples(bc_cols,
                                                        names=["MIP", "Copy"])
+    barcode_counts.fillna(0, inplace=True)
+    barcode_counts.to_csv(os.path.join(wdir, "barcode_counts.csv"))
     # Calculate coverage for each variant position for each sample
     bc_dict = barcode_counts.to_dict(orient="index")
     cov_dict = {}
@@ -11353,7 +11381,7 @@ def process_results(wdir,
     )
     # remove place holder sample for unobserved variants
     try:
-        vcf_table.drop("Temp", axis=1)
+        vcf_table.drop("Temp", axis=1, inplace=True)
     except KeyError:
         pass
     vcf_table.fillna(0, inplace=True)
@@ -11386,7 +11414,7 @@ def process_results(wdir,
     vcf_quals = vcf_quals.astype(int).astype(str)
     vcf_quals = vcf_quals.replace("-1", ".")
     try:
-        vcf_quals.drop("Temp", axis=1)
+        vcf_quals.drop("Temp", axis=1, inplace=True)
     except KeyError:
         pass
     # calculate allele frequencies and create genotype calls from frequencies
@@ -11403,8 +11431,7 @@ def process_results(wdir,
     vcf = (vcf_gen + ":" + vcf_ref.astype(int).astype(str)
            + "," + vcf_table.astype(int).astype(str)
            + ":" + vcf_co.astype(int).astype(str)
-           + ":" + vcf_quals
-    )
+           + ":" + vcf_quals)
     # Add vcf header
     vcf_samples = vcf.columns.tolist()
     vcf.columns = vcf_samples
@@ -11511,7 +11538,7 @@ def process_results(wdir,
         variant_table = variant_table.T
         variant_cov_df = variant_cov_df.T
         non_ref_aa_table = variant_table.loc[
-            :, idx[:, :, :, :, :, :, :, :, nonsyn, :, :, :]
+            idx[:, :, :, :, :, :, :, :, nonsyn, :, :, :], :
         ].groupby(
             level=["Gene", "AA Change Position"],
             axis=0
@@ -11565,12 +11592,13 @@ def process_results(wdir,
         variant_cov_df = variant_cov_df.T
         mutant_aa_table = mutant_aa_table.T
         coverage_aa_table = coverage_aa_table.T
+        ref_aa_table = ref_aa_table.T
         # where reference is the variant of interest("Reference Resistant")
         # change mutant count to reference count
         try:
             mutant_aa_table.loc[
-                :, idx[:, :, "Yes", :]
-            ] = ref_aa_table.loc[:, idx[:, :, "Yes", :]]
+                :, idx[:, :, "Yes", :, :],
+            ] = ref_aa_table.loc[:, idx[:, :, "Yes", :, :]]
         except KeyError:
             pass
         mutant_aa_table.columns = mutant_aa_table.columns.droplevel(
@@ -11591,7 +11619,7 @@ def process_results(wdir,
         )
         try:
             # drop the temporary sample place holder
-            variant_table.drop("Temp")
+            variant_table.drop("Temp", inplace=True)
         except KeyError:
             pass
         # if a sample did not have a variant, the table value will be NA.
@@ -11687,6 +11715,10 @@ def process_results(wdir,
     # total read count, barcode count, and how well they cover each MIP.
     sample_counts = combined_df.groupby("Sample ID")[["Read Count",
                                                       "Barcode Count"]].sum()
+    try:
+        sample_counts.drop("Temp", inplace=True)
+    except KeyError:
+        pass
     target_cov = pd.concat(
         [(barcode_counts >= 1).sum(axis=1),
          (barcode_counts >= 5).sum(axis=1),
@@ -11895,7 +11927,9 @@ def generate_mock_fastqs(settings_file):
                                 fastq_lines = "\n".join([read_name, seq, "+", qual]) + "\n"
                                 outfile.write(fastq_lines)
     return
- generate_fastqs(wdir, mipster_files, min_bc_count, min_bc_frac):
+
+
+def generate_fastqs(wdir, mipster_files, min_bc_count, min_bc_frac):
     """
     Generate fastq files for each sample. These files will have stitched and
     barcode corrected reads.

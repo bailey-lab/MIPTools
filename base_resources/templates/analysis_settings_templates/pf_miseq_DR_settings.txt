@@ -7,8 +7,8 @@
 ##############################################################################
 ##############################################################################
 species	pf
-callInfoDictionary	resources/mip_ids/pf_all_call_info_crt.json
-mipSetsDictionary	resources/mip_ids/probe_sets.json
+callInfoDictionary	/opt/project_resources/mip_ids/call_info.json
+mipSetsDictionary	/opt/project_resources/mip_ids/probe_sets.json
 # If only  one mip set was used, end with a trailing comma
 mipSetKey	DR1,VAR4
 ##############################################################################
@@ -30,7 +30,8 @@ caseControlStats	False
 ##############  SETTINGS THAT CAN CHANGE PER RUN #############################
 ##############################################################################
 ##############################################################################
-workingDir	./
+workingDir	/opt/analysis/
+dataDir	/opt/data
 mipsterFile	data.tsv
 ##############################################################################
 ##############################################################################
@@ -47,7 +48,7 @@ minHaplotypeSamples	0
 minHaplotypeSampleFraction	0
 ##############################################################################
 ##############################################################################
-# filters for a variant to be considered valid, across all samples in 
+# filters for a variant to be considered valid, across all samples in
 # an analysis similar to haplotype filters
 minVariantBarcodes	0
 minVariantSamples	0
@@ -109,7 +110,7 @@ processorNumber	50
 copyStableGenes	na
 ########################################################################
 ########################################################################
-###############   FILE NAMES THAT DO NOT CHANGE ########################  
+###############   FILE NAMES THAT DO NOT CHANGE ########################
 ########################################################################
 #########################################################################
 haplotypesSamFile	haplotypes_bwa.sam
@@ -127,7 +128,7 @@ rawProblemData	problem_raw_data
 normalizedProblemData	problem_normalized_data
 ##############################################################################
 ##############################################################################
-##############  SETTINGS THAT CHANGE FOR FIRST RUN OF A PROJECT ##############  
+##############  SETTINGS THAT CHANGE FOR FIRST RUN OF A PROJECT ##############
 ##############################################################################
 ##############################################################################
 haplotypeDictionary	unique_haplotype.dic
