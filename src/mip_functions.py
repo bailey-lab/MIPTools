@@ -11748,12 +11748,26 @@ def process_results(wdir,
     no_data.to_csv(no_data_file)
 
     return
+
+
 def combine_sample_data(gr):
+    """ Combine data from multiple sequencing runs for the same sample.
+
+    Take a pandas groupby object representing multiple data points
+    corresponding the same sequence and sample, from multiple sequence runs.
+    Sum the barcode and read counts for the combined result. Use the sequencing
+    quality values for the record with most supporting barcodes.
+
+    Return a single combined record in pd.Series object so that all results can
+    be combined into a new pd.DataFrame for all samples.
+    """
     result = {}
     result["barcode_count"] = gr["barcode_count"].sum()
     result["read_count"] = gr["read_count"].sum()
-    result["sequence_quality"] = gr.sort_values("barcode_count",
-                       ascending=False)["sequence_quality"].iloc[0]
+    result["sequence_quality"] = gr.sort_values(
+        "barcode_count",
+        ascending=False
+    )["sequence_quality"].iloc[0]
     result["mip_name"] = gr["mip_name"].iloc[0]
     result["gene_name"] = gr["gene_name"].iloc[0]
     return pd.Series(result)
