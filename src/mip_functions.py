@@ -1676,11 +1676,10 @@ def update_variation(settings):
         variation = {}
     var_key_to_uniq_file = wdir +  settings["variationKeyToUniqueKey"]
     try:
-        with open(var_key_to_uniq_file) as infile,             open(var_key_to_uniq_file + id_generator(6), "w") as outfile:
+        with open(var_key_to_uniq_file) as infile:
             var_key_to_uniq = json.load(infile)
     except IOError:
         var_key_to_uniq = {}
-    #
     outfile_list = ["##fileformat=VCFv4.1"]
     outfile_list.append("\t".join(["#CHROM", "POS", "ID", "REF", "ALT"]))
     temp_variations = []
@@ -11407,11 +11406,12 @@ def process_results(wdir,
     # calculate reference allele counts
     vcf_ref = vcf_co - vcf_non_ref
     # get variant qualities for each variant in each sample.
+    variant_counts["Variation Quality"].fillna(-1, inplace=True)
     vcf_quals = variant_counts.pivot_table(
             columns="Sample ID",
             index=["CHROM", "POS", "ID", "REF", "ALT"],
             values="Variation Quality",
-            aggfunc="mean",
+            aggfunc="mean"
     ).fillna(-1)
     # convert quality values to string for vcf file.
     vcf_quals = vcf_quals.astype(int).astype(str)
@@ -11460,6 +11460,12 @@ def process_results(wdir,
         vcf.reset_index().rename(columns={"CHROM": "#CHROM"}).to_csv(
             outfile, index=False, sep="\t"
         )
+    # Replace NA values for some fields in the variant counts
+    # because they will be used in generating pivot tables
+    # they cannot have NA values.
+    variant_counts["Gene"].fillna("NA", inplace=True)
+    variant_counts["AA Change Position"].fillna("NA", inplace=True)
+    variant_counts["ExonicFunc"].fillna("NA", inplace=True)
     if ref_resistant:
         variant_counts["Reference Resistant"].fillna("No", inplace=True)
         # create pivot table for each unique variant
@@ -12806,11 +12812,8 @@ def merge_snps(settings):
     species = settings["species"]
     # load haplotype dictionary, save a backup.
     unique_haplotype_file = wdir + settings["haplotypeDictionary"]
-    with open(
-        unique_haplotype_file) as infile, open(
-        unique_haplotype_file + id_generator(6), "w") as outfile:
+    with open(unique_haplotype_file) as infile:
         haplotypes = json.load(infile)
-        json.dump(haplotypes, outfile)
     # create output information list to report all changes
     outlist = [["HaplotypeID", "Copy", "New AA", "Reference AA",
                "ReplacedCDNAchanges", "New Codon", "Reference Codon",
@@ -13251,39 +13254,41 @@ def vcf_to_table(collapsed, output_file):
     subprocess.call(["tabix", "-0", "-s 2",
                          "-b 3", "-e 3", output_file + ".gz"])
     return table
-def header_to_primer (seq_to_bc_dict,
+
+
+def header_to_primer(bc_dict,
                      header_string,
                      platform):
     """
     Convert a demultiplexed fastq header to forward and
     reverse primer numbers.
     """
+    # Create sequence to primer dictionary from primer to sequence dict
+    # bc_dict maps primer number to the sample barcode sequence
+    # such as 1: AAATGCCC. We would like to get to a dict like AAATGCCC: 1
+    seq_to_bc_dict = {v["sequence"]: int(k) for k, v in bc_dict.items()}
     split_string = header_string.split("+")
     if platform == "miseq":
         try:
-            fw = seq_to_bc_dict[split_string[0]]
+            fw = seq_to_bc_dict[split_string[1]]
         except KeyError:
             fw = 999
         try:
-            rev = seq_to_bc_dict[
-                reverse_complement(split_string[1])
-        ]
+            rev = seq_to_bc_dict[reverse_complement(split_string[0])]
         except KeyError:
             rev = 999
     elif platform == "nextseq":
         try:
-            fw = seq_to_bc_dict[
-                reverse_complement(split_string[1])
-            ]
+            fw = seq_to_bc_dict[reverse_complement(split_string[1])]
         except KeyError:
             fw = 999
         try:
-            rev = seq_to_bc_dict[
-                reverse_complement(split_string[0])
-            ]
+            rev = seq_to_bc_dict[reverse_complement(split_string[0])]
         except KeyError:
             rev = 999
     return fw, rev
+
+
 def primer_to_header(bc_dict, primers, platform):
     """
     Convert fw, rev primer numbers to demultiplexed fastq header.
@@ -13293,7 +13298,9 @@ def primer_to_header(bc_dict, primers, platform):
     if platform == "nextseq":
         return reverse_complement(rev_seq) + "+" + reverse_complement(fw_seq)
     elif platform == "miseq":
-        return  fw_seq + "+" + reverse_complement(rev_seq)
+        return reverse_complement(rev_seq) + "+" + fw_seq
+
+
 def check_stitching(stitch_file):
     """
     Take a stitch log file from MIPWrangler output, return summary datframe.
@@ -13302,13 +13309,11 @@ def check_stitching(stitch_file):
         stitch = []
         for line in infile:
             newline = line.strip()
-            stitch.append(line)
+            stitch.append(newline)
     sti_sum = []
     for l in stitch:
         if '\t"stdOut_" : "[FLASH] Starting FLASH v' in l:
             nl = l.split("\\n")
-            #print nl
-            #break
             for i in range(len(nl)):
                 il = nl[i]
                 if "Input files" in il:
@@ -13324,11 +13329,12 @@ def check_stitching(stitch_file):
     sti = []
     for i in range(0, len(sti_sum), 3):
         sti.append(sti_sum[i:i+3])
-    sti = pd.DataFrame(sti,
-                columns = ["Sample ID",
-                         "Total Reads",
-                         "Combined Reads"])
+    sti = pd.DataFrame(sti, columns=["Sample ID",
+                                     "Total Reads",
+                                     "Combined Reads"])
     return sti
+
+
 def filter_vcf(in_vcf, out_vcf, filters_to_remove):
     """
     Filter a vcf (possibly gzipped) for given filters
@@ -13360,60 +13366,40 @@ def filter_vcf(in_vcf, out_vcf, filters_to_remove):
                 if len(filt.intersection(var_filters)) == 0:
                     outfile.write(line)
     return
+
+
 def iupac_converter(iupac_code):
-    """ Return a list of all possible bases corresponding
-    to a given iupac nucleotide code. """
-    iupac_dict = {
-        "A": "A",
-        "C": "C",
-        "G": "G",
-        "T": "T",
-        "R": "AG",
-        "Y": "CT",
-        "S": "GC",
-        "W": "AT",
-        "K": "GT",
-        "M": "AC",
-        "B": "CGT",
-        "D": "AGT",
-        "H": "ACT",
-        "V": "ACG",
-        "N": "ACGT"
-    }
+    """
+    Return a list of all possible bases corresponding to a given iupac
+    nucleotide code.
+    """
+    iupac_dict = {"A": "A", "C": "C", "G": "G", "T": "T", "R": "AG", "Y": "CT",
+                  "S": "GC", "W": "AT", "K": "GT", "M": "AC", "B": "CGT",
+                  "D": "AGT", "H": "ACT", "V": "ACG", "N": "ACGT"}
     try:
         return list(iupac_dict[iupac_code.upper()])
     except KeyError:
-        print((("Non-IUPAC nucleotide code {}."
-               " Code must be one of {}").format(
-            iupac_code,
-            "".join(list(iupac_dict.keys()))
-        )))
+        print(("Non-IUPAC nucleotide code {}. Code must be one of {}").format(
+            iupac_code, "".join(list(iupac_dict.keys()))
+            ))
         return []
+
+
 def iupac_fasta_converter(header, sequence):
     """
-    Given a sequence (header and sequence itself)
-    containing iupac characters, return a dictionary with
-    all possible sequences converted to ATCG.
+    Given a sequence (header and sequence itself) containing iupac characters,
+    return a dictionary with all possible sequences converted to ATCG.
     """
-    iupac_dict = {
-        "R": "AG",
-        "Y": "CT",
-        "S": "GC",
-        "W": "AT",
-        "K": "GT",
-        "M": "AC",
-        "B": "CGT",
-        "D": "AGT",
-        "H": "ACT",
-        "V": "ACG",
-        "N": "ACGT"
-    }
+    iupac_dict = {"R": "AG", "Y": "CT", "S": "GC", "W": "AT", "K": "GT",
+                  "M": "AC", "B": "CGT", "D": "AGT", "H": "ACT", "V": "ACG",
+                  "N": "ACGT"}
     iupac_dict = {k: list(iupac_dict[k])
                   for k in list(iupac_dict.keys())}
     if sequence.upper().count("N") >= 10:
-        return {header : sequence}
+        return {header: sequence}
     sequence = list(sequence.upper())
     result_list = []
+
     def iupac_recurse(seq):
         for i in range(len(seq)):
             if seq[i] in list(iupac_dict.keys()):
@@ -13426,12 +13412,14 @@ def iupac_fasta_converter(header, sequence):
         else:
             result_list.append("".join(seq))
     iupac_recurse(sequence)
-    if len (result_list) == 1:
+    if len(result_list) == 1:
         return {header: result_list[0]}
     else:
-        return {header + "-" + str(i) : result_list[i]
+        return {header + "-" + str(i): result_list[i]
                 for i in range(len(result_list))}
-def save_fasta_dict(fasta_dict, fasta_file, linewidth = 60):
+
+
+def save_fasta_dict(fasta_dict, fasta_file, linewidth=60):
     """ Save a fasta dictionary to file. """
     with open(fasta_file, "w") as outfile:
         for header in fasta_dict:

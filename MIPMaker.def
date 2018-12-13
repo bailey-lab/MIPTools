@@ -34,6 +34,8 @@ From: amd64/ubuntu:18.04
     cmake \
     automake \
     autoconf \
+    rsync \
+    perl-tk \
     software-properties-common
     # install conda
     cd /tmp && \
@@ -138,6 +140,8 @@ From: amd64/ubuntu:18.04
                    Using default port 8888 and default dir /opt.]"
         esac
     done
+    rsync /opt/resources/test.ipynb /opt/analysis --ignore-existing
+    rsync /opt/resources/analysis.ipynb /opt/analysis --ignore-existing
     jupyter notebook --notebook-dir=$nb_dir --port=$nb_port --no-browser
 
 %apprun wrangler
