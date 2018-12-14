@@ -36,6 +36,7 @@ From: amd64/ubuntu:18.04
     autoconf \
     rsync \
     perl-tk \
+    less \
     software-properties-common
     # install conda
     cd /tmp && \
@@ -147,8 +148,11 @@ From: amd64/ubuntu:18.04
 %apprun wrangler
     set -e
     set -u
-    sample_list=/opt/data/sample_list.tsv
-    while getopts p:l:e: OPT; do
+    # set defaults
+    cluster_script="runMIPWranglerCurrent.sh"
+    server_number=1
+    cpu_count=1
+    while getopts p:l:e:m:s:w:n:c OPT; do
         case "$OPT" in
             p)
               platform="$OPTARG";;
@@ -156,15 +160,31 @@ From: amd64/ubuntu:18.04
               experiment_id="$OPTARG";;
             l)
               sample_list="$OPTARG";;
+            m)
+              probe_sets="$OPTARG";;
+            s)
+              sample_sets="$OPTARG";;
+            w)
+              cluster_script="$OPTARG";;
+            n)
+              server_number="$OPTARG";;
+            c)
+              cpu_count="$OPTARG";;
+
             *)
               echo "Invalid option. Use 'wrangler -p {miseq, nexseq} \
-              -e experiment_id -l sample_list.file' \
-              to specify the sequencing platform,\
-              the experiment ID and a sample list file. "
+              -e experiment_id -l sample_list.file -m probe_sets\
+              -s sample_sets -w cluster_script -n server_number \
+              -c  cpu_count'  "
         esac
     done
     python /opt/src/generate_wrangler_scripts.py \
-    -p $platform -e $experiment_id -l /opt/analysis/$sample_list
+    -p $platform -e $experiment_id -l /opt/analysis/$sample_list \
+    -m $probe_sets -s $sample_sets -w $cluster_script -n $server_number \
+    -c $cpu_count
+    cd /opt/analysis
+    script_name=$sample_sets"_"$(echo $probe_sets|tr "," "_")".sh"
+    . script_name
 
 %apprun download
     set -e

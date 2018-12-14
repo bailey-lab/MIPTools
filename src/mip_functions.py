@@ -3,7 +3,7 @@ import subprocess
 import json
 import os
 import io
-from multiprocessing import Pool, cpu_count
+from multiprocessing import Pool
 import multiprocessing
 import multiprocessing.pool
 from operator import itemgetter
@@ -15,13 +15,11 @@ import pickle
 import copy
 from Bio import SeqIO
 import numpy as np
-from sklearn.cluster import MeanShift, estimate_bandwidth, DBSCAN
+from sklearn.cluster import MeanShift, DBSCAN
 import matplotlib.pyplot as plt
 from matplotlib import colors
 from sklearn.manifold import TSNE
 from scipy.stats import chi2_contingency, fisher_exact
-from itertools import cycle
-from functools import partial
 import pysam
 import mip_classes as mod
 import pandas as pd
@@ -11837,6 +11835,14 @@ def combine_info_files(wdir,
                                       "new_replicate"]].apply(
         lambda a: "-".join(a), axis=1
     )
+    # load the probe set dictionary to extract the
+    # probes that we're interested in
+    probe_sets_file = settings["mipSetsDictionary"]
+    probe_set_keys = settings["mipSetKey"]
+    used_probes = set()
+    for psk in probe_set_keys:
+        with open(probe_sets_file) as infile:
+            used_probes.update(json.load(infile)[psk])
     for i in range(len(info_files)):
         i_file = info_files[i]
         current_run_meta = run_meta.loc[run_meta["sheet_order"] == i]
@@ -11861,20 +11867,24 @@ def combine_info_files(wdir,
                     for ci in col_indexes:
                         if colnames[newline[ci]] == "sample_name":
                             si_index = ci
+                        elif colnames[newline[ci]] == "mip_name":
+                            mip_name_index = ci
                 else:
                     ori_sample_id = newline[si_index]
-                    try:
-                        library = current_run_dict[
-                            ori_sample_id
-                        ]["Library Prep"]
-                        sample_id = current_run_dict[
-                            ori_sample_id
-                        ]["Sample ID"]
-                        d = ([newline[ci] if ci != si_index else sample_id
-                              for ci in col_indexes] + [library])
-                        data.append(d)
-                    except KeyError:
-                        continue
+                    mip_fam_name = newline[mip_name_index]
+                    if mip_fam_name in used_probes:
+                        try:
+                            library = current_run_dict[
+                                ori_sample_id
+                            ]["Library Prep"]
+                            sample_id = current_run_dict[
+                                ori_sample_id
+                            ]["Sample ID"]
+                            d = ([newline[ci] if ci != si_index else sample_id
+                                  for ci in col_indexes] + [library])
+                            data.append(d)
+                        except KeyError:
+                            continue
     info = pd.DataFrame(data, columns=c_vals + ["Library Prep"])
     info["barcode_count"] = info["barcode_count"].astype(int)
     info["read_count"] = info["read_count"].astype(int)
