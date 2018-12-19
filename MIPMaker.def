@@ -82,6 +82,8 @@ From: amd64/ubuntu:18.04
     # copy programs and executables from the resources directory on host
     # working directory
     scp /opt/bin/* /usr/bin
+    cd /usr/bin
+    ls | chmod +xr
 
     # install bcl2fastq
     cd /opt/programs
@@ -141,8 +143,10 @@ From: amd64/ubuntu:18.04
                    Using default port 8888 and default dir /opt.]"
         esac
     done
-    rsync /opt/resources/test.ipynb /opt/analysis --ignore-existing
-    rsync /opt/resources/analysis.ipynb /opt/analysis --ignore-existing
+    rsync /opt/resources/test.ipynb /opt/analysis --ignore-existing \
+        --ignore-missing-args
+    rsync /opt/resources/analysis.ipynb /opt/analysis --ignore-existing \
+        --ignore-missing-args
     jupyter notebook --notebook-dir=$nb_dir --port=$nb_port --no-browser
 
 %apprun wrangler
@@ -152,15 +156,13 @@ From: amd64/ubuntu:18.04
     cluster_script="runMIPWranglerCurrent.sh"
     server_number=1
     cpu_count=1
-    while getopts p:l:e:m:s:w:n:c OPT; do
+    while getopts p:l:e:s:w:n:c: OPT; do
         case "$OPT" in
-            p)
-              platform="$OPTARG";;
             e)
               experiment_id="$OPTARG";;
             l)
               sample_list="$OPTARG";;
-            m)
+            p)
               probe_sets="$OPTARG";;
             s)
               sample_sets="$OPTARG";;
@@ -172,19 +174,18 @@ From: amd64/ubuntu:18.04
               cpu_count="$OPTARG";;
 
             *)
-              echo "Invalid option. Use 'wrangler -p {miseq, nexseq} \
+              echo "Invalid option. Use 'wrangler \
               -e experiment_id -l sample_list.file -m probe_sets\
               -s sample_sets -w cluster_script -n server_number \
               -c  cpu_count'  "
         esac
     done
     python /opt/src/generate_wrangler_scripts.py \
-    -p $platform -e $experiment_id -l /opt/analysis/$sample_list \
-    -m $probe_sets -s $sample_sets -w $cluster_script -n $server_number \
+    -e $experiment_id -l /opt/analysis/$sample_list \
+    -p $probe_sets -s $sample_sets -w $cluster_script -n $server_number \
     -c $cpu_count
-    cd /opt/analysis
     script_name=$sample_sets"_"$(echo $probe_sets|tr "," "_")".sh"
-    . script_name
+    . /opt/analysis/$script_name
 
 %apprun download
     set -e

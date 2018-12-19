@@ -16,10 +16,6 @@ parser.add_argument(
     help=("A Unique id given to each sequencing run by the user."),
     required=True
 )
-parser.add_argument("-p", "--platform",
-                    help="Sequencing platform.",
-                    choices=["nextseq", "miseq"],
-                    required=True)
 parser.add_argument("-c", "--cpu-count",
                     type=int,
                     help="Number of available processors to use.",
@@ -56,7 +52,7 @@ parser.add_argument("-l", "--sample-list",
 parser.add_argument("-s", "--sample-set",
                     help=("Sample set to be processed."),
                     required=True)
-parser.add_argument("-m", "--probe-set",
+parser.add_argument("-p", "--probe-set",
                     help=("Probe set to be processed."),
                     required=True)
 # parse arguments from command line
@@ -198,11 +194,11 @@ stitch_commands = [
 ]
 # Create MIPWrangler part II script commands
 wrangler_commands = [
-    ["nohup", cluster_script, str(cpu_count), str(server_num)],
-    ["rsync -a " + os.path.join(
-        analysis_dir, "/analysis/popClusInfo/allInfo.tab.txt.gz"
-    ), os.path.join(analysis_dir,
-                    experiment_id + "_" + subset_name + ".txt.gz")]
+    ["cd", "analysis"],
+    ["nohup", cluster_script, str(server_num), str(cpu_count)],
+    ["mv", os.path.join(analysis_dir, "analysis/serverResources/mip"
+                        + str(server_num) + "/popClusInfo/allInfo.tab.txt.gz"),
+     os.path.join(analysis_dir, experiment_id + "_" + subset_name + ".txt.gz")]
 ]
 server_num += 1
 if subset_name in subset_names:
