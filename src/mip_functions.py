@@ -1179,63 +1179,83 @@ def parse_aligned_haplotypes(settings):
                     hap_index = 0
                     for i in range(len(diff)):
                         d = diff[i]
-                        # each difference between the hap and ref can be an indel ("-")
-                        # or a snp (":" or "x") or the same as the reference (".")
-                        # When dealing with indels, it is best to call
-                        # consecutive indels as a cumulative indel rather than individual
-                        # i.e. AAA/--- instead of A/-, A/-, A/- because if we are looking for
-                        # a frameshift insertion A/-, having AAA/--- means we don't observe the
-                        # frameshift. But if it is kept as three A/-'s then it looks like
-                        # the frameshift mutation is there.
+                        # each difference between the hap and ref can be an
+                        # indel ("-") or a snp (":" or "x") or the same as
+                        # the reference ("."). When dealing with indels, it is
+                        # best to call consecutive indels as a cumulative indel
+                        # rather than individual indels, i.e. AAA/--- instead
+                        # of A/-, A/-, A/- because if we are looking for a
+                        # frameshift insertion A/-, having AAA/--- means we
+                        # don't observe the frameshift. But if it is kept as
+                        # three A/-'s then it looks like the frameshift
+                        # mutation is there.
                         if d == "-":
-                            # if an indel is encountered, we'll keep track of it until
-                            # the end of the indel. That is, when d != "-"
+                            # if an indel is encountered, we'll keep track of
+                            # it until the end of the indel. That is, when
+                            # d != "-"
                             indel_count += 1
                             if hap_al[i] == "-":
                                 # if a deletion, hap sequence should have "-"
                                 indel_types.append("del")
                                 indels.append(ref_al[i])
-                                # in cases of deletions, we increment the genomic pos
-                                # because the reference has a nucleotide in this position
+                                # in cases of deletions, we increment the
+                                # genomic pos because the reference has a
+                                # nucleotide in this position.
                                 genomic_pos += 1
                             elif ref_al[i] == "-":
                                 indel_types.append("ins")
                                 indels.append(hap_al[i])
                                 hap_index += 1
-                                # in cases of insertions, we don't increment the genomic pos
-                                # because the reference has no nucleotide in this position
-                                # insAAA would have same start and end positions
+                                # in cases of insertions, we don't increment
+                                # the genomic pos because the reference has no
+                                # nucleotide in this position insAAA would have
+                                # the same start and end positions
                             else:
-                                # if neither hap nor ref has "-" at this position there is
-                                # a disagreement between the alignment and the sequences
-                                print("Alignment shows indel but sequences do not", h_name)
+                                # if neither hap nor ref has "-" at this
+                                # position there is a disagreement between the
+                                # alignment and the sequences.
+                                print(("For the haplotype {} the alignment "
+                                       " shows an indel but sequences do not."
+                                       " This haplotype  will not have "
+                                       "variant calls.").format(h_name))
+                                problem_al = True
                                 break
                         else:
                             # if the current diff is not an indel,
                             # check if there is preceeding indel
                             if len(indels) > 0:
-                                # there should only be a del or ins preceding this base
+                                # there should only be a del or ins preceding
+                                # this base
                                 if len(set(indel_types)) != 1:
                                     # Consecutive insertions and deletions
+                                    print(
+                                        ("For the haplotype {} there are "
+                                         "consecutive insertions and "
+                                         "deletions. This haplotype will not"
+                                         "have variant calls.").format(h_name)
+                                    )
                                     problem_al = True
-                                    break
                                 else:
                                     indel_type = list(set(indel_types))[0]
                                     indel_length = len(indels)
                                     # genomic_pos is the current position
-                                    # since this position is not an indel, indel has ended
-                                    # 1 nucleotide prior to this position.
+                                    # since this position is not an indel,
+                                    # indel has ended 1 nucleotide prior to
+                                    # this position.
                                     indel_end = genomic_pos - 1
                                     indel_seq = "".join(indels)
-                                    buffer_seq = "".join(["-" for j in range(indel_length)])
+                                    buffer_seq = "".join(["-" for j in
+                                                         range(indel_length)])
                                     if indel_type == "del":
-                                        indel_begin = genomic_pos - indel_length
+                                        indel_begin = (genomic_pos
+                                                       - indel_length)
                                         ref_base = indel_seq
                                         hap_base = buffer_seq
                                         h_index = [hap_index, hap_index - 1]
                                     else:
-                                        # if the preceding indel was an insertion
-                                        # the start and end position is the same
+                                        # if the preceding indel was an
+                                        # insertion the start and end positions
+                                        # are the same
                                         indel_begin = genomic_pos - 1
                                         ref_base = buffer_seq
                                         hap_base = indel_seq
@@ -1767,8 +1787,6 @@ def update_variation(settings):
                 if not normalized_key in variation:
                     variation[normalized_key] = {colnames[i] : newline[i]                                                  for i in range(len(colnames))}
                 line_num += 1
-    #print temp_variation_keys[:10]
-    #print var_key_to_uniq.keys()[:10]
     if line_num != len(temp_variation_keys):
         print("There are more variation keys then annotated variants.")
 
@@ -10604,12 +10622,16 @@ def analyze_data(settings_file):
     update_raw_data(settings)
     get_counts(settings)
     return
+
+
 def process_data(wdir, run_ids):
     for rid in run_ids:
         settings_file = wdir + "settings_" + rid
         get_data(settings_file)
         analyze_data(settings_file)
     return
+
+
 def process_haplotypes(settings_file):
     settings = get_analysis_settings(settings_file)
     get_haplotypes(settings)
@@ -10619,6 +10641,242 @@ def process_haplotypes(settings_file):
     update_unique_haplotypes(settings)
     update_variation(settings)
     return
+
+
+def make_snp_vcf(variant_file, haplotype_file, call_info_file,
+                 haplotype_counts_file, vcf_chrom, barcode_count_file,
+                 min_cov, min_count, min_freq, vcf_file, header_count=11):
+    """
+    Create a vcf file for SNV only. This will be integrated to process_results
+    in the future.
+    """
+    # Load variant count table
+    variant_counts = pd.read_csv(variant_file,
+                                 header=list(range(header_count)),
+                                 index_col=0)
+    # Add variant type to tables, convert position to integer
+    cols = variant_counts.columns
+    new_index = pd.MultiIndex.from_tuples(
+        [(c[0], ) + (int(c[1]), ) + c[2:] + ("SNV", ) if len(c[3]) == len(c[4])
+         else (c[0], ) + (int(c[1]), ) + c[2:] + ("indel", ) for c in cols],
+        names=cols.names + ["Variant Type"])
+    variant_counts.columns = new_index
+    # filter indels
+    variant_counts = variant_counts.xs("SNV", level="Variant Type", axis=1)
+    # load haplotype dict
+    with open(haplotype_file) as infile:
+        haplotypes = json.load(infile)
+    # load call info
+    with open(call_info_file) as infile:
+        call_info = json.load(infile)
+    # Load haplotype counts per sample
+    haplotype_counts = pd.read_csv(haplotype_counts_file)
+    # Add "copy" information to haplotype counts
+    hap_copies = []
+    for m in haplotypes:
+        g = m.split("_")[0]
+        for h in haplotypes[m]:
+            try:
+                mc = haplotypes[m][h]["mapped_copies"]
+                for c in mc:
+                    hap_copies.append([h, c,
+                                       call_info[g][m]["copies"][c]["chrom"]])
+            except KeyError:
+                continue
+    hap_copies = pd.DataFrame(hap_copies, columns=["Haplotype ID",
+                                                   "Copy", "CHROM"])
+    # Get all variant positions across the data set
+    variant_positions = set()
+    cols = variant_counts.columns
+    for c in cols:
+        pos = c[1]
+        ref = c[3]
+        alt = c[4]
+        len_diff = len(ref) - len(alt)
+        if len_diff > 0:
+            vp = set(range(pos, pos + len_diff + 1))
+        else:
+            vp = set([pos])
+        variant_positions.update(vp)
+    variant_position_set = variant_positions
+    # Create a position_to_mip dictionary that maps each genomic position
+    # to all MIPs covering that position
+    mip_positions = {}
+    position_to_mip = {}
+    for g in call_info:
+        for m in call_info[g]:
+            for c in call_info[g][m]["copies"]:
+                chrom = call_info[g][m]["copies"][c]["chrom"]
+                if chrom == vcf_chrom:
+                    start = call_info[g][m]["copies"][c]["capture_start"]
+                    end = call_info[g][m]["copies"][c]["capture_end"]
+                    cov_pos = variant_position_set.intersection(
+                        range(start, end + 1)
+                    )
+                    mip_positions[(m, c)] = cov_pos
+                    for p in cov_pos:
+                        try:
+                            position_to_mip[p].add((m, c))
+                        except KeyError:
+                            position_to_mip[p] = set([(m, c)])
+    # Create a dataframe that maps whether a genomic position is the same
+    # as the reference or not for each haplotype
+    references = []
+    for m in haplotypes:
+        g = m.split("_")[0]
+        cops = call_info[g][m]["copies"]
+        copy_keys = list(call_info[g][m]["copies"].keys())
+        for c in copy_keys:
+            mp = mip_positions[(m, c)]
+            capture_chrom = cops[c]["chrom"]
+            if capture_chrom == vcf_chrom:
+                for h in haplotypes[m]:
+                    hap = haplotypes[m][h]
+                    refs = {p: 1 for p in mp}
+                    try:
+                        hap_copy = hap["mapped_copies"][c]
+                    except KeyError:
+                        continue
+                    else:
+                        for d in hap_copy["differences"]:
+                            vcf_norm = d["vcf_normalized"].split(":")
+                            pos = int(vcf_norm[1])
+                            r = vcf_norm[3]
+                            for j in range(len(r)):
+                                refs[pos + j] = 0
+                    references.extend([(h, c) + item for item in refs.items()])
+    references = pd.DataFrame(
+        references, columns=["Haplotype ID", "Copy", "POS", "Reference"]
+    )
+    # Update the haplotype count dataframe to include each (variant) position's
+    # reference and non-reference status.
+    references = references.merge(haplotype_counts[
+        ["Haplotype ID", "Copy", "Sample ID", "Barcode Count"]
+        ])
+    # Update the dataframe with Reference base counts by multiplying
+    # the haplotype's count by reference count for the haplotype
+    references["Ref Count"] = (references["Reference"]
+                               * references["Barcode Count"])
+    # Create a dictionary that maps each sample's reference base counts at
+    # each position of interest
+    counts = references.groupby(
+        ["Sample ID", "POS"]
+    )["Ref Count"].sum().to_dict()
+    # Load the barcode counts table, which has the total barcode count for a
+    # given MIP for each sample
+    barcode_counts = pd.read_csv(barcode_count_file,
+                                 header=[0, 1], index_col=0)
+    # Create a coverage dictionary from the barcode count table
+    cov_dict = barcode_counts.fillna(0).loc[
+        :, list(mip_positions.keys())
+    ].to_dict()
+    # Create reference count and coverage tables corresponding to the variant
+    # table we had earlier
+    rows = variant_counts.index
+    columns = variant_counts.columns
+    reference_counts = []
+    coverage = []
+    for sample in rows:
+        sample_refs = []
+        sample_cov = []
+        for variant in columns:
+            pos = variant[1]
+            try:
+                ref_count = counts[(sample, pos)]
+            except KeyError:
+                ref_count = 0
+            cov = 0
+            for k in position_to_mip[pos]:
+                cov += cov_dict[k][sample]
+            sample_refs.append(ref_count)
+            sample_cov.append(cov)
+        reference_counts.append(sample_refs)
+        coverage.append(sample_cov)
+    reference_counts = pd.DataFrame(reference_counts,
+                                    columns=columns, index=rows)
+    coverage = pd.DataFrame(coverage, columns=columns, index=rows)
+
+    def collapse_snps(g):
+        """Take a group of variants on the same position, return a merged
+        dataframe which has the allele counts as a comma separated string
+        for each  allele in a given position."""
+        gv = g.columns.get_level_values
+        ref = gv("REF")[0]
+        alts = ",".join(gv("ALT"))
+        idx = pd.MultiIndex.from_tuples([(".", ref, alts)],
+                                        names=["ID", "REF", "ALT"])
+        vals = [",".join(map(str, map(int, v))) for v in g.values]
+        return pd.DataFrame(vals, columns=idx)
+    # group variants on the position to merge multiallelic loci
+    collapsed_vars = variant_counts.groupby(level=["CHROM", "POS"],
+                                            axis=1).apply(collapse_snps)
+    # group coverage and reference counts for multiallelic loci
+    collapsed_refs = reference_counts.groupby(
+        level=["CHROM", "POS", "ID", "REF"], axis=1
+    ).first()
+    collapsed_cov = coverage.groupby(level=["CHROM", "POS", "ID", "REF"],
+                                     axis=1).first()
+    # index of collapsed_vars is lost after groupby operation
+    # although the operation does not impact the rows. We'll recover
+    # the index from the other data frames which all have the same
+    # row indices
+    collapsed_vars.index = collapsed_cov.index
+    collapsed_vars.sort_index(axis=1, level=["CHROM", "POS"], inplace=True)
+    collapsed_refs.sort_index(axis=1, level=["CHROM", "POS"], inplace=True)
+    collapsed_cov.sort_index(axis=1, level=["CHROM", "POS"], inplace=True)
+    collapsed_refs.columns = collapsed_vars.columns
+    collapsed_cov.columns = collapsed_vars.columns
+    # merge the variant, reference and coverage count tables to get a "variant
+    # string" for each locus and for each sample.
+    collapsed_merge = (collapsed_refs.astype(int).astype(str)
+                       + "," + collapsed_vars
+                       + ":" + collapsed_cov.astype(int).astype(str))
+
+    def call_genotype(s, min_cov, min_count, min_freq):
+        """Call genotypes from the variant strings that are in the form:
+        ref_count,allele1_count,allele2_count,...:coverage."""
+        sp = s.split(":")
+        cov = int(sp[-1])
+        allele_counts = list(map(int, sp[0].split(",")))
+        if cov < min_cov:
+            genotypes = []
+        else:
+            genotypes = []
+            for i in range(len(allele_counts)):
+                ac = allele_counts[i]
+                if ((ac >= min_count) & ((ac/cov) >= min_freq)):
+                    genotypes.append(str(i))
+        if len(genotypes) == 0:
+            genotypes = "."
+        else:
+            genotypes = "/".join(genotypes)
+        return genotypes + ":" + s
+    # call genotypes
+    vcf = collapsed_merge.applymap(lambda a: call_genotype(
+        a, min_cov, min_count, min_freq)
+    ).T
+    # Update columns of vcf table to remove the column's level name
+    vcf_samples = vcf.columns.tolist()
+    vcf.columns = vcf_samples
+    # Add vcf filler text
+    vcf["QUAL"] = "."
+    vcf["FILTER"] = "."
+    vcf["INFO"] = "."
+    vcf["FORMAT"] = "GT:AD:DP"
+    vcf = vcf[["QUAL", "FILTER", "INFO", "FORMAT"] + vcf_samples]
+    vcf_header = [
+        "##fileformat=VCFv4.2",
+        '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">',
+        '##FORMAT=<ID=AD,Number=R,Type=Integer,Description='
+        '"Allelic depths for the ref and alt alleles in that order">',
+        '##FORMAT=<ID=DP,Number=1,Type=Integer,Description='
+        '"Total read depth (coverage) at this position.>']
+    # save vcf file
+    with open(vcf_file, "w") as outfile:
+        outfile.write("\n".join(vcf_header) + "\n")
+        vcf.reset_index().rename(columns={"CHROM": "#CHROM"}).to_csv(
+            outfile, index=False, sep="\t"
+        )
 
 
 def process_results(wdir,
@@ -10817,10 +11075,10 @@ def process_results(wdir,
     # create a dataframe for all mapped haplotypes
     mapped_haplotype_df = pd.concat(
         [variation_df.groupby(
-            ["Haplotype ID", "Copy", "Multi Mapping"]
-        ).first().reset_index()[["Haplotype ID", "Copy", "Multi Mapping"]],
-         reference_df],
-        ignore_index=True
+            ["Haplotype ID", "Copy", "Multi Mapping", "CHROM"]
+        ).first().reset_index()[
+            ["Haplotype ID", "Copy", "Multi Mapping", "CHROM"]
+        ], reference_df], ignore_index=True
     )
     print(
         ("There are {mh.shape[0]} mapped and {um} unmapped (off target)"
@@ -10867,7 +11125,7 @@ def process_results(wdir,
     unique_df = mapped_results.loc[~mapped_results["Multi Mapping"]]
     unique_table = pd.pivot_table(unique_df,
                                   index="Sample ID",
-                                  columns=["Gene", "MIP", "Copy"],
+                                  columns=["Gene", "MIP", "Copy", "Chrom"],
                                   values=["Barcode Count"],
                                   aggfunc=np.sum)
     # 2) Estimate the copy number of each paralog gene
@@ -12003,105 +12261,8 @@ def generate_fastqs(wdir, mipster_files, min_bc_count, min_bc_frac):
                     outfile_list.extend([read_name, seq, "+", qual])
             outfile.write("\n".join(outfile_list) + "\n")
     return
-def make_vcf(settings):
-    """
-    Create a vcf file from variation table to be used
-    in vcf friendly programs.
-    """
-    wdir = settings["workingDir"]
-    with open(wdir + settings["variationTableFile"]
-         + ".json") as infile:
-        var_tab = json.load(infile)
-    var_head = var_tab[0]
-    var_data = var_tab[1:]
-    head_cols = ["CHROM", "POS", "ID", "REF", "ALT",
-                "QUAL", "FILTER", "INFO", "FORMAT"]
-    ann_index = list(range(var_head.index("CP") + 1,
-                      var_head.index("NS")))
-    format_index = var_head.index("FORMAT")
-    gen_index = list(range(var_head.index("FORMAT") + 1,
-                     len(var_head)))
-    info_index = list(range(var_head.index("NS"),
-                      var_head.index("HE") + 1))
-    col_index = list(range(var_head.index("CHROM"),
-                     var_head.index("ALT") + 1))
-    mip_index = list(range(var_head.index("TARGET"),
-                     var_head.index("PAR") + 1))
-    mip_index.append(var_head.index("VKEY"))
-    # Allele depth field in the variation table file only shows
-    # the alt allele depth. VCF specs want REF, ALT counts.
-    # REF count is inferred from total - ALT here, so this
-    # will not work for multiallelic sites such as microsatellites.
-    updated_var = []
-    for v in var_data:
-        vd = []
-        for i in col_index:
-            vd.append(v[i])
-        vd.extend([".", "."])
-        info = []
-        for ind in [info_index, ann_index, mip_index]:
-            for i in ind:
-                field_name = var_head[i]
-                field_value = v[i]
-                info.append("=".join(map(str,
-                    [field_name, field_value])))
-        vd.append(";".join(info))
-        format_text = v[format_index]
-        vd.append(format_text)
-        for i in gen_index:
-            gen = v[i].split(":")
-            try:
-                ad = int(float(gen[1]))
-                dp = int(float(gen[2]))
-                wd = dp - ad
-                ad = str(wd) + "," + str(ad)
-                gen[1] = ad
-            except ValueError:
-                pass
-            gen = ":".join(gen)
-            vd.append(gen)
-        updated_var.append(vd)
-    # get the meta information lines from ANNOVAR output
-    with open(wdir + settings["annotationOutput"]
-             + "." + settings["annotationBuildVersion"]
-             + "_multianno.vcf") as infile:
-        meta_info_lines = []
-        for line in infile:
-            if line.startswith("##"):
-                meta_info_lines.append(line.strip())
-            else:
-                break
-    # add meta information lines for the MIP pipeline fields
-    met1 = ['##INFO=<ID=NS,Number=1,Type=Integer,Description="Number of Samples With Data">',
-    '##INFO=<ID=DP,Number=1,Type=Integer,Description="Total Depth">',
-    '##INFO=<ID=AD,Number=A,Type=Integer,Description="Alternate Allele Depth">',
-    '##INFO=<ID=AF,Number=A,Type=Float,Description="Allele Frequency, as determined by # heterozygous or homozygous samples divided by NS">',
-    '##INFO=<ID=HO,Number=A,Type=Integer,Description="Number of Samples Homozygous for ALT allele">',
-    '##INFO=<ID=HE,Number=A,Type=Integer,Description="Number of Samples Heterozygous for ALT Allele">',
-           '##INFO=<ID=TARGET,Number=1,Type=String,Description="Whether the position was targeted.">',
-    '##INFO=<ID=TID,Number=1,Type=String,Description="Target ID if the position was targeted.">',
-    '##INFO=<ID=PSV,Number=1,Type=String,Description="Whether the position was determined as a paralog specific locus.">',
-    '##INFO=<ID=PAR,Number=1,Type=String,Description="Gene or region name from MIP pipeline.">',
-    '##INFO=<ID=VKEY,Number=1,Type=String,Description="Unique ID given to each variation.">',
-    '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype.">',
-           '##FORMAT=<ID=AD,Number=R,Type=Float,Description="Read depth for each allele, starting with REF.">',
-           '##FORMAT=<ID=DP,Number=1,Type=Float,Description=" Read depth at this position for this sample.">',
-           '##FORMAT=<ID=BQ,Number=1,Type=Float,Description="Base quality for alt allele.">',
-           '##FORMAT=<ID=ADS,Number=.,Type=Float,Description="Alt allele read depths when supported by multiple MIPs.">'
-           '##FORMAT=<ID=DPS,Number=.,Type=Float,Description="Total read depths when supported by multiple MIPs.">'
-           '##FORMAT=<ID=MM,Number=.,Type=String,Description="Whether the allele mapping to multiple locations on reference genome.">',
-           '##FORMAT=<ID=HID,Number=.,Type=String,Description="Haplotype ID supporting the alt allele. This can be considered similar to Phase Set. Alleles on the same HID are on the same chromosome.">',
-           '##FORMAT=<ID=CS,Number=1,Type=String,Description="Case/control status of sample.">']
-    meta_info_lines.extend(met1)
-    meta_info_lines = [[m] for m in meta_info_lines]
-    up_var_head = ["#CHROM", "POS", "ID", "REF", "ALT",
-                   "QUAL", "FILTER", "INFO", "FORMAT"]
-    for i in gen_index:
-        up_var_head.append(var_head[i])
-    meta_info_lines.append(up_var_head)
-    meta_info_lines.extend(updated_var)
-    #save vcf file
-    write_list(meta_info_lines, wdir + "variation.vcf")
+
+
 def convert_to_int(n):
     """
     Convert values to integers. This is to be used when
