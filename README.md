@@ -68,7 +68,7 @@ singularity run --app wrangler \
 ```
 After the app finishes, it creates a file with all _clean haplotype_ sequences (and a lot more) in a subdirectory called analsis within the wrangler_dir. Create a link to the main output file to set up for the next step in analysis:  
 ```bash
-ln -s wrangler_dir/
+ln -s wrangler_dir/analysis/serverResources/mip1/popClusInfo/allInfo.tab.txt.gz wrangler_dir/
 ```
 #### mapper
 Runs post-wrangler mapping and variant calling pipeline. For the test_data:    
