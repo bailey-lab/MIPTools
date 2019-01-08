@@ -43,7 +43,7 @@ singularity run --app appName singularityOptions miptools.sif appOptions
 ```
 
 #### wrangler
-Runs MIPWrangler. Although currently the container does not include MIPWrangler itself, this  first step is necessary to generate some files used in "post wrangler" analysis. User needs to specify the **sequencing_platform** used (miseq or nextseq) and **experiment_id** (we use sequencing date in the format "YYMMDD", but it can be any name for the current experiment. The **data** directory must have **sample_list.tsv** file (see test_data for an example).  
+Runs MIPWrangler.   
 
 Run the following command, changing only the **host** part of the binding arguments (-B) to fit your directory structure.
 ```bash
@@ -66,27 +66,24 @@ singularity run --app wrangler \
     -B wrangler_dir/:/opt/analysis \
     miptools.sif -e wrangler -l 170828_samples.tsv -p DR1,CSP -s SM -c 4
 ```
-This should generate a new directory in your "data_dir" named "experiment_id" that contains a few files to use for MIPWrangler program.
-#### Post-wrangler usage
-**data_dir** must have 1 more file in addition to the sample_list.tsv for post-wrangler analysis.  
-*  **wrangler_output**: MIPWrangler output file (can be gzipped or regular text file).
-**analysis_dir** must contain the analysis settings file.
-*  **settings.txt**: analysis settings file  
-
-Run the following command, changing only the **host** part of the binding arguments (-B) to fit your directory structure. Two optional arguments can set the notebook server port (default 8888) and notebook directory where the server is started (default /opt, **this is relative to the container and NOT the host**, so do not change from the default if you're not absolutely sure it is called for).  
-
-Note that we are binding an additional directory now (species_resources) that we did not need for the *wrangler* app.
+After the app finishes, it creates a file with all _clean haplotype_ sequences (and a lot more) in a subdirectory called analsis within the wrangler_dir. Create a link to the main output file to set up for the next step in analysis:  
+```bash
+ln -s wrangler_dir/
+```
+#### mapper
+Runs post-wrangler mapping and variant calling pipeline. For the test_data:    
 ```bash
 singularity run --app jupyter \
-    -B base_resources(on-host):/opt/resources \
-    -B species_resources(on-host):/opt/species_resources \
-    -B project_resources(on-host):/opt/project_resources \
-    -B data_dir(on-host):/opt/data \
-    -B analysis_dir(on-host):/opt/analysis \
-    mipmaker.sif -p port_to_use -d notebook_directory
+    -B base_resources/:/opt/base_resources \
+    -B DR1_project_resources/:/opt/project_resources \
+    -B pf_resources/:/opt/species_resources \
+    -B wrangler_dir/:/opt/data \
+    -B mapper_dir/:/opt/analysis \
+    miptools.sif
 ```
-**port_to_use** and **notebook_directory** are optional arguments defaulting to **8888** and **/opt**, respectively.
-This starts a jupyter notebook on the host computer: 
+
+This will start a Jupyter notebook where the rest of the analysis takes place.
+
 ```bash
 [I 09:31:00.231 NotebookApp] Serving notebooks from local directory: /opt
 [I 09:31:00.231 NotebookApp] The Jupyter Notebook is running at:
@@ -104,6 +101,4 @@ ssh -N -f -L localhost:8888:localhost:8888 username@serveraddress
 ```
 
 Finally, open a web browser (Chrome, Chromium, Firefox works in my experience), paste the address from your terminal (http://localhost:8888/?token=600be64ca79ef74ebe4fbd3698bc8a0d049e01d4e28b30ec in this example)  
-Navigate to **resources/analysis.ipyn** and follow the instructions contained in the notebook.
-### Test run
-A test_data folder and test_analysis folder are included in the base_resources directory. Use them as your data_dir and analysis_dir, respectively. You'll need 2 additional directories for project_resources and species_resources to start the jupyter notebook. Make a copy of the analysis.ipynb and compare if your results are the same as the one in the provided copy.
+Navigate to **analysis/analysis.ipynb** and follow the instructions contained in the notebook.
