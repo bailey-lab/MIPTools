@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 import argparse
 import sys
-import json
+import datetime
 
 # Read input arguments
 parser = argparse.ArgumentParser(
@@ -193,12 +193,22 @@ stitch_commands = [
      "--dir", fastq_dir, "--mipServerNumber", str(server_num)]
 ]
 # Create MIPWrangler part II script commands
+now = datetime.datetime.now()
+run_date = now.strftime("%Y%m%d")
 wrangler_commands = [
     ["cd", "analysis"],
     ["nohup", cluster_script, str(server_num), str(cpu_count)],
+    ["sleep", "60"],
+    ["mv", os.path.join(analysis_dir, "analysis/logs"), analysis_dir],
+    ["mv", os.path.join(analysis_dir, "analysis/scripts"), analysis_dir],
+    ["mv", os.path.join(analysis_dir, "analysis/resources"), analysis_dir],
+    ["mv", os.path.join(analysis_dir, "analysis/nohup.out"),
+     os.path.join(analysis_dir, "nohup2.out")],
     ["mv", os.path.join(analysis_dir, "analysis/serverResources/mip"
-                        + str(server_num) + "/popClusInfo/allInfo.tab.txt.gz"),
-     os.path.join(analysis_dir, experiment_id + "_" + subset_name + ".txt.gz")]
+                        + str(server_num)
+                        + "/popClusInfo/allInfo.tab.txt.gz"),
+     os.path.join(analysis_dir, experiment_id + "_"
+                  + subset_name + "_" + run_date + ".txt.gz")]
 ]
 server_num += 1
 if subset_name in subset_names:

@@ -9,25 +9,24 @@ import pickle
 import os
 import subprocess
 from operator import itemgetter
-import ast
 import mip_functions as mip
 import copy
 import numpy as np
-import math
 import pandas as pd
-print("mip module reloading")
+
 
 class Locus:
     """
     Locus class provides a construct for creating objects representing
     any DNA locus that is to be used for MIP designs.
     Multiple loci can and should be represented by a single
-    object when there is high sequence similarity, i.e. paralogus sequencesself.
+    object when there is high sequence similarity, i.e. paralogus sequences.
     A locus must have at least one sequence that is designated as the
     reference when multiple loci represented in a single Locus object.
-    Locus objects will be instantiated by
+    Locus objects will be instantiated objects of the Paralog class.
     """
-    def __init__ (self, paralog, rinfo_file):
+
+    def __init__(self, paralog, rinfo_file):
         # connect the paralog object creating the locus so that the locus
         # "knows" what paralog object it belongs to
         self.paralog = paralog
@@ -47,8 +46,6 @@ class Locus:
         self.file_locations = mip.get_file_locations()
         # give the object a name
         self.paralog_name = self.rinfo["NAME"]
-        # resource_dir is employed to indicate the location of rinfo and other files
-        # files should be in a directory named as the paralog family name
         self.segment_name = "S0"
         self.cwd = self.paralog.cwd + self.segment_name + "/"
         if not os.path.exists(self.cwd):
@@ -74,14 +71,11 @@ class Locus:
         self.subregions = {}
         self.designed = False
         self.failed = False
-    def target_base_converter(self):
-        for r in self.regions:
-            r[1] += 1
-        return
+
     def get_segment_dic(self):
         """ Take a rinfo dictionary and extract the segments in it.
         Return a dictionary in the form:
-        {'S0': ['C0', 'C1', 'C2', 'S0'], 'S1': ['C0', 'S1'], 'S2': ['C0', 'C1', 'C2', 'S2']}
+        {'S0': ['C0', 'C1', 'C2', 'S0']}
         """
         # get region information
         regions = self.regions
@@ -93,8 +87,9 @@ class Locus:
         for k in alignments:
             key_id = k.split("_")[-1]
             copy_num = int(key_id[1:])
-            # sequences that originate from reference genome have ids like C0, C1
-            # extra sequences that has no known reference genome positions have X0, X1
+            # sequences that originate from reference genome have ids like C0,
+            # C1. Extra sequences that has no known reference genome positions
+            # have ids such as X0, X1.
             if key_id.startswith("C"):
                 copies.append(copy_num)
             elif key_id.startswith("X"):
@@ -113,11 +108,11 @@ class Locus:
             elif ori == "-":
                 orientation = "reverse"
             seg[copy_id] = {"chrom": regions[c][0],
-                                 "begin": regions[c][1],
-                                 "end": regions[c][2],
-                                 "length": regions[c][2]-regions[c][1] + 1,
-                                 "orientation": orientation,
-                                 "copy_key": self.paralog_name + "_" + copy_id}
+                            "begin": regions[c][1],
+                            "end": regions[c][2],
+                            "length": regions[c][2]-regions[c][1] + 1,
+                            "orientation": orientation,
+                            "copy_key": self.paralog_name + "_" + copy_id}
         extras_dic = {}
         for e in extras:
             copy_id = "X" + str(e)
@@ -127,19 +122,24 @@ class Locus:
             elif ori == "-":
                 orientation = "reverse"
             extras_dic[copy_id] = {"orientation": orientation,
-                                 "copy_key": self.paralog_name + "_" + copy_id}
+                                   "copy_key": self.paralog_name
+                                   + "_" + copy_id}
         return {"segment_dic": segment_dic,
                 "extras_dic": extras_dic,
                 "segment_copies": segment_copies}
+
     def segment_converter(self):
-        """ Convert 0-offset coordinates between paralogs for a given segment."""
+        """
+        Convert 0-offset coordinates between paralogs for a given segment.
+        """
         segment_dic = self.segment_dic["S0"]
         coordinates = {"C0": {"chromosomes": {}}}
         for c in segment_dic:
             coordinates["C0"]["chromosomes"][c] = segment_dic[c]["chrom"]
-            begin = segment_dic[c]["begin"]
             co = self.alignments[segment_dic[c]["copy_key"]]["coordinates"]
-            rev_co = self.alignments[segment_dic[c]["copy_key"]]["reverse_coordinates"]
+            rev_co = self.alignments[segment_dic[c]["copy_key"]][
+                "reverse_coordinates"
+            ]
             ref_start = segment_dic["C0"]["begin"] - 1
             copy_start = segment_dic[c]["begin"] - 1
             if c != "C0":
@@ -148,11 +148,16 @@ class Locus:
                 for i in co:
                     # convert .5 coordinates to lower whole number
                     j = int(np.floor(i))
-                    coordinates["C0"][c][j + ref_start] = int(np.floor(co[i])) + copy_start
+                    coordinates["C0"][c][j + ref_start] = int(
+                        np.floor(co[i])
+                    ) + copy_start
                 for i in rev_co:
                     j = int(np.floor(i))
-                    coordinates[c][j + copy_start] = int(np.floor(rev_co[i])) + ref_start
+                    coordinates[c][j + copy_start] = int(
+                        np.floor(rev_co[i])
+                    ) + ref_start
         return coordinates
+
     def base_converter(self):
         """ Convert 0-offset pcoordinates to 1-offset."""
         zcoordinates = self.zcoordinates
@@ -165,7 +170,8 @@ class Locus:
                     if co != "chromosomes":
                         pcoordinates[c][co] = {}
                         for k in zcoordinates[c][co]:
-                            pcoordinates[c][co][k+1] = zcoordinates[c][co][k] + 1
+                            pcoordinates[c][co][k+1] = (zcoordinates
+                                                        [c][co][k] + 1)
                     else:
                         pcoordinates[c][co] = zcoordinates[c][co]
             else:
@@ -173,6 +179,7 @@ class Locus:
                 for k in zcoordinates[c]:
                     pcoordinates[c][k+1] = zcoordinates[c][k] + 1
         return pcoordinates
+
     def get_pdiffs(self):
         """ Return 1-offset pdiffs and extra snps. """
         alignments = self.alignments
@@ -198,100 +205,100 @@ class Locus:
                 copy_chrom = segment_dic[c]["chrom"]
                 copy_begin = genomic_copy_begin + target_begin
                 copy_end = genomic_copy_begin + target_end
-                copy_ori = snps[s]["target_orientation"]
                 copy_base = snps[s]["target_base"]
                 diff_ori = "forward"
                 if ref_ori == "-":
                     diff_ori = "reverse"
                     ref_base = mip.reverse_complement(ref_base)
                     copy_base = mip.reverse_complement(copy_base)
-                # insertions and single changes will be represented by a single diff
-                # insertions will have the smaller coordinate as the 1-offset coordinate
-                # so no changes to end and begin coordinates for the reference
-                # but the insertion begin coordinate will be incremented by 1
+                # Insertions and single changes will be represented by a single
+                # diff. Insertions will have the smaller coordinate as the
+                # 1-offset coordinate so no changes to end and begin
+                # coordinates for the reference but the insertion begin
+                # coordinate will be incremented by 1.
                 if end == begin:
                     d = {"chrom": ref_chrom,
                          "begin": begin,
                          "end": end + 1,
                          "type": "insertion",
                          "base": ref_base,
-                         "alleles" : [ref_base],
+                         "alleles": [ref_base],
                          "orientation": diff_ori,
                          "copy_chrom": copy_chrom,
                          "copy_begin": copy_begin + 1,
                          "copy_end": copy_end,
                          "copy_base": copy_base,
-                        "size_difference": copy_end - copy_begin}
+                         "size_difference": copy_end - copy_begin}
                 elif end - begin == 1:
                     d = {"chrom": ref_chrom,
                          "begin": begin + 1,
                          "end": end,
                          "type": "SNV",
                          "base": ref_base,
-                         "alleles" : [ref_base],
+                         "alleles": [ref_base],
                          "orientation": diff_ori,
                          "copy_chrom": copy_chrom,
                          "copy_begin": copy_begin + 1,
                          "copy_end": copy_end,
                          "copy_base": copy_base,
-                        "size_difference": 0}
+                         "size_difference": 0}
                 # multiple changes will be split
                 # if it is not a deletion
                 elif "-" not in copy_base:
                     for i in range(end - begin):
                         if diff_ori == "forward":
                             d = {"chrom": ref_chrom,
-                             "begin": begin + i + 1,
-                             "end": begin + i + 1,
-                             "type": "SNV",
-                             "base": ref_base[i],
-                             "alleles" : [ref_base[i]],
-                             "orientation": diff_ori,
-                             "copy_chrom": copy_chrom,
-                             "copy_begin": copy_begin + i + 1,
-                             "copy_end": copy_begin + i + 1,
-                             "copy_base": copy_base[i],
-                             "size_difference": 0}
+                                 "begin": begin + i + 1,
+                                 "end": begin + i + 1,
+                                 "type": "SNV",
+                                 "base": ref_base[i],
+                                 "alleles": [ref_base[i]],
+                                 "orientation": diff_ori,
+                                 "copy_chrom": copy_chrom,
+                                 "copy_begin": copy_begin + i + 1,
+                                 "copy_end": copy_begin + i + 1,
+                                 "copy_base": copy_base[i],
+                                 "size_difference": 0}
                         else:
                             d = {"chrom": ref_chrom,
-                             "begin": begin + i + 1,
-                             "end": begin + i + 1,
-                             "type": "SNV",
-                             "base": ref_base[i],
-                             "alleles" : [ref_base[i]],
-                             "orientation": diff_ori,
-                             "copy_chrom": copy_chrom,
-                             "copy_begin": copy_end - i,
-                             "copy_end": copy_end - i,
-                             "copy_base": copy_base[-i-1],
-                                "size_difference": 0}
-                else: # if deletion
+                                 "begin": begin + i + 1,
+                                 "end": begin + i + 1,
+                                 "type": "SNV",
+                                 "base": ref_base[i],
+                                 "alleles": [ref_base[i]],
+                                 "orientation": diff_ori,
+                                 "copy_chrom": copy_chrom,
+                                 "copy_begin": copy_end - i,
+                                 "copy_end": copy_end - i,
+                                 "copy_base": copy_base[-i-1],
+                                 "size_difference": 0}
+                else:  # if deletion
                     if diff_ori == "forward":
                         d = {"chrom": ref_chrom,
-                         "begin": begin + 1,
-                         "end": end,
-                         "type": "deletion",
-                         "base": ref_base,
-                         "alleles" : [ref_base],
-                         "orientation": diff_ori,
-                         "copy_chrom": copy_chrom,
-                         "copy_begin": copy_begin,
-                         "copy_end": copy_begin,
-                         "copy_base": copy_base,
-                            "size_difference": begin - end}
+                             "begin": begin + 1,
+                             "end": end,
+                             "type": "deletion",
+                             "base": ref_base,
+                             "alleles": [ref_base],
+                             "orientation": diff_ori,
+                             "copy_chrom": copy_chrom,
+                             "copy_begin": copy_begin,
+                             "copy_end": copy_begin,
+                             "copy_base": copy_base,
+                             "size_difference": begin - end}
                     else:
                         d = {"chrom": ref_chrom,
-                         "begin": begin + 1,
-                         "end": end,
-                         "type": "deletion",
-                         "base": ref_base,
-                         "alleles" : [ref_base],
-                         "orientation": diff_ori,
-                         "copy_chrom": copy_chrom,
-                         "copy_begin": copy_end,
-                         "copy_end": copy_end,
-                         "copy_base": copy_base,
-                            "size_difference": begin - end}
+                             "begin": begin + 1,
+                             "end": end,
+                             "type": "deletion",
+                             "base": ref_base,
+                             "alleles": [ref_base],
+                             "orientation": diff_ori,
+                             "copy_chrom": copy_chrom,
+                             "copy_begin": copy_end,
+                             "copy_end": copy_end,
+                             "copy_base": copy_base,
+                             "size_difference": begin - end}
                 copy_diffs[d["copy_chrom"]
                            + ":" + str(d["copy_begin"])
                            + d["copy_base"] + ":"
@@ -318,76 +325,78 @@ class Locus:
                     diff_ori = "reverse"
                     ref_base = mip.reverse_complement(ref_base)
                     copy_base = mip.reverse_complement(copy_base)
-                # insertions and single changes will be represented by a single diff
+                # insertions and single changes will be represented by a single
+                # diff
                 if end == begin:
                     d = {"chrom": ref_chrom,
                          "begin": begin,
                          "end": end,
                          "type": "insertion",
                          "base": ref_base,
-                        "alleles" : [ref_base],
+                         "alleles": [ref_base],
                          "orientation": diff_ori,
                          "copy_base": copy_base,
-                            "size_difference": len(copy_base)}
+                         "size_difference": len(copy_base)}
                 elif end - begin == 1:
                     d = {"chrom": ref_chrom,
                          "begin": begin + 1,
                          "end": end,
                          "type": "SNV",
                          "base": ref_base,
-                        "alleles" : [ref_base],
+                         "alleles": [ref_base],
                          "orientation": diff_ori,
                          "copy_base": copy_base,
-                            "size_difference": 0}
+                         "size_difference": 0}
                 elif "-" not in copy_base:
                     for i in range(end - begin):
                         if diff_ori == "forward":
                             d = {"chrom": ref_chrom,
-                             "begin": begin + i + 1,
-                             "end": begin + i + 1,
-                             "type": "SNV",
-                             "base": ref_base[i],
-                             "alleles" : [ref_base[i]],
-                             "orientation": diff_ori,
-                             "copy_base": copy_base[i],
-                            "size_difference": 0}
+                                 "begin": begin + i + 1,
+                                 "end": begin + i + 1,
+                                 "type": "SNV",
+                                 "base": ref_base[i],
+                                 "alleles": [ref_base[i]],
+                                 "orientation": diff_ori,
+                                 "copy_base": copy_base[i],
+                                 "size_difference": 0}
                         else:
                             d = {"chrom": ref_chrom,
-                             "begin": begin + i + 1,
-                             "end": begin + i + 1,
-                             "type": "SNV",
-                             "base": ref_base[i],
-                             "alleles" : [ref_base[i]],
-                             "orientation": diff_ori,
-                             "copy_base": copy_base[-i-1],
-                            "size_difference": 0}
+                                 "begin": begin + i + 1,
+                                 "end": begin + i + 1,
+                                 "type": "SNV",
+                                 "base": ref_base[i],
+                                 "alleles": [ref_base[i]],
+                                 "orientation": diff_ori,
+                                 "copy_base": copy_base[-i-1],
+                                 "size_difference": 0}
                 else:
                     if diff_ori == "forward":
                         d = {"chrom": ref_chrom,
-                         "begin": begin + 1,
-                         "end": end,
-                         "type": "deletion",
-                         "base": ref_base,
-                         "alleles" : [ref_base],
-                         "orientation": diff_ori,
-                         "copy_base": copy_base,
-                            "size_difference": begin - end}
+                             "begin": begin + 1,
+                             "end": end,
+                             "type": "deletion",
+                             "base": ref_base,
+                             "alleles": [ref_base],
+                             "orientation": diff_ori,
+                             "copy_base": copy_base,
+                             "size_difference": begin - end}
                     else:
                         d = {"chrom": ref_chrom,
-                         "begin": begin + 1,
-                         "end": end,
-                         "type": "deletion",
-                         "base": ref_base,
-                         "alleles" : [ref_base],
-                         "orientation": diff_ori,
-                         "copy_base": copy_base,
-                            "size_difference": begin - end}
+                             "begin": begin + 1,
+                             "end": end,
+                             "type": "deletion",
+                             "base": ref_base,
+                             "alleles": [ref_base],
+                             "orientation": diff_ori,
+                             "copy_base": copy_base,
+                             "size_difference": begin - end}
                 copy_snps[d["copy_chrom"]
                           + ":" + str(d["copy_begin"])
                           + d["copy_base"] + ":"
                           + ref_base] = d
         return {"pdiffs": diffs,
                 "extra_snps": extra_snps}
+
     def get_snps_from_table(self):
         pcoordinates = self.pcoordinates
         chrom = pcoordinates["C0"]["chromosomes"]["C0"]
@@ -459,6 +468,7 @@ class Locus:
                     d["end"] = end
                 snps[c][d["chrom"] + ":" + str(d["begin"]) + "-" + str(d["end"])] = d
         return snps
+
     def get_snps(self):
         pcoordinates = self.pcoordinates
         chrom = pcoordinates["C0"]["chromosomes"]["C0"]
@@ -510,6 +520,7 @@ class Locus:
                 snp_key = schr + ":" + str(spos) + ":" + sref + ":" + s[4]
                 snps[c][snp_key] = d
         return snps
+
     def get_must(self):
         must_dic = self.rinfo["MUST"]
         pcoordinates = self.pcoordinates
@@ -521,21 +532,26 @@ class Locus:
                 copy_must = must[c]
             except KeyError:
                 copy_must = must[c] = {}
+            try:
+                sz_diff = int(must_dic[m]["size_difference"])
+            except KeyError:
+                sz_diff = 0
             d = {"name": m,
                  "copy_begin": int(must_dic[m]["begin"]),
                  "copy_end": int(must_dic[m]["end"]),
                  "copy_chrom": must_dic[m]["chrom"],
                  "copy_base": must_dic[m]["ref_base"],
                  "snp_id": must_dic[m]["snp_id"],
-                 "alleles": [must_dic[m]["ref_base"]] + must_dic[m]["snp_bases"].split(","),
-                "size_difference": int(must_dic[m]["size_difference"])}
+                 "alleles": ([must_dic[m]["ref_base"]]
+                             + must_dic[m]["snp_bases"].split(",")),
+                 "size_difference": sz_diff}
             if d["size_difference"] == 0:
                 d["type"] = "SNV"
             elif d["size_difference"] < 0:
                 d["type"] = "deletion"
             elif d["size_difference"] > 0:
                 d["type"] = "insertion"
-            if c!= "C0":
+            if c != "C0":
                     begin = pcoordinates[c][d["copy_begin"]]
                     end = pcoordinates[c][d["copy_end"]]
             else:
@@ -549,11 +565,11 @@ class Locus:
                 d["begin"] = begin
                 d["end"] = end
             copy_must[d["copy_chrom"]
-                        + ":" + str(d["copy_begin"])
-                        + must_dic[m]["ref_base"] + ":"
-                        + must_dic[m]["snp_bases"]] = d
-
+                      + ":" + str(d["copy_begin"])
+                      + must_dic[m]["ref_base"] + ":"
+                      + must_dic[m]["snp_bases"]] = d
         return must
+
     def get_variants(self):
         columns = ["chrom", "begin", "end", "base",
          "copy_chrom", "copy_begin", "copy_end", "copy_base",
@@ -703,9 +719,9 @@ class Locus:
             res = []
             for i in range(r_begin, r_end + 1):
                 res.append([r_chrom, i, ac, an])
-            return pd.DataFrame(res, columns = ["chrom",
-                                               "position",
-                                               "AC", "AN"])
+            return pd.DataFrame(res, columns=["chrom",
+                                              "position",
+                                              "AC", "AN"])
         split_result_list = []
         for i in snp_df.index:
             split_result_list.append(
@@ -755,30 +771,33 @@ class Locus:
         insertion_filter = float(self.rinfo["CAPTURE"]["S0"]["maf_for_indels"])
         filt_insertions = insertion_df.loc[(insertion_df["AF"]
                                            >= insertion_filter)]
-        max_sizes = filt_insertions.groupby(["copy_chrom",
-                                 "copy_begin"])["size_difference"].max().reset_index(
-        ).rename(columns = {"size_difference": "max_size"})
-        insertion_df = insertion_df.merge(max_sizes, how = "inner")
-        # Collapse on position and select the largest insertion
-        collapsed_insertions = insertion_df.groupby(["copy_chrom",
-                                                   "copy_begin"]).agg(
-            {"copy_end": "first",
-            "AC": sum,
-            "AN": max,
-            "max_size": max}
-        ).reset_index()
-        # filter for maf
-        collapsed_insertions["AF"] = collapsed_insertions["AC"]/collapsed_insertions["AN"]
-        filt_insertions = collapsed_insertions.loc[collapsed_insertions["AF"]
-                                             >= maf_filter]
+        if not filt_insertions.empty:
+            max_sizes = filt_insertions.groupby(["copy_chrom",
+                                     "copy_begin"])["size_difference"].max().reset_index(
+            ).rename(columns = {"size_difference": "max_size"})
+            insertion_df = insertion_df.merge(max_sizes, how = "inner")
+            # Collapse on position and select the largest insertion
+            collapsed_insertions = insertion_df.groupby(["copy_chrom",
+                                                       "copy_begin"]).agg(
+                {"copy_end": "first",
+                "AC": sum,
+                "AN": max,
+                "max_size": max}
+            ).reset_index()
+            # filter for maf
+            collapsed_insertions["AF"] = collapsed_insertions["AC"]/collapsed_insertions["AN"]
+            filt_insertions = collapsed_insertions.loc[collapsed_insertions["AF"]
+                                                 >= maf_filter]
         self.insertions = filt_insertions
         return
+
     def get_exons(self):
         copies = self.segment_dic["S0"]
         for c in copies:
             copy_key = copies[c]["chrom"] + ":" + str(copies[c]["begin"]) +                         "-" + str(copies[c]["end"])
             copies[c]["genes"] = mip.get_region_exons(copy_key, self.species)
         return
+
     def get_projected_exons(self):
         """create a dictionary of segment exons projected on reference copy
         keys: copy_names: [list of exons of this copy projected on reference copy coordinates],
@@ -828,6 +847,7 @@ class Locus:
             all_exons.extend(projected_exons[p])
         projected_exons["merged"] = sorted(mip.merge_overlap(all_exons), key=itemgetter(0) )
         return projected_exons
+
     def make_subregions (self):
         """ Take a region with its genomic coordinates, a dictionary of possible targets in the region
         which is the output of targets function. Return subregions depending on the capture type that
@@ -861,7 +881,7 @@ class Locus:
                 for c in must:
                     for m in must[c]:
                         if (e[0] <= must[c][m]["begin"]
-                            <= must[c][m]["end"] <= e[1]):
+                           <= must[c][m]["end"] <= e[1]):
                             uncaptured[c].pop(m)
             for c in list(uncaptured.keys()):
                 if len(uncaptured[c]) == 0:
@@ -1009,7 +1029,6 @@ class Paralog(Locus):
         with open(self.resource_dir + self.paralog_name + ".pkl", "rb") as infile:
             self.target_dict = pickle.load(infile)
         self.regions = self.target_dict["regions"]
-        self.target_base_converter()
         self.alignments = self.target_dict["alignments"]
         self.target_genes = self.target_dict["genes"]
         self.segment_dic = self.get_segment_dic()["segment_dic"]

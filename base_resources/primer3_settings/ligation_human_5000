@@ -2,7 +2,7 @@ Primer3 File - http://primer3.sourceforge.net
 P3_FILE_TYPE=settings
 
 P3_FILE_ID="Ligation arm settings"
-PRIMER_THERMODYNAMIC_PARAMETERS_PATH=/data/home/aydemiro/programs/primer3-2.3.6/src/primer3_config/
+PRIMER_THERMODYNAMIC_PARAMETERS_PATH=/opt/resources/primer3_settings/primer3_config/
 PRIMER_TASK=pick_primer_list
 PRIMER_PICK_LEFT_PRIMER=1
 PRIMER_PICK_INTERNAL_OLIGO=0

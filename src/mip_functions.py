@@ -22,11 +22,13 @@ from sklearn.manifold import TSNE
 from scipy.stats import chi2_contingency, fisher_exact
 import pysam
 import mip_classes as mod
+import autoreload
+autoreload.reload(mod)
 import pandas as pd
 import gzip
 print("functions reloading")
 
-
+"""
 # > Below class allows processors from a pool from multiprocessing module to create processor pools of their own.
 # http://mindcache.io/2015/08/09/python-multiprocessing-module-daemonic-processes-are-not-allowed-to-have-children.html
 class NoDaemonProcess(multiprocessing.Process):
@@ -40,6 +42,31 @@ class NoDaemonProcess(multiprocessing.Process):
 # because the latter is only a wrapper function, not a proper class.
 class NoDaemonProcessPool(multiprocessing.pool.Pool):
     Process = NoDaemonProcess
+"""
+# above code was broken when switching to python 3. Below is taken from:
+# https://stackoverflow.com/questions/6974695/python-process-pool-non-daemonic/8963618#8963618
+class NoDaemonProcess(multiprocessing.Process):
+    @property
+    def daemon(self):
+        return False
+
+    @daemon.setter
+    def daemon(self, value):
+        pass
+
+
+class NoDaemonContext(type(multiprocessing.get_context())):
+    Process = NoDaemonProcess
+
+
+# We sub-class multiprocessing.pool.Pool instead of multiprocessing.Pool
+# because the latter is only a wrapper function, not a proper class.
+class NoDaemonProcessPool(multiprocessing.pool.Pool):
+    def __init__(self, *args, **kwargs):
+        kwargs['context'] = NoDaemonContext()
+        super(NoDaemonProcessPool, self).__init__(*args, **kwargs)
+
+
 def get_file_locations():
     """ All static files such as fasta genomes, snp files, etc. must be listed
     in a file in the working directory. File name is file_locations.
@@ -548,11 +575,15 @@ def parse_alignment(reg_file):
                                              "end":int(newline[5]),
                                              "ori":(newline[6]=="F")}
     return reg_dic
+
+
 def id_generator(N):
     """ Generate a random string of length N consisting of uppercase letters and digits.
     Used for generating names for temporary files, etc."""
     return ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(N))
-def hybrid_TM (temp_dir, s1, s2, Na=0.025, Mg=0.01, conc=(0.4*pow(10,-9)), tm=65):
+
+
+def hybrid_TM(temp_dir, s1, s2, Na=0.025, Mg=0.01, conc=(0.4*pow(10,-9)), tm=65):
     """ Return the melting temperature of two oligos at given conditions, using melt.pl
     of UNAfold software suite."""
     # generate random file names for the sequences
@@ -563,17 +594,47 @@ def hybrid_TM (temp_dir, s1, s2, Na=0.025, Mg=0.01, conc=(0.4*pow(10,-9)), tm=65
         with open(temp_dir + f2, "w") as out2:
             out1.write(s1)
             out2.write(s2)
-    t = subprocess.check_output(["melt.pl", "-n",  "DNA", "-t" , str(tm),                      "-N", str(Na), "-M", str(Mg), "-C", str(conc),                     f1, f2], cwd=temp_dir)
+    t = subprocess.check_output(
+        ["melt.pl", "-n",  "DNA", "-t", str(tm), "-N", str(Na), "-M", str(Mg),
+         "-C", str(conc), f1, f2], cwd=temp_dir
+    )
     return float(t.strip().split("\t")[-1])
-def hybrid_TM_files (temp_dir, f1, f2, fo, Na=0.025, Mg=0.01, conc=(0.4*pow(10,-9)), tm=65):
+
+
+def hybrid_TM_files(temp_dir, f1, f2, fo, Na=0.025, Mg=0.01, conc=(0.4*pow(10,-9)), tm=65):
     """ Return the melting temperature of two oligos at given conditions, using melt.pl
     of UNAfold software suite."""
     # generate random file names for the sequences
     # because melt.pl requires sequences to be read from files
-    t = subprocess.check_output(["melt.pl", "-n",  "DNA", "-t" , str(tm),                      "-N", str(Na), "-M", str(Mg), "-C", str(conc),                     f1, f2], cwd=temp_dir)
+    t = subprocess.check_output(
+        ["melt.pl", "-n",  "DNA", "-t" , str(tm), "-N", str(Na), "-M", str(Mg),
+         "-C", str(conc), f1, f2], cwd=temp_dir
+    )
     with open(temp_dir + fo, "w") as of:
         of.write(t)
     return t
+
+
+def get_TM(s1, s2, Na=25, Mg=10, conc=0.4,
+           td_path="/opt/resources/primer3_settings/primer3_config/"):
+    """ Return the melting temperature of two oligos at given conditions,
+    using ntthal from primer3 software.
+
+    Parameters
+    -----------
+    s1 : str, sequence of first oligo.
+    s2 : str, sequence of second oligo
+    Na : int, Sodium (or other monovalent cation) concentration in mM
+    Mg : int, Magnesium (or other divalent cation) concentration in mM
+    conc : float, concentration of the more concentrated oligo in nM
+    td_path : str, path to thermodynamic alignment parameters.
+    """
+    ntt_res = subprocess.check_output(
+        ["ntthal", "-path", td_path, "-mv", str(Na), "-dv", str(Mg),
+         "-d", str(conc), "-s1", s1, "-s2", s2, "-r"])
+    return float(ntt_res.decode("UTF-8").strip())
+
+
 def align_region_worker_for_design(l):
     try:
         # get parameters from the input list
@@ -1597,7 +1658,8 @@ def update_aligned_haplotypes (settings):
             temp_dic = {}
             for c in temp_keys:
                 temp_dic[c] = {"copy_name": call_info[gene_name][m]["copies"][c]["copyname"],
-                               "differences": alignments[h][c]["differences"]}
+                               "differences": alignments[h][c]["differences"],
+                               "chrom": call_info[gene_name][m]["copies"][c]["chrom"]}
             haplotypes[m][h]["mapped_copies"] = temp_dic
             # create a single copy name for the haplotype such as HBA1_C0
             # if there are multiple copies that the haplotype matchedequally well
@@ -3174,11 +3236,9 @@ def intraparalog_aligner(resource_dir,
             identity = alignment_options_dict[t]["identity"]
             coverage = alignment_options_dict[t]["coverage"]
         alignment_options.append("--noytrim")
-        commands = []
-        #if len(target_regions[t]) > 1:
-        query_region = target_regions[t][0]
         tar_regs = target_regions[t]
-        target_keys = [tr[0] + ":" + str(tr[1] + 1) + "-" + str(tr[2]) for tr in tar_regs]
+        target_keys = [tr[0] + ":" + str(tr[1] + 1)
+                       + "-" + str(tr[2]) for tr in tar_regs]
         query_key = target_keys[0]
         with open(resource_dir + t + ".query.fa", "w") as outfile:
             outfile.write(">" + t + "_ref\n")
@@ -3203,7 +3263,7 @@ def intraparalog_aligner(resource_dir,
                 resource_dir + t + ".targets.fa",
                 ["multiple", "unmask", "nameparse=darkspace"],
                 ["unmask", "nameparse=darkspace"],
-                identity, coverage,gen_out,
+                identity, coverage, gen_out,
                 alignment_options, species]
         alignment_commands.append(comm)
         comm = [t + ".query.fa", resource_dir,
@@ -3214,8 +3274,9 @@ def intraparalog_aligner(resource_dir,
                 identity, coverage,
                 diff_out, alignment_options, species]
         alignment_commands.append(comm)
-    #print alignment_commands
     return align_region_multi(alignment_commands, num_process)
+
+
 def check_overlap (r1, r2, padding = 0):
     """ Check if two regions overlap. Regions are given as lists of chrom (str),
     begin (int), end (int)."""
@@ -3225,16 +3286,19 @@ def check_overlap (r1, r2, padding = 0):
     merged = merge_overlap([r1[1:], r2[1:]], padding)
     o2 = len(merged) == 1
     return o1 & o2
+
+
 def alignment_check(region_list):
-    """ Check if any region in the given region list produces overlapping alignments.
-    Return offending regions. Region list must have two alignment options for each region:
-    first one with general output and .al file extension, which will be used
-    to check the alignment."""
+    """ Check if any region in the given region list produces overlapping
+    alignments. Return offending regions. Region list must have two alignment
+    options for each region: one with general output and .al file extension,
+    which will be used to check the alignment."""
     alignments = {}
     for i in range(0, len(region_list), 2):
         alignment_dir = region_list[i][1]
         alignment_file = region_list[i][2]
-        alignment_dic = alignments[alignment_file.split(".")[0]] = {"overlap": []}
+        alignment_dic = alignments[alignment_file.split(".")[0]] = {"overlap":
+                                                                    []}
         alignment_list = alignment_dic["alignments"] = []
         full_alignments = alignment_dic["full_alignments"] = []
         with open(alignment_dir + alignment_file) as infile:
@@ -3244,7 +3308,9 @@ def alignment_check(region_list):
                     alignment_chrom = newline[0]
                     alignment_start = int(newline[1])
                     alignment_end = int(newline[2])
-                    alignment_list.append([alignment_chrom, alignment_start, alignment_end])
+                    alignment_list.append([alignment_chrom,
+                                           alignment_start,
+                                           alignment_end])
                     newline[1] = alignment_start
                     newline[2] = alignment_end
                     full_alignments.append(newline)
@@ -3257,11 +3323,13 @@ def alignment_check(region_list):
                 for i in a_list1:
                     if not overlap_found:
                         for j in a_list2:
-                            if check_overlap(i,j):
+                            if check_overlap(i, j):
                                 alignments[a1]["overlap"].append(a2)
                                 overlap_found = True
                                 break
     return alignments
+
+
 def intra_alignment_checker(family_name,
                             res_dir,
                            target_regions,
@@ -3586,7 +3654,7 @@ def get_fasta_list(regions, species):
         command = ["samtools",  "faidx", genome_fasta]
         command.extend(region_list)
         #print len(region_list)
-        out=subprocess.check_output(command)
+        out=subprocess.check_output(command).decode("UTF-8")
         fasta_list = out.split(">")[1:]
         for f in fasta_list:
             fl = f.strip().split("\n")
@@ -4616,9 +4684,11 @@ def make_primers (input_file,  settings, primer3_input_DIR, primer3_output_DIR, 
     outfile.write(primer3_output)
     outfile.close()
     return
+
+
 def make_primers_worker (l):
     """ A worker function to make primers for multiple regions
-    using separate processors. Reads boulder record in given input
+    using separate processors. Read boulder record in given input
     directory and creates primer output files in output directory"""
     file_locations = get_file_locations()
     primer3_settings_DIR = file_locations["all"]["primer3_settings_DIR"]
@@ -4634,14 +4704,17 @@ def make_primers_worker (l):
     primer3_input_DIR = l[3]
     primer3_output_DIR = l[4]
     # call primer3 program using the input and settings file
-    primer3_output = subprocess.check_output(["primer3_core",
-                                              "-p3_settings_file="+primer3_settings_DIR+settings,
-                                              primer3_input_DIR + input_file])
-    # write boulder record to file. Append the settings used to output file name.
-    outfile = open (primer3_output_DIR + output_file, 'w')
-    outfile.write(primer3_output)
-    outfile.close()
+    primer3_output = subprocess.check_output(
+        ["primer3_core",
+         "-p3_settings_file="+primer3_settings_DIR+settings,
+         primer3_input_DIR + input_file]
+    )
+    # write boulder record to file.
+    with open(primer3_output_DIR + output_file, 'w') as outfile:
+        outfile.write(primer3_output.decode("UTF-8"))
     return
+
+
 def make_primers_multi(ext_list, lig_list, pro):
 
     # create a pool of twice the number of targets (for extension and ligation)
@@ -5306,7 +5379,10 @@ def check_TM (s1,s2):
     """
     # split ntthal command line input to a list of strings
     # to pass into subprocess module
-    ntthal_input = ["ntthal", "-r", "-mv", "25", "-dv", "10", "-n", "0.02",                    "-d", "0.4",  "-path",                    "/home/aydemiro/programs/primer3-2.3.6/src/primer3_config/",                    "-s1", s1, "-s2", s2]
+    ntthal_input = ["ntthal", "-r", "-mv", "25", "-dv", "10", "-n", "0.02",
+                    "-d", "0.4",  "-path",
+                    "/home/aydemiro/programs/primer3-2.3.6/src/primer3_config/",
+                    "-s1", s1, "-s2", s2]
     # run ntthal through subprocess
     TM = subprocess.check_output(ntthal_input, stderr=subprocess.STDOUT)
     return TM
@@ -9938,15 +10014,11 @@ def variation_filter(variation_json, min_barcode_count, min_barcode_fraction):
             filtered_var_table.append(updated_var)
     write_list(filtered_var_table, variation_json + ".filtered.tsv")
     return
-def map_str(s):
-    try:
-        return str(s).encode("utf-8")
-    except UnicodeEncodeError:
-        return s.encode("utf-8")
 def write_list(alist, outfile_name):
     """ Convert values of a list to strings and save to file."""
     with open(outfile_name, "w") as outfile:
-        outfile.write("\n".encode("utf-8").join(["\t".encode("utf-8").                                    join(map(map_str, l)) for l in alist])                      + "\n".encode("utf-8"))
+        outfile.write("\n".join(["\t".join(map(str, l))
+                                for l in alist]) + "\n")
     return
 def snp_stats(hom_case, hom_control,
                het_case, het_control,
@@ -10849,8 +10921,8 @@ def make_snp_vcf(variant_file, haplotype_file, call_info_file,
         if len(genotypes) == 0:
             genotypes = "."
         else:
-            genotypes = "/".join(genotypes)
-        return genotypes + ":" + s
+            genotypes = "/".join(genotypes) + ":" + s
+        return genotypes
     # call genotypes
     vcf = collapsed_merge.applymap(lambda a: call_genotype(
         a, min_cov, min_count, min_freq)
@@ -10989,11 +11061,12 @@ def process_results(wdir,
                 multi_mapping = False
             for c in copies:
                 copy_differences = hap["mapped_copies"][c]["differences"]
+                copy_chrom = hap["mapped_copies"][c]["chrom"]
                 # go through all differences from reference genome
                 # get a subset of information included in the
                 # haplotype dictionary
                 if len(copy_differences) == 0:
-                    reference_list.append([hid, c, multi_mapping])
+                    reference_list.append([hid, c, multi_mapping, copy_chrom])
                 for d in copy_differences:
                     # all variation is left normalized to reference genome
                     # this is done to align all indels to the same start
@@ -11070,14 +11143,15 @@ def process_results(wdir,
     reference_df = pd.DataFrame(reference_list,
                                 columns=["Haplotype ID",
                                          "Copy",
-                                         "Multi Mapping"])
+                                         "Multi Mapping",
+                                         "Chrom"])
 
     # create a dataframe for all mapped haplotypes
     mapped_haplotype_df = pd.concat(
         [variation_df.groupby(
             ["Haplotype ID", "Copy", "Multi Mapping", "CHROM"]
-        ).first().reset_index()[
-            ["Haplotype ID", "Copy", "Multi Mapping", "CHROM"]
+        ).first().reset_index().rename(columns={"CHROM": "Chrom"})[
+            ["Haplotype ID", "Copy", "Multi Mapping", "Chrom"]
         ], reference_df], ignore_index=True
     )
     print(
@@ -11722,6 +11796,12 @@ def process_results(wdir,
     variant_counts["Gene"].fillna("NA", inplace=True)
     variant_counts["AA Change Position"].fillna("NA", inplace=True)
     variant_counts["ExonicFunc"].fillna("NA", inplace=True)
+    # it is possible to filter variants per sample based on their barcode count
+    # this can be provided in the settings as minVariantCount
+    try:
+        min_variant_count = int(settings["minVariantCount"])
+    except KeyError:
+        min_variant_count = 0
     if ref_resistant:
         variant_counts["Reference Resistant"].fillna("No", inplace=True)
         # create pivot table for each unique variant
@@ -11741,6 +11821,10 @@ def process_results(wdir,
         # if a sample did not have a variant, the table value
         # will be NA. Change those to 0.
         variant_table.fillna(0, inplace=True)
+        # Filter based on min count
+        variant_table = variant_table.applymap(
+            lambda a: a if a >= min_variant_count else 0
+        )
         # add amino acid positions and sort table
         # this is to convert an AA Change Position such as Arg59Glu to 59
         # other possible values, for example, 144delGlu for a deletion.
@@ -11890,6 +11974,10 @@ def process_results(wdir,
         # if a sample did not have a variant, the table value will be NA.
         # Change those to 0.
         variant_table.fillna(0, inplace=True)
+        # Filter based on min count
+        variant_table = variant_table.applymap(
+            lambda a: a if a >= min_variant_count else 0
+        )
         # get coverage table with same indexes as
         # the variant table
         v_cols = variant_table.columns
@@ -12229,24 +12317,26 @@ def generate_fastqs(wdir, mipster_files, min_bc_count, min_bc_frac):
     if not os.path.exists(fastq_dir):
         os.makedirs(fastq_dir)
     mipster_dfs = pd.concat([pd.read_table(wdir + mfile,
-                                          usecols = [
+                                           usecols=[
                                               "s_Sample",
                                               'h_popUID',
                                               "h_seq",
                                               'c_qual',
                                               'c_barcodeCnt',
-                                              "c_barcorac"
-                                          ])
+                                              "c_barcodeFrac"
+                                           ])
                              for mfile in mipster_files],
-                           axis = 0,
-                           ignore_index = True)
-    mipster = mipster_dfs.loc[(mipster_dfs["c_barcodeCnt"] >= min_bc_count)
-                              &(mipster_dfs["c_barcorac"] >= min_bc_frac)].groupby(
-        "s_Sample").apply(lambda x: pd.DataFrame.to_dict(
-        x, orient = "index"
+                            axis=0,
+                            ignore_index=True)
+    mipster = mipster_dfs.loc[
+        (mipster_dfs["c_barcodeCnt"] >= min_bc_count)
+        & (mipster_dfs["c_barcorac"] >= min_bc_frac)
+    ].groupby("s_Sample").apply(lambda x: pd.DataFrame.to_dict(
+        x, orient="index"
     )).to_dict()
     for sample in mipster:
-        with gzip.open(fastq_dir + sample + ".fq.gz", "w") as outfile:
+        fastq_file = os.path.join(fastq_dir, sample + ".fq.gz")
+        with gzip.open(fastq_file, "wb") as outfile:
             outfile_list = []
             for ind in mipster[sample]:
                 row = mipster[sample][ind]
@@ -12255,11 +12345,57 @@ def generate_fastqs(wdir, mipster_files, min_bc_count, min_bc_frac):
                 qual = row["c_qual"]
                 seq = row["h_seq"]
                 sample = row["s_Sample"]
-                counter = 0
                 for i in range(bc):
                     read_name = "_".join(["@", sample, hid, str(ind), str(i)])
                     outfile_list.extend([read_name, seq, "+", qual])
-            outfile.write("\n".join(outfile_list) + "\n")
+            outfile.write(("\n".join(outfile_list) + "\n").encode("UTF-8"))
+    return
+
+
+def generate_processed_fastqs_worker(fastq_file, sample_mipster):
+    with gzip.open(fastq_file, "wb") as outfile:
+        outfile_list = []
+        for ind in sample_mipster:
+            row = sample_mipster[ind]
+            bc = int(row["barcode_count"])
+            hid = row["haplotype_ID"]
+            qual = row["sequence_quality"]
+            seq = row["haplotype_sequence"]
+            sample = row["sample_name"]
+            for i in range(bc):
+                read_name = "_".join(["@", sample, hid, str(ind), str(i)])
+                outfile_list.extend([read_name, seq, "+", qual])
+        outfile.write(("\n".join(outfile_list) + "\n").encode("UTF-8"))
+
+
+def generate_processed_fastqs(fastq_dir, mipster_file,
+                              min_bc_count=1,
+                              pro=8):
+    """
+    Generate fastq files for each sample. These files will have stitched and
+    barcode corrected reads.
+    """
+    if not os.path.exists(fastq_dir):
+        os.makedirs(fastq_dir)
+    mipster = pd.read_table(mipster_file,
+                            usecols=[
+                              "sample_name",
+                              'haplotype_ID',
+                              "haplotype_sequence",
+                              'sequence_quality',
+                              'barcode_count'
+                            ])
+    mipster = mipster.loc[mipster["barcode_count"] >= min_bc_count].groupby(
+        "sample_name"
+    ).apply(lambda x: pd.DataFrame.to_dict(x, orient="index")).to_dict()
+    p = Pool(pro)
+    for sample in mipster:
+        fastq_file = os.path.join(fastq_dir, sample + ".fq.gz")
+        sample_mipster = mipster[sample]
+        p.apply_async(generate_processed_fastqs_worker, (fastq_file,
+                                                         sample_mipster))
+    p.close()
+    p.join()
     return
 
 
@@ -12274,6 +12410,8 @@ def convert_to_int(n):
         return int(n)
     except ValueError:
         return np.nan
+
+
 def get_ternary_genotype(gen):
     """
     Convert a 0/0, 0/1, 1/1 type genotype string to

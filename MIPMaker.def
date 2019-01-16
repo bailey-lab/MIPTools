@@ -1,4 +1,4 @@
-Bootstrap: docker
+ibBootstrap: docker
 From: amd64/ubuntu:18.04
 
 %post
@@ -67,7 +67,8 @@ From: amd64/ubuntu:18.04
     "pandas=0.23" \
     "matplotlib=3.0" \
     "seaborn=0.9" \
-    "scikit-learn=0.20"
+    "scikit-learn=0.20" \
+    "scandir=1.9.0"
     conda clean -tipsy
 
     # install lastZ
@@ -82,8 +83,7 @@ From: amd64/ubuntu:18.04
     # copy programs and executables from the resources directory on host
     # working directory
     scp /opt/bin/* /usr/bin
-    cd /usr/bin
-    ls | chmod +xr
+    chmod -R +xr /usr/bin
 
     # install bcl2fastq
     cd /opt/programs
@@ -251,7 +251,7 @@ From: amd64/ubuntu:18.04
     nohup bcl2fastq -o /opt/analysis/fastq \
         --sample-sheet /opt/analysis/SampleSheet.csv \
         --no-lane-splitting
-
+    python /opt/src/demux_qc.py -p $platform
 %apprun wrangle
         set -e
         set -u
