@@ -4729,6 +4729,8 @@ def make_primers_multi(ext_list, lig_list, pro):
     # wait for processes to finish
     p.join()
     return
+
+
 def primer_parser3 (input_file,
                     primer3_output_DIR,
                     bowtie2_input_DIR,
@@ -4881,151 +4883,8 @@ def primer_parser3 (input_file,
             outfile.write(">" + fasta_head + "\n" + fasta_line +"\n")
         outfile.close()
     return primer_dic
-def adjust_worker(chores):
-    try:
-        p_name = chores[0]
-        p_dic = chores[1]
-        chroms = chores[2]
-        p_copies = chores[3]
-        p_tm_diff = chores[4]
-        p_end_identity = chores[5]
-        p_temp_dir = chores[6]
-        p_settings = chores[7]
-        p_spec = chores[8]
-        Na = float(p_settings["Na"])
-        Mg = float(p_settings["Mg"])
-        conc = float(p_settings["oligo_conc"])
-        alt_arm = int(p_settings["alternative_arms"])
-        #chroms = p_coord["C0"]["chromosomes"]
-        ref_coord = p_dic["COORDINATES"]
-        primer_ori = p_dic["ORI"]
-        paralogs = p_dic["PARALOG_COORDINATES"]
-        primer_seq = p_dic["SEQUENCE"]
-        p_dic["BOWTIE_BINDS"] = []
-        try:
-            start = paralogs["C0"]["BOWTIE_START"]
-            end = paralogs["C0"]["BOWTIE_END"]
-        except KeyError:
-            return [p_name, p_dic]
 
-        # add reference copy as paralog
-        paralogs["C0"]["BOWTIE_BOUND"] = True
-        paralogs["C0"]["BOWTIE_SEQUENCE"] = primer_seq
-        p_dic["BOWTIE_BINDS"] = ["C0"]
-        #if alt_arm:
-        paralogs["C0"]["ALT_BOUND"] = True
-        paralogs["C0"]["ALT_SEQUENCE"] = primer_seq
-        p_dic["ALT_BINDS"] = []
 
-        for i in range(len(p_copies)-1):
-            para = paralogs[p_copies[i+1]]
-            try:
-                para_primer_ori = para["ORI"]
-                para_start = para["BOWTIE_START"]
-                para_end = para["BOWTIE_END"]
-                para_chr = para["CHR"]
-                if para_primer_ori == "forward":
-                    para_primer_key = para_chr + ":" + str(para_start) + "-" + str(para_end)
-                    para_primer_seq = fasta_to_sequence(get_fasta(para_primer_key, p_spec))
-                else:
-                    para_primer_key = para_chr + ":" + str(para_end) + "-" + str(para_start)
-                    para_primer_seq = reverse_complement(fasta_to_sequence(get_fasta(para_primer_key, p_spec)))
-                para["BOWTIE_SEQUENCE"] = para_primer_seq
-                if para_primer_seq.upper() == primer_seq.upper():
-                    p_dic["BOWTIE_BINDS"].append(p_copies[i+1])
-                    para["BOWTIE_BOUND"] = True
-                else:
-                    para["BOWTIE_BOUND"] = False
-                    if alt_arm:
-                        try:
-                            alt_tms = {}
-                            ref_tm = hybrid_TM(p_temp_dir, reverse_complement(primer_seq), primer_seq, Na=Na, Mg=Mg, conc=conc)
-                            for j in range(-3,4):
-                                alt_start = para_start + j
-                                if para_primer_ori == "forward":
-                                    alt_primer_key = para_chr + ":" + str(alt_start) + "-" + str(para_end)
-                                    alt_primer_seq = fasta_to_sequence(get_fasta(alt_primer_key, p_spec))
-                                else:
-                                    alt_primer_key = para_chr + ":" + str(para_end) + "-" + str(alt_start)
-                                    alt_primer_seq = reverse_complement(fasta_to_sequence(
-                                                                        get_fasta(alt_primer_key, p_spec)))
-                                alt_tm = hybrid_TM(p_temp_dir, alt_primer_seq, reverse_complement(alt_primer_seq),
-                                                   Na=Na, Mg=Mg, conc=conc)
-                                alt_tms[abs(alt_tm - ref_tm)] = [alt_tm, alt_start, alt_primer_seq]
-                            best_alt_tm = min(alt_tms.keys())
-                            para["ALT_START"] = alt_tms[best_alt_tm][1]
-                            para["ALT_TM"] = alt_tms[best_alt_tm][0]
-                            para["ALT_DIFF"] = ref_tm - para["ALT_TM"]
-                            para["ALT_SEQUENCE"] = alt_tms[best_alt_tm][2]
-                            if best_alt_tm <= p_tm_diff:
-                                para["ALT_BOUND"] = True
-                                p_dic["ALT_BINDS"].append(p_copies[i+1])
-                            else:
-                                para["ALT_BOUND"] = False
-                        except Exception as e:
-                            p_dic["BOWTIE_BINDS"] = [str(e)]
-                    else:
-                        para["ALT_TM"] = 0
-                        para["ALT_TM_DIFF"] = 100
-                        para["ALT_BOUND"] = False
-            except KeyError:
-                para["BOWTIE_TM"] = 0
-                para["BOWTIE_TM_DIFF"] = 100
-                para["BOWTIE_BOUND"] = False
-                para["ALT_TM"] = 0
-                para["ALT_TM_DIFF"] = 100
-                para["ALT_BOUND"] = False
-
-        return [p_name, p_dic]
-    except Exception as e:
-        p_dic["error"] = str(e)
-        return [p_name, p_dic]
-def adjust_paralogs (primer_dic, copies, p_chromosomes, settings,                           primer3_output_DIR, outname, species):
-    """ Take a primer dictionary file and add genomic start and end coordinates
-    of all its paralogs."""
-    # uncomment for using json object instead of dic
-    # load the primers dictionary from file
-    # with open(primer_file, "r") as infile:
-    #     primer_dic = json.load(infile)
-    # primer dict consists of 2 parts, sequence_information dict
-    # and primer information dict. We wont'change the sequence_info part
-    primers = dict(primer_dic["primer_information"])
-    # get chromosomes of the paralog copies
-    #chromosomes = coordinate_converter["C0"]["chromosomes"]
-    # allowed temperature difference for a primer to be considered binding
-    # to a paralog. For example, if its tm for ref copy is 60°C, and for C1 59,
-    # it will be considered satisfying tm restriction, if tm_diff is 2, but
-    # not satisfying if tm_diff is 0.
-    tm_diff = float(settings["tm_diff"])
-    # A specified number of nucleotides at the 3' of a primer and its paralog primer
-    # need to be identical for paralog primers to be considered valid.
-    end_identity = -1 * int(settings["3p_identity"])
-    # add paralog coordinate information for each primer in primers dic
-    chore_list = []
-    dics = []
-    # create a temp directory in temp_dir
-    tmp = primer3_output_DIR + "tmp/"
-    if not os.path.exists(tmp):
-        os.makedirs(tmp)
-    for primer in list(primers.keys()):
-        chore_list.append([primer, primers[primer], p_chromosomes,                          copies, tm_diff, end_identity, tmp, settings, species])
-    num_process = int(settings["processors"])
-    #print chore_list[-1]
-    p = Pool(num_process)
-    p.map_async(adjust_worker, chore_list, callback=dics.extend)
-    p.close()
-    p.join()
-    #print dics[:2]
-    #print dics
-    for dic in dics:
-        primers[dic[0]] = dic[1]
-    out_dic = {}
-    out_dic["sequence_information"] = primer_dic["sequence_information"]
-    out_dic["primer_information"] = primers
-    with open(primer3_output_DIR + outname, "w") as outf:
-        json.dump(out_dic, outf, indent=1)
-    shutil.rmtree(tmp)
-    return out_dic
 def paralog_primer_worker(chores):
     p_name = chores[0]
     p_dic = chores[1]
@@ -5071,6 +4930,8 @@ def paralog_primer_worker(chores):
                 p_dic["PARALOG_COORDINATES"][c] = {"SEQUENCE": para_primer_seq,                          "ORI": "reverse","CHR":chroms[c], "NAME":p_name,                          "GENOMIC_START": para_start, "GENOMIC_END": para_end,                          "COORDINATES":ref_coord}
 
     return [p_name, p_dic]
+
+
 def paralog_primers_multi (primer_dic, copies, coordinate_converter, settings,                           primer3_output_DIR, outname, species, outp = 0):
     """ Take a primer dictionary file and add genomic start and end coordinates
     of all its paralogs."""
@@ -5116,120 +4977,8 @@ def paralog_primers_multi (primer_dic, copies, coordinate_converter, settings,  
             json.dump(out_dic, outf, indent=1)
     shutil.rmtree(tmp)
     return out_dic
-def alter_worker(chores):
-    p_name = chores[0]
-    p_dic = chores[1]
-    p_coord = chores[2]
-    p_copies = chores[3]
-    p_tm_diff = chores[4]
-    p_end_identity = chores[5]
-    p_temp_dir = chores[6]
-    p_settings = chores[7]
-    p_spec = chores[8]
-    Na = float(p_settings["Na"])
-    Mg = float(p_settings["Mg"])
-    conc = float(p_settings["oligo_conc"])
-    chroms = p_coord["C0"]["chromosomes"]
-    ref_coord = p_dic["COORDINATES"]
-    primer_ori = p_dic["ORI"]
-    paralogs = p_dic["PARALOG_COORDINATES"]
-    primer_seq = p_dic["SEQUENCE"]
-    try:
-        start = paralogs["C0"]["BOWTIE_START"]
-        end = paralogs["C0"]["BOWTIE_END"]
-    except KeyError:
-        return [p_name, p_dic]
-    # add reference copy as paralog
-    ref_tm = hybrid_TM(p_temp_dir, primer_seq, reverse_complement(primer_seq), Na=Na, Mg=Mg, conc=conc)
-    paralogs["C0"]["ALT_TM"] = ref_tm
-    paralogs["C0"]["ALT_TM_DIFF"] = ref_tm - ref_tm
-    paralogs["C0"]["ALT_BOUND"] = True
-    p_dic["ALT_BINDS"] = ["C0"]
-    for i in range(1, len(p_copies)):
-        p_cop = p_copies[i]
-        try:
-            para = paralogs[p_cop]
-        except KeyError:
-            continue
-        try:
-            para_primer_ori = para["ORI"]
-            para_start = para["BOWTIE_START"]
-            para_end = para["BOWTIE_END"]
-            para_chr = chroms[p_cop]
-            alt_tms = {}
-            for i in range(-3,4):
-                alt_start = para_start + i
-                if para_primer_ori == "forward":
-                    alt_primer_key = para_chr + ":" + str(alt_start) + "-" + str(para_end)
-                    alt_primer_seq = fasta_to_sequence(get_fasta(alt_primer_key, p_spec))
-                else:
-                    alt_primer_key = para_chr + ":" + str(para_end) + "-" + str(alt_start)
-                    alt_primer_seq = reverse_complement(fasta_to_sequence(
-                                                        get_fasta(alt_primer_key, p_spec)))
-                alt_tm = hybrid_TM(p_temp_dir, alt_primer_seq, reverse_complement(alt_primer_seq),
-                                   Na=Na, Mg=Mg, conc=conc)
-                alt_tms[abs(alt_tm - ref_tm)] = [alt_tm, alt_start, alt_primer_seq]
-            best_alt_tm = min(alt_tms.keys())
-            para["ALT_START"] = alt_tms[best_alt_tm][1]
-            para["ALT_TM"] = alt_tms[best_alt_tm][0]
-            para["ALT_DIFF"] = ref_tm - para["ALT_TM"]
-            para["ALT_SEQUENCE"] = alt_tms[best_alt_tm][2]
-            if best_alt_tm <= p_tm_diff:
-                para["ALT_BOUND"] = True
-                p_dic["ALT_BINDS"].append(p_cop)
 
-        except KeyError:
-            para["ALT_TM"] = 0
-            para["ALT_TM_DIFF"] = ref_tm
-            para["ALT_BOUND"] = False
 
-    return [p_name, p_dic]
-def alternative_paralogs (primer_dic, copies, coordinate_converter, settings,                           primer3_output_DIR, outname, species):
-    """ Take a primer dictionary file and add genomic start and end coordinates
-    of all its paralogs."""
-    # uncomment for using json object instead of dic
-    # load the primers dictionary from file
-    # with open(primer_file, "r") as infile:
-    #     primer_dic = json.load(infile)
-    # primer dict consists of 2 parts, sequence_information dict
-    # and primer information dict. We wont'change the sequence_info part
-    primers = dict(primer_dic["primer_information"])
-    # get chromosomes of the paralog copies
-    chromosomes = coordinate_converter["C0"]["chromosomes"]
-    # allowed temperature difference for a primer to be considered binding
-    # to a paralog. For example, if its tm for ref copy is 60°C, and for C1 59,
-    # it will be considered satisfying tm restriction, if tm_diff is 2, but
-    # not satisfying if tm_diff is 0.
-    tm_diff = float(settings["tm_diff"])
-    # A specified number of nucleotides at the 3' of a primer and its paralog primer
-    # need to be identical for paralog primers to be considered valid.
-    end_identity = -1 * int(settings["3p_identity"])
-    # add paralog coordinate information for each primer in primers dic
-    chore_list = []
-    dics = []
-    # create a temp directory in temp_dir
-    tmp = primer3_output_DIR + "tmp/"
-    if not os.path.exists(tmp):
-        os.makedirs(tmp)
-    for primer in list(primers.keys()):
-        chore_list.append([primer, primers[primer], coordinate_converter,                          copies, tm_diff, end_identity, tmp, settings, species])
-    num_process = int(settings["processors"])
-    #print chore_list[-1]
-    p = Pool(num_process)
-    p.map_async(alter_worker, chore_list, callback=dics.extend)
-    p.close()
-    p.join()
-    #print dics[:2]
-    #print dics
-    for dic in dics:
-        primers[dic[0]] = dic[1]
-    out_dic = {}
-    out_dic["sequence_information"] = primer_dic["sequence_information"]
-    out_dic["primer_information"] = primers
-    with open(primer3_output_DIR + outname, "w") as outf:
-        json.dump(out_dic, outf, indent=1)
-    shutil.rmtree(tmp)
-    return out_dic
 def fasta_parser(fasta):
     """ Convert a fasta file with multiple sequences
     to a dictionary with fasta headers as keys and sequences
@@ -5249,6 +4998,8 @@ def fasta_parser(fasta):
             except KeyError:
                 fasta_dic[header] = line.strip()
     return fasta_dic
+
+
 def fasta_to_sequence(fasta):
     """ Convert a fasta sequence to one line sequence"""
     f = fasta.strip().split("\n")
@@ -5938,7 +5689,9 @@ def alternative(primer_file, output_file, primer3_output_DIR, tm_diff, outp = 1)
                     alts = para[c]["ALTERNATIVES"]
                     ref_tm = alts["ref"].pop("ALT_TM")
                     alts.pop("ref")
-                    sorted_alts = sorted(alts, key=lambda a:                                abs(alts[a]["ALT_TM"] - ref_tm))
+                    sorted_alts = sorted(
+                        alts, key=lambda a: abs(alts[a]["ALT_TM"] - ref_tm)
+                    )
                     if abs(alts[sorted_alts[0]]["ALT_TM"] - ref_tm) <= tm_diff:
                         primer["ALT_BINDS"].append(c)
                         para[c].update(alts[sorted_alts[0]])
@@ -5959,170 +5712,8 @@ def alternative(primer_file, output_file, primer3_output_DIR, tm_diff, outp = 1)
         with open(primer3_output_DIR + output_file, "w") as outfile:
             json.dump(primer_dic, outfile, indent=1)
     return primer_dic
-def cleaner_bowtie (primer_file, bt_file, bt_out, primer_out,primer3_output_DIR,                   bowtie2_output_DIR, N=50, M=500):
-    """ take a bowtie output file and remove all hits on intended
-    target. Then, filter top N hits per primer/mip.
-    Create a cleaned sam output file. Return nothing."""
-    # read in bowtie file
-    infile = open(bowtie2_output_DIR + bt_file, 'r')
-    # create cleaned bowtie out file
-    outfile = open(bowtie2_output_DIR + bt_out, 'w')
-    # read in primer/mip file
-    with open (primer3_output_DIR + primer_file, 'r') as handle:
-        primers = json.load(handle)
-    # create a temp dic to count hits/primer or mip
-    temp = {}
-    # check if primers or mips are cleaned
-    # default is a primer file
-    mip = 0
-    # change mip to 1 if mips are analyzed
-    if "pair_information" in list(primers.keys()):
-        mip = 1
-    counter = 0
-    # read bowtie hits
-    for line in infile:
-        try:
-            if not line.startswith("@"):
-                record = line.strip('\n').split('\t')
-                # another temp dic to
-                primer_name = record [0]
-                flag = record [1]
-                # a flag value of 4 means there was no hit, so pass those lines
-                if flag == "4":
-                    continue
-                # chromosome of the bowtie hit
-                chrom = record [2]
-                # genomic position of bowtie hit
-                pos = int(record [3])
-                # get cigar string of alignment
-                cigar = record[5]
-                # extract which strand is the bowtie hit on
-                # true if forward
-                strand = ((int(record[1]) % 256) == 0)
-                # create an intended variable that will be true if the bt hit is on
-                # an intended target
-                intended = 0
-                # get sequence of mip (if mip) from primer dic
-                if mip:
-                    if "pairs" in list(primers["pair_information"][primer_name].keys()):
-                        para = primers["pair_information"][primer_name]["pairs"]
-                        for p in para:
-                            mip_start = para[p]["mip_start"] -10
-                            mip_end = para[p]["mip_end"] + 10
-                            mip_chrom = para[p]["chrom"]
-                            if (mip_chrom == chrom) and (mip_start <= pos <= mip_end):
-                                intended = 1
-                # get sequence of primer from dic
-                else:
-                    if "PARALOG_COORDINATES" in list(primers['primer_information'][primer_name].keys()):
-                        para = primers['primer_information'][primer_name]["PARALOG_COORDINATES"]
-                        # para is a dic like {C0:{"CHR": "chr4", "GENOMIC_START" ..}, C1:{..
-                        for k in para:
-                            primer_ori = para[k]["ORI"]
-                            primer_chr = para[k]["CHR"]
-                            # expected bowtie hit position depends on the orientation of the primer
-                            # orientation of primer and bowtie hit must be the same
-                            # and genomic start is the hit position for forward, and end for reverse
-                            if primer_ori == "reverse" and not strand and                                (para[k]["GENOMIC_END"]+10) >= pos >= (para[k]["GENOMIC_END"]-10):
-                                intended = 1
-                                para[k]["BOWTIE_END"] = pos
-                                para[k]["BOWTIE_START"] = pos + get_cigar_length(cigar) - 1
-                            elif primer_ori == "forward" and strand and                                  (para[k]["GENOMIC_START"]+10) >= pos >= (para[k]["GENOMIC_START"]-10):
-                                intended = 1
-                                para[k]["BOWTIE_START"] = pos
-                                para[k]["BOWTIE_END"] = pos + get_cigar_length(cigar) - 1
-                    else:
-                        primer_start = primers['primer_information']                                        [primer_name]["GENOMIC_START"]
-                        primer_end = primers['primer_information']                                        [primer_name]["GENOMIC_END"]
-                        primer_chr = primers['primer_information']                                        [primer_name]["CHR"]
-                        primer_ori = primers['primer_information']                                        [primer_name]["ORI"]
-                        if (primer_ori == "forward") and strand and (primer_start == pos) and (primer_chr == chrom):
-                            intended = 1
-                            #print primer_ori, strand, primer_start, pos, primer_chr, chrom
-                        elif (primer_ori == "reverse") and (not strand) and (primer_end == pos) and (primer_chr == chrom):
-                            intended = 1
-                            #print primer_ori, strand, primer_start, pos, primer_chr, chrom
-                        elif counter < 50:
-                            #print primer_ori, strand, primer_start, pos, primer_chr, chrom
-                            counter += 1
 
-                # if the target is intended it should not be added to the cleaned bowtie hits
-                # which is for nonspecific targets only
-                if intended:
-                    continue
-                # if it is a nonspecific hit, check how many hits for this primer
-                # have already been recorded. If none, create a counter for that primer.
-                elif not primer_name in temp:
-                    temp[primer_name] = 1
-                else:
-                    temp[primer_name] += 1
-                # if there are less then N hits recorded, write the line to file
-                if temp[primer_name] < int(N):
-                    outfile.write(line)
-                if temp[primer_name] > int(M):
-                    if "pair_information" in list(primers.keys()):
-                        if primer_name in list(primers["pair_information"].keys()):
-                            primers["pair_information"].pop(primer_name)
-                    elif primer_name in list(primers["primer_information"].keys()):
-                        primers["primer_information"].pop(primer_name)
-        except KeyError:
-            continue
-    infile.close()
-    outfile.close()
-    # write the (if) updated dictionary to the file
-    if primer_out != "":
-        # mip dict is not updated
-        with open(primer3_output_DIR + primer_out, 'w') as outfile:
-            json.dump(primers, outfile, indent=1)
-    return primers
-def cleaner_host_bowtie (primer_file, bt_file, bt_out,primer3_output_DIR,                   bowtie2_output_DIR, N=50):
-    """ take a bowtie output file and remove all hits on intended
-    target. Then, filter top N hits per primer/mip.
-    Create a cleaned sam output file. Return nothing."""
-    # read in bowtie file
-    infile = open(bowtie2_output_DIR + bt_file, 'r')
-    # create cleaned bowtie out file
-    outfile = open(bowtie2_output_DIR + bt_out, 'w')
-    # read in primer/mip file
-    with open (primer3_output_DIR + primer_file, 'r') as handle:
-        primers = json.load(handle)
-    # create a temp dic to count hits/primer or mip
-    temp = {}
-    # check if primers or mips are cleaned
-    # default is a primer file
-    mip = 0
-    # change mip to 1 if mips are analyzed
-    if "pair_information" in list(primers.keys()):
-        mip = 1
-    # read bowtie hits
-    for line in infile:
-        if not line.startswith("@"):
-            record = line.strip('\n').split('\t')
-            # another temp dic to
-            primer_name = record [0]
-            flag = record [1]
-            # a flag value of 4 means there was no hit, so pass those lines
-            if flag == "4":
-                continue
-            # chromosome of the bowtie hit
-            chrom = record [2]
-            # genomic position of bowtie hit
-            pos = int(record [3])
-            # get cigar string of alignment
-            cigar = record[5]
-            # extract which strand is the bowtie hit on
-            # true if forward
-            strand = ((int(record[1]) % 256) == 0)
-            if not primer_name in temp:
-                temp[primer_name] = 1
-            else:
-                temp[primer_name] += 1
-            # if there are less then N hits recorded, write the line to file
-            if temp[primer_name] < int(N):
-                outfile.write(line)
-    infile.close()
-    outfile.close()
-    return primers
+
 def add_bt_worker (primer_name, primer_seq, strand, region, mip, fasta_genome, tmp, settings):
     """ Worker function for add_bowtie_multi function.
     Return TM of each bowtie hit passed from parent function."""
