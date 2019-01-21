@@ -22,8 +22,6 @@ from sklearn.manifold import TSNE
 from scipy.stats import chi2_contingency, fisher_exact
 import pysam
 import mip_classes as mod
-import autoreload
-autoreload.reload(mod)
 import pandas as pd
 import gzip
 print("functions reloading")
@@ -615,7 +613,7 @@ def hybrid_TM_files(temp_dir, f1, f2, fo, Na=0.025, Mg=0.01, conc=(0.4*pow(10,-9
     return t
 
 
-def get_TM(s1, s2, Na=25, Mg=10, conc=0.4,
+def ntthal(s1, s2, Na=25, Mg=10, conc=0.4,
            td_path="/opt/resources/primer3_settings/primer3_config/"):
     """ Return the melting temperature of two oligos at given conditions,
     using ntthal from primer3 software.
@@ -633,6 +631,153 @@ def get_TM(s1, s2, Na=25, Mg=10, conc=0.4,
         ["ntthal", "-path", td_path, "-mv", str(Na), "-dv", str(Mg),
          "-d", str(conc), "-s1", s1, "-s2", s2, "-r"])
     return float(ntt_res.decode("UTF-8").strip())
+
+
+def oligoTM(s, Na=25, Mg=10, conc=0.4,
+            thermodynamic_parameters=1, salt_correction=2):
+    """ Return the melting temperature an oligo at given conditions,
+    using oligotm from primer3 software.
+
+    Parameters
+    -----------
+    s : str, sequence of the oligo.
+    Na : int, Sodium (or other monovalent cation) concentration in mM
+    Mg : int, Magnesium (or other divalent cation) concentration in mM
+    conc : float, concentration of the more concentrated oligo in nM
+    tp : [0|1], Specifies the table of thermodynamic parameters and
+                the method of melting temperature calculation:
+                 0  Breslauer et al., 1986 and Rychlik et al., 1990
+                    (used by primer3 up to and including release 1.1.0).
+                    This is the default, but _not_ the recommended value.
+                 1  Use nearest neighbor parameters from SantaLucia 1998
+                    *THIS IS THE RECOMMENDED VALUE*
+    sc : [0..2], Specifies salt correction formula for the melting
+                 temperature calculation
+                  0  Schildkraut and Lifson 1965, used by primer3 up to
+                     and including release 1.1.0.
+                     This is the default but _not_ the recommended value.
+                  1  SantaLucia 1998
+                     *THIS IS THE RECOMMENDED VAULE*
+                  2  Owczarzy et al., 2004
+
+    """
+    ntt_res = subprocess.check_output(
+        ["oligotm", "-mv", str(Na), "-dv", str(Mg),
+         "-d", str(conc), "-tp", str(thermodynamic_parameters),
+         "-sc", str(salt_correction), s])
+    return float(ntt_res.decode("UTF-8").strip())
+
+
+def calc_tm(sequence, conc, Na,
+            Mg, dNTP_conc=0):
+    from math import log
+    from math import sqrt
+    monovalent_conc = Na/1000
+    divalent_conc = Mg/1000
+    oligo_conc = conc * pow(10, -9)
+    parameters = {}
+    parameters['AA'] = (-7900, -22.2, -1.0)
+    parameters['AT'] = (-7200, -20.4, -0.88)
+    parameters['AC'] = (-8400, -22.4, -1.44)
+    parameters['AG'] = (-7800, -21.0, -1.28)
+
+    parameters['TA'] = (-7200, -21.3, -0.58)
+    parameters['TT'] = (-7900, -22.2, -1.0)
+    parameters['TC'] = (-8200, -22.2, -1.3)
+    parameters['TG'] = (-8500, -22.7, -1.45)
+
+    parameters['CA'] = (-8500, -22.7, -1.45)
+    parameters['CT'] = (-7800, -21.0, -1.28)
+    parameters['CC'] = (-8000, -19.9, -1.84)
+    parameters['CG'] = (-10600, -27.2, -2.17)
+
+    parameters['GA'] = (-8200, -22.2, -1.3)
+    parameters['GT'] = (-8400, -22.4, -1.44)
+    parameters['GC'] = (-9800, -24.4, -2.24)
+    parameters['GG'] = (-8000, -19.9, -1.84)
+    params = parameters
+    # Normalize divalent_conc (Mg) for dNTP_conc
+    K_a = 30000
+    D = ((K_a * dNTP_conc - K_a * divalent_conc + 1) ** 2
+         + 4 * K_a * divalent_conc)
+    divalent_conc = (- (K_a * dNTP_conc - K_a * divalent_conc + 1)
+                     + sqrt(D)) / (2 * K_a)
+
+    # Define a, d, g coefficients used in salt adjustment
+    a_con = 3.92 * (
+        0.843 - 0.352 * sqrt(monovalent_conc) * log(monovalent_conc)
+    )
+    d_con = 1.42 * (
+        1.279 - 4.03 * pow(10, -3) * log(monovalent_conc)
+        - 8.03 * pow(10, -3) * ((log(monovalent_conc))**2)
+    )
+    g_con = 8.31 * (
+        0.486 - 0.258 * log(monovalent_conc)
+        + 5.25 * pow(10, -3) * ((log(monovalent_conc))**3)
+    )
+    dHsum = 0
+    dSsum = 0
+    sequence = sequence.upper()
+    # define duplex initiation values for T and G terminal nucleotides
+    if sequence[-1] == 'G' or sequence[-1] == 'C':
+        dHiTer = 100
+        dSiTer = -2.8
+    elif sequence[-1] == 'A' or sequence[-1] == 'T':
+        dHiTer = 2300
+        dSiTer = 4.1
+    if sequence[0] == 'G' or sequence[0] == 'C':
+        dHiIn = 100
+        dSiIn = -2.8
+    elif sequence[0] == 'A' or sequence[0] == 'T':
+        dHiIn = 2300
+        dSiIn = 4.1
+    dHi = dHiTer + dHiIn
+    dSi = dSiTer + dSiIn
+
+    R = 1.987  # ideal gas constant
+    for i in range(len(sequence)-1):
+        dinuc = sequence[i:(i+2)]
+        dinuc_params = params[dinuc]
+        dH = dinuc_params[0]
+        dS = dinuc_params[1]
+        dHsum += dH
+        dSsum += dS
+    # Tm w/o salt adjustment
+    Tm = (dHsum + dHi)/float(dSsum + dSi + (R*log(oligo_conc)))
+
+    # Salt adjustment
+    GC_frac = calculate_gc(sequence)/100
+    seq_length = len(sequence)
+    if sqrt(divalent_conc)/monovalent_conc < 0.22:
+        Tm = (Tm /
+              (pow(10, -5) * Tm * ((4.29 * GC_frac - 3.95)
+                                   * log(monovalent_conc)
+                                   + 0.94 * (log(monovalent_conc)**2))
+               + 1)
+              )
+
+    elif sqrt(divalent_conc)/monovalent_conc <= 6:
+        Tm = (Tm /
+              (Tm * (a_con
+                     - 0.911 * log(divalent_conc)
+                     + GC_frac * (6.26 + d_con * log(divalent_conc))
+                     + (1 / float(2 * (seq_length - 1))) *
+                     (-48.2 + 52.5 * log(divalent_conc) + g_con *
+                      (log(divalent_conc)) ** 2))
+               * pow(10, -5) + 1))
+    elif sqrt(divalent_conc)/monovalent_conc > 6:
+        a_con = 3.92
+        d_con = 1.42
+        g_con = 8.31
+        Tm = (Tm /
+              (Tm * (a_con
+                     - 0.911 * log(divalent_conc)
+                     + GC_frac * (6.26 + d_con * log(divalent_conc))
+                     + (1 / (2 * float(seq_length - 1))) *
+                     (-48.2 + 52.5 * log(divalent_conc) + g_con *
+                      (log(divalent_conc)) ** 2))
+               * pow(10, -5) + 1))
+    return Tm -  273.15
 
 
 def align_region_worker_for_design(l):
@@ -4762,7 +4907,7 @@ def primer_parser3 (input_file,
     # find sequence related information and add it to appropriate dic.
     for pair in lines:
         tag = pair[0]
-        value = pair [1]
+        value = pair[1]
         if tag.startswith("SEQUENCE"):
             if tag == "SEQUENCE_ID":
                 new_value = value.split(",")[-1].replace("CHR", "chr")
@@ -4908,7 +5053,6 @@ def paralog_primer_worker(chores):
     p_dic["PARALOG_COORDINATES"] = {}
     primer_seq = p_dic["SEQUENCE"]
     # add reference copy as paralog
-    #ref_tm = hybrid_TM(p_temp_dir, extended_primer_seq, primer_seq, Na=Na, Mg=Mg, conc=conc)
     p_dic["PARALOG_COORDINATES"]["C0"] = {"SEQUENCE": primer_seq,                      "ORI": primer_ori,"CHR":chroms["C0"], "NAME":p_name,                      "GENOMIC_START": start, "GENOMIC_END": end, "COORDINATES":ref_coord,                      }
     for c in p_copies:
         if c!= "C0":
@@ -5120,23 +5264,8 @@ def reverse_complement(sequence):
             print("Unexpected base encountered: ", base, " returned as X!!!")
             revcomp.append("X")
     return "".join(revcomp)
-def check_TM (s1,s2):
-    """ Return melting temparature of two sequences as string.
-    Uses ntthal program and current MIP conditions, salt concentration etc.
-    ntthal uses Santa Lucia salt correction which yields TMs a few degrees
-    higher than the most current R.O. correction. Since it is used for
-    determining mispriming, the values it generates are on the safer side.
-    For example, a 46C cut off eliminates primers with 43-44 C mispriming.
-    """
-    # split ntthal command line input to a list of strings
-    # to pass into subprocess module
-    ntthal_input = ["ntthal", "-r", "-mv", "25", "-dv", "10", "-n", "0.02",
-                    "-d", "0.4",  "-path",
-                    "/home/aydemiro/programs/primer3-2.3.6/src/primer3_config/",
-                    "-s1", s1, "-s2", s2]
-    # run ntthal through subprocess
-    TM = subprocess.check_output(ntthal_input, stderr=subprocess.STDOUT)
-    return TM
+
+
 def parse_cigar(cigar):
     """ Parse a cigar string which is made up of numbers followed
     by key letters that represent a sequence alignment; return a dictionary
@@ -5347,14 +5476,8 @@ def cleanest_bowtie (primer_file, primer_out,primer3_output_DIR,                
                             para[k]["ALT_BOUND"] = False
 
         except KeyError:
-            #print str(e)
-
             continue
 
-
-
-    #infile.close()
-    #outfile.close()
     if len(hit_list) > 0:
         with open(bowtie2_output_DIR + "seq_for_tm", "w") as seq_for_tm, \
             open(bowtie2_output_DIR + "hits_for_tm", "w") as hits_for_tm:
@@ -5401,145 +5524,8 @@ def cleanest_bowtie (primer_file, primer_out,primer3_output_DIR,                
         with open(primer3_output_DIR + primer_out, 'w') as outfile:
             json.dump(primers, outfile, indent=1)
     return primers
-def cleanest_bowtie_old (primer_file, primer_out,primer3_output_DIR,                   bowtie2_output_DIR, species, settings):
-    """ Take a primer dict with bowtie information added.
-    Look at bowtie hits for each primer, determine if they
-    are on intended targets or nonspecific. In cases of paralogus
-    regions, check all paralogs and determine if the primer
-    will bind to any paralog. Create alternative primers if necessary
-    and allowed. Get melting temperatures of all hits and add
-    all these information to the primer dictionary.
-    """
-    Na = float(settings["Na"])
-    Mg = float(settings["Mg"])
-    conc = float(settings["oligo_conc"])
-    alt_arm = int(settings["alternative_arms"])
-    # read in primer/mip file
-    with open (primer3_output_DIR + primer_file, 'r') as handle:
-        primers = json.load(handle)
-    seq_list = []
-    hit_list = []
-    bowtie_key ="bowtie_information_" + species
-    # read bowtie hits
-    for primer_name in primers['primer_information']:
-        try:
-            primer_seq = primers['primer_information'][primer_name]["SEQUENCE"]
-            for bt_hit_name in list(primers['primer_information'][primer_name][bowtie_key].keys()):
-                bt_hit = primers['primer_information'][primer_name][bowtie_key][bt_hit_name]
-                bt_chrom = bt_hit["chrom"]
-                bt_begin = bt_hit["begin"]
-                bt_end = bt_hit["end"]
-                bt_ori = bt_hit["strand"]
-                bt_seq = bt_hit["sequence"][3:]
-                intended = 0
-                #try:
-                para = primers['primer_information'][primer_name]["PARALOG_COORDINATES"]
-                if "BOWTIE_BINDS" not in primers['primer_information'][primer_name]:
-                    primers['primer_information'][primer_name]["BOWTIE_BINDS"] = []
-                if "ALT_BINDS" not in primers['primer_information'][primer_name]:
-                    primers['primer_information'][primer_name]["ALT_BINDS"] = []
-                # para is a dict like {C0:{"CHR": "chr4", "GENOMIC_START" ..}, C1:{..
-                for k in para:
-                    para_ori = para[k]["ORI"]
-                    para_chr = para[k]["CHR"]
-                    para_begin = para[k]["GENOMIC_START"]
-                    para_end = para[k]["GENOMIC_END"]
-                    if (para_ori == bt_ori) and (para_chr == bt_chrom) and                        (abs(para_begin - bt_begin) < 10) and (abs(para_end - bt_end) < 10):
-                        intended = 1
-                        para[k]["BOWTIE_END"] = bt_end
-                        para[k]["BOWTIE_START"] = bt_begin
-                        para[k]["BOWTIE_SEQUENCE"] = bt_seq
-                    if intended:
-                        if bt_seq.upper() == primer_seq.upper():
-                            para[k]["BOWTIE_BOUND"] = True
-                            primers['primer_information'][primer_name]["BOWTIE_BINDS"].append(k)
-                        else:
-                            para[k]["BOWTIE_BOUND"] = False
-                            if alt_arm:
-                                al = {}
-                                al ["ref"] = {"ALT_SEQUENCE": primer_seq}
-                                seq_list.extend([">" + primer_name, primer_seq])
-                                hit_list.extend([">alt_" + k + "_ref", reverse_complement(
-                                                 primer_seq)])
-                                for j in range(7):
-                                    alt_start = bt_begin + j
-                                    alt_primer_seq = bt_hit["sequence"][j:]
-                                    al[j] = {}
-                                    al[j]["ALT_START"] = alt_start
-                                    al[j]["ALT_SEQUENCE"] = alt_primer_seq
-                                    seq_list.extend([">" + primer_name, alt_primer_seq])
-                                    hit_list.extend([">alt_" + k + "_" + str(j),
-                                                    reverse_complement(alt_primer_seq)])
-                                para[k]["ALTERNATIVES"] = al
-                            else:
-                                para[k]["ALTERNATIVES"] = {}
-                                para[k]["ALT_TM"] = 0
-                                para[k]["ALT_TM_DIFF"] = 100
-                                para[k]["ALT_BOUND"] = False
-                        primers['primer_information'][primer_name][bowtie_key].pop(bt_hit_name)
-                        break
-                """
-                except KeyError:
-                    #print "KE2"
-                    primer_start = primers['primer_information']\
-                                    [primer_name]["GENOMIC_START"]
-                    primer_end = primers['primer_information']\
-                                    [primer_name]["GENOMIC_END"]
-                    primer_chr = primers['primer_information']\
-                                    [primer_name]["CHR"]
-                    primer_ori = primers['primer_information']\
-                                    [primer_name]["ORI"]
-                    if (primer_ori == bt_ori) and (primer_start == bt_begin) and (primer_chr == bt_chrom):
-                        intended = 1
-                        primers['primer_information'][primer_name][bowtie_key].pop(bt_hit_name)
-                """
-                # if the target is intended it should not be added to the cleaned bowtie hits
-                # which is for nonspecific targets only
-                if not intended:
-                    seq_list.extend([">" + primer_name, primer_seq])
-                    hit_list.extend([">bt_" + bt_hit_name, reverse_complement(bt_seq)])
-                    #print bt_seq
 
-        except KeyError as e:
-            print((str(e)))
 
-            continue
-    #infile.close()
-    #outfile.close()
-    if len(hit_list) > 0:
-        with open(bowtie2_output_DIR + "seq_for_tm", "w") as seq_for_tm,             open(bowtie2_output_DIR + "hits_for_tm", "w") as hits_for_tm:
-            seq_for_tm.write("\n".join(seq_list))
-            hits_for_tm.write("\n".join(hit_list))
-        melt_ext = id_generator(6)
-        tms = hybrid_TM_files(bowtie2_output_DIR, "seq_for_tm", "hits_for_tm", "melting_" + melt_ext,
-                                Na=Na, Mg=Mg, conc=conc)
-        tm_list = tms.split("\n")
-        tm_count = (len(tm_list) - 1)//2
-        for i in range(tm_count):
-            items = tm_list[i].split(" ")
-            h_tm = float(tm_list[i+tm_count+1].split("\t")[-1])
-            p_name = items[2]
-            h_type = items[4].split("_")[0]
-            h_name = items[4].split("_")[-1][:-1]
-            if h_type == "alt":
-                copyname = items[4].split("_")[1]
-                try:
-                    if h_name == "ref":
-                        primers["primer_information"][p_name]["PARALOG_COORDINATES"][copyname]                                   ["ALTERNATIVES"][h_name]["ALT_TM"] = h_tm
-                    else:
-                        primers["primer_information"][p_name]["PARALOG_COORDINATES"][copyname]                                       ["ALTERNATIVES"][int(h_name)]["ALT_TM"] = h_tm
-                except KeyError:
-                    print((p_name, h_name, items))
-
-            else:
-                bowtie_dic = primers["primer_information"][p_name][bowtie_key]
-                for b in bowtie_dic:
-                    if h_name == b:
-                        bowtie_dic[b]["TM"] = h_tm
-    # write the (if) updated dictionary to the file
-    with open(primer3_output_DIR + primer_out, 'w') as outfile:
-        json.dump(primers, outfile, indent=1)
-    return primers
 def parse_bowtie (primer_file, bt_file, primer_out,primer3_output_DIR,                   bowtie2_output_DIR, species, settings, outp = 1):
     """ take a bowtie output file and filter top N hits per primer.
     When a primer has more than "upper_hit_limit" bowtie hits,
