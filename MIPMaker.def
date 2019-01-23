@@ -1,4 +1,4 @@
-ibBootstrap: docker
+Bootstrap: docker
 From: amd64/ubuntu:18.04
 
 %post
@@ -119,7 +119,7 @@ From: amd64/ubuntu:18.04
     src /opt
 
 %environment
-    export PATH=/opt/conda/bin:/opt/programs/MIPWrangler/bin:$PATH
+    export PATH=/opt/conda/bin:/opt/programs/MIPWrangler/bin:/opt/programs/unafold/bin:$PATH
     export XDG_RUNTIME_DIR=""
     export DEBIAN_FRONTEND=noninteractive
     export LANG=en_US.UTF-8
@@ -143,9 +143,7 @@ From: amd64/ubuntu:18.04
                    Using default port 8888 and default dir /opt.]"
         esac
     done
-    rsync /opt/resources/test.ipynb /opt/analysis --ignore-existing \
-        --ignore-missing-args
-    rsync /opt/resources/analysis.ipynb /opt/analysis --ignore-existing \
+    rsync /opt/resources/*.ipynb /opt/analysis --ignore-existing \
         --ignore-missing-args
     jupyter notebook --notebook-dir=$nb_dir --port=$nb_port --no-browser
 
@@ -252,6 +250,22 @@ From: amd64/ubuntu:18.04
         --sample-sheet /opt/analysis/SampleSheet.csv \
         --no-lane-splitting
     python /opt/src/demux_qc.py -p $platform
+
+%apprun demux-qc
+    set -e
+    set -u
+    while getopts p: opt; do
+        case $opt in
+            p)  platform=$OPTARG;;
+            ?)  echo "Usage: singularity run --app fastq-qc \\"
+                echo "           -B /path_to_base_resources:/opt/resources \\"
+                echo "           -B /path_to_fastq_dir:/opt/analysis "
+                echo "            mycontainer.sif -p sequencing_platform"
+                exit 1;;
+        esac
+    done
+    python /opt/src/demux_qc.py -p $platform
+
 %apprun wrangle
         set -e
         set -u
