@@ -89,10 +89,9 @@ From: amd64/ubuntu:18.04
     git checkout develop
     ./install.sh 20
 
-    # copy programs and executables from the resources directory on host
-    # working directory
-    scp /opt/bin/* /usr/bin
+    # add executable flag to executables
     chmod -R +xr /usr/bin
+    chmod -R +xr /opt/bin
 
     # install bcl2fastq
     cd /opt/programs
@@ -128,7 +127,9 @@ From: amd64/ubuntu:18.04
     src /opt
 
 %environment
-    export PATH=/opt/conda/bin:/opt/programs/MIPWrangler/bin:/opt/programs/elucidator/bin:/opt/programs/unafold/bin:$PATH
+    path=/opt/bin:/opt/conda/bin:/opt/programs/MIPWrangler/bin:
+    path+=/opt/programs/elucidator/bin:/opt/programs/unafold/bin:$PATH
+    export PATH=$path
     export XDG_RUNTIME_DIR=""
     export DEBIAN_FRONTEND=noninteractive
     export LANG=en_US.UTF-8
@@ -138,7 +139,8 @@ From: amd64/ubuntu:18.04
 %apprun jupyter
     set -e
     set -u
-    nb_port=8888
+    nb_port=$(shuf -i 8000-9999 -n 1)
+    server_user=$(whoami)@$(hostname -f)
     nb_dir=/opt
     while getopts p:d: OPT; do
         case "$OPT" in
@@ -148,12 +150,15 @@ From: amd64/ubuntu:18.04
               nb_dir="$OPTARG";;
             *)
               echo "Invalid option. Use -p to specify notebook port \
-                   -d to specify notebook directory. \
-                   Using default port 8888 and default dir /opt.]"
+                   -d to specify notebook directory."
         esac
     done
     rsync /opt/resources/*.ipynb /opt/analysis --ignore-existing \
         --ignore-missing-args
+    port_fw="Use the following command if you are running this notebook from "
+    port_fw+="a remote server. Ignore if using a local computer. "
+    port_fw+="ssh -N -f -L $nb_port:localhost:$nb_port:localhost $server_user"
+    echo $port_fw
     jupyter notebook --notebook-dir=$nb_dir --port=$nb_port --no-browser
 
 %apprun wrangler
