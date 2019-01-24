@@ -8,4 +8,4 @@ MIPWrangler mipBarcodeCorrectionMultiple                --masterDir $(realpath .
 MIPWrangler mipCorrectForContamWithSameBarcodesMultiple --masterDir $(realpath ./)  --numThreads $2 --overWriteDirs --overWriteLog --logFile mipCorrectForContamWithSameBarcodes_run1
 MIPWrangler mipClusteringMultiple                       --masterDir $(realpath ./)  --numThreads $2 --overWriteDirs --overWriteLog --logFile mipClustering_run1 --par /opt/resources/clustering_pars/illumina_collapseHomoploymers.pars.txt --countEndGaps
 MIPWrangler mipPopulationClusteringMultiple             --masterDir $(realpath ./)  --numThreads $2 --overWriteDirs --overWriteLog --logFile mipPopClustering_run1 --cutoff 0 --countEndGaps
-nohup MIPWrangler mav			                        --masterDir $(realpath ./)  --numThreads $2 --port $((10000+$1)) --name mip$1  &
+#nohup MIPWrangler mav			                        --masterDir $(realpath ./)  --numThreads $2 --port $((10000+$1)) --name mip$1  &

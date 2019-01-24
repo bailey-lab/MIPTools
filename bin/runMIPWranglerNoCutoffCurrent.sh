@@ -5,9 +5,8 @@ if [[ $# -ne 2 ]]; then
 fi
 
 MIPWrangler mipIllumExtractByArmAndFilterMultiple       --masterDir $(realpath ./)  --numThreads $2 --overWriteDirs --overWriteLog --logFile extractRun_run1 --allowableErrors 6
-MIPWrangler mipBarcodeCorrectionMultiple                --masterDir $(realpath ./)  --numThreads $2 --overWriteDirs --overWriteLog --logFile mipBarcodeCorrecting_run1 --allowableErrors 6  
+MIPWrangler mipBarcodeCorrectionMultiple                --masterDir $(realpath ./)  --numThreads $2 --overWriteDirs --overWriteLog --logFile mipBarcodeCorrecting_run1 --allowableErrors 6
 MIPWrangler mipCorrectForContamWithSameBarcodesMultiple --masterDir $(realpath ./)  --numThreads $2 --overWriteDirs --overWriteLog --logFile mipCorrectForContamWithSameBarcodes_run1
 MIPWrangler mipClusteringMultiple                       --masterDir $(realpath ./)  --numThreads $2 --overWriteDirs --overWriteLog --logFile mipClustering_run1 --par /home/hathawan/hathaway/MIPWrangler/etc/clusteringPars/illumina_collapseHomoploymers.pars.txt --countEndGaps
 MIPWrangler mipPopulationClusteringMultiple             --masterDir $(realpath ./)  --numThreads $2 --overWriteDirs --overWriteLog --logFile mipPopClustering_run1  --refDir /nfs/bailey@bib6/rawData/mips/refs/allRefs/ --cutoff 0 --countEndGaps
-nohup MIPWrangler mav			                        --masterDir $(realpath ./)  --numThreads $2 --port $((10000+$1)) --name mip$1  &
-
+#nohup MIPWrangler mav			                        --masterDir $(realpath ./)  --numThreads $2 --port $((10000+$1)) --name mip$1  &

@@ -195,20 +195,20 @@ stitch_commands = [
 # Create MIPWrangler part II script commands
 now = datetime.datetime.now()
 run_date = now.strftime("%Y%m%d")
+info_file = os.path.join(analysis_dir,
+                         "analysis/populationClustering/allInfo.tab.txt")
+renamed_info = os.path.join(analysis_dir, experiment_id + "_"
+                            + subset_name + "_" + run_date + ".txt")
 wrangler_commands = [
     ["cd", "analysis"],
     ["nohup", cluster_script, str(server_num), str(cpu_count)],
-    ["sleep", "60"],
     ["mv", os.path.join(analysis_dir, "analysis/logs"), analysis_dir],
     ["mv", os.path.join(analysis_dir, "analysis/scripts"), analysis_dir],
     ["mv", os.path.join(analysis_dir, "analysis/resources"), analysis_dir],
     ["mv", os.path.join(analysis_dir, "analysis/nohup.out"),
      os.path.join(analysis_dir, "nohup2.out")],
-    ["mv", os.path.join(analysis_dir, "analysis/serverResources/mip"
-                        + str(server_num)
-                        + "/popClusInfo/allInfo.tab.txt.gz"),
-     os.path.join(analysis_dir, experiment_id + "_"
-                  + subset_name + "_" + run_date + ".txt.gz")]
+    ["mv", info_file, renamed_info],
+    ["pigz", "-9", "-p", str(cpu_count), renamed_info]
 ]
 server_num += 1
 if subset_name in subset_names:
