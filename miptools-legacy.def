@@ -1,6 +1,13 @@
 Bootstrap: docker
 From: amd64/ubuntu:18.04
 
+# copy files from host system to container
+# this is done in %files section for current versions of Singularity
+%setup
+    scp programs ${SINGULARITY_ROOTFS}/opt
+    scp bin ${SINGULARITY_ROOTFS}/opt
+    scp src ${SINGULARITY_ROOTFS}/opt
+
 %post
     # set build environment
     export DEBIAN_FRONTEND=noninteractive \
@@ -122,18 +129,14 @@ From: amd64/ubuntu:18.04
     echo "LANGUAGE=en_US.UTF-8" >> /etc/environment
     locale-gen en_US.UTF-8
 
-%files
-    programs /opt
-    bin /opt
-    src /opt
-
-%environment
-    export PATH=/opt/conda/bin:/opt/programs/MIPWrangler/bin:/opt/programs/elucidator/bin:/opt/programs/unafold/bin:$PATH
-    export XDG_RUNTIME_DIR=""
-    export DEBIAN_FRONTEND=noninteractive
-    export LANG=en_US.UTF-8
-    export LANGUAGE="en_US.UTF-8"
-    export LC_ALL="en_US.UTF-8"
+    path="export PATH=/opt/conda/bin:/opt/programs/MIPWrangler/bin:"
+    path+="/opt/programs/elucidator/bin:/opt/programs/unafold/bin:$PATH"
+    echo  $path >> $SINGULARITY_ENVIRONMENT
+    echo 'export XDG_RUNTIME_DIR=""'
+    echo 'export DEBIAN_FRONTEND=noninteractive'
+    echo 'export LANG=en_US.UTF-8'
+    echo 'export LANGUAGE="en_US.UTF-8"'
+    echo 'export LC_ALL="en_US.UTF-8"'
 
 %apprun jupyter
     set -e
