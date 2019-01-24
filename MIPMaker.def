@@ -81,6 +81,14 @@ From: amd64/ubuntu:18.04
     git clone https://github.com/bailey-lab/MIPWrangler
     cd MIPWrangler
     ./install.sh 20
+
+    # install elucidator
+    cd /opt/programs
+    git clone https://github.com/nickjhathaway/elucidator
+    cd elucidator
+    git checkout develop
+    ./install.sh 20
+
     # copy programs and executables from the resources directory on host
     # working directory
     scp /opt/bin/* /usr/bin
@@ -120,7 +128,7 @@ From: amd64/ubuntu:18.04
     src /opt
 
 %environment
-    export PATH=/opt/conda/bin:/opt/programs/MIPWrangler/bin:/opt/programs/unafold/bin:$PATH
+    export PATH=/opt/conda/bin:/opt/programs/MIPWrangler/bin:/opt/programs/elucidator/bin:/opt/programs/unafold/bin:$PATH
     export XDG_RUNTIME_DIR=""
     export DEBIAN_FRONTEND=noninteractive
     export LANG=en_US.UTF-8
