@@ -35,6 +35,7 @@ From: amd64/ubuntu:18.04
     automake \
     autoconf \
     rsync \
+    pigz \
     perl-tk \
     less \
     software-properties-common
