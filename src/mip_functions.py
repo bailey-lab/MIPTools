@@ -24,6 +24,7 @@ import pysam
 import mip_classes as mod
 import pandas as pd
 import gzip
+from primer3 import calcHeterodimerTm
 print("functions reloading")
 
 """
@@ -581,38 +582,6 @@ def id_generator(N):
     return ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(N))
 
 
-def hybrid_TM(temp_dir, s1, s2, Na=0.025, Mg=0.01, conc=(0.4*pow(10,-9)), tm=65):
-    """ Return the melting temperature of two oligos at given conditions, using melt.pl
-    of UNAfold software suite."""
-    # generate random file names for the sequences
-    # because melt.pl requires sequences to be read from files
-    f1 = id_generator(8)
-    f2 = id_generator(8)
-    with open(temp_dir + f1, "w") as out1:
-        with open(temp_dir + f2, "w") as out2:
-            out1.write(s1)
-            out2.write(s2)
-    t = subprocess.check_output(
-        ["melt.pl", "-n",  "DNA", "-t", str(tm), "-N", str(Na), "-M", str(Mg),
-         "-C", str(conc), f1, f2], cwd=temp_dir
-    )
-    return float(t.strip().split("\t")[-1])
-
-
-def hybrid_TM_files(temp_dir, f1, f2, fo, Na=0.025, Mg=0.01, conc=(0.4*pow(10,-9)), tm=65):
-    """ Return the melting temperature of two oligos at given conditions, using melt.pl
-    of UNAfold software suite."""
-    # generate random file names for the sequences
-    # because melt.pl requires sequences to be read from files
-    t = subprocess.check_output(
-        ["melt.pl", "-n",  "DNA", "-t" , str(tm), "-N", str(Na), "-M", str(Mg),
-         "-C", str(conc), f1, f2], cwd=temp_dir
-    )
-    with open(temp_dir + fo, "w") as of:
-        of.write(t)
-    return t
-
-
 def ntthal(s1, s2, Na=25, Mg=10, conc=0.4, print_command=False,
            td_path="/opt/resources/primer3_settings/primer3_config/"):
     """ Return the melting temperature of two oligos at given conditions,
@@ -671,7 +640,7 @@ def oligoTM(s, Na=25, Mg=10, conc=0.4,
     return float(ntt_res.decode("UTF-8").strip())
 
 
-def calc_tm(sequence, conc, Na,
+def tm_calculator(sequence, conc, Na,
             Mg, dNTP_conc=0):
     from math import log
     from math import sqrt
@@ -5308,8 +5277,11 @@ def get_cigar_length(cigar):
     # all the values in the cigar dictionary represent a base in the reference seq,
     # except the insertions, so they should be subtracted
     return sum(parse_cigar(cigar).values()) - insertions
-def cleanest_bowtie (primer_file, primer_out,primer3_output_DIR,                   bowtie2_output_DIR, species, settings, host = False,
-                    outp = 1):
+
+
+def cleanest_bowtie (primers, primer_out,primer3_output_DIR,
+                     bowtie2_output_DIR, species, settings, host=False,
+                     outp=1):
     """ Take a primer dict with bowtie information added.
     Look at bowtie hits for each primer, determine if they
     are on intended targets or nonspecific. In cases of paralogus
@@ -5318,48 +5290,59 @@ def cleanest_bowtie (primer_file, primer_out,primer3_output_DIR,                
     and allowed. Get melting temperatures of all hits and add
     all these information to the primer dictionary.
     """
-    Na = float(settings["Na"])
-    Mg = float(settings["Mg"])
-    conc = float(settings["oligo_conc"])
+    # get Na, Mg and oligo concentrations these are specified in M but primer3
+    # uses mM for ions and nM for oligos, so those will be adjusted.
+    Na = float(settings["Na"]) * 1000
+    Mg = float(settings["Mg"]) * 1000
+    conc = float(settings["oligo_conc"]) * pow(10, 9)
     alt_arm = int(settings["alternative_arms"])
-    """
-    # read in primer/mip file
-    with open (primer3_output_DIR + primer_file, 'r') as handle:
-        primers = json.load(handle)
-
-    """
-    primers = primer_file
     seq_list = []
     hit_list = []
-    bowtie_key ="bowtie_information_" + species
+    bowtie_key = "bowtie_information_" + species
     # read bowtie hits
     for primer_name in primers['primer_information']:
         try:
             primer_seq = primers['primer_information'][primer_name]["SEQUENCE"]
             if not host:
-                para = primers['primer_information'][primer_name]["PARALOG_COORDINATES"]
-                if "BOWTIE_BINDS" not in primers['primer_information'][primer_name]:
-                    primers['primer_information'][primer_name]["BOWTIE_BINDS"] = []
-                if "ALT_BINDS" not in primers['primer_information'][primer_name]:
-                    primers['primer_information'][primer_name]["ALT_BINDS"] = []
-            for bt_hit_name in list(primers['primer_information'][primer_name][bowtie_key].keys()):
-                bt_hit = primers['primer_information'][primer_name][bowtie_key][bt_hit_name]
+                para = (primers['primer_information'][primer_name]
+                        ["PARALOG_COORDINATES"])
+                if ("BOWTIE_BINDS" not in
+                        primers['primer_information'][primer_name]):
+                    primers[
+                        'primer_information'][primer_name]["BOWTIE_BINDS"] = []
+                if ("ALT_BINDS" not in
+                        primers['primer_information'][primer_name]):
+                    primers[
+                        'primer_information'][primer_name]["ALT_BINDS"] = []
+            for bt_hit_name in list(primers['primer_information']
+                                    [primer_name][bowtie_key].keys()):
+                bt_hit = (primers['primer_information'][primer_name]
+                          [bowtie_key][bt_hit_name])
                 bt_chrom = bt_hit["chrom"]
                 bt_begin = bt_hit["begin"]
                 bt_end = bt_hit["end"]
                 bt_ori = bt_hit["strand"]
                 bt_seq = bt_hit["sequence"]
                 if host:
-                    seq_list.extend([">" + primer_name, primer_seq])
-                    hit_list.extend([">bt_" + bt_hit_name, reverse_complement(bt_seq)])
+                    bt_hit["TM"] = calcHeterodimerTm(
+                        primer_seq,
+                        reverse_complement(bt_seq),
+                        mv_conc=Na,
+                        dv_conc=Mg,
+                        dntp_conc=0,
+                        dna_conc=conc
+                    )
                     continue
                 intended = 0
-                # para is a dict like {C0:{"CHR": "chr4", "GENOMIC_START" ..}, C1:{..
-                # for non-CNV regions, bowtie mapping should be exactly the same as
-                # genomic coordinates, so even if there is 1 bp difference, we'll count
-                # this as off target. For CNV regions, a more generous 100 bp
-                # padding will be allowed to account for differences in our mapping
-                # and bowtie mapping
+                # para is a dict like:
+                # {C0:{"CHR": "chr4", "GENOMIC_START" ..}, C1:{..
+                # for non-CNV regions, bowtie mapping should be exactly the
+                # same as genomic coordinates, so even if there is 1 bp
+                # difference, we'll count this as off target. For CNV regions,
+                # a more generous 100 bp padding will be allowed to account for
+                # differences in our mapping and bowtie mapping. Bowtie mapping
+                # will be accepted as the accurate mapping and paralog
+                # coordinates will be changed accordingly.
                 map_padding = 1
                 if len(para) > 1:
                     map_padding = 100
@@ -5368,66 +5351,106 @@ def cleanest_bowtie (primer_file, primer_out,primer3_output_DIR,                
                     para_chr = para[k]["CHR"]
                     para_begin = para[k]["GENOMIC_START"]
                     para_end = para[k]["GENOMIC_END"]
-                    if (para_ori == bt_ori) and (para_chr == bt_chrom) and                        (abs(para_begin - bt_begin)
-                        < map_padding) and (abs(para_end - bt_end) < map_padding):
+                    if ((para_ori == bt_ori) and (para_chr == bt_chrom)
+                            and (abs(para_begin - bt_begin) < map_padding)
+                            and (abs(para_end - bt_end) < map_padding)):
                         intended = 1
+                        # Get bowtie determined coordinates and sequences
+                        # for the paralog copy. These will have priority
+                        # over GENOMIC_ values calculated internally.
                         para[k]["BOWTIE_END"] = bt_end
                         para[k]["BOWTIE_START"] = bt_begin
                         para[k]["BOWTIE_SEQUENCE"] = bt_seq
                     if intended:
+                        # if the paralog sequence is the same as the reference
+                        # this primer should bind to the paralog copy as well.
                         if bt_seq.upper() == primer_seq.upper():
                             para[k]["BOWTIE_BOUND"] = True
-                            primers['primer_information'][primer_name]["BOWTIE_BINDS"].append(k)
+                            primers['primer_information'][
+                                primer_name]["BOWTIE_BINDS"].append(k)
                         else:
+                            # if the sequences are not exactly the same
+                            # we'll assume the primer does not bind to the
+                            # paralog and attempt to generate an alternative
+                            # primer for this paralog.
                             para[k]["BOWTIE_BOUND"] = False
+                            # Do this only if alternative MIP arms are allowed
+                            # specified by alt_arm setting.
                             if alt_arm:
                                 al = {}
-                                al ["ref"] = {"ALT_SEQUENCE": primer_seq}
-                                seq_list.extend([">" + primer_name, primer_seq])
-                                hit_list.extend([">alt_" + k + "_ref", reverse_complement(
-                                                 primer_seq)])
-                                for j in range(-3,4):
+                                al["ref"] = {"ALT_SEQUENCE": primer_seq}
+                                al["ref"]["ALT_TM"] = calcHeterodimerTm(
+                                    primer_seq,
+                                    reverse_complement(primer_seq),
+                                    mv_conc=Na,
+                                    dv_conc=Mg,
+                                    dntp_conc=0,
+                                    dna_conc=conc
+                                )
+                                for j in range(-3, 4):
                                     if j == 0:
                                         continue
                                     alt_start = bt_begin + j
                                     alt_end = bt_end
                                     if para_ori == "forward":
-                                        alt_primer_key = create_region(bt_chrom,
-                                                                       alt_start,
-                                                                       alt_end)
-                                        alt_primer_seq = get_sequence(alt_primer_key,
-                                                                     species)
+                                        alt_primer_key = create_region(
+                                            bt_chrom,
+                                            alt_start,
+                                            alt_end
+                                        )
+                                        alt_primer_seq = get_sequence(
+                                            alt_primer_key,
+                                            species
+                                        )
                                     else:
-                                        alt_primer_key = create_region(bt_chrom,
-                                                                       alt_end,
-                                                                       alt_start)
-                                        alt_primer_seq = get_sequence(alt_primer_key,
-                                                                     species)
-                                        alt_primer_seq = reverse_complement(alt_primer_seq)
+                                        alt_primer_key = create_region(
+                                            bt_chrom,
+                                            alt_end,
+                                            alt_start
+                                        )
+                                        alt_primer_seq = get_sequence(
+                                            alt_primer_key,
+                                            species
+                                        )
+                                        alt_primer_seq = reverse_complement(
+                                            alt_primer_seq
+                                        )
                                     if alt_primer_seq == "":
                                         continue
                                     al[j] = {}
                                     al[j]["ALT_START"] = alt_start
                                     al[j]["ALT_END"] = alt_end
                                     al[j]["ALT_SEQUENCE"] = alt_primer_seq
-                                    seq_list.extend([">" + primer_name, alt_primer_seq])
-                                    hit_list.extend([">alt_" + k + "_" + str(j),
-                                                    reverse_complement(alt_primer_seq)])
+                                    al[j]["ALT_TM"] = calcHeterodimerTm(
+                                        primer_seq,
+                                        reverse_complement(alt_primer_seq),
+                                        mv_conc=Na,
+                                        dv_conc=Mg,
+                                        dntp_conc=0,
+                                        dna_conc=conc
+                                    )
                                 para[k]["ALTERNATIVES"] = al
                             else:
                                 para[k]["ALTERNATIVES"] = {}
                                 para[k]["ALT_TM"] = 0
                                 para[k]["ALT_TM_DIFF"] = 100
                                 para[k]["ALT_BOUND"] = False
-                        primers['primer_information'][primer_name][bowtie_key].pop(bt_hit_name)
+                        # remove bowtie hit for intended target
+                        primers['primer_information'][
+                            primer_name][bowtie_key].pop(bt_hit_name)
                         break
-                # if the target is intended it should not be added to the cleaned bowtie hits
-                # which is for nonspecific targets only
+                # add TM value for unindended target
                 if not intended:
-                    seq_list.extend([">" + primer_name, primer_seq])
-                    hit_list.extend([">bt_" + bt_hit_name, reverse_complement(bt_seq)])
-                    #print bt_seq
-            # end bowtie check
+                    bt_hit["TM"] = calcHeterodimerTm(
+                        primer_seq,
+                        reverse_complement(bt_seq),
+                        mv_conc=Na,
+                        dv_conc=Mg,
+                        dntp_conc=0,
+                        dna_conc=conc
+                    )
+            # Design alternative primers (if allowed) for paralogs
+            # when there is no bowtie hit for that paralog.
             if not host:
                 for k in para:
                     try:
@@ -5440,37 +5463,57 @@ def cleanest_bowtie (primer_file, primer_out,primer3_output_DIR,                
                         para[k]["BOWTIE_BOUND"] = False
                         if alt_arm:
                             al = {}
-                            al ["ref"] = {"ALT_SEQUENCE": primer_seq}
-                            seq_list.extend([">" + primer_name, primer_seq])
-                            hit_list.extend([">alt_" + k + "_ref", reverse_complement(
-                                             primer_seq)])
-                            for j in range(-3,4):
+                            al["ref"] = {"ALT_SEQUENCE": primer_seq}
+                            al["ref"]["ALT_TM"] = calcHeterodimerTm(
+                                primer_seq,
+                                reverse_complement(primer_seq),
+                                mv_conc=Na,
+                                dv_conc=Mg,
+                                dntp_conc=0,
+                                dna_conc=conc
+                            )
+                            for j in range(-3, 4):
                                 if j == 0:
                                     continue
-                                alt_start = para_begin + j
-                                alt_end = para_end
+                                alt_start = bt_begin + j
+                                alt_end = bt_end
                                 if para_ori == "forward":
-                                    alt_primer_key = create_region(para_chr,
-                                                                   alt_start,
-                                                                   alt_end)
-                                    alt_primer_seq = get_sequence(alt_primer_key,
-                                                                 species)
+                                    alt_primer_key = create_region(
+                                        bt_chrom,
+                                        alt_start,
+                                        alt_end
+                                    )
+                                    alt_primer_seq = get_sequence(
+                                        alt_primer_key,
+                                        species
+                                    )
                                 else:
-                                    alt_primer_key = create_region(para_chr,
-                                                                   alt_end,
-                                                                   alt_start)
-                                    alt_primer_seq = get_sequence(alt_primer_key,
-                                                                 species)
-                                    alt_primer_seq = reverse_complement(alt_primer_seq)
+                                    alt_primer_key = create_region(
+                                        bt_chrom,
+                                        alt_end,
+                                        alt_start
+                                    )
+                                    alt_primer_seq = get_sequence(
+                                        alt_primer_key,
+                                        species
+                                    )
+                                    alt_primer_seq = reverse_complement(
+                                        alt_primer_seq
+                                    )
                                 if alt_primer_seq == "":
                                     continue
                                 al[j] = {}
                                 al[j]["ALT_START"] = alt_start
                                 al[j]["ALT_END"] = alt_end
                                 al[j]["ALT_SEQUENCE"] = alt_primer_seq
-                                seq_list.extend([">" + primer_name, alt_primer_seq])
-                                hit_list.extend([">alt_" + k + "_" + str(j),
-                                                reverse_complement(alt_primer_seq)])
+                                al[j]["ALT_TM"] = calcHeterodimerTm(
+                                    primer_seq,
+                                    reverse_complement(alt_primer_seq),
+                                    mv_conc=Na,
+                                    dv_conc=Mg,
+                                    dntp_conc=0,
+                                    dna_conc=conc
+                                )
                             para[k]["ALTERNATIVES"] = al
                         else:
                             para[k]["ALTERNATIVES"] = {}
@@ -5481,48 +5524,7 @@ def cleanest_bowtie (primer_file, primer_out,primer3_output_DIR,                
         except KeyError:
             continue
 
-    if len(hit_list) > 0:
-        with open(bowtie2_output_DIR + "seq_for_tm", "w") as seq_for_tm, \
-            open(bowtie2_output_DIR + "hits_for_tm", "w") as hits_for_tm:
-            seq_for_tm.write("\n".join(seq_list))
-            hits_for_tm.write("\n".join(hit_list))
-        melt_ext = id_generator(6)
-        tms = hybrid_TM_files(bowtie2_output_DIR,
-                              "seq_for_tm",
-                              "hits_for_tm",
-                              "melting_" + melt_ext,
-                              Na=Na,
-                              Mg=Mg,
-                              conc=conc)
-        tm_list = tms.split("\n")
-        tm_count = (len(tm_list) - 1)//2
-        for i in range(tm_count):
-            items = tm_list[i].split(" ")
-            h_tm = float(tm_list[i+tm_count+1].split("\t")[-1])
-            p_name = items[2]
-            h_type = items[4].split("_")[0]
-            h_name = items[4].split("_")[-1][:-1]
-            if host:
-                bowtie_dic = primers["primer_information"][p_name][bowtie_key]
-                for b in bowtie_dic:
-                    if h_name == b:
-                        bowtie_dic[b]["TM"] = h_tm
-            elif h_type == "alt":
-                copyname = items[4].split("_")[1]
-                try:
-                    if h_name == "ref":
-                        primers["primer_information"][p_name]["PARALOG_COORDINATES"][copyname]                                   ["ALTERNATIVES"][h_name]["ALT_TM"] = h_tm
-                    else:
-                        primers["primer_information"][p_name]["PARALOG_COORDINATES"][copyname]                                       ["ALTERNATIVES"][int(h_name)]["ALT_TM"] = h_tm
-                except KeyError:
-                    pass
-
-            else:
-                bowtie_dic = primers["primer_information"][p_name][bowtie_key]
-                for b in bowtie_dic:
-                    if h_name == b:
-                        bowtie_dic[b]["TM"] = h_tm
-    # write the (if) updated dictionary to the file
+    # write the (if specified) updated dictionary to the file
     if outp:
         with open(primer3_output_DIR + primer_out, 'w') as outfile:
             json.dump(primers, outfile, indent=1)
