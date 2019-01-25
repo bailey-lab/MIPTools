@@ -613,7 +613,7 @@ def hybrid_TM_files(temp_dir, f1, f2, fo, Na=0.025, Mg=0.01, conc=(0.4*pow(10,-9
     return t
 
 
-def ntthal(s1, s2, Na=25, Mg=10, conc=0.4,
+def ntthal(s1, s2, Na=25, Mg=10, conc=0.4, print_command=False,
            td_path="/opt/resources/primer3_settings/primer3_config/"):
     """ Return the melting temperature of two oligos at given conditions,
     using ntthal from primer3 software.
@@ -627,10 +627,13 @@ def ntthal(s1, s2, Na=25, Mg=10, conc=0.4,
     conc : float, concentration of the more concentrated oligo in nM
     td_path : str, path to thermodynamic alignment parameters.
     """
-    ntt_res = subprocess.check_output(
-        ["ntthal", "-path", td_path, "-mv", str(Na), "-dv", str(Mg),
-         "-d", str(conc), "-s1", s1, "-s2", s2, "-r"])
-    return float(ntt_res.decode("UTF-8").strip())
+    cmnd = ["ntthal", "-path", td_path, "-mv", str(Na), "-dv", str(Mg),
+            "-d", str(conc), "-s1", s1, "-s2", s2, "-r"]
+    if print_command:
+        return(" ".join(cmnd))
+    else:
+        ntt_res = subprocess.check_output(cmnd)
+        return float(ntt_res.decode("UTF-8").strip())
 
 
 def oligoTM(s, Na=25, Mg=10, conc=0.4,
@@ -5700,164 +5703,6 @@ def alternative(primer_file, output_file, primer3_output_DIR, tm_diff, outp = 1)
     return primer_dic
 
 
-def add_bt_worker (primer_name, primer_seq, strand, region, mip, fasta_genome, tmp, settings):
-    """ Worker function for add_bowtie_multi function.
-    Return TM of each bowtie hit passed from parent function."""
-    # get the sequence of the region where the bt hit was mapped
-    fasta=subprocess.check_output(["samtools",  "faidx", fasta_genome, region])
-    # extract 1 line sequence from fasta output
-    fasta_list=fasta.split("\n")
-    seq_template_temp = "".join(fasta_list[1:])
-    Na = float(settings["Na"])
-    Mg = float(settings["Mg"])
-    conc = float(settings["oligo_conc"])
-    # if primer is mapped to reverse strand
-    if not strand:
-        # then primer will be complementary to forward strand
-        # and seq_template_temp is the sequence of forward strand
-        seq_template = seq_template_temp
-    # if mapped to forward strand
-    else:
-        # then primer is complementary to reverse strand
-        # so we get reverse complement of mapped sequence
-        seq_template = reverse_complement(seq_template_temp)
-    # ntthal program used for TM checking does not work for >60nt oligos
-    # to use the program on MIPS, get subsequences of the MIP and
-    # use the maximum temperature. It is not optimal but works fine.
-    TM = hybrid_TM(tmp, seq_template, primer_seq, Na=Na, Mg=Mg, conc=conc)
-    # add strand information to bowtie dict
-    # add TM and region information to bowtie dict
-    return TM
-def add_bowtie_multi (primer_file, bowtie_out_file, output_file,                      primer3_output_DIR, bowtie2_output_DIR, num_processors,settings, species="pf"):
-    """Adds bowtie information to a given primer (or MIP) dictionary file (json object).
-    Once done, primer dic still has 2 keys, sequence_information and primer_information.
-    Each primer in primer information dic will have a new key: bowtie_information_"species"
-    whose value is a list of dictionaries (for each bt hit).
-    Mip dictionary will still have 2 keys, sequence_information and pair_information.
-    Each primer pair will have bowtie information associated with the mip they make.
-    bowtie dictionaries have keys primer_name, flag, chrom, pos, cigar, strand, TM,
-    region and other (other parameters not used for now),  with corresponding values.
-    if a mip file is given, mip_information has new key bowtie_information_"species"."""
-    file_locations = get_file_locations()
-    # assign fasta genome file for species
-    fasta_genome = file_locations[species]["fasta_genome"]
-    # get primer dictionary from file
-    with open(primer3_output_DIR + primer_file, "r") as handle:
-        primers = json.load(handle)
-    # are we adding bowtie information for mips or primers?
-    if "pair_information" in list(primers.keys()):
-        # then primers already paired and we are looking at MIP data
-        mip = 1
-    else:
-        # then we are looking at individual primers
-        mip = 0
-    # open bowtie output file
-    infile = open (bowtie2_output_DIR + bowtie_out_file, 'r')
-    # bowtie_key will be added to primer_information dictionaries for each hit.
-    bowtie_key ="bowtie_information_" + species
-    # read each line of bowtie output file into list to be fed to worker func
-    lines = infile.readlines()
-    infile.close()
-    # create a temp directory in temp_dir
-    tmp = bowtie2_output_DIR + "tmp/"
-    if not os.path.exists(tmp):
-        os.makedirs(tmp)
-    # start multiprocess
-    #if __name__ == "__main__":
-    # create a pool of "num_process" processors
-    p = Pool(num_processors)
-    # results of each process will be appended to a list
-    worker_results = []
-    # for each line in bowtie file, extract alignment info
-    for l in lines:
-        if not l.startswith("@"):
-            record = l.strip('\n').split('\t')
-            # create a dic to hold the hit information
-            temp_dic = {}
-            temp_dic["primer_name"] = record [0]
-            temp_dic["flag"] = record [1]
-            # a flag value of 4 means there was no alignment
-            # so no need to continue with this line/hit
-            if temp_dic["flag"] == "4":
-                continue
-            # chromosome of the bowtie hit
-            temp_dic["chrom"] = record [2]
-            # genomic position of bowtie hit
-            temp_dic["pos"] = record [3]
-            # CIGAR string of the hit
-            temp_dic["cigar"] = record [5]
-            # other information belonging the hit
-            # that is not useful for now
-            temp_dic["other"] = record [4:5] + record [6:]
-            # extract which strand is the bowtie hit on
-            # true if forward
-            strand = ((int(record[1]) % 256) == 0)
-            if strand:
-                temp_dic["strand"] = "forward"
-            else:
-                temp_dic["strand"] = "reverse"
-            # get melting temperature of the hit
-            primer_name = temp_dic["primer_name"]
-            # get start and end coordinates of both primers in mip
-            coord = []
-            try:
-                if mip:
-                    primer_seq = primers['pair_information']                                [primer_name]['mip_information']["SEQUENCE"]
-                    ext_start = primers['pair_information']                               [primer_name]['extension_primer_information']                               ["GENOMIC_START"]
-                    ext_end = primers['pair_information']                             [primer_name]['extension_primer_information']                             ["GENOMIC_END"]
-                    lig_start = primers['pair_information']                                [primer_name]['ligation_primer_information']                                ["GENOMIC_START"]
-                    lig_end = primers['pair_information']                             [primer_name]['ligation_primer_information']                             ["GENOMIC_END"]
-                    primer_chr = primers['pair_information']                             [primer_name]['ligation_primer_information']["CHR"]
-                    coord.append(ext_start)
-                    coord.append(ext_end)
-                    coord.append(lig_start)
-                    coord.append(lig_end)
-                # get start and end coordinates of primer
-                else:
-                    primer_seq = primers['primer_information']                                        [primer_name]["SEQUENCE"]
-                    primer_start = primers['primer_information']                                          [primer_name]["GENOMIC_START"]
-                    primer_end = primers['primer_information']                                        [primer_name]["GENOMIC_END"]
-                    primer_chr = primers['primer_information']                                        [primer_name]["CHR"]
-                    coord.append(primer_start)
-                    coord.append(primer_end)
-            except KeyError:
-                continue
-            # check if the hit is on intended target
-            # no specific hit should remain after using cleaner_bowtie function
-            # so this is just double checking
-            #if temp_dic["chrom"] == primer_chr and (temp_dic["pos"] in coord):
-            #    continue
-            # get the coordinates of bowtie hit +/- 5 bp for hybridization test
-            region = temp_dic["chrom"] + ":" + str(int(temp_dic["pos"])-5)            + "-" + str(int(temp_dic["pos"])+len(primer_seq)+5)
-            # create TM list to be populated by the worker function
-            temp_dic["TM"] = []
-            # pick a processor from the pool and pass necessary arguments
-            # callback function will append the calculated TM to the list
-            res = p.apply_async(add_bt_worker, (primer_name, primer_seq, strand,                                region, mip, fasta_genome, tmp, settings), callback=temp_dic["TM"].append)
-            # add the bowtie information dictionary to primer dictionary
-            # all bowtie dictionaries for a single mip/primer are appended
-            # to a list
-            if mip:
-                if bowtie_key in list(primers['pair_information']                   [primer_name]['mip_information'].keys()):
-                    primers['pair_information'][primer_name]                    ['mip_information'][bowtie_key].append(temp_dic)
-                else:
-                    primers['pair_information'][primer_name]                    ['mip_information'][bowtie_key] = [temp_dic]
-            else:
-                if bowtie_key in list(primers['primer_information'][primer_name].keys()):
-                    primers['primer_information'][primer_name][bowtie_key].append(temp_dic)
-                else:
-                    primers['primer_information'][primer_name][bowtie_key] = [temp_dic]
-    # close the pool of processor since no other processes will be added
-    p.close()
-    # wait for each process to finish and then continue with remaining code
-    p.join()
-    # write the updated dictionary to json file in primer3_output_DIR.
-    outfile = open (primer3_output_DIR + output_file, "w")
-    json.dump(primers, outfile, indent=1)
-    outfile.close()
-    # remove files by the tm calculation function
-    shutil.rmtree(tmp)
-    return primers
 def filter_bowtie (primer_file,
                    output_file,
                    primer3_output_DIR,
