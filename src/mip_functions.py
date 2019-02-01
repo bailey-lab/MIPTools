@@ -26,6 +26,14 @@ import pandas as pd
 import gzip
 from primer3 import calcHeterodimerTm
 print("functions reloading")
+# backbone dictionary
+mip_backbones = {
+    "hybrid_bb": "AGATCGGAAGAGCACACGTGACTCGCCAAGCTGAAGNNNNNNNNNNNN",
+    "hybrid_split": "NNNNAGATCGGAAGAGCACACGTGACTCGCCAAGCTGAAGNNNNNNNNNN",
+    "hybrid_split_hp": "AGATCGGAAGAGCACACGTGACTCGCCAAGCTGAAGNNNNNNNNNN",
+    "gc_bb": "GCAGATCGGAAGAGCACACCTCGCCAAGCTTTCGGCNNNNNNNNNNNN",
+    "slx_bb": "CTTCAGCTTCCCGATCCGACGGTAGTGTNNNNNNNNNNNN"
+}
 
 """
 # > Below class allows processors from a pool from multiprocessing module to create processor pools of their own.
@@ -6484,6 +6492,93 @@ def make_mips(pairs, output_file, primer3_output_DIR, mfold_input_DIR,
     return pairs
 
 
+def check_hairpin(pairs, output_file, settings, outp=1):
+    """ Check possible hiybridization between the MIP arms themselves or
+    between the MIP arms and the probe backbone. Remove MIPs with likely
+    hairpins.
+    """
+    pairs = copy.deepcopy(pairs)
+    # get Na, Mg and oligo concentrations these are specified in M but primer3
+    # uses mM for ions and nM for oligos, so those will be adjusted.
+    Na = float(settings["mip"]["Na"]) * 1000
+    Mg = float(settings["mip"]["Mg"]) * 1000
+    conc = float(settings["mip"]["oligo_conc"]) * pow(10, 9)
+    # number of mips will be used to determine the bacbone concentration
+    mip_count = int(settings["mip"]["mipset_size"])
+    # get TM thresholds for hairpins, arm tms should be the same
+    # otherwise we'll use the lower of the two
+    ext_arm_tm = float(settings["extension"]["hairpin_tm"])
+    lig_arm_tm = float(settings["ligation"]["hairpin_tm"])
+    arm_tm = min([ext_arm_tm, lig_arm_tm])
+    # backbone tm will be used for interactions between arms and
+    # all the backbones (from other mips as well). This will cause a higher
+    # tm since the backbones will be more in concentration, so it could
+    # make sense to keep this threshold high. On the other hand, eliminating
+    # even low likelyhood interactions could be useful.
+    backbone_tm = float(settings["ligation"]["hairpin_tm"])
+    backbone_name = settings["mip"]["backbone"]
+    backbone = mip_backbones[backbone_name]
+    # go through mips and calculate hairpins
+    # we will calculate hairpins by looking at TMs between arm sequences
+    # and backbone sequences since the whole MIP sequence is too long
+    # for nearest neighbor calculations (at least or primer3 implementation).
+    for p in pairs["pair_information"].keys():
+        pair_dict = pairs["pair_information"][p]
+        mip_dict = pair_dict["mip_information"]
+        # for each primer pair we can have a number of mips due to paralog
+        # copies having alternative mips. We'll go through each mip.
+        for m in mip_dict.keys():
+            mip_seq = mip_dict[m]["SEQUENCE"]
+            # extract arm and backbone sequences from the mip sequence
+            lig = mip_seq[:mip_seq.index(backbone)]
+            ext = mip_seq[mip_seq.index(backbone) + len(backbone):]
+            bb = backbone.replace("N", "")
+            # calculate dimer TMs between sequence combinations
+            ext_lig = calcHeterodimerTm(ext, lig, mv_conc=Na, dv_conc=Mg,
+                                        dntp_conc=0, dna_conc=conc)
+            bb_ext_arm = calcHeterodimerTm(ext, bb, mv_conc=Na, dv_conc=Mg,
+                                           dntp_conc=0, dna_conc=conc)
+            bb_lig_arm = calcHeterodimerTm(lig, bb, mv_conc=Na, dv_conc=Mg,
+                                           dntp_conc=0, dna_conc=conc)
+            # take the maximum TM for hairpin threshold comparison
+            arms = max([ext_lig, bb_ext_arm, bb_lig_arm])
+            # calculate TM between arms and the whole reaction backbones
+            # backbone concentration will be more for this calculation.
+            bb_ext = calcHeterodimerTm(ext, bb, mv_conc=Na, dv_conc=Mg,
+                                       dntp_conc=0, dna_conc=conc * mip_count)
+            bb_lig = calcHeterodimerTm(lig, bb, mv_conc=Na, dv_conc=Mg,
+                                       dntp_conc=0, dna_conc=conc * mip_count)
+            bb_temp = max([bb_ext, bb_lig])
+            # if either hairpin tms is higher than the limit, remove the mip
+            # and remove the paralog copy that is supposed to be captured
+            # by this specific mip from the pair dictionary.
+            if (arms > arm_tm) or (bb_temp > backbone_tm):
+                lost_captures = mip_dict[m]["captures"]
+                mip_copies = pair_dict["captured_copies"]
+                mip_copies = list(set(mip_copies).difference(lost_captures))
+                alt_copies = pair_dict["alt_copies"]
+                alt_copies = list(set(alt_copies).difference(lost_captures))
+                mip_dict.pop(m)
+            else:
+                mip_dict[m]["Melting Temps"] = {{"arms_hp": ext_lig,
+                                                 "ext_hp": bb_ext_arm,
+                                                 "lig_hp": bb_lig_arm,
+                                                 "ext_backbone": bb_ext,
+                                                 "lig_backbone": bb_lig}}
+        if len(mip_dict) == 0:
+            pairs["pair_information"].pop(p)
+    for p in pairs["pair_information"].keys():
+        pair_dict = pairs["pair_information"][p]
+        hp_dict = pair_dict["hairpin"] = {}
+        mip_dict = pair_dict["mip_information"]
+        for m in mip_dict:
+            hp_dict[m] = mip_dict[m]["Melting Temps"]
+    if outp:
+        with open(output_file, "w") as outfile:
+            json.dump(pairs, outfile)
+    return pairs
+
+
 def make_chunks(l, n):
     """ Yield successive n-sized chunks from l.
     """
@@ -7395,24 +7490,8 @@ def score_hs_mips(mip_file, primer3_output_DIR, output_file):
     json.dump(dic, outfile, indent=1)
     outfile.close()
     return dic
-# backbone compatible with truseq read 2 primer
-hybrid_bb = "AGATCGGAAGAGCACACGTGACTCGCCAAGCTGAAG" + "NNNNNNNNNNNN"
-# backbone compatible with truseq read 2 primer, molecular barcodes 10/4 split
-hybrid_split = "NNNN" + "AGATCGGAAGAGCACACGTGACTCGCCAAGCTGAAG" + "NNNNNNNNNN"
-# backbone compatible with truseq read 2 primer, molecular barcodes 10/4 split
-hybrid_split_hp = "AGATCGGAAGAGCACACGTGACTCGCCAAGCTGAAG" + "NNNNNNNNNN"
-# backbone compatible with truseq; plus GC buffer 3' downstream of primers
-gc_bb = "GCAGATCGGAAGAGCACACCTCGCCAAGCTTTCGGC" + "NNNNNNNNNNNN"
-# old backbone with molecular bar codes on one side
-slx_bb = "CTTCAGCTTCCCGATCCGACGGTAGTGT" + "NNNNNNNNNNNN"
-# backbone dictionary
-backbones = {
-            "hybrid_bb": "AGATCGGAAGAGCACACGTGACTCGCCAAGCTGAAG" + "NNNNNNNNNNNN",
-            "hybrid_split": "NNNN" + "AGATCGGAAGAGCACACGTGACTCGCCAAGCTGAAG" + "NNNNNNNNNN",
-            "hybrid_split_hp": "AGATCGGAAGAGCACACGTGACTCGCCAAGCTGAAG" + "NNNNNNNNNN",
-            "gc_bb": "GCAGATCGGAAGAGCACACCTCGCCAAGCTTTCGGC" + "NNNNNNNNNNNN",
-            "slx_bb": "CTTCAGCTTCCCGATCCGACGGTAGTGT" + "NNNNNNNNNNNN"
-            }
+
+
 def strip_fasta (sequence):
     seq_list = sequence.split('\n')[1:]
     seq_join = "".join(seq_list)

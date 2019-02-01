@@ -2106,8 +2106,10 @@ class Subregion(Locus):
         return
 
     def score_primers(self):
-        """ Score and filter primers. Parameters are specified in the
-        rinfo file and include lowercase masking penalty, """
+        """
+        Score and filter primers. Parameters are specified in the
+        rinfo file.
+        """
         self.primers["scored"] = {}
         self.primers["filtered"] = {}
         mask_penalty = self.scoring["mask_penalty"]
@@ -2117,36 +2119,41 @@ class Subregion(Locus):
             self.primers["filtered"][arm] = {"filename": name + "_filtered"}
             scored = mip.score_paralog_primers(
                 self.primers["alternative"][arm]["dictionary"],
-                  self.primers["scored"][arm]["filename"],
-                  self.primer3_output_DIR, arm,
-                  mask_penalty,
-                 self.species,
-                 outp = int(self.locus.rinfo["CAPTURE"]["S0"]["output_level"]))
+                self.primers["scored"][arm]["filename"],
+                self.primer3_output_DIR, arm, mask_penalty, self.species,
+                outp=int(self.locus.rinfo["CAPTURE"]["S0"]["output_level"])
+            )
             filtered = mip.filter_primers(
-                               scored,
-                               self.primers["filtered"][arm]["filename"],
-                               self.primer3_output_DIR,
-                               int(self.settings[arm]["pick_size"]),
-                               int(self.settings[arm]["bin_size"]),
-                outp = int(self.locus.rinfo["CAPTURE"]["S0"]["output_level"])
-                               )
+                scored, self.primers["filtered"][arm]["filename"],
+                self.primer3_output_DIR, int(self.settings[arm]["pick_size"]),
+                int(self.settings[arm]["bin_size"]),
+                outp=int(self.locus.rinfo["CAPTURE"]["S0"]["output_level"])
+            )
             self.primers["filtered"][arm]["dictionary"] = filtered
         return
 
-    def pick_primer_pairs (self):
-        self.primers["paired"] = {"filename":self.fullname + "_paired"}
+    def pick_primer_pairs(self):
+        """
+        Pick primer pairs from the filtered primers satisfying minimum and
+        maximum product size criteria.
+        """
+        self.primers["paired"] = {"filename": self.fullname + "_paired"}
         settings = self.settings["mip"]
-        self.primers["pairs"] = {"filename":self.fullname + "_pairs"}
+        self.primers["pairs"] = {"filename": self.fullname + "_pairs"}
+        # determine product size range by using the planned sequence  read
+        # lengths, UMI lengths and desired read overlap.
         extension_read_len = int(self.settings["extension"]["read_length"])
         ligation_read_len = int(self.settings["ligation"]["read_length"])
         extension_umi_len = int(self.settings["extension"]["umi_length"])
         ligation_umi_len = int(self.settings["ligation"]["umi_length"])
-        minimum_read_overlap = int(self.settings["mip"]["minimum_read_overlap"])
-        maximum_read_overlap = int(self.settings["mip"]["maximum_read_overlap"])
-        size_min = (extension_read_len + ligation_read_len
-                   - extension_umi_len - ligation_umi_len - maximum_read_overlap)
-        size_max = (extension_read_len + ligation_read_len
-                   - extension_umi_len - ligation_umi_len - minimum_read_overlap)
+        minimum_read_overlap = int(self.settings["mip"]
+                                   ["minimum_read_overlap"])
+        maximum_read_overlap = int(self.settings["mip"]
+                                   ["maximum_read_overlap"])
+        size_min = (extension_read_len + ligation_read_len - extension_umi_len
+                    - ligation_umi_len - maximum_read_overlap)
+        size_max = (extension_read_len + ligation_read_len - extension_umi_len
+                    - ligation_umi_len - minimum_read_overlap)
         paired = mip.pick_paralog_primer_pairs(
             self.primers["filtered"]["extension"]["dictionary"],
             self.primers["filtered"]["ligation"]["dictionary"],
@@ -2157,56 +2164,49 @@ class Subregion(Locus):
             settings["alternative_arms"],
             self.locus.insertions,
             self.subregion_name,
-            outp = int(self.locus.rinfo["CAPTURE"]["S0"]["output_level"])
+            outp=int(self.locus.rinfo["CAPTURE"]["S0"]["output_level"])
         )
         pairs = mip.add_capture_sequence(
             paired,
             self.primers["pairs"]["filename"],
             self.primer3_output_DIR,
             self.species)
-        #self.primers["paired"]["dictionary"] = paired
         self.primers["pairs"]["dictionary"] = pairs
         return
 
-    def make_mips (self):
-        self.mips = {"original":{}}
+    def make_mips(self):
+        self.mips = {"original": {}}
         self.primers["original"]["mip"] = {}
         self.primers["original"]["mip"]["filename"] = self.fullname + "_mips"
-        mips_made = mip.make_mips (self.primers["pairs"]["dictionary"],
-                       self.primers["original"]["mip"]["filename"],
-                       self.primer3_output_DIR,
-                       self.mfold_input_DIR,
-                       mip.backbones[self.settings["mip"]["backbone"]],
-                                  outp = int(self.locus.rinfo["CAPTURE"]["S0"]["output_level"]))
+        mips_made = mip.make_mips(
+            self.primers["pairs"]["dictionary"],
+            self.primers["original"]["mip"]["filename"],
+            self.primer3_output_DIR,
+            self.mfold_input_DIR,
+            mip.mip_backbones[self.settings["mip"]["backbone"]],
+            outp=int(self.locus.rinfo["CAPTURE"]["S0"]["output_level"])
+        )
         self.primers["original"]["mip"]["dictionary"] = mips_made
+        mip_bb = mip.mip_backbones[self.settings["mip"]["backbone"]]
         for m in mips_made["pair_information"]:
             temp = mips_made["pair_information"][m]
-            self.mips["original"][m] = Mip(self,
-                                           m,
-                                           temp,
-                                           mip.backbones[self.settings["mip"]["backbone"]])
+            self.mips["original"][m] = Mip(self, m, temp, mip_bb)
         return
 
-    def hairpin (self):
+    def hairpin(self):
         self.primers["hairpin"] = {}
         self.primers["hairpin"]["filename"] = self.fullname + "_hp"
         self.mips["hairpin"] = {}
-        hp = mip.hairpin_multi(
+        hp = mip.check_hairpin(
             self.primers["original"]["mip"]["dictionary"],
-            self.primers["original"]["mip"]["filename"],
-                          self.primers["hairpin"]["filename"],
-                          self.primer3_output_DIR,
-                          self.bowtie2_input_DIR,
-                          self.mfold_input_DIR,
-                          self.mfold_output_DIR,
-                          int(self.settings["mip"]["processors"]),
-                          #float(self.settings["mip"]["dg"]),
-                          float(self.settings["mip"]["hairpin_tm"]),
-        outp=int(self.locus.rinfo["CAPTURE"]["S0"]["output_level"]))
+            self.primers["hairpin"]["filename"],
+            self.settings,
+            outp=int(self.locus.rinfo["CAPTURE"]["S0"]["output_level"])
+        )
         self.primers["hairpin"]["dictionary"] = hp
         for h in hp["pair_information"]:
-            dg = hp["pair_information"][h]["mip_information"]["ref"]["HAIRPIN"]
-            self.mips["original"][h].hairpin = dg
+            hairpin_tms = hp["pair_information"][h]["hairpin"]
+            self.mips["original"][h].hairpin = hairpin_tms
             self.mips["hairpin"][h] = self.mips["original"][h]
         return
 
