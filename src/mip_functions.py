@@ -1119,6 +1119,8 @@ def align_genes(gene_name_list, wdir, alignment_types = ["differences", "general
     align_region_multi(region_list, num_processor)
     #check = alignment_check(region_list)
     return
+
+
 def align_haplotypes(settings,
                      target_actions = ["unmask", "multiple"],
                      query_actions = ["unmask"],
@@ -1130,7 +1132,7 @@ def align_haplotypes(settings,
     haplotypes_file = wdir + settings["tempHaplotypesFile"]
     with open(haplotypes_file) as infile:
         haplotypes = json.load(infile)
-    species  = settings["species"]
+    species = settings["species"]
     alignment_dir = wdir + settings["alignmentDir"]
     num_processor = int(settings["processorNumber"])
     command_list = []
@@ -1178,6 +1180,8 @@ def align_haplotypes(settings,
     with open(alignment_out_file, "w") as outfile:
         json.dump(alignment, outfile)
     return
+
+
 def parse_aligned_haplotypes(settings):
     wdir = settings["workingDir"]
     species = settings["species"]
@@ -1210,14 +1214,14 @@ def parse_aligned_haplotypes(settings):
                     if rf_ori == "reverse":
                         ref_al = reverse_complement(ref_al)
                     # aligned part of the reference without gaps
-                    ref_used = ref_al.translate(str.maketrans({"-" : None})).upper()
+                    ref_used = ref_al.translate(str.maketrans({"-": None})).upper()
                     hap_name = newline[2]
                     # aligned part of the haplotype with gaps
                     hap_al = newline[3].upper()
                     if rf_ori == "reverse":
                         hap_al = reverse_complement(hap_al)
                     # aligned part of the haplotype without gaps
-                    hap_used = hap_al.translate(str.maketrans({"-" : None})).upper()
+                    hap_used = hap_al.translate(str.maketrans({"-": None})).upper()
                     # alignment (.for match, : and X mismatch, - gap)
                     diff = newline[4]
                     if rf_ori == "reverse":
@@ -1653,6 +1657,8 @@ def parse_aligned_haplotypes(settings):
     with open(alignment_file, "w") as outfile:
         json.dump(result, outfile)
     return
+
+
 def update_aligned_haplotypes (settings):
     """
     Update haplotypes with information from the alignment results.
@@ -1789,6 +1795,8 @@ def update_aligned_haplotypes (settings):
     with open(temp_mapped_haps_file, "w") as outfile:
         json.dump(haplotypes, outfile, indent=1)
     return
+
+
 def update_unique_haplotypes (settings):
     """
     Add new on and off target haplotypes to the unique haplotypes.
@@ -1854,6 +1862,8 @@ def update_unique_haplotypes (settings):
     with open(sequence_to_haplotype_file, "w") as outfile:
         json.dump(sequence_to_haplotype, outfile, indent=1)
     return
+
+
 def update_variation(settings):
     """
     Add new on and off target haplotypes to the unique haplotypes.
@@ -1996,6 +2006,8 @@ def update_variation(settings):
     except KeyError:
         pass
     return
+
+
 def get_raw_data (settings):
     """ Extract raw data from filtered_data file. If there is data from a previous run,
     new data can be added to old data. If this sample set is new, or being analyzed
@@ -3736,6 +3748,8 @@ def create_dirs (dir_name):
     mfold_input_DIR = dir_name + "/mfold_input/"
     mfold_output_DIR = dir_name + "/mfold_output/"
     return [primer3_input_DIR, primer3_output_DIR, bowtie2_input_DIR,            bowtie2_output_DIR, mfold_input_DIR, mfold_output_DIR]
+
+
 def get_coordinates (region):
     """ Define coordinates chr, start pos and end positions
     from region string chrX:start-end. Return coordinate list.
@@ -3746,13 +3760,16 @@ def get_coordinates (region):
     begin = int(coord_list [0])
     end = int(coord_list [1])
     return [chromosome, begin, end]
+
+
 def get_fasta (region, species="pf", offset=1, header="na"):
     """ Take a region string (chrX:begin-end (1 indexed)),
     and species (human=hs, plasmodium= pf),Return fasta record.
     """
     if offset == 0:
         region_coordinates = get_coordinates(region)
-        region = region_coordinates[0] + ":" + str(region_coordinates[1] + 1) +                "-" + str(region_coordinates[2])
+        region = (region_coordinates[0] + ":" + str(region_coordinates[1] + 1)
+                  + "-" + str(region_coordinates[2]))
     region = region.encode("utf-8")
     file_locations = get_file_locations()
     genome_fasta = file_locations[species]["fasta_genome"].encode("utf-8")
@@ -3761,6 +3778,8 @@ def get_fasta (region, species="pf", offset=1, header="na"):
         fasta_seq = "\n".join(fasta.split("\n")[1:])
         fasta = ">" + header + "\n" + fasta_seq
     return fasta
+
+
 def get_fasta_list(regions, species):
     """ Take a list of regions and return fasta sequences."""
     file_locations = get_file_locations()
@@ -3770,8 +3789,7 @@ def get_fasta_list(regions, species):
     for region_list in region_subs:
         command = ["samtools",  "faidx", genome_fasta]
         command.extend(region_list)
-        #print len(region_list)
-        out=subprocess.check_output(command).decode("UTF-8")
+        out = subprocess.check_output(command).decode("UTF-8")
         fasta_list = out.split(">")[1:]
         for f in fasta_list:
             fl = f.strip().split("\n")
@@ -3779,11 +3797,15 @@ def get_fasta_list(regions, species):
             fseq = "".join(fl[1:])
             fasta_dic[fhead] = fseq
     return fasta_dic
+
+
 def create_fasta_file (region, species, output_file):
     if not os.path.exists(output_file):
         os.makedirs(output_file)
     with open (output_file, "w") as outfile:
         outfile.write(get_fasta(region, species))
+
+
 def get_snps (region, snp_file):
     """ Take a region string and a  tabix'ed snp file,
     return a list of snps which are lists of
@@ -3800,6 +3822,8 @@ def get_snps (region, snp_file):
         snps.append(snp)
     del snps[-1] #remove last item which is coming from the new line at the end
     return snps
+
+
 def get_vcf_snps(region, snp_file):
     """ Take a region string and a tabix'ed snp file,
     return a list of snps which are lists of
@@ -5162,6 +5186,8 @@ def bowtie2_run (fasta_file, output_file, bowtie2_input_DIR, bowtie2_output_DIR,
                                    "-S",
                                     bowtie2_output_DIR + output_file])
     return 0
+
+
 def bowtie(fasta_file, output_file, bowtie2_input_DIR, bowtie2_output_DIR, options,
            species,process_num=4, mode="-a", local=0, fastq = 0):
     """ Extract primer sequences from the fasta file,
@@ -5188,6 +5214,8 @@ def bowtie(fasta_file, output_file, bowtie2_input_DIR, bowtie2_output_DIR, optio
     com.append("-S " + bowtie2_output_DIR + output_file)
     dump = subprocess.check_output(com)
     return 0
+
+
 def bwa(fastq_file, output_file, output_type, input_dir,
         output_dir, options, species):
     """ Run bwa alignment on given fastq file using the species bwa indexed genome.
@@ -5244,13 +5272,14 @@ def parse_cigar(cigar):
     with alignment keys and number of bases with that alignment key as values.
     Below is some more information about cigar strings.
 
-    2S20M1I2M5D,for, example would mean that the 2 bases are "S"oft clipped from
-    5' end of the sequence(read) aligned and it is not part of the alignment;
-    following that 2 bases, 20 bases of the read aligns or "Mathces" to the reference sequence,
-    mathc here does not mean the bases are identical, just that there is 1 base of
-    reference for each base of the read and there are enough similarity between the two
-    sequences that they aligned. 1 base following the 20M is an insertion, that is,
-    it exists in the read but not in the reference; 5 bases at the end are "D"eletions,
+    2S20M1I2M5D,for, example would mean that the 2 bases are "S"oft clipped
+    from 5' end of the sequence(read) aligned and it is not part of the
+    alignment; following that 2 bases, 20 bases of the read aligns or "M"atches
+    to the reference sequence, match here does not mean the bases are
+    identical, just that there is 1 base of reference for each base of the read
+    and there are enough similarity between the two sequences that they
+    aligned. 1 base following the 20M is an insertion, that is, it exists in
+    the read but not in the reference; 5 bases at the end are "D"eletions,
     they are in the reference but not in the read.
     """
     cig = {}
@@ -5265,6 +5294,7 @@ def parse_cigar(cigar):
                 cig[c] = int("".join(values))
             values = []
     return cig
+
 def get_cigar_length(cigar):
     """ Get the length of the reference sequence that a read is aligned to,
     given their cigar string."""
@@ -5279,9 +5309,156 @@ def get_cigar_length(cigar):
     return sum(parse_cigar(cigar).values()) - insertions
 
 
-def cleanest_bowtie (primers, primer_out,primer3_output_DIR,
-                     bowtie2_output_DIR, species, settings, host=False,
-                     outp=1):
+def parse_bowtie(primer_dict, bt_file, primer_out, primer3_output_DIR,
+                 bowtie2_output_DIR, species, settings, outp=1):
+    """ Take a bowtie output file and filter top N hits per primer.
+    When a primer has more than "upper_hit_limit" bowtie hits,
+    remove that primer.
+    Add the bowtie hit information, including hit sequence to
+    the primers dictionary.
+    """
+    # extract how many bowtie hits should be added
+    # to the primer information for further TM analysis
+    N = int(settings["hit_limit"])
+    # how many total bowtie hits gets a primer fired
+    M = int(settings["upper_hit_limit"])
+    # read in bowtie file
+    infile = open(bowtie2_output_DIR + bt_file, 'r')
+    primers = copy.deepcopy(primer_dict)
+    # create a temp dic to count hits/primer
+    counter_dic = {}
+    # create a bowtie key that will be used when adding
+    # bowtie information to primers
+    bowtie_key = "bowtie_information_" + species
+    # all bowtie hits that will be used further for TM analysis
+    # will need to have sequence information with them
+    # region keys for hits (in chrx:begin-end format) will be
+    # kept in a list for mass fasta extraction later.
+    keys = []
+    #
+    # read bowtie hits
+    for line in infile:
+        try:
+            if not line.startswith("@"):
+                record = line.strip('\n').split('\t')
+                primer_name = record[0]
+                # increment hit counter for primer
+                try:
+                    counter_dic[primer_name] += 1
+                except KeyError:
+                    counter_dic[primer_name] = 1
+                # check how many hits have been analyzed for this primer
+                # if upper hit limit has been reached, mark primer for removal
+                if counter_dic[primer_name] >= M:
+                    primers['primer_information'][primer_name]["remove"] = True
+                    continue
+                # move on to the next hit if primer hit limit has been reached.
+                # no further hits will be added for those primers
+                if counter_dic[primer_name] >= N:
+                    continue
+                flag = record[1]
+                # a flag value of 4 means there was no hit, so pass those lines
+                if flag == "4":
+                    continue
+                # chromosome of the bowtie hit
+                chrom = record[2]
+                # genomic position of bowtie hit
+                pos = int(record[3])
+                # get cigar string of alignment
+                cigar = record[5]
+                # extract which strand is the bowtie hit on
+                # true if forward
+                strand = ((int(record[1]) % 256) == 0)
+                # get hit coordinates
+                hit_start = pos
+                # bowtie gives us the start position of the hit
+                # end position is calculated using the cigar string
+                # of the hit
+                hit_end = pos + get_cigar_length(cigar) - 1
+                # create region keys required for sequence retrieval
+                # we want 3 nt extra on the 5' of the primer
+                # because when alternative primers for paralogs
+                # are considered we check +/- 3 nt from 5' end
+                # to balance TM.
+                if strand:
+                    # Primer's 5' is the hit start when the hit is on forward
+                    # strand so the nucleotides are added at start position
+                    bt_start = hit_start
+                    bt_end = hit_end
+                    hit_str = "forward"
+                    hit_region_key = (chrom + ":" + str(hit_start)
+                                      + "-" + str(hit_end))
+                else:
+                    bt_start = hit_end
+                    bt_end = hit_start
+                    hit_str = "reverse"
+                    hit_region_key = (chrom + ":" + str(hit_start)
+                                      + "-" + str(hit_end))
+                # add region key to keys list for fasta retrieval later
+                keys.append(hit_region_key)
+                # add all hit information to primer dictionary
+                try:
+                    primers["primer_information"][primer_name][bowtie_key][
+                        str(counter_dic[primer_name])
+                    ] = {"chrom": chrom, "begin": bt_start, "end": bt_end,
+                         "key": hit_region_key, "strand": hit_str}
+                except KeyError:
+                    primers["primer_information"][primer_name][bowtie_key] = {
+                         str(counter_dic[primer_name]): {"chrom": chrom,
+                                                         "begin": bt_start,
+                                                         "end": bt_end,
+                                                         "key": hit_region_key,
+                                                         "strand": hit_str}
+                    }
+        except KeyError:
+            # in earlier versions of this function the primers with
+            # excessive hits were removed during iteration and that lead
+            # to keyerrors. Now there should be no key error.
+            continue
+    # get the fasta sequences of all hits
+    sequence_dic = get_fasta_list(keys, species)
+    # remove primers with too many hits and add bowtie information for others.
+    for p in list(primers["primer_information"].keys()):
+        try:
+            if primers["primer_information"][p]["remove"]:
+                primers["primer_information"].pop(p)
+                continue
+        except KeyError:
+            pass
+        # add hit sequences to primer dictionary
+        # forward strand hits are added directly
+        # reverse strand hits are reversed-complemented
+        # so the hit is always in the primer orientation and
+        # and similar in sequence
+        try:
+            for h in primers["primer_information"][p][bowtie_key]:
+                if (primers["primer_information"][p]
+                        [bowtie_key][h]["strand"] == "forward"):
+                    primers["primer_information"][p][bowtie_key][h][
+                        "sequence"
+                    ] = sequence_dic[primers["primer_information"][p][
+                        bowtie_key][h]["key"]
+                    ]
+                else:
+                    primers["primer_information"][p][bowtie_key][h][
+                        "sequence"
+                    ] = reverse_complement(
+                        sequence_dic[primers["primer_information"]
+                                     [p][bowtie_key][h]["key"]]
+                    )
+        except KeyError:
+            # if there is no bowtie hit for this primer (happens for host
+            # species):
+            primers["primer_information"][p][bowtie_key] = {}
+    # save the updated primers file
+    if outp:
+        with open(primer3_output_DIR + primer_out, 'w') as outfile:
+            json.dump(primers, outfile, indent=1)
+    return primers
+
+
+def process_bowtie(primers, primer_out, primer3_output_DIR,
+                   bowtie2_output_DIR, species, settings, host=False, outp=1):
     """ Take a primer dict with bowtie information added.
     Look at bowtie hits for each primer, determine if they
     are on intended targets or nonspecific. In cases of paralogus
@@ -5295,9 +5472,8 @@ def cleanest_bowtie (primers, primer_out,primer3_output_DIR,
     Na = float(settings["Na"]) * 1000
     Mg = float(settings["Mg"]) * 1000
     conc = float(settings["oligo_conc"]) * pow(10, 9)
+    # are alternative mip arms allowed/desired
     alt_arm = int(settings["alternative_arms"])
-    seq_list = []
-    hit_list = []
     bowtie_key = "bowtie_information_" + species
     # read bowtie hits
     for primer_name in primers['primer_information']:
@@ -5531,145 +5707,58 @@ def cleanest_bowtie (primers, primer_out,primer3_output_DIR,
     return primers
 
 
-def parse_bowtie (primer_file, bt_file, primer_out,primer3_output_DIR,                   bowtie2_output_DIR, species, settings, outp = 1):
-    """ take a bowtie output file and filter top N hits per primer.
-    When a primer has more than "upper_hit_limit" bowtie hits,
-    remove that primer.
-    Add the bowtie hit information, including hit sequence to
-    the primers dictionary.
-    """
-    # extract how many bowtie hits should be added
-    # to the primer information for further TM analysis
-    N = int(settings["hit_limit"])
-    # how many total bowtie hits gets a primer fired
-    M = int(settings["upper_hit_limit"])
-    # read in bowtie file
-    infile = open(bowtie2_output_DIR + bt_file, 'r')
-    # read in primer/mip file
-    """
-    with open (primer3_output_DIR + primer_file, 'r') as handle:
-        primers = json.load(handle)
-    """
-    primers = copy.deepcopy(primer_file)
-    # create a temp dic to count hits/primer
-    counter_dic = {}
-    # create a bowtie key that will be used when adding
-    # bowtie information to primers
-    bowtie_key ="bowtie_information_" + species
-    # all bowtie hits that will be used further for TM analysis
-    # will need to have sequence information with them
-    # region keys for hits (in chrx:begin-end format) will be
-    # kept in a list for mass fasta extraction later.
-    keys = []
-    #
-    # read bowtie hits
-    for line in infile:
+def filter_bowtie(primers, output_file, primer3_output_DIR, species, TM=46,
+                  hit_threshold=0, lower_tm=46, lower_hit_threshold=3, outp=1):
+    """ Check TMs of bowtie hits of given primers, on a given genome.
+    Filter the primers with too many nonspecific hits."""
+    for primer in list(primers["primer_information"].keys()):
+        # create a hit count parameter for hits with significant tm
+        # there are two parameters specified in the rinfo file
+        # high temp limit and low temp limit. The idea is to allow
+        # a very small (if any) number of nonspecific targets with high TM
+        # values but allow some low TM off targets.
+        hc = 0
+        lhc = 0
+        # check if bowtie information exists in dic
         try:
-            if not line.startswith("@"):
-                record = line.strip('\n').split('\t')
-                primer_name = record [0]
-                # increment hit counter for primer
+            bt_key = "bowtie_information_" + species
+            bowtie = primers["primer_information"][primer][bt_key]
+            for h in bowtie:
+                hit = bowtie[h]
                 try:
-                    counter_dic[primer_name] +=1
+                    # if TM information is included in bowtie, compare with
+                    # high and low TM, increment hc, lc if necessary and
+                    # discard primers passing specified off target tresholds.
+                    if float(hit["TM"]) >= TM:
+                        hc += 1
+                        if hc > hit_threshold:
+                            primers["primer_information"].pop(primer)
+                            break
+                    elif float(hit["TM"]) >= lower_tm:
+                        lhc += 1
+                        if lhc > lower_hit_threshold:
+                            primers["primer_information"].pop(primer)
+                            break
                 except KeyError:
-                    counter_dic[primer_name] = 1
-                # check how many hits have been analyzed for this primer
-                # if upper hit limit has been reached, mark primer for removal
-                if counter_dic[primer_name] >= M:
-                    primers['primer_information'][primer_name]["remove"] = True
-                # move on to the next hit if primer hit limit has been reached.
-                # no further hits will be added for those primers
-                if counter_dic[primer_name] >= N:
                     continue
-                flag = record [1]
-                # a flag value of 4 means there was no hit, so pass those lines
-                if flag == "4":
-                    continue
-                # chromosome of the bowtie hit
-                chrom = record [2]
-                # genomic position of bowtie hit
-                pos = int(record [3])
-                # get cigar string of alignment
-                cigar = record[5]
-                # extract which strand is the bowtie hit on
-                # true if forward
-                strand = ((int(record[1]) % 256) == 0)
-                # get hit coordinates
-                hit_start = pos
-                # bowtie gives us the start position of the hit
-                # end position is calculated using the cigar string
-                # of the hit
-                hit_end = pos + get_cigar_length(cigar) - 1
-                # create region keys required for sequence retrieval
-                # we want 3 nt extra on the 5' of the primer
-                # because when alternative primers for paralogs
-                # are considered we check +/- 3 nt from 5' end
-                # to balance TM.
-                if strand:
-                    # Primer's 5' is the hit start when the hit is on forward strand
-                    # so the nucleotides are added at start position
-                    bt_start = hit_start
-                    bt_end = hit_end
-                    hit_str = "forward"
-                    hit_region_key = chrom + ":" + str(hit_start) + "-" + str(hit_end)
-                else:
-                    bt_start = hit_end
-                    bt_end = hit_start
-                    hit_str = "reverse"
-                    hit_region_key = chrom + ":" + str(hit_start) + "-" + str(hit_end)
-                # add region key to keys list for fasta retrieval later
-                keys.append(hit_region_key)
-                # add all hit information to primer dictionary
-                try:
-                    primers["primer_information"][primer_name][bowtie_key][str(counter_dic[primer_name])] =                          {"chrom":chrom, "begin": bt_start, "end":bt_end, "key":hit_region_key,
-                          "strand":hit_str}
-                except KeyError:
-                     primers["primer_information"][primer_name][bowtie_key] = {str(counter_dic[primer_name]):                          {"chrom":chrom, "begin": bt_start, "end":bt_end, "key":hit_region_key,
-                          "strand":hit_str}}
-        except KeyError as ke:
-            # in earlier versions of this function the primers with
-            # excessive hits were removed during iteration and that lead
-            # to keyerrors. Now there should be no key error
-            # but print the key if an exception arises.
-            # print ke
+            # remove bowtie information once we use it.
+            primers["primer_information"][primer].pop(bt_key)
+        except KeyError:
             continue
-    # get the fasta sequences of all hits
-    sequence_dic = get_fasta_list(keys, species)
-    # remove primers with too many hits
-    for p in list(primers["primer_information"].keys()):
-        if "remove" in primers["primer_information"][p]:
-            primers["primer_information"].pop(p)
-        else:
-            # add hit sequences to primer dictionary
-            # forward strand hits are added directly
-            # reverse strand hits are reversed-complemented
-            # so the hit is always in the primer orientation and
-            # and similar in sequence
-            try:
-                for h in primers["primer_information"][p][bowtie_key]:
-                    if primers["primer_information"][p][bowtie_key][h]["strand"] == "forward":
-                        primers["primer_information"][p][bowtie_key][h]["sequence"] =                              sequence_dic[primers["primer_information"][p][bowtie_key][h]["key"]]
-                    else:
-                        primers["primer_information"][p][bowtie_key][h]["sequence"] =                              reverse_complement(sequence_dic[primers["primer_information"]                             [p][bowtie_key][h]["key"]])
-            except KeyError:
-                # if there is no bowtie hit for this primer (happens for host species)
-                primers["primer_information"][p][bowtie_key] = {}
-    # save the updated primers file
     if outp:
-        with open(primer3_output_DIR + primer_out, 'w') as outfile:
-            json.dump(primers, outfile, indent=1)
+        # write dictionary to file in primer3_output_DIR
+        outfile = open(primer3_output_DIR + output_file, 'w')
+        json.dump(primers, outfile, indent=1)
+        outfile.close()
     return primers
-def alternative(primer_file, output_file, primer3_output_DIR, tm_diff, outp = 1):
-    """ Pick the best alternative arm for primers that do not bind
-    all paralogs.
-    """
 
+
+def alternative(primer_dic, output_file,
+                primer3_output_DIR, tm_diff, outp=1):
+    """ Pick the best alternative arm for primers that do not bind all
+    paralogs. This is done picking the alternative primer with melting
+    temperature that is closest to the original primer.
     """
-    with open (primer3_output_DIR + primer_file) as infile:
-        primer_dic = json.load(infile)
-        primers = primer_dic["primer_information"]
-    """
-    primer_dic = primer_file
     primers = primer_dic["primer_information"]
     try:
         for primer_name in primers:
@@ -5678,11 +5767,15 @@ def alternative(primer_file, output_file, primer3_output_DIR, tm_diff, outp = 1)
             for c in para:
                 try:
                     alts = para[c]["ALTERNATIVES"]
+                    # get the original primer TM
                     ref_tm = alts["ref"].pop("ALT_TM")
                     alts.pop("ref")
+                    # sort alt primers by their TM difference from the ref
                     sorted_alts = sorted(
                         alts, key=lambda a: abs(alts[a]["ALT_TM"] - ref_tm)
                     )
+                    # use the primer only if the TM difference is within
+                    # specified limit.
                     if abs(alts[sorted_alts[0]]["ALT_TM"] - ref_tm) <= tm_diff:
                         primer["ALT_BINDS"].append(c)
                         para[c].update(alts[sorted_alts[0]])
@@ -5705,274 +5798,252 @@ def alternative(primer_file, output_file, primer3_output_DIR, tm_diff, outp = 1)
     return primer_dic
 
 
-def filter_bowtie (primer_file,
-                   output_file,
-                   primer3_output_DIR,
-                   species,
-                   TM=46,
-                   hit_threshold=0,
-                   lower_tm=46,
-                   lower_hit_threshold=3,
-                  outp = 1):
-    """ Check TMs of bowtie hits of given primers,
-    on a given genome.Filter the primers with too many
-    nonspecific hits."""
-
-    """
-    infile = open(primer3_output_DIR + primer_file, 'r')
-    primers = json.load(infile)
-    infile.close()
-    """
-    # load primer dictionary
-    primers = primer_file
-    #print TM, hit_threshold, lower_tm, lower_hit_threshold, species
-    #print str(len(primers["primer_information"])) + " primers analyzed!"
-    for primer in list(primers["primer_information"].keys()):
-        # create a hit count parameter for hits with significant tm
-        hc = 0
-        lhc = 0
-        # check if bowtie information exists in dic
-        try:
-            bowtie = primers["primer_information"][primer]                     ["bowtie_information_" + species]
-            for h in bowtie:
-                hit = bowtie[h]
-                try:
-                    # check if TM information is included in bowtie
-                    # for the same TypeError as the mips above
-                    if float(hit["TM"]) >= TM:
-                        hc += 1
-                        if hc > hit_threshold:
-                            primers["primer_information"].pop(primer)
-                            break
-                    elif float(hit["TM"]) >= lower_tm:
-                        lhc += 1
-                        if lhc > lower_hit_threshold:
-                            primers["primer_information"].pop(primer)
-                            break
-                except KeyError:
-                    continue
-
-            if primer in list(primers["primer_information"].keys()):
-                primers["primer_information"][primer].pop("bowtie_information_" + species)
-        except KeyError as ke:
-            #print ke
-            continue
+def score_paralog_primers(primer_dict, output_file, primer3_output_DIR,
+                           ext, mask_penalty, species, outp=1):
+    """ Score primers in a dictionary according to a scoring matrix.
+    Scoring matrices are somewhat crude at this time.
+    Arm GC content weighs the most, then arms GC clamp and arm length
+    Next_base values are last."""
+    primers = primer_dict["primer_information"]
+    sequence = primer_dict["sequence_information"]
+    extension = (ext == "extension")
+    # extract template sequence
+    seq_template = sequence["SEQUENCE_TEMPLATE"]
+    # find the coordinates of next bases
+    for p in primers:
+        # get coordinates of primers in the form of "start_base, len"
+        coord = primers[p]["COORDINATES"]
+        strand = primers[p]["ORI"]
+        if strand == "forward":
+            primer_end = (int(coord.split(",")[0])
+                          + int(coord.split(",")[1]) - 1)
+            # 1 is added or subtracted due to sequence index being zero based.
+            next_bases = seq_template[(primer_end+1):(primer_end+3)]
+        elif strand == "reverse":
+            primer_end = (int(coord.split(",")[0])
+                          - int(coord.split(",")[1]) + 1)
+            next_bases = reverse_complement(seq_template[
+                                               (primer_end - 2):primer_end
+                                               ])
+        # add "NEXT_BASES" key and its value to mip dictionary
+        primers[p]["NEXT_BASES"] = next_bases
+    # define scoring matrices
+    # arm gc content score matrix
+    # define best to worst values for gc content.
+    best = 1000
+    mid = 100
+    low = 10
+    worst = 0
+    # define matrix
+    arm_gc_con = {}
+    if species.startswith("pf"):
+        for i in range(100):
+            if i < 15:
+                arm_gc_con[i] = worst
+            elif i < 20:
+                arm_gc_con[i] = low
+            elif i < 25:
+                arm_gc_con[i] = mid
+            elif i < 60:
+                arm_gc_con[i] = best
+            elif i < 65:
+                arm_gc_con[i] = mid
+            elif i < 70:
+                arm_gc_con[i] = low
+            else:
+                arm_gc_con[i] = worst
+    else:
+        for i in range(100):
+            if i < 35:
+                arm_gc_con[i] = worst
+            elif i < 40:
+                arm_gc_con[i] = low
+            elif i < 45:
+                arm_gc_con[i] = mid
+            elif i < 60:
+                arm_gc_con[i] = best
+            elif i < 65:
+                arm_gc_con[i] = mid
+            elif i < 70:
+                arm_gc_con[i] = low
+            else:
+                arm_gc_con[i] = worst
+    # next base score matrix
+    # define best to worst values for next bases.
+    # This parameter should be important only when comparing mips with equally
+    # good gc contents. Therefore, the values are low and does not give a mip
+    # a big +.
+    best = 10
+    mid = 5
+    low = 2
+    worst = 0
+    # define matrix
+    next_bases = ({"": worst, "A": worst, "T": worst, "G": worst, "C": worst,
+                   "GG": best, "CC": best, "GC": best, "CG": best,
+                   "GA": mid, "CA": mid, "GT": mid, "CT": mid,
+                   "AG": low, "TG": low, "AC": low, "TC": low,
+                   "AA": worst, "AT": worst, "TA": worst, "TT": worst})
+    # gc clamp matrix
+    # gc clamp will be updated taking into account that although G/C base
+    # pairs are the most stable, G/X mismatches are also the most stable.
+    # mismatch stability order is G>T>A>C with C being the most discriminating
+    # base.
+    ext_gc_clamp = {"G": 0, "C": 200, "A": 50, "T": 100}
+    lig_gc_clamp = {"G": 0, "C": 200, "A": 50, "T": 100}
+    # extension arm lengths score matrix
+    # this is added for plasmodium since length is more relaxed
+    # to get best possible mips with higher TMs
+    # which sometimes leads to very long arms.
+    best = 50
+    mid = 25
+    low = 5
+    worst = 0
+    extension_len_matrix = {}
+    for i in range(18, 36):
+        if (i == 18) or (25 <= i <= 28):
+            extension_len_matrix[i] = mid
+        elif (19 <= i <= 24):
+            extension_len_matrix[i] = best
+        elif (30 > i > 28):
+            extension_len_matrix[i] = low
+        elif (i > 29):
+            extension_len_matrix[i] = worst
+    # ligation arm lengths score matrix
+    best = 50
+    mid = 25
+    low = 10
+    worst = 0
+    ligation_len_matrix = {}
+    for i in range(18, 36):
+        if (i == 18) or (i == 19):
+            ligation_len_matrix[i] = mid
+        elif (20 <= i <= 26):
+            ligation_len_matrix[i] = best
+        elif (27 <= i <= 30):
+            ligation_len_matrix[i] = low
+        elif (i > 30):
+            ligation_len_matrix[i] = worst
+    # score all mips using above matrices
+    for p in list(primers.keys()):
+        # get arm sequences
+        seq = primers[p]["SEQUENCE"]
+        # count lower case masked nucleotides
+        mask_count = sum(-1 for n in seq if n.islower())
+        mask_score = mask_count * mask_penalty
+        # arm lengths
+        if extension:
+            len_score = extension_len_matrix[len(seq)]
+        else:
+            len_score = ligation_len_matrix[len(seq)]
+        # gc clamp
+        if extension:
+            gc_clamp = ext_gc_clamp[seq[-1].upper()]
+        else:
+            gc_clamp = lig_gc_clamp[seq[-1].upper()]
+        # get gc percentages and convert to int.
+        gc = int(float(primers[p]["GC_PERCENT"]))
+        # get next base values
+        next_b = primers[p]["NEXT_BASES"]
+        all_scores = {"arm_len": [len(seq), len_score],
+                      "arm_gc": [gc, arm_gc_con[gc]],
+                      "mask_penalty": mask_penalty,
+                      "gc_clamp": gc_clamp,
+                      "next_bases": [next_b, next_bases[next_b.upper()]]}
+        # calculate total score
+        score = (len_score + arm_gc_con[gc] + mask_score
+                 + next_bases[next_b.upper()])
+        # add score to dictionary
+        primers[p]["SCORE"] = score
+        primers[p]["all_scores"] = all_scores
     if outp:
-        # write dictionary to file in primer3_output_DIR
-        outfile = open (primer3_output_DIR + output_file, 'w')
-        json.dump(primers, outfile, indent=1)
+        # write dictionary to json file
+        outfile = open(primer3_output_DIR + output_file, "w")
+        json.dump(primer_dict, outfile, indent=1)
         outfile.close()
-    return primers
-def filter_bowtie_hits (primer_file, output_file, primer3_output_DIR, species, TM=46, hit_threshold=0,
-                        lower_tm=46, lower_hit_threshold=3):
-    """ Check TMs of bowtie hits of given mips or primers,
-    on a given genome.if high, make sure they are the intended
-    target. Otherwise, remove primer. Then remove bowtie
-    information from dictionary."""
-    supported_species = ["pf", "hs"]
-    # check if species is supported
-    if not species in supported_species:
-        return "Species not supported"
-    # load primer dictionary
-    infile = open(primer3_output_DIR + primer_file, 'r')
-    primers = json.load(infile)
-    infile.close()
-    # check if it is a mip dictionary or primer dictionary
-    if "pair_information" in list(primers.keys()):
-        # report how many primer pairs are analyzed
-        #print str(len(primers["pair_information"])) + " mips analyzed!"
-        # remove bowtie hits with TMs higher than given TM
-        for primer in list(primers["pair_information"].keys()):
-            # create a hit count parameter for hits with significant tm
-            hc = 0
-            lhc = 0
-            # check if bowtie_information key exists for given species
-            if ("bowtie_information_" + species) in list(primers["pair_information"]               [primer]["mip_information"].keys()):
-                # extract bowtie information
-                bowtie = primers["pair_information"][primer]["mip_information"]                         ["bowtie_information_" + species]
-                for hit in bowtie:
-                    # get TM of the hit
-                    # depending on what function had been used to add bowtie
-                    # information to the dictionary, TM can be a list or a float
-                    # Therefore, we have to check if it is a string or not first.
-                    try:
-                        # if TM not a list, TypeError is raised
-                        if ("TM" in list(hit.keys())) and (hit["TM"][0] >= TM)                            and (primer in list(primers["pair_information"].keys())):
-                            hc += 1
-                            if hc > hit_threshold:
-                                primers["pair_information"].pop(primer)
-                                break
-                        elif ("TM" in list(hit.keys())) and (hit["TM"][0] >= lower_tm)                            and (primer in list(primers["pair_information"].keys())):
-                            lhc += 1
-                            if lhc > lower_hit_threshold:
-                                primers["pair_information"].pop(primer)
-                                break
-                    except TypeError:
-                        if ("TM" in list(hit.keys())) and (hit["TM"] >= TM)                            and (primer in list(primers["pair_information"].keys())):
-                            hc += 1
-                            if hc > hit_threshold:
-                                primers["pair_information"].pop(primer)
-                                break
-                        elif ("TM" in list(hit.keys())) and (hit["TM"] >= lower_tm)                            and (primer in list(primers["pair_information"].keys())):
-                            lhc += 1
-                            if lhc > lower_hit_threshold:
-                                primers["pair_information"].pop(primer)
-                                break
-                # if a primer is still in dictionary after filtering for bowtie hits
-                # keep the primer and remove the bowtie hits
-                if primer in list(primers["pair_information"].keys()):
-                    primers["pair_information"][primer]                           ["mip_information"].pop("bowtie_information_" + species)
+    return primer_dict
 
-        # report how many mips are left after filtering
-        #print str(len(primers["pair_information"])) +\
-        #      " mips with mispriming TM < " + str(TM)
-    # if dictionary is for primers only:
-    else:
-        #print str(len(primers["primer_information"])) + " primers analyzed!"
-        for primer in list(primers["primer_information"].keys()):
-            # create a hit count parameter for hits with significant tm
-            hc = 0
-            lhc = 0
-            # check if bowtie information exists in dic
-            if ("bowtie_information_" + species) in                list(primers["primer_information"][primer].keys()):
-                # get bowtie information for the primer
-                bowtie = primers["primer_information"][primer]                         ["bowtie_information_" + species]
-                for hit in bowtie:
-                    # check if TM information is included in bowtie
-                    # for the same TypeError as the mips above
-                    try:
-                        if ("TM" in list(hit.keys())) and (float(hit["TM"][0]) >= TM)                            and (primer in list(primers["primer_information"].keys())):
-                            hc += 1
-                            if hc > hit_threshold:
-                                primers["primer_information"].pop(primer)
-                                break
-                        elif ("TM" in list(hit.keys())) and (float(hit["TM"][0]) >= lower_tm)                            and (primer in list(primers["primer_information"].keys())):
-                            lhc += 1
-                            if lhc > lower_hit_threshold:
-                                primers["primer_information"].pop(primer)
-                                break
 
-                    except TypeError:
-                        if ("TM" in list(hit.keys())) and (float(hit["TM"]) >= TM)                            and (primer in list(primers["primer_information"].keys())):
-                            hc += 1
-                            if hc > hit_threshold:
-                                primers["primer_information"].pop(primer)
-                                break
-                        elif ("TM" in list(hit.keys())) and (float(hit["TM"]) >= lower_tm)                            and (primer in list(primers["primer_information"].keys())):
-                            lhc += 1
-                            if lhc > lower_hit_threshold:
-                                primers["primer_information"].pop(primer)
-                                break
+def filter_primers (primer_file, output_file,
+                    primer3_output_DIR, n, bin_size,
+                   outp = 1):
+    """ filter primers so that only top n scoring primers
+    ending within the same subregion (determined by bin_size)
+    remains."""
+    # load extension and ligation primers from file
+    """
+    with open (primer3_output_DIR + primer_file, 'r') as infile:
+        dic = json.load(infile)
+    """
+    dic = primer_file
+    template_seq = dic["sequence_information"]["SEQUENCE_TEMPLATE"]
+    template_len = len(template_seq)
+    forward_bins = {}
+    reverse_bins = {}
+    best_score = 0
+    for i in range(template_len//bin_size + 1):
+        forward_bins[i] = []
+        reverse_bins[i] = []
+    for primer in list(dic["primer_information"].keys()):
+        # get primer orientation
+        ori = dic["primer_information"][primer]["ORI"]
+        # get primer start coordinate
+        start = int(dic["primer_information"][primer]["COORDINATES"].split(",")[0])
+        primer_len = int(dic["primer_information"][primer]["COORDINATES"].split(",")[1])
+        if ori == "forward":
+            end = start + primer_len - 1
+        elif ori == "reverse":
+            end = start - primer_len + 1
+        # which bin the start coordinate falls into
+        end_bin = end//bin_size
+        # get primer score
+        score = dic["primer_information"][primer]["SCORE"]
+        # append the primer name/score to appropriate bin dic
+        if ori == "forward":
+            forward_bins[end_bin].append([primer, score])
+        elif ori == "reverse":
+            reverse_bins[end_bin].append([primer, score])
+    best_dic = {}
+    best_dic["sequence_information"] = dic["sequence_information"]
+    best_dic["primer_information"] = {}
+    # find best scoring mips in each forward bin
+    for key in forward_bins:
+        # sort primers for score
+        primer_set = sorted(forward_bins[key], key= itemgetter(1))
+        # get best scoring primers (all primers if there are less than n)
+        if len(primer_set) < n:
+            best_primers = primer_set
+        else:
+            best_primers = primer_set[-n:]
+        # add best primers do dictionary
+        for primers in best_primers:
+            primer_name = primers[0]
+            best_dic["primer_information"][primer_name] = dic["primer_information"][primer_name]
+    # find best scoring mips in each reverse bin
+    for key in reverse_bins:
+        # sort primers for score
+        primer_set = sorted(reverse_bins[key], key= itemgetter(1))
+        # get best scoring primers (all primers if there are less than n)
+        if len(primer_set) < n:
+            best_primers = primer_set
+        else:
+            best_primers = primer_set[-n:]
+        # add best primers do dictionary
+        for primers in best_primers:
+            primer_name = primers[0]
+            best_dic["primer_information"][primer_name] = dic["primer_information"][primer_name]
+    # write new dic to file
+    if outp:
+        with open (primer3_output_DIR + output_file, "w") as outfile:
+            json.dump(best_dic, outfile, indent=1)
+    return best_dic
 
-                if primer in list(primers["primer_information"].keys()):
-                    primers["primer_information"][primer].pop("bowtie_information_" + species)
 
-        #print str(len(primers["primer_information"])) + " primers with mispriming TM < " + str(TM)
-    # write dictionary to file in primer3_output_DIR
-    outfile = open (primer3_output_DIR + output_file, 'w')
-    json.dump(primers, outfile, indent=1)
-    outfile.close()
-    return primers
-def filter_bowtie_hits_dup (primer_file, output_file, species, primer3_output_DIR, TM=46):
-    """ Check TMs of bowtie hits of given mips or primers,
-    on a given genome.if high, make sure they are the intended
-    target. Otherwise, remove primer. Then remove bowtie
-    information from dictionary.
-    This is for use in mips for duplicated regions. It should not filter
-    when the hit is on a duplicated copy."""
-    supported_species = ["pf", "hs"]
-    # check if species is supported
-    if not species in supported_species:
-        return "Species not supported"
-    # load primer dictionary
-    infile = open(primer3_output_DIR + primer_file, 'r')
-    primers = json.load(infile)
-    infile.close()
-    # check if it is a mip dictionary or primer dictionary
-    if "pair_information" in list(primers.keys()):
-        # report how many primer pairs are analyzed
-        #print str(len(primers["pair_information"])) + " mips analyzed!"
-        # remove bowtie hits with TMs higher than given TM
-        for primer in list(primers["pair_information"].keys()):
-            # check if bowtie_information key exists for given species
-            if ("bowtie_information_" + species) in list(primers["pair_information"]               [primer]["mip_information"].keys()):
-                # extract bowtie information
-                bowtie = primers["pair_information"][primer]["mip_information"]                         ["bowtie_information_" + species]
-                for hit in bowtie:
-                    # get TM of the hit
-                    # depending on what function had been used to add bowtie
-                    # information to the dictionary, TM can be a list or a string
-                    # Therefore, we have to check if it is a string or not first.
-                    try:
-                        if ("TM" in list(hit.keys())) and (float(hit["TM"]) >= TM)                            and (primer in list(primers["pair_information"].keys())):
-                            # remove primers with TM higher than specified
-                            primers["pair_information"].pop(primer)
-                            break
-                    except TypeError:
-                        # if TM is a list and not a string, TypeError is raised
-                        if ("TM" in list(hit.keys())) and (float(hit["TM"][0]) >= TM)                            and (primer in list(primers["pair_information"].keys())):
-                            primers["pair_information"].pop(primer)
-                            break
-                # if a primer is still in dictionary after filtering for bowtie hits
-                # keep the primer and remove the bowtie hits
-                if primer in list(primers["pair_information"].keys()):
-                    primers["pair_information"][primer]                           ["mip_information"].pop("bowtie_information_" + species)
-        # report how many mips are left after filtering
-        #print str(len(primers["pair_information"])) +\
-        #      " mips with mispriming TM < " + str(TM)
-    # if dictionary is for primers only:
-    else:
-        #print str(len(primers["primer_information"])) + " primers analyzed!"
-        for primer in list(primers["primer_information"].keys()):
-            # check if bowtie information exists in dic
-            if ("bowtie_information_" + species) in                list(primers["primer_information"][primer].keys()):
-                # get bowtie information for the primer
-                bowtie = primers["primer_information"][primer]                         ["bowtie_information_" + species]
-                for hit in bowtie:
-                    # check if TM information is included in bowtie
-                    # for the same TypeError as the mips abova
-                    # use try/except statements
-                    try:
-                        if ("TM" in list(hit.keys())) and (float(hit["TM"]) >= TM)                            and (primer in list(primers["primer_information"].keys())):
-                            primers["primer_information"].pop(primer)
-                            break
-                    except TypeError:
-                        if ("TM" in list(hit.keys())) and (float(hit["TM"][0]) >= TM)                            and (primer in list(primers["primer_information"].keys())):
-                            primers["primer_information"].pop(primer)
-                            break
-                if primer in list(primers["primer_information"].keys()):
-                    primers["primer_information"][primer].pop("bowtie_information_" + species)
-        #print str(len(primers["primer_information"])) + " primers with mispriming TM < " + str(TM)
-    # write dictionary to file in primer3_output_DIR
-    outfile = open (primer3_output_DIR + output_file, 'w')
-    json.dump(primers, outfile, indent=1)
-    outfile.close()
-    return primers
-def pick_paralog_primer_pairs (ext_file,
-                               lig_file,
-                               output_file,
-                               primer3_output_DIR,
-                               min_size, max_size,
-                               alternative_arms,
-                              region_insertions,
-                              subregion_name,
-                              outp = 1):
+def pick_paralog_primer_pairs(extension, ligation, output_file,
+                              primer3_output_DIR, min_size, max_size,
+                              alternative_arms, region_insertions,
+                              subregion_name, outp=1):
     """ Pick primer pairs from extension and ligation arm candidate
-    dictionary files for a given size range. Output dic has 2 keys:
-    sequence_information: template sequence information
-    pair_information: dictionary with PAIR_NAME:{extenison_primer_information:...
-    ligation_primer... orientation:fw/rv}. """
-    # load extension and ligation dictionaries
-    """
-    infile1 = open(primer3_output_DIR + ext_file, 'r')
-    infile2 = open(primer3_output_DIR + lig_file, 'r')
-    extension = json.load(infile1)
-    ligation = json.load(infile2)
-    infile1.close()
-    infile2.close()
-    """
-    extension = ext_file
-    ligation = lig_file
+    dictionary files for a given size range."""
     # assign primer information dictionaries to a shorter name
     ext = extension["primer_information"]
     lig = ligation["primer_information"]
@@ -6431,7 +6502,11 @@ def hairpin_worker (l):
     # run mfold_quiker script on mip sequences. current working directory is changed when
     # using subprocess.call because the input sequence must be in the directory where the
     # script is run.
-    melt_output = subprocess.check_output(["melt.pl", "-n",  "DNA", "--temperature=25",                      "-N", "0.025", "-M", "0.01", script_DIR + mfold_input_DIR + input_fasta ],                     cwd=mfold_input_DIR)
+    melt_output = subprocess.check_output(
+        ["melt.pl", "-n",  "DNA", "--temperature=25", "-N", "0.025",
+         "-M", "0.01", script_DIR + mfold_input_DIR + input_fasta],
+        cwd=mfold_input_DIR
+    )
     # a number of files are generated by the script using the input base name.
     # .det file has the dG TM information we need.
     out_list = melt_output.split("\n")[:-1]
@@ -6445,24 +6520,6 @@ def hairpin_worker (l):
             tm_values.append(float(o.split("\t")[-1]))
         else:
             others.append(o)
-    """
-    with open(primer3_output_DIR + mip_file, 'r') as infile:
-        hairpin_dic = json.load(infile)
-    for i in xrange(len(primer_names)):
-        hairpin_dic["pair_information"][primer_names[i]]["mip_information"]["ref"]["HAIRPIN"] = \
-                tm_values[i]
-
-
-    for mip in hairpin_dic["pair_information"].keys():
-        if "HAIRPIN" in hairpin_dic["pair_information"][mip]["mip_information"]["ref"].keys():
-            if hairpin_dic["pair_information"][mip]["mip_information"]["ref"]["HAIRPIN"] >= hairpin_tm:
-                hairpin_dic["pair_information"].pop(mip)
-        else:
-            hairpin_dic["pair_information"].pop(mip)
-
-    with open(mfold_output_DIR + input_fasta, 'w') as outfile:
-        json.dump(hairpin_dic, outfile, indent=1)
-    """
     output_tm = list(zip(primer_names, tm_values))
     with open(mfold_output_DIR + input_fasta, 'w') as outfile:
         outfile.write("\n".join(["\t".join(map(str, o))                                 for o in output_tm]))
@@ -6489,9 +6546,11 @@ def split_file(input_file,
             linenum += 1
             outlist.append(line.strip())
             if linenum == line_limit:
-                with open(mfold_input_DIR + input_file +                       str(counter),  'w') as outfile:
+                with open(mfold_input_DIR + input_file +
+                                       str(counter),  'w') as outfile:
                     outfile.write("\n".join(outlist))
-                temp = [input_file + str(counter), input_file, hairpin_tm,                 primer3_output_DIR, mfold_input_DIR, mfold_output_DIR]
+                temp = [input_file + str(counter), input_file, hairpin_tm,
+                                 primer3_output_DIR, mfold_input_DIR, mfold_output_DIR]
                 map_input.append(temp)
                 counter += 1
                 linenum = 0
@@ -6502,6 +6561,8 @@ def split_file(input_file,
             temp = [input_file + str(counter), input_file, hairpin_tm,             primer3_output_DIR, mfold_input_DIR, mfold_output_DIR]
             map_input.append(temp)
     return map_input
+
+
 def hairpin_multi (input_dict,
                    input_file,
                    output_file, primer3_output_DIR, bowtie2_input_DIR,\
@@ -6558,7 +6619,7 @@ def hairpin_multi (input_dict,
                 mip_name = newline[0]
                 mip_tm = float(newline[1])
                 if mip_tm < hairpin_tm:
-                    hairpin[mip_name]["mip_information"]                    ["ref"]["HAIRPIN"] = mip_tm
+                    hairpin[mip_name]["mip_information"]["ref"]["HAIRPIN"] = mip_tm
                     mip_counter += 1
                 else:
                     hairpin.pop(mip_name)
@@ -6588,426 +6649,8 @@ def hairpin_multi (input_dict,
             outline = ">" + mip + '\n' + mip_seq + '\n'
             outfile.write(outline)
     return hairpin_dict
-def score_paralog_primers (primer_file,
-                           output_file,
-                           primer3_output_DIR,
-                           ext,
-                           mask_penalty,
-                          species,
-                          outp = 1):
-    """ Score primers in a dictionary according to scoring matrix
-    Scoring matrices are somewhat crude at this time.
-    Arm GC content weighs the most, then arms GC clamp and arm length
-    Next_base values are last."""
-    # load extension and ligation primers from file
-    """
-    with open (primer3_output_DIR + primer_file, 'r') as infile:
-        dic = json.load(infile)
 
-    """
-    dic = primer_file
-    primers = dic["primer_information"]
-    sequence = dic["sequence_information"]
-    extension = (ext == "extension")
-    # extract template sequence
-    seq_template = sequence["SEQUENCE_TEMPLATE"]
-    # find the coordinates of next bases
-    for p in primers:
-        # get coordinates of primers in the form of "start_base, len"
-        coord = primers[p]["COORDINATES"]
-        strand = primers[p]["ORI"]
-        if strand == "forward": # then the extension arm is the LEFT primer and ligation arm is RIGHT
-            primer_end = int(coord.split(",")[0]) + int(coord.split(",")[1]) - 1
-            # 1 is added or subtracted due to sequence index being zero based.
-            next_bases = seq_template [(primer_end+1):(primer_end+3)]
-        elif strand == "reverse": # then the extension arm is the RIGHT primer and ligation is LEFT
-            primer_end = int(coord.split(",")[0]) - int(coord.split(",")[1]) + 1
-            next_bases = reverse_complement(seq_template [(primer_end - 2):primer_end])
-        # add "NEXT_BASES" key and its value to mip dictionary
-        primers[p]["NEXT_BASES"] = next_bases
-        #print next_bases
-    # define scoring matrices
-    # arm gc content score matrix
-    # define best to worst values for gc content. Best is very important so it has a huge effect on score.
-    best = 1000
-    mid = 100
-    low = 10
-    worst = 0
-    # define matrix
-    arm_gc_con = {}
-    if species.startswith("pf"):
-        for i in range(100):
-            if i < 15:
-                arm_gc_con[i] = worst
-            elif i < 20:
-                arm_gc_con[i] = low
-            elif i < 25:
-                arm_gc_con[i] = mid
-            elif i < 60:
-                arm_gc_con[i] = best
-            elif i < 65:
-                arm_gc_con[i] = mid
-            elif i < 70:
-                arm_gc_con[i] = low
-            else :
-                arm_gc_con[i] = worst
-    else:
-        for i in range(100):
-            if i < 35:
-                arm_gc_con[i] = worst
-            elif i < 40:
-                arm_gc_con[i] = low
-            elif i < 45:
-                arm_gc_con[i] = mid
-            elif i < 60:
-                arm_gc_con[i] = best
-            elif i < 65:
-                arm_gc_con[i] = mid
-            elif i < 70:
-                arm_gc_con[i] = low
-            else :
-                arm_gc_con[i] = worst
-    # next base score matrix
-    # define best to worst values for next bases. This parameter should be important only when comparing
-    # mips with equally good gc contents. Therefore the values are low and does not give a mip a big +.
-    best = 10
-    mid = 5
-    low = 2
-    worst = 0
-    # define matrix
-    next_bases = ({"":worst, "A":worst, "T":worst, "G":worst, "C": worst,
-                  "GG":best, "CC":best, "GC":best, "CG":best,
-                  "GA":mid, "CA":mid, "GT":mid, "CT":mid,
-                  "AG":low, "TG":low, "AC":low, "TC":low,
-                  "AA":worst, "AT":worst, "TA":worst, "TT":worst})
-    # gc clamp matrix: a mid score for g or c clamp and best for extension gg or cc
-    best = 200
-    mid = 100
-    worst = 0
-    # using an empirical scoring dictionary here based on initial results
-    ext_gc_clamp = ({"GG":best, "CC":best, "GC":best, "CG":best,
-                  "GA":worst, "CA":worst, "GT":worst, "CT":worst,
-                  "AG":mid, "TG":mid, "AC":mid, "TC":mid,
-                  "AA":worst, "AT":worst, "TA":worst, "TT":worst})
-    lig_gc_clamp = {"G": mid, "C": mid, "A": worst, "T": worst}
 
-    # extension arm lengths score matrix
-    # this is added for plasmodium since length is more relaxed to get best possible mips with higher TMs
-    # which sometimes leads to very long arms.
-    best = 50
-    mid = 25
-    low = 5
-    worst = 0
-    extension_len_matrix = {}
-    for i in range(18,36):
-        if (i == 18) or (25 <= i <= 28):
-            extension_len_matrix [i] = mid
-        elif (19 <= i <= 24):
-            extension_len_matrix [i] = best
-        elif (30 > i > 28):
-            extension_len_matrix [i] = low
-        elif (i > 29):
-            extension_len_matrix [i] = worst
-    # ligation arm lengths score matrix
-    best = 50
-    mid = 25
-    low = 10
-    worst = 0
-    ligation_len_matrix = {}
-    for i in range(18,36):
-        if (i == 18) or (i == 19):
-            ligation_len_matrix [i] = mid
-        elif (20 <= i <= 26):
-            ligation_len_matrix [i] = best
-        elif (27 <= i <= 30):
-            ligation_len_matrix [i] = low
-        elif (i > 30):
-            ligation_len_matrix [i] = worst
-    # score all mips using above matrices
-    for p in list(primers.keys()):
-        # get arm sequences
-        seq = primers[p]["SEQUENCE"]
-        # count lower case masked nucleotides
-        mask_count = sum(-1 for n in seq if n.islower())
-        """
-        if mask_count > 2:
-            mask_score = -3 * mask_penalty
-        else:
-            mask_score = mask_count * mask_penalty
-        """
-        mask_score = mask_count * mask_penalty
-        # arm lengths
-        if extension:
-            len_score = extension_len_matrix[len(seq)]
-        else:
-            len_score = ligation_len_matrix[len(seq)]
-
-        # gc clamp
-        if extension:
-            gc_clamp = ext_gc_clamp[seq[-2:].upper()]
-        else:
-            gc_clamp = lig_gc_clamp[seq[-1].upper()]
-        # get gc percentages and convert to int.
-        gc = int(float(primers[p]["GC_PERCENT"]))
-        # get next base values
-        next_b = primers[p]["NEXT_BASES"]
-        all_scores = {"arm_len":[len(seq), len_score],                      "arm_gc":[gc, arm_gc_con[gc]],                      "mask_penalty":mask_penalty,                      "gc_clamp": gc_clamp,                      "next_bases":[next_b, next_bases[next_b.upper()]]
-                      }
-        # calculate total score
-        score = len_score + arm_gc_con[gc] + mask_score + next_bases[next_b.upper()]
-        # add score to dictionary
-        primers[p]["SCORE"] = score
-        primers[p]["all_scores"] = all_scores
-    if outp:
-        # write dictionary to json file
-        outfile = open (primer3_output_DIR + output_file, "w")
-        json.dump(dic, outfile, indent=1)
-        outfile.close()
-        #print "hello"
-    return dic
-def score_primers (ext_file, lig_file, ext_out, lig_out, primer3_output_DIR):
-    """ Score primers in a dictionary according to scoring matrix
-    Scoring matrices are somewhat crude at this time.
-    Arm GC content weighs the most, then arms GC clamp and arm length
-    Next_base values are last."""
-    # load extension and ligation primers from file
-    with open (primer3_output_DIR + ext_file, 'r') as infile:
-        ext_dic = json.load(infile)
-    with open (primer3_output_DIR + lig_file, 'r') as infile:
-        lig_dic = json.load(infile)
-    # extract template sequence
-    ext_template = ext_dic["sequence_information"]["SEQUENCE_TEMPLATE"]
-    lig_template = lig_dic["sequence_information"]["SEQUENCE_TEMPLATE"]
-    ext_temp_lenght = len(ext_template)
-    lig_temp_length = len(lig_template)
-    # define scoring matrices
-    # arm gc content score matrix
-    # define best to worst values for gc content. Best is very important so it has a huge effect on score.
-    best = 1000
-    mid = 100
-    low = 10
-    worst = 0
-    # define matrix
-    arm_gc_con = {}
-    for i in range(20,81):
-        if i < 35:
-            arm_gc_con[i] = worst
-        elif i < 40:
-            arm_gc_con[i] = low
-        elif i < 45:
-            arm_gc_con[i] = mid
-        elif i < 60:
-                arm_gc_con[i] = best
-        elif i < 65:
-                arm_gc_con[i] = mid
-        elif i < 70:
-            arm_gc_con[i] = low
-        else :
-            arm_gc_con[i] = worst
-    # gc clamp matrix: a mid score for g or c clamp and best for extension gg or cc
-    best = 200
-    mid = 100
-    worst = 0
-    ext_gc_clamp = ({"GG":best, "CC":best, "GC":best, "CG":best,
-                  "GA":worst, "CA":worst, "GT":worst, "CT":worst,
-                  "AG":mid, "TG":mid, "AC":mid, "TC":mid,
-                  "AA":worst, "AT":worst, "TA":worst, "TT":worst})
-    lig_gc_clamp = {"G": mid, "C": mid, "A": worst, "T": worst}
-
-    # extension arm lengths score matrix
-    # this is added for plasmodium since length is more relaxed to
-    # get best possible mips with higher TMs
-    # which sometimes leads to very long arms.
-    best = 50
-    mid = 25
-    low = 5
-    worst = 0
-    extension_len_matrix = {}
-    for i in range(18,36):
-        if (i == 18) or (25 <= i <= 28):
-            extension_len_matrix [i] = mid
-        elif (19 <= i <= 24):
-            extension_len_matrix [i] = best
-        elif (30 > i > 28):
-            extension_len_matrix [i] = low
-        elif (i > 29):
-            extension_len_matrix [i] = worst
-    # ligation arm lengths score matrix
-    best = 50
-    mid = 25
-    low = 10
-    worst = 0
-    ligation_len_matrix = {}
-    for i in range(18,36):
-        if (i == 18) or (i == 19):
-            ligation_len_matrix [i] = mid
-        elif (20 <= i <= 26):
-            ligation_len_matrix [i] = best
-        elif (27 <= i <= 30):
-            ligation_len_matrix [i] = low
-        elif (i > 30):
-            ligation_len_matrix [i] = worst
-    # next base score matrix
-    # define best to worst values for next bases. This parameter should be important only when comparing
-    # mips with equally good gc contents. Therefore the values are low and does not give a mip a big +.
-    best = 10
-    mid = 5
-    low = 2
-    worst = 0
-    # define matrix
-    next_bases = ({"GG":best, "CC":best, "GC":best, "CG":best,
-                  "GA":mid, "CA":mid, "GT":mid, "CT":mid,
-                  "AG":low, "TG":low, "AC":low, "TC":low,
-                  "AA":worst, "AT":worst, "TA":worst, "TT":worst})
-    # score extension arm primers using above matrices
-    for ext_arm in list(ext_dic["primer_information"].keys()):
-        # extract primer sequence
-        extension_seq = ext_dic["primer_information"][ext_arm]["SEQUENCE"]
-        # extract primer coordinates
-        ext_coord = (ext_dic["primer_information"][ext_arm]["COORDINATES"]).split(",")
-        ext_start = int(ext_coord[0])
-        ext_len = int(ext_coord[1])
-        # get gc percentages and convert to int.
-        extension_gc = int(float(ext_dic["primer_information"][ext_arm]["GC_PERCENT"]))
-        # score gc clamp
-        gc_clamp = ext_gc_clamp[extension_seq[-2:].upper()]
-        # get primer orientation
-        if ext_arm.startswith("PRIMER_LEFT"):
-            ext_ori = "forward"
-        elif ext_arm.startswith("PRIMER_RIGHT"):
-            ext_ori = "reverse"
-        # get downstream 2 bases for each primer
-        if ext_ori == "forward":
-            extension_end = ext_start + ext_len - 1
-            # 1 is subtracted due to sequence index being zero based.
-            ext_next = ext_template [(extension_end+1):(extension_end+3)]
-        else:
-            extension_end = ext_start - ext_len + 1
-            ext_next = reverse_complement(ext_template [(extension_end - 2):extension_end])
-        # add next base tag:value pair to dictionary
-        ext_dic["primer_information"][ext_arm]["NEXT_BASES"] = ext_next
-        if len(ext_next) < 2:
-            score = (extension_len_matrix[ext_len] + arm_gc_con[extension_gc] + gc_clamp)
-        else:
-            score = (extension_len_matrix[ext_len] + arm_gc_con[extension_gc] +                      next_bases[ext_next.upper()] + gc_clamp)
-        # add score to dictionary
-        ext_dic["primer_information"][ext_arm]["SCORE"] = score
-        # add primer orientation to dic
-        ext_dic["primer_information"][ext_arm]["ORIENTATION"] = ext_ori
-    # score ligation arm primers using above matrices
-    for lig_arm in list(lig_dic["primer_information"].keys()):
-        # extract primer sequence
-        ligation_seq = lig_dic["primer_information"][lig_arm]["SEQUENCE"]
-        # extract primer coordinates
-        lig_coord = (lig_dic["primer_information"][lig_arm]["COORDINATES"]).split(",")
-        lig_start = int(lig_coord[0])
-        lig_len = int(lig_coord[1])
-        # get gc percentages and convert to int.
-        ligation_gc = int(float(lig_dic["primer_information"][lig_arm]["GC_PERCENT"]))
-        # score gc clamp
-        gc_clamp = lig_gc_clamp[ligation_seq[-1].upper()]
-        # get primer orientation
-        if lig_arm.startswith("PRIMER_LEFT"):
-            lig_ori = "forward"
-        elif lig_arm.startswith("PRIMER_RIGHT"):
-            lig_ori = "reverse"
-        # get downstream 2 bases for each primer
-        if lig_ori == "forward":
-            ligation_end = lig_start + lig_len - 1
-            # 1 is subtracted due to sequence index being zero based.
-            lig_next = lig_template [(ligation_end+1):(ligation_end+3)]
-        else:
-            ligation_end = lig_start - lig_len + 1
-            lig_next = reverse_complement(lig_template [(ligation_end - 2):ligation_end])
-        # add next base tag:value pair to dictionary
-        lig_dic["primer_information"][lig_arm]["NEXT_BASES"] = lig_next
-        if len(lig_next) < 2:
-            score = (ligation_len_matrix[lig_len] + arm_gc_con[ligation_gc] + gc_clamp)
-        else:
-            score = (ligation_len_matrix[lig_len] + arm_gc_con[ligation_gc] +                      next_bases[lig_next.upper()] + gc_clamp)
-        # add score to dictionary
-        lig_dic["primer_information"][lig_arm]["SCORE"] = score
-        # add primer orientation to dic
-        lig_dic["primer_information"][lig_arm]["ORIENTATION"] = lig_ori
-    # write dictionaries to json file
-    with open (primer3_output_DIR + ext_out, "w") as outfile:
-     json.dump(ext_dic, outfile, indent=1)
-    with open (primer3_output_DIR + lig_out, "w") as outfile:
-     json.dump(lig_dic, outfile, indent=1)
-    return
-def filter_primers (primer_file, output_file,
-                    primer3_output_DIR, n, bin_size,
-                   outp = 1):
-    """ filter primers so that only top n scoring primers
-    ending within the same subregion (determined by bin_size)
-    remains."""
-    # load extension and ligation primers from file
-    """
-    with open (primer3_output_DIR + primer_file, 'r') as infile:
-        dic = json.load(infile)
-    """
-    dic = primer_file
-    template_seq = dic["sequence_information"]["SEQUENCE_TEMPLATE"]
-    template_len = len(template_seq)
-    forward_bins = {}
-    reverse_bins = {}
-    best_score = 0
-    for i in range(template_len//bin_size + 1):
-        forward_bins[i] = []
-        reverse_bins[i] = []
-    for primer in list(dic["primer_information"].keys()):
-        # get primer orientation
-        ori = dic["primer_information"][primer]["ORI"]
-        # get primer start coordinate
-        start = int(dic["primer_information"][primer]["COORDINATES"].split(",")[0])
-        primer_len = int(dic["primer_information"][primer]["COORDINATES"].split(",")[1])
-        if ori == "forward":
-            end = start + primer_len - 1
-        elif ori == "reverse":
-            end = start - primer_len + 1
-        # which bin the start coordinate falls into
-        end_bin = end//bin_size
-        # get primer score
-        score = dic["primer_information"][primer]["SCORE"]
-        # append the primer name/score to appropriate bin dic
-        if ori == "forward":
-            forward_bins[end_bin].append([primer, score])
-        elif ori == "reverse":
-            reverse_bins[end_bin].append([primer, score])
-    best_dic = {}
-    best_dic["sequence_information"] = dic["sequence_information"]
-    best_dic["primer_information"] = {}
-    # find best scoring mips in each forward bin
-    for key in forward_bins:
-        # sort primers for score
-        primer_set = sorted(forward_bins[key], key= itemgetter(1))
-        # get best scoring primers (all primers if there are less than n)
-        if len(primer_set) < n:
-            best_primers = primer_set
-        else:
-            best_primers = primer_set[-n:]
-        # add best primers do dictionary
-        for primers in best_primers:
-            primer_name = primers[0]
-            best_dic["primer_information"][primer_name] = dic["primer_information"][primer_name]
-    # find best scoring mips in each reverse bin
-    for key in reverse_bins:
-        # sort primers for score
-        primer_set = sorted(reverse_bins[key], key= itemgetter(1))
-        # get best scoring primers (all primers if there are less than n)
-        if len(primer_set) < n:
-            best_primers = primer_set
-        else:
-            best_primers = primer_set[-n:]
-        # add best primers do dictionary
-        for primers in best_primers:
-            primer_name = primers[0]
-            best_dic["primer_information"][primer_name] = dic["primer_information"][primer_name]
-    # write new dic to file
-    if outp:
-        with open (primer3_output_DIR + output_file, "w") as outfile:
-            json.dump(best_dic, outfile, indent=1)
-    return best_dic
 def filter_mips (mip_dic, bin_size, mip_limit):
     """
     Filter mips in "mip_dic" so that only top scoring mip
@@ -7167,7 +6810,7 @@ def score_mips (mip_file, primer3_output_DIR, output_file):
     # define matrix
     cap_gc_con = {}
     for i in range(100):
-        if i<20:
+        if i< 20:
             cap_gc_con[i] = worst
         elif i < 35:
             cap_gc_con[i] = worse
@@ -8560,6 +8203,8 @@ def filter_mipster (settings):
                 outfile.write("\t".join(outlist) + "\n")
             counter += 1
     return
+
+
 def get_haplotypes(settings):
     """ 1) Extract all haplotypes from new data.
         2) Remove known haplotypes using previous data (if any).
@@ -8576,16 +8221,15 @@ def get_haplotypes(settings):
     haplotypes_fq_file = wdir + settings["haplotypesFastqFile"]
     haplotypes_sam_file = wdir + settings["haplotypesSamFile"]
     bwa_options = settings["bwaOptions"]
-    sequence_to_haplotype_file = wdir + settings["sequenceToHaplotypeDictionary"]
+    sequence_to_haplotype_file = (wdir
+                                  + settings["sequenceToHaplotypeDictionary"])
     call_info_file = settings["callInfoDictionary"]
     species = settings["species"]
     try:
         tol = int(settings["alignmentTolerance"])
     except KeyError:
         tol = 50
-
-    #wdir = settings["workingDir"]
-    ### DATA EXTRACTION ###
+    # DATA EXTRACTION ###
     # if there is no previous haplotype information, an empty dict will be used
     # for instead of the known haplotypes dict
     try:
@@ -8615,20 +8259,21 @@ def get_haplotypes(settings):
                 hapname = newline[hap_index]
                 hapseq = newline[seq_index]
                 hapqual = "H" * len(hapseq)
-                # add the haplotype to the dict if it has not been mapped before
+                # add the haplotype to the dict
+                # if it has not been mapped before
                 if hapseq not in sequence_to_haplotype:
                     haps[hapname] = {"sequence": hapseq,
                                      "quality": hapqual}
 
-    ### BWA alignment ####
+    # BWA alignment ####
     # create a fastq file for bwa input
     with open(haplotypes_fq_file, "w") as outfile:
         for h in haps:
             outfile.write("@" + h + "\n")
             outfile.write(haps[h]["sequence"] + "\n" + "+" + "\n")
             outfile.write(haps[h]["quality"] + "\n")
-    # re-structure haplotypes dictionary and initialize a hits dictionary for all
-    # haplotypes that will hold the bowtie hits for each of the haplotypes
+    # re-structure haplotypes dictionary and initialize a hits dictionary for
+    # all haplotypes that will hold the bowtie hits for each of the haplotypes
     # keys for this dict will be mipnames
     haplotypes = {}
     for h in haps:
@@ -8638,8 +8283,8 @@ def get_haplotypes(settings):
         except KeyError:
             haplotypes[mip_name] = {h: {"sequence": haps[h]["sequence"]}}
     # run bwa
-    bwa(haplotypes_fq_file, haplotypes_sam_file, "sam", "", "",
-            bwa_options, species)
+    bwa(haplotypes_fq_file, haplotypes_sam_file, "sam", "", "", bwa_options,
+        species)
     # get best hits from alignment results
     hap_hits = {}
     for h in haps:
@@ -8671,6 +8316,42 @@ def get_haplotypes(settings):
     for m in haplotypes:
         for h in haplotypes[m]:
             haplotypes[m][h]["best_hits"] = hap_hits[h]
+    # create a dataframe from the call info dictionary
+    # to determine minimum and maximum coordinates for each gene
+    # this will be used for haplotypes that do not map to their intended
+    # targets but still are not offtarget haplotypes because they map
+    # to one of the regions of interest. A situation like this could be caused
+    # by two regions of sufficient similarity to be captured by a single mip
+    # even though regions were not determined to be paralogus. Or in any
+    # situation where the reads were assigned to the wrong MIP for any reason.
+    call_copy = copy.deepcopy(call_info)
+    call_df_list = []
+    for g in call_copy:
+        for m in call_copy[g]:
+            mip_number = int(m.split("_")[-1][3:])
+            sub_number = int(m.split("_")[-2][3:])
+            for c in call_copy[g][m]["copies"]:
+                call_dict = call_copy[g][m]["copies"][c]
+                try:
+                    call_dict.pop("genes")
+                except KeyError:
+                    pass
+                call_dict["gene"] = g
+                call_dict["copy"] = c
+                call_dict["mip_number"] = mip_number
+                call_dict["sub_number"] = sub_number
+                call_df_list.append(pd.DataFrame(call_dict))
+    call_df = pd.concat(call_df_list)
+    gene_df = call_df.groupby(["gene", "copy"]).agg(
+        {"chrom": "first",
+         "capture_start": np.min,
+         "capture_end": np.max,
+         "copyname": "first",
+         "mip_number": np.max,
+         "sub_number": np.max}
+    )
+    gene_dict = gene_df.to_dict(orient="index")
+    gene_df = gene_df.reset_index()
     # crosscheck the best bwa hit(s) for each haplotype with mip targets
     # mark off target haplotypes
     for m in haplotypes:
@@ -8689,10 +8370,8 @@ def get_haplotypes(settings):
                         copy_chrom = call_dict[copy_name]["chrom"]
                         copy_begin = call_dict[copy_name]["capture_start"]
                         copy_end = call_dict[copy_name]["capture_end"]
-                        if (
-                            (copy_chrom == hit_chrom)
-                            and (copy_begin -tol < hit_pos < copy_end + tol)
-                        ):
+                        if ((copy_chrom == hit_chrom) and
+                                (copy_begin - tol < hit_pos < copy_end + tol)):
                             haplotypes[m][h]["mapped"] = True
                             break
         except KeyError:
@@ -8700,6 +8379,68 @@ def get_haplotypes(settings):
                 haplotypes[m][h]["mapped"] = False
     # remove haplotypes that mapped best to an untargeted location on genome
     off_target_haplotypes = {}
+    secondary_haplotypes = []
+    secondary_haylotype_dict = {}
+    for m in list(haplotypes.keys()):
+        for h in list(haplotypes[m].keys()):
+            if not haplotypes[m][h]["mapped"]:
+                # check other genes/MIPs for off targets that are
+                # on other possible targets due to sequence similarity
+                best_hits = haplotypes[m][h]["best_hits"][0]
+                for record in best_hits:
+                    flag = record[1]
+                    # a flag value of 4 means there was no hit,
+                    # so pass those records
+                    if flag == "4":
+                        continue
+                    hit_chrom = record[2]
+                    hit_pos = int(record[3])
+                    # get cigar string of alignment
+                    cigar = record[5]
+                    # extract which strand is the bowtie hit on
+                    # true if forward
+                    strand = ((int(record[1]) % 256) == 0)
+                    # bowtie gives us the start position of the hit
+                    # end position is calculated using the cigar string
+                    # of the hit
+                    hit_end = hit_pos + get_cigar_length(cigar) - 1
+                    # create region keys required for sequence retrieval
+                    hit_region_key = (hit_chrom + ":" + str(hit_pos)
+                                      + "-" + str(hit_end))
+                    if strand:
+                        orient = "forward"
+                    else:
+                        orient = "reverse"
+                    for k in gene_dict:
+                        copy_chrom = gene_dict[k]["chrom"]
+                        copy_begin = gene_dict[k]["capture_start"]
+                        copy_end = gene_dict[k]["capture_end"]
+                        if (((copy_chrom == hit_chrom) and
+                                (copy_begin - tol
+                                 < hit_pos < copy_end + tol))
+                                or ((copy_chrom == hit_chrom) and
+                                    (copy_begin - tol
+                                     < hit_end < copy_end + tol))):
+                            secondary_haplotypes.append(
+                                [k[0], k[1], h, hit_chrom, hit_pos, hit_end,
+                                 orient, hit_region_key]
+                            )
+                            haplotypes[m][h]["mapped"] = True
+                            secondary_haylotype_dict[h] = (
+                                haplotypes[m].pop(h)
+                            )
+                            break
+    if len(secondary_haplotypes > 0):
+        secondary_haplotypes = pd.DataFrame(
+            secondary_haplotypes,
+            columns=["gene", "copy", "original_hap_ID", "chrom",
+                     "capture_start", "capture_end", "orientation",
+                      "region_key"]
+        )
+        secondary_haplotypes = secondary_haplotypes.merge(
+            gene_df[["gene", "copy", "copyname", "mip_number", "sub_number"]]
+        )
+
     for m in list(haplotypes.keys()):
         for h in list(haplotypes[m].keys()):
             if not haplotypes[m][h]["mapped"]:
@@ -10084,26 +9825,10 @@ def rescue_mips(design_dir,
     with open(design_dir + paralog_name + "/" + paralog_name +              "_rescue.mips", "w") as outfile:
         outfile.write("\n".join(["\t".join(map(str, outlist)) for                                 outlist in outfile_list]))
     return
-def analyze_data_old(settings_file):
-    settings = get_analysis_settings(settings_file)
-    group_samples(settings)
-    update_raw_data(settings)
-    get_counts(settings)
-    get_unique_probes(settings)
-    create_data_table(settings)
-    filter_tables(settings)
-    get_summary_table(settings)
-    return
-def process_data_old(wdir, run_ids):
-    for rid in run_ids:
-        settings_file = wdir + "settings_" + rid
-        get_data(settings_file)
-        analyze_data_old(settings_file)
-    return
+
+
 def get_data(settings_file):
     settings = get_analysis_settings(settings_file)
-    # data extraction
-    #filter_mipster (settings)
     get_haplotypes(settings)
     align_haplotypes(settings)
     parse_aligned_haplotypes(settings)
@@ -10112,6 +9837,8 @@ def get_data(settings_file):
     update_variation(settings)
     get_raw_data(settings)
     return
+
+
 def analyze_data(settings_file):
     settings = get_analysis_settings(settings_file)
     group_samples(settings)

@@ -1664,12 +1664,13 @@ class Paralog(Locus):
         with open(self.cwd + self.paralog_name, "wb") as savefile:
                 pickle.dump(self, savefile)
 
+
 class Subregion(Locus):
     """ Subregion class is used to create objects representing DNA loci
     which is a subregion of interest of a segment object. For example,
-    if a exonic regions of a gene is to be targeted for MIP capture,
+    if exonic regions of a gene is to be targeted for MIP capture,
     the whole gene would be the segment, and each exon would be a subregion.
-    MIP are designed at the subregion level.
+    MIPs are designed at the subregion level.
     """
     def __init__(self, locus, name, intervals):
         self.subregion_name = name
@@ -1678,6 +1679,7 @@ class Subregion(Locus):
         self.designed = False
         self.failed = False
         self.update_subregion()
+
     def update_subregion(self):
         self.chrom = self.locus.chrom
         self.snps = self.locus.snps
@@ -1698,8 +1700,11 @@ class Subregion(Locus):
             self.end = self.intervals[1] + self.flank
         else:
             self.end = self.segment_end
-        self.region_key = self.chrom + ":" + str(self.begin) + "-" + str(self.end)
-        self.fullname = self.locus.paralog.paralog_name + "_" + self.locus.segment_name +                         "_" + self.subregion_name
+        self.region_key = (self.chrom + ":" + str(self.begin)
+                           + "-" + str(self.end))
+        self.fullname = (self.locus.paralog.paralog_name
+                         + "_" + self.locus.segment_name
+                         + "_" + self.subregion_name)
 
         self.cwd = self.locus.cwd + self.subregion_name + "/"
         self.species = self.locus.species
@@ -1707,8 +1712,8 @@ class Subregion(Locus):
         self.create_dirs()
         self.targets = self.get_targets()
         self.masking()
-        self.get_targets()
         self.update_scoring()
+
     def get_targets(self):
         """ Select targets falling into the subregion, if
         parent segment has targets attribute."""
@@ -1717,12 +1722,11 @@ class Subregion(Locus):
             for copy_id in self.locus.targets[target_type]:
                 for t in self.locus.targets[target_type][copy_id]:
                     if (self.begin
-                        <= self.locus.targets[target_type]
-                        [copy_id][t]["begin"] <= self.end):
+                            <= self.locus.targets[target_type]
+                            [copy_id][t]["begin"] <= self.end):
                         try:
                             targets[target_type][copy_id][t] = (
-                                self.locus.targets
-                                    [target_type][copy_id][t]
+                                self.locus.targets[target_type][copy_id][t]
                             )
                         except KeyError:
                             try:
@@ -1732,16 +1736,17 @@ class Subregion(Locus):
                                 }
                             except KeyError:
                                 targets[target_type] = {
-                                    copy_id : {
+                                    copy_id: {
                                         t: self.locus.targets
                                         [target_type][copy_id][t]
                                     }
                                 }
         return targets
+
     def create_dirs(self):
         if not os.path.exists(self.cwd):
             # create a list of subdirectories, for input and output files
-            # to be used throughout the program for this sub-gene
+            # to be used throughout the program for this subregion.
             env = mip.create_dirs(self.cwd)
             # create the main dir
             os.makedirs(self.cwd)
@@ -1756,32 +1761,50 @@ class Subregion(Locus):
         self.mfold_input_DIR = self.cwd + "mfold_input/"
         self.mfold_output_DIR = self.cwd + "mfold_output/"
         return
+
     def masking(self):
-        # get masking criteria
+        """
+        Prepare primer design templates (boulder records) to be used
+        by primer3 in primer design.
+        """
+        # get masking criteria from settings
         mask_diffs_lig = int(self.capture["mask_diffs_lig"])
         mask_diffs_ext = int(self.capture["mask_diffs_ext"])
         mask_snps_lig = int(self.capture["mask_snps_lig"])
         mask_snps_ext = int(self.capture["mask_snps_ext"])
-        maf_filter = float(self.capture["maf_for_arm_design"])
-        insertion_filter = float(self.capture["maf_for_indels"])
-        must = self.locus.must
-        pdiffs = self.locus.pdiffs
-        extra_snps = self.locus.extra_snps
+        # get region sequence
         region_fasta = mip.get_fasta(self.region_key, self.species).upper()
         # convert fasta record to one line string without the fasta identifier
-        fasta_list=region_fasta.split("\n")
+        fasta_list = region_fasta.split("\n")
         fasta_head = fasta_list[0]
         seq_template_temp = "".join(fasta_list[1:])
         # convert fasta string to list of characters
         seq_template_list_lig = list(seq_template_temp)
         seq_template_list_ext = list(seq_template_temp)
+        # keep positions to be excluded from primer design in a list
         exclude_lig = []
         exclude_ext = []
+        # get locus diffs (paralogus differences, target SNPs etc.)
         region_diffs = copy.deepcopy(self.locus.split_pdiffs)
+        # diff positions are genomic but we need local positions
+        # get the local (index) of diffs by subtracting the genomic region
+        # start position from diff position.
         region_diffs["index_position"] = region_diffs["position"] - self.begin
-        region_diffs = region_diffs.loc[(region_diffs["position"] >= self.begin)
-                                       &(region_diffs["position"] <= self.end)]
+        # limit diffs to those within this subregion
+        region_diffs = region_diffs.loc[
+            (region_diffs["position"] >= self.begin)
+            & (region_diffs["position"] <= self.end)
+        ]
         diff_positions = region_diffs["index_position"].tolist()
+        # two options for excluding positions from designs are mask and
+        # exclude. Masking is simple lowercase masking which can be used
+        # by primer3 to avoid placing 3' end of a primer by setting
+        # lowercase mask option. Additionally, lowercase masking is a feature
+        # that is propagated down the pipeline which can be used in scoring
+        # each primer according to lowercase positions as opposed to letting
+        # primer3 make a final decision to design the primer or not.
+        # Exclude option prevents any primer overlapping with a given position
+        # and thus is more strict.
         if mask_diffs_lig:
             for i in diff_positions:
                 seq_template_list_lig[i] = seq_template_list_lig[i].lower()
@@ -1794,10 +1817,11 @@ class Subregion(Locus):
         else:
             for i in diff_positions:
                 exclude_ext.append([i, i])
+        # carry out masking procedure for region SNPs
         region_snps = copy.deepcopy(self.locus.split_snps)
         region_snps["index_position"] = region_snps["position"] - self.begin
         region_snps = region_snps.loc[(region_snps["position"] >= self.begin)
-                                     &(region_snps["position"] <= self.end)]
+                                      & (region_snps["position"] <= self.end)]
         snp_positions = region_snps["index_position"].tolist()
         if mask_snps_lig:
             for i in snp_positions:
@@ -1811,77 +1835,115 @@ class Subregion(Locus):
         else:
             for i in snp_positions:
                 exclude_ext.append([i, i])
-        exclude_ext = mip.merge_overlap(exclude_ext, spacer = 17)
-        exclude_lig = mip.merge_overlap(exclude_lig, spacer = 17)
+        # There is a limit to how many positions can be specified in an exclude
+        # list for primer 3. We reduce the number we provide by collapsing
+        # positions that are closer than 17 nucleotides assuming the minimum
+        # primer length is 17  and there cannot be a primer between two
+        # excluded positions that are closer than 17  nt.
+        exclude_ext = mip.merge_overlap(exclude_ext, spacer=17)
+        exclude_lig = mip.merge_overlap(exclude_lig, spacer=17)
+        # boulder records specifies the positions as a space separated list
+        # of comma separated values as index1,length1 index2,length2 ...
+        # so we convert the index values (index_start, index_end) to that
+        # format.
         exclude_ext = [[e[0], e[1] - e[0] + 1] for e in exclude_ext]
         exclude_lig = [[l[0], l[1] - l[0] + 1] for l in exclude_lig]
-        # rebuild the fasta record from modified list
+        # rebuild the fasta record from modified list of nucleotides.
         fasta_seq_lig = "".join(seq_template_list_lig)
-        fasta_rec_lig = ">" + self.fullname + "_lig"+ "," + fasta_head[1:] + "\n" + fasta_seq_lig
+        fasta_rec_lig = (">" + self.fullname + "_lig" + "," + fasta_head[1:]
+                         + "\n" + fasta_seq_lig)
         fasta_seq_ext = "".join(seq_template_list_ext)
-        fasta_rec_ext = ">" + self.fullname + "_ext" + "," + fasta_head[1:] + "\n" + fasta_seq_ext
-        #print "making boulder with ", exclude_lig
+        fasta_rec_ext = (">" + self.fullname + "_ext" + "," + fasta_head[1:]
+                         + "\n" + fasta_seq_ext)
         lig_output_name = self.fullname + "_lig"
         ext_output_name = self.fullname + "_ext"
-        mip.make_boulder (fasta_rec_lig, self.primer3_input_DIR,exclude_list=exclude_lig,                          output_file_name=lig_output_name)
-        mip.make_boulder (fasta_rec_ext, self.primer3_input_DIR,exclude_list=exclude_ext,                          output_file_name=ext_output_name)
+        # create boulder records using the masked sequences.
+        mip.make_boulder(fasta_rec_lig, self.primer3_input_DIR,
+                         exclude_list=exclude_lig,
+                         output_file_name=lig_output_name)
+        mip.make_boulder(fasta_rec_ext, self.primer3_input_DIR,
+                         exclude_list=exclude_ext,
+                         output_file_name=ext_output_name)
         return
+
     def update_scoring(self):
-        self.scoring = {"snp_scores":{}, "diff_scores":{} }
+        """
+        Get scoring parameters from the settings (rinfo) file.
+        It is possible to assign scores to each SNP/diff captured, although
+        this is not used extensively. More documentation should be available
+        for each scoring parameter where they are used.
+        """
+        self.scoring = {"snp_scores": {}, "diff_scores": {}}
         snps = self.capture["target_snp_functions"].split(",")
         if snps != ["none"]:
-            snp_scores = list(map(int,self.capture["score_snp_functions"].split(",")))
+            snp_scores = list(map(int,
+                              self.capture["score_snp_functions"].split(",")))
             for i in range(len(snps)):
                 self.scoring["snp_scores"][snps[i]] = snp_scores[i]
         diffs = self.capture["target_diffs"].split(",")
         if diffs != ["none"]:
-            diff_scores = list(map(int,self.capture["score_target_diffs"].split(",")))
+            diff_scores = list(map(int,
+                               self.capture["score_target_diffs"].split(",")))
             for i in range(len(diffs)):
                 self.scoring["diff_scores"][diffs[i]] = diff_scores[i]
         self.scoring["mask_penalty"] = int(self.capture["mask_penalty"])
-        self.scoring["unique_copy_bonus"] = int(self.capture["unique_copy_bonus"])
-        self.scoring["alternative_copy_penalty"] = int(self.capture["alternative_copy_penalty"])
-        self.scoring["technical_score_coefficient"] = float(self.capture["technical_score_coefficient"])
+        self.scoring["unique_copy_bonus"] = int(
+            self.capture["unique_copy_bonus"]
+        )
+        self.scoring["alternative_copy_penalty"] = int(
+            self.capture["alternative_copy_penalty"]
+        )
+        self.scoring["technical_score_coefficient"] = float(
+            self.capture["technical_score_coefficient"]
+        )
         self.scoring["chain_bonus"] = int(self.capture["chain_bonus"])
         self.scoring["chain_coverage"] = float(self.capture["chain_coverage"])
         self.scoring["must_bonus"] = int(self.capture["must_bonus"])
         self.scoring["set_copy_bonus"] = int(self.capture["set_copy_bonus"])
         return
-    def update_capture(self):
-        #self.locus.segment_rinfo["CAPTURE"] = self.rinfo_parser(self.config_file)\
-        #                                     ["CAPTURE"][self.locus.segment_name]
-        self.capture = self.rinfo_parser(self.config_file)["CAPTURE"][self.locus.segment_name]
-        self.update_scoring()
-        return
-    def update_settings(self):
-        #self.locus.rinfo["SETTINGS"] = self.rinfo_parser(self.config_file)["SETTINGS"]
-        self.config_file = self.locus.paralog.rinfo_file
-        self.settings = self.locus.paralog.rinfo_parser(self.config_file)["SETTINGS"]
-        self.capture = self.rinfo_parser(self.config_file)["CAPTURE"][self.locus.segment_name]
-        self.update_scoring()
-        return
+
     def parse_primers(self):
-        self.primers = {"original":{}, "parsed":{}}
+        """ Parse primer file generated by primer3. Return a dict."""
+        self.primers = {"original": {}, "parsed": {}}
         for arm in ["extension", "ligation"]:
             name = self.fullname + "_" + arm[:3]
-            self.primers["original"][arm] = {"filename":name}
-            self.primers["parsed"][arm] = {"filename":name + "_parsed"}
-            parsed = mip.primer_parser3(self.primers["original"][arm]["filename"],
-                                        self.primer3_output_DIR,
-                                        self.bowtie2_input_DIR,
-                                        self.primers["parsed"][arm]["filename"],
-                                        fasta = 1, outp=0)
-            par = mip.paralog_primers_multi(parsed,
-                                            self.locus.copies,
-                                            self.locus.pcoordinates,
-                                            self.settings[arm],
-                                            self.primer3_output_DIR,
-                                            self.primers["parsed"][arm]["filename"],
-                                            self.locus.species,
-                                            outp = int(self.locus.rinfo["CAPTURE"]["S0"]["output_level"]))
+            self.primers["original"][arm] = {"filename": name}
+            self.primers["parsed"][arm] = {"filename": name + "_parsed"}
+            parsed = mip.primer_parser3(
+                self.primers["original"][arm]["filename"],
+                self.primer3_output_DIR, self.bowtie2_input_DIR,
+                self.primers["parsed"][arm]["filename"], fasta=1, outp=0
+            )
+            par = mip.paralog_primers_multi(
+                parsed, self.locus.copies, self.locus.pcoordinates,
+                self.settings[arm], self.primer3_output_DIR,
+                self.primers["parsed"][arm]["filename"],
+                self.locus.species,
+                outp=int(self.locus.rinfo["CAPTURE"]["S0"]["output_level"]))
             self.primers["parsed"][arm]["dictionary"] = par
         return
+
     def bowtie2_run(self):
+        """
+        Take primers generated by primer3. Align them to reference (and host)
+        genomes to decide where these primers might be binding on both the
+        target genome and the host genome (if any).
+        Decide which primers are on target, which have too many off targets
+        and remove those with too many off targets.
+        When there area multiple paralogs, the primers are designed on one
+        paralog. This function also determines if a given primer is likely to
+        bind to the other paralogs. If not, and if it is allowed, it will
+        design alternative primers for those paralogs that are not likely to
+        be bound by the original primer. The alternative primer is based on
+        the original primer when possible, that is, when the paralog copy
+        shows up as off target by the bowtie alignment, in which case, the
+        bowtie alinged region of the paralog is extended or clipped from the
+        5' end to match the melting temperature of the original primers. When
+        bowtie alignment does not catch the paralog copy, the original
+        lastz alignment used in region preps are used to get the alternative
+        primer. Similarly, the sequence from the alignment will be adjusted
+        from the 5' end to match the melting temperature.
+        """
         species = self.species
         host = self.host
         self.bowtie = {}
@@ -1889,156 +1951,163 @@ class Subregion(Locus):
         self.bowtie["output"] = {}
         self.bowtie["cleaned"] = {}
         self.primers["bt_added"] = {}
-        self.primers["adjusted"] = {}
         self.primers["bowtied"] = {}
         self.primers["alternative"] = {}
         self.primers["bt_filtered"] = {}
-
+        output_level = int(self.locus.rinfo["CAPTURE"]["S0"]["output_level"])
+        # carry out everything for extension and ligation arms
         for arm in ["extension", "ligation"]:
             name = self.fullname + "_" + arm[:3]
-            self.bowtie["input"][arm] = {"filename":self.primers["parsed"][arm]["filename"]}
-            self.bowtie["output"][arm] = {"filename":name + "_" + species,
-                                          "hostfile":name + "_" + host}
-            #self.bowtie["cleaned"][arm] = {"filename":self.bowtie["output"][arm]["filename"] + "_clean"}
+            # parsed primer3 output will be used as bowtie input.
+            # primer_parser creates a fasta file of primers in
+            # the bowtie2_input_DIR.
+            self.bowtie["input"][arm] = {
+                "filename": self.primers["parsed"][arm]["filename"]
+            }
+            # output files will be generated for both the target and the
+            # host species in the bowtie2_output_DIR.
+            self.bowtie["output"][arm] = {"filename": name + "_" + species,
+                                          "hostfile": name + "_" + host}
             # run bowtie2 for the species
             mip.bowtie2_run(self.bowtie["input"][arm]["filename"],
                             self.bowtie["output"][arm]["filename"],
-                            self.bowtie2_input_DIR, self.bowtie2_output_DIR, species,
+                            self.bowtie2_input_DIR, self.bowtie2_output_DIR,
+                            species,
                             process_num=int(self.settings[arm]["processors"]),
                             mode=self.settings[arm]["bowtie_mode"],
                             seed_len=int(self.settings[arm]["seed_len"]),
                             local=int(self.settings[arm]["local"]))
             # run bowtie2 for host species
             if host != "none":
-                mip.bowtie2_run(self.bowtie["input"][arm]["filename"],
-                                self.bowtie["output"][arm]["hostfile"],
-                                self.bowtie2_input_DIR, self.bowtie2_output_DIR, host,
-                                process_num=int(self.settings[arm]["processors"]),
-                                mode=self.settings[arm]["bowtie_mode"],
-                                seed_len=int(self.settings[arm]["seed_len"]),
-                                local=int(self.settings[arm]["local"]))
+                mip.bowtie2_run(
+                    self.bowtie["input"][arm]["filename"],
+                    self.bowtie["output"][arm]["hostfile"],
+                    self.bowtie2_input_DIR, self.bowtie2_output_DIR, host,
+                    process_num=int(self.settings[arm]["processors"]),
+                    mode=self.settings[arm]["bowtie_mode"],
+                    seed_len=int(self.settings[arm]["seed_len"]),
+                    local=int(self.settings[arm]["local"]))
             # parse bowtie hits, remove primers with excessive hits
             # and add bowtie sequence information to primer dict
             # first for the species, create the filename for primers dictionary
             # that has the bowtie information for the species
-            self.primers["bt_added"][arm] = {"filename":name + "_" + species+ "_bt_added",
-                                             "hostfile":name + "_" + host+ "_bt_added"}
-            bt_added = mip.parse_bowtie(self.primers["parsed"][arm]["dictionary"],
-                                       self.bowtie["output"][arm]["filename"],
-                                       self.primers["bt_added"][arm]["filename"],
-                                       self.primer3_output_DIR,
-                                       self.bowtie2_output_DIR,
-                                       self.species,
-                                       self.settings[arm],
-                                       outp = int(
-                        self.locus.rinfo["CAPTURE"]["S0"]["output_level"]
-                                       )
+            self.primers["bt_added"][arm] = {
+                "filename": name + "_" + species + "_bt_added",
+                "hostfile": name + "_" + host + "_bt_added"
+            }
+            bt_added = mip.parse_bowtie(
+                self.primers["parsed"][arm]["dictionary"],
+                self.bowtie["output"][arm]["filename"],
+                self.primers["bt_added"][arm]["filename"],
+                self.primer3_output_DIR,
+                self.bowtie2_output_DIR,
+                self.species, self.settings[arm], outp=output_level
             )
-            # add bowtie information for host species
-            # primer dict to be used here is species bt_added dict, not the original
+            # add bowtie information for host species primer
+            # dict to be used here is species bt_added dict, not the original
             # and the bowtie file to be used is that of the host species
             if host != "none":
-                bt_added_host = mip.parse_bowtie(bt_added,
-                                       self.bowtie["output"][arm]["hostfile"],
-                                       self.primers["bt_added"][arm]["hostfile"],
-                                       self.primer3_output_DIR,
-                                       self.bowtie2_output_DIR,
-                                       self.host,
-                                       self.settings[arm],
-                                                outp = int(self.locus.rinfo["CAPTURE"]["S0"]["output_level"]))
-            # add temperature information of bowtie hits and create alternative arms
-            # if necessary and allowed (for paralogus genes only).
-            self.primers["bowtied"][arm] = {"filename":name + "_" + species + "_bowtied",
-                                            "hostfile": name +  "_" + host + "_bowtied"}
+                bt_added_host = mip.parse_bowtie(
+                    bt_added,
+                    self.bowtie["output"][arm]["hostfile"],
+                    self.primers["bt_added"][arm]["hostfile"],
+                    self.primer3_output_DIR, self.bowtie2_output_DIR,
+                    self.host, self.settings[arm], outp=output_level
+                )
+            # add temperature information of bowtie hits and create alternative
+            # arms if necessary and allowed (for paralogus genes only).
+            self.primers["bowtied"][arm] = {
+                "filename": name + "_" + species + "_bowtied",
+                "hostfile": name + "_" + host + "_bowtied"
+            }
             if host != "none":
-                # if there is a host species, then the most up to date primers are in
-                # the hostfile, rather than the species file. That is the input dict.
-                # first add the species bowtie information
-                bowtied_host = mip.cleanest_bowtie(bt_added_host,
-                                               self.primers["bowtied"][arm]["filename"],
-                                               self.primer3_output_DIR,
-                                               self.bowtie2_output_DIR,
-                                               self.species,
-                                               self.settings[arm],
-                                             outp = int(self.locus.rinfo["CAPTURE"]["S0"]["output_level"]))
-                # then add the host information, using species-bowtied dictionary as input
-                bowtied = mip.cleanest_bowtie(bowtied_host,
-                                               self.primers["bowtied"][arm]["hostfile"],
-                                               self.primer3_output_DIR,
-                                               self.bowtie2_output_DIR,
-                                               self.host,
-                                               self.settings[arm],
-                                             True,
-                                             outp = int(self.locus.rinfo["CAPTURE"]["S0"]["output_level"]))
+                # if there is a host species, then the most up to date primers
+                # are in the hostfile, rather than the species file. That will
+                # be the starting input dict.
+                # First, add the species bowtie information
+                bowtied_host = mip.process_bowtie(
+                    bt_added_host, self.primers["bowtied"][arm]["filename"],
+                    self.primer3_output_DIR, self.bowtie2_output_DIR,
+                    self.species, self.settings[arm],
+                    outp=output_level)
+                # then add the host information, using species-bowtied
+                # dictionary as input
+                bowtied = mip.process_bowtie(
+                    bowtied_host, self.primers["bowtied"][arm]["hostfile"],
+                    self.primer3_output_DIR, self.bowtie2_output_DIR,
+                    self.host, self.settings[arm], True, outp=output_level
+                )
             else:
                 # if there is no host species, add bt information for species
                 # here the primer file is that of the species
-                bowtied = mip.cleanest_bowtie(bt_added,
-                                                   self.primers["bowtied"][arm]["filename"],
-                                                   self.primer3_output_DIR,
-                                                   self.bowtie2_output_DIR,
-                                                   self.species,
-                                                   self.settings[arm],
-                                             outp = int(self.locus.rinfo["CAPTURE"]["S0"]["output_level"]))
+                bowtied = mip.process_bowtie(
+                    bt_added, self.primers["bowtied"][arm]["filename"],
+                    self.primer3_output_DIR, self.bowtie2_output_DIR,
+                    self.species, self.settings[arm], outp=output_level
+                )
 
             # filter primers with nonspecific binding
-            self.primers["bt_filtered"][arm] = {"filename":name + "_" + species + "_bt_filtered",
-                                                "hostfile":name + "_" + host + "_bt_filtered"}
+            self.primers["bt_filtered"][arm] = {
+                "filename": name + "_" + species + "_bt_filtered",
+                "hostfile": name + "_" + host + "_bt_filtered"}
 
             if host != "none":
-                # the primer dict with both host and species bt information will be used first
-                filtered_host = mip.filter_bowtie(bowtied,
-                                             self.primers["bt_filtered"][arm]["hostfile"],
-                                             self.primer3_output_DIR,
-                                             self.host,
-                                             TM=float(self.settings[arm]["tm"]),
-                                             hit_threshold=int(self.settings[arm]["hit_threshold"]),
-                                             lower_tm=float(self.settings[arm]["lower_tm"]),
-                                             lower_hit_threshold=int(self.settings[arm]\
-                                                                 ["lower_hit_threshold"]),
-                                                 outp = int(self.locus.rinfo["CAPTURE"]["S0"]["output_level"]))
+                # the primer dict with both host and species bt information
+                # will be used first
+                filtered_host = mip.filter_bowtie(
+                    bowtied, self.primers["bt_filtered"][arm]["hostfile"],
+                    self.primer3_output_DIR, self.host,
+                    TM=float(self.settings[arm]["tm"]),
+                    hit_threshold=int(self.settings[arm]["hit_threshold"]),
+                    lower_tm=float(self.settings[arm]["lower_tm"]),
+                    lower_hit_threshold=int(self.settings[arm]
+                                            ["lower_hit_threshold"]),
+                    outp=output_level
+                )
                 # filter the species hits next
-                filtered = mip.filter_bowtie(filtered_host,
-                                             self.primers["bt_filtered"][arm]["filename"],
-                                             self.primer3_output_DIR,
-                                             self.species,
-                                             TM=float(self.settings[arm]["tm"]),
-                                             hit_threshold=int(self.settings[arm]["hit_threshold"]),
-                                             lower_tm=float(self.settings[arm]["lower_tm"]),
-                                             lower_hit_threshold=int(self.settings[arm]\
-                                                                 ["lower_hit_threshold"]),
-                                            outp = int(self.locus.rinfo["CAPTURE"]["S0"]["output_level"]))
+                filtered = mip.filter_bowtie(
+                    filtered_host,
+                    self.primers["bt_filtered"][arm]["filename"],
+                    self.primer3_output_DIR,
+                    self.species,
+                    TM=float(self.settings[arm]["tm"]),
+                    hit_threshold=int(self.settings[arm]["hit_threshold"]),
+                    lower_tm=float(self.settings[arm]["lower_tm"]),
+                    lower_hit_threshold=int(self.settings[arm]
+                                            ["lower_hit_threshold"]),
+                    outp=output_level
+                )
             else:
                 # if there is no host species, filter the species bowtie hits
-                filtered = mip.filter_bowtie(bowtied,
-                                             self.primers["bt_filtered"][arm]["filename"],
-                                             self.primer3_output_DIR,
-                                             self.species,
-                                             TM=float(self.settings[arm]["tm"]),
-                                             hit_threshold=int(self.settings[arm]["hit_threshold"]),
-                                             lower_tm=float(self.settings[arm]["lower_tm"]),
-                                             lower_hit_threshold=int(self.settings[arm]\
-                                                                 ["lower_hit_threshold"]))
+                filtered = mip.filter_bowtie(
+                    bowtied, self.primers["bt_filtered"][arm]["filename"],
+                    self.primer3_output_DIR,
+                    self.species,
+                    TM=float(self.settings[arm]["tm"]),
+                    hit_threshold=int(self.settings[arm]["hit_threshold"]),
+                    lower_tm=float(self.settings[arm]["lower_tm"]),
+                    lower_hit_threshold=int(self.settings[arm]
+                                            ["lower_hit_threshold"]))
 
-            # whether there are two species or one, the file with the latest information is the same
-            # and it has no more bowtie information in it (self.primers["bt_filtered"][arm]["filename"])
-            # ############################
-            # Pick the best alternative primer according to the TM information, if necessary
-            # when there is no need for alternatives, the alternative function will return
-            # the same dictionary as the input
+            # Pick the best alternative primer according to the TM information,
+            # if necessary. when there is no need for alternatives, the
+            # alternative function will return the same dictionary as the
+            # input.
             try:
                 tm_diff = float(self.settings[arm]["alt_tm_diff"])
             except KeyError:
                 tm_diff = float(self.settings[arm]["tm_diff"])
-            self.primers["alternative"][arm] = {"filename":name + "_alternative"}
-            alternative = mip.alternative(filtered,
-                                          self.primers["alternative"][arm]["filename"],
-                                          self.primer3_output_DIR,
-                                          tm_diff,
-                                         outp = 1)
+            self.primers["alternative"][arm] = {"filename": name
+                                                + "_alternative"}
+            alternative = mip.alternative(
+                filtered, self.primers["alternative"][arm]["filename"],
+                self.primer3_output_DIR, tm_diff, outp=1)
             self.primers["alternative"][arm]["dictionary"] = alternative
         return
+
     def score_primers(self):
+        """ Score and filter primers. Parameters are specified in the
+        rinfo file and include lowercase masking penalty, """
         self.primers["scored"] = {}
         self.primers["filtered"] = {}
         mask_penalty = self.scoring["mask_penalty"]
@@ -2063,6 +2132,7 @@ class Subregion(Locus):
                                )
             self.primers["filtered"][arm]["dictionary"] = filtered
         return
+
     def pick_primer_pairs (self):
         self.primers["paired"] = {"filename":self.fullname + "_paired"}
         settings = self.settings["mip"]
@@ -2097,6 +2167,7 @@ class Subregion(Locus):
         #self.primers["paired"]["dictionary"] = paired
         self.primers["pairs"]["dictionary"] = pairs
         return
+
     def make_mips (self):
         self.mips = {"original":{}}
         self.primers["original"]["mip"] = {}
@@ -2115,6 +2186,7 @@ class Subregion(Locus):
                                            temp,
                                            mip.backbones[self.settings["mip"]["backbone"]])
         return
+
     def hairpin (self):
         self.primers["hairpin"] = {}
         self.primers["hairpin"]["filename"] = self.fullname + "_hp"
@@ -2130,13 +2202,14 @@ class Subregion(Locus):
                           int(self.settings["mip"]["processors"]),
                           #float(self.settings["mip"]["dg"]),
                           float(self.settings["mip"]["hairpin_tm"]),
-        outp = int(self.locus.rinfo["CAPTURE"]["S0"]["output_level"]))
+        outp=int(self.locus.rinfo["CAPTURE"]["S0"]["output_level"]))
         self.primers["hairpin"]["dictionary"] = hp
         for h in hp["pair_information"]:
             dg = hp["pair_information"][h]["mip_information"]["ref"]["HAIRPIN"]
             self.mips["original"][h].hairpin = dg
             self.mips["hairpin"][h] = self.mips["original"][h]
         return
+
     def score_mips(self):
         for m in list(self.mips["hairpin"].keys()):
             try:
@@ -2178,6 +2251,7 @@ class Subregion(Locus):
             json.dump(self.mips["scored_filtered"]["dictionary"], infile, indent=1)
 
         return
+
     def compatible(self):
         try:
             overlap_same = int(self.locus.rinfo["SELECTION"]["compatibility"]                                               ["same_strand_overlap"])

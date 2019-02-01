@@ -72,6 +72,7 @@ From: amd64/ubuntu:18.04
     "scandir=1.9.0"
     conda clean -tipsy
 
+    pip install primer3-py==0.5.7
     # install lastZ
     cd /opt/programs/lastz/src
     make lastz_32 && install lastz_32 /usr/bin/
@@ -80,7 +81,8 @@ From: amd64/ubuntu:18.04
     cd /opt/programs
     git clone https://github.com/bailey-lab/MIPWrangler
     cd MIPWrangler
-    ./install.sh 20
+    git checkout develop
+    ./upgradeDevelop.sh 20
 
     # install elucidator
     cd /opt/programs
@@ -128,7 +130,8 @@ From: amd64/ubuntu:18.04
 
 %environment
     path=/opt/bin:/opt/conda/bin:/opt/programs/MIPWrangler/bin:
-    path+=/opt/programs/elucidator/bin:/opt/programs/unafold/bin:$PATH
+    path=$path/opt/programs/elucidator/bin:/opt/programs/mpfold-3.6/bin:
+    path=$path$PATH
     export PATH=$path
     export XDG_RUNTIME_DIR=""
     export DEBIAN_FRONTEND=noninteractive
@@ -140,6 +143,7 @@ From: amd64/ubuntu:18.04
     set -e
     set -u
     nb_port=$(shuf -i 8000-9999 -n 1)
+    server_ip=$(hostname -i)
     server_user=$(whoami)@$(hostname -f)
     nb_dir=/opt
     while getopts p:d: OPT; do
@@ -156,10 +160,12 @@ From: amd64/ubuntu:18.04
     rsync /opt/resources/*.ipynb /opt/analysis --ignore-existing \
         --ignore-missing-args
     port_fw="Use the following command if you are running this notebook from "
-    port_fw+="a remote server. Ignore if using a local computer. "
-    port_fw+="ssh -N -f -L $nb_port:localhost:$nb_port:localhost $server_user"
+    port_fw=$port_fw"a remote server. Ignore if using a local computer."
     echo $port_fw
-    jupyter notebook --notebook-dir=$nb_dir --port=$nb_port --no-browser
+    port_fw="ssh -N -f -L localhost:$nb_port:$server_ip:$nb_port $server_user"
+    echo $port_fw
+    jupyter notebook --notebook-dir=$nb_dir --ip=$server_ip \
+            --port=$nb_port --no-browser
 
 %apprun wrangler
     set -e
@@ -265,13 +271,13 @@ From: amd64/ubuntu:18.04
         --no-lane-splitting
     python /opt/src/demux_qc.py -p $platform
 
-%apprun demux-qc
+%apprun demux_qc
     set -e
     set -u
     while getopts p: opt; do
         case $opt in
             p)  platform=$OPTARG;;
-            ?)  echo "Usage: singularity run --app fastq-qc \\"
+            ?)  echo "Usage: singularity run --app demux_qc\\"
                 echo "           -B /path_to_base_resources:/opt/resources \\"
                 echo "           -B /path_to_fastq_dir:/opt/analysis "
                 echo "            mycontainer.sif -p sequencing_platform"
