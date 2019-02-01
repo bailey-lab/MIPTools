@@ -5963,32 +5963,28 @@ def score_paralog_primers(primer_dict, output_file, primer3_output_DIR,
     return primer_dict
 
 
-def filter_primers (primer_file, output_file,
-                    primer3_output_DIR, n, bin_size,
-                   outp = 1):
-    """ filter primers so that only top n scoring primers
-    ending within the same subregion (determined by bin_size)
-    remains."""
+def filter_primers(primer_dict, output_file,
+                   primer3_output_DIR, n, bin_size, outp=1):
+    """ Filter primers so that only top n scoring primers
+    ending within the same subregion (determined by bin_size) remain.
+    For example, bin_size=3 and n=1 would chose the best scoring primer
+    among primers that end within 3 bps of each other."""
     # load extension and ligation primers from file
-    """
-    with open (primer3_output_DIR + primer_file, 'r') as infile:
-        dic = json.load(infile)
-    """
-    dic = primer_file
-    template_seq = dic["sequence_information"]["SEQUENCE_TEMPLATE"]
+    template_seq = primer_dict["sequence_information"]["SEQUENCE_TEMPLATE"]
     template_len = len(template_seq)
     forward_bins = {}
     reverse_bins = {}
-    best_score = 0
     for i in range(template_len//bin_size + 1):
         forward_bins[i] = []
         reverse_bins[i] = []
-    for primer in list(dic["primer_information"].keys()):
+    for primer in list(primer_dict["primer_information"].keys()):
         # get primer orientation
-        ori = dic["primer_information"][primer]["ORI"]
+        ori = primer_dict["primer_information"][primer]["ORI"]
         # get primer start coordinate
-        start = int(dic["primer_information"][primer]["COORDINATES"].split(",")[0])
-        primer_len = int(dic["primer_information"][primer]["COORDINATES"].split(",")[1])
+        start = int(primer_dict["primer_information"][primer]
+                    ["COORDINATES"].split(",")[0])
+        primer_len = int(primer_dict["primer_information"][primer]
+                         ["COORDINATES"].split(",")[1])
         if ori == "forward":
             end = start + primer_len - 1
         elif ori == "reverse":
@@ -5996,19 +5992,20 @@ def filter_primers (primer_file, output_file,
         # which bin the start coordinate falls into
         end_bin = end//bin_size
         # get primer score
-        score = dic["primer_information"][primer]["SCORE"]
+        score = primer_dict["primer_information"][primer]["SCORE"]
         # append the primer name/score to appropriate bin dic
         if ori == "forward":
             forward_bins[end_bin].append([primer, score])
         elif ori == "reverse":
             reverse_bins[end_bin].append([primer, score])
-    best_dic = {}
-    best_dic["sequence_information"] = dic["sequence_information"]
-    best_dic["primer_information"] = {}
+    best_primer_dict = {}
+    best_primer_dict["sequence_information"] = primer_dict[
+        "sequence_information"]
+    best_primer_dict["primer_information"] = {}
     # find best scoring mips in each forward bin
     for key in forward_bins:
         # sort primers for score
-        primer_set = sorted(forward_bins[key], key= itemgetter(1))
+        primer_set = sorted(forward_bins[key], key=itemgetter(1))
         # get best scoring primers (all primers if there are less than n)
         if len(primer_set) < n:
             best_primers = primer_set
@@ -6017,11 +6014,12 @@ def filter_primers (primer_file, output_file,
         # add best primers do dictionary
         for primers in best_primers:
             primer_name = primers[0]
-            best_dic["primer_information"][primer_name] = dic["primer_information"][primer_name]
+            best_primer_dict["primer_information"][primer_name] = primer_dict[
+                "primer_information"][primer_name]
     # find best scoring mips in each reverse bin
     for key in reverse_bins:
         # sort primers for score
-        primer_set = sorted(reverse_bins[key], key= itemgetter(1))
+        primer_set = sorted(reverse_bins[key], key=itemgetter(1))
         # get best scoring primers (all primers if there are less than n)
         if len(primer_set) < n:
             best_primers = primer_set
@@ -6030,12 +6028,13 @@ def filter_primers (primer_file, output_file,
         # add best primers do dictionary
         for primers in best_primers:
             primer_name = primers[0]
-            best_dic["primer_information"][primer_name] = dic["primer_information"][primer_name]
+            best_primer_dict["primer_information"][primer_name] = primer_dict[
+                "primer_information"][primer_name]
     # write new dic to file
     if outp:
-        with open (primer3_output_DIR + output_file, "w") as outfile:
-            json.dump(best_dic, outfile, indent=1)
-    return best_dic
+        with open(primer3_output_DIR + output_file, "w") as outfile:
+            json.dump(best_primer_dict, outfile, indent=1)
+    return best_primer_dict
 
 
 def pick_paralog_primer_pairs(extension, ligation, output_file,
@@ -6054,9 +6053,6 @@ def pick_paralog_primer_pairs(extension, ligation, output_file,
     if len(lig) == 0:
         print("There are no ligation primers.")
         return 1
-    # assign sequence information dict to shorter name
-    ext_seq = extension["sequence_information"]
-    lig_seq = ligation["sequence_information"]
     # create a primer pairs dic. This dictionary is similar to primer dic
     primer_pairs = {}
     # has the same sequence_information key:value pairs
@@ -6064,12 +6060,17 @@ def pick_paralog_primer_pairs(extension, ligation, output_file,
     # has pair information key instead of primer_information
     primer_pairs["pair_information"] = {}
     # populate sequence information (same as extension or ligation)
-    primer_pairs["sequence_information"]['SEQUENCE_TEMPLATE'] =       extension["sequence_information"]['SEQUENCE_TEMPLATE']
-    primer_pairs["sequence_information"]['SEQUENCE_EXCLUDED_REGION'] =       extension["sequence_information"]['SEQUENCE_EXCLUDED_REGION']
-    primer_pairs["sequence_information"]['SEQUENCE_TARGET'] =     extension["sequence_information"]['SEQUENCE_TARGET']
-    primer_pairs["sequence_information"]['SEQUENCE_ID'] =     extension["sequence_information"]['SEQUENCE_ID']
+    primer_pairs["sequence_information"]['SEQUENCE_TEMPLATE'] = extension[
+        "sequence_information"]['SEQUENCE_TEMPLATE']
+    primer_pairs["sequence_information"]['SEQUENCE_EXCLUDED_REGION'] = (
+        extension["sequence_information"]['SEQUENCE_EXCLUDED_REGION']
+    )
+    primer_pairs["sequence_information"]['SEQUENCE_TARGET'] = extension[
+        "sequence_information"]['SEQUENCE_TARGET']
+    primer_pairs["sequence_information"]['SEQUENCE_ID'] = extension[
+        "sequence_information"]['SEQUENCE_ID']
     # pick primer pairs
-    for e in list(ext.keys()):
+    for e in ext.keys():
         # extension primer information for this mip will be e_info
         e_info = ext[e]
         # get primer coordinates
@@ -6077,11 +6078,14 @@ def pick_paralog_primer_pairs(extension, ligation, output_file,
         ext_end = e_info["GENOMIC_END"]
         # get primer orientation
         ext_ori = ext_end > ext_start
-        # if end is greater than start then it is a left(fw) primer, ext_ori is True
-        # get coordinates of this primer in paralog copies
+        # if end is greater than start then it is a left(fw) primer,
+        # and ext_ori is True.
+        # get coordinates of this primer in paralog copies.
         ep_info = e_info["PARALOG_COORDINATES"]
-        # paralogs bound by primer
+        # the paralogs bound by primer according to bowtie mapping
         e_binds = e_info["BOWTIE_BINDS"]
+        # paralogs that were not bound by the primer and alt primers were
+        # designed.
         e_alt_binds = e_info["ALT_BINDS"]
         # find a ligation primer
         for l in list(lig.keys()):
@@ -6098,12 +6102,15 @@ def pick_paralog_primer_pairs(extension, ligation, output_file,
             if lig_ori == ext_ori:
                 # check if relative positions of primers are correct
                 if ext_ori:
-                    # ligation end should be greater than extension end for forward pairs
+                    # ligation end should be greater than extension end
+                    # for forward pairs
                     position = lig_end > ext_end
                 else:
-                    # extension end should be greater than ligation end for reverse pairs
+                    # extension end should be greater than ligation end
+                    # for reverse pairs
                     position = ext_end > lig_end
-                # get pair information if relative positions of primers are correct
+                # get pair information if relative positions of primers are
+                # correct
                 if position:
                     coord = [ext_start, ext_end, lig_start, lig_end]
                     coord.sort()
@@ -6114,6 +6121,8 @@ def pick_paralog_primer_pairs(extension, ligation, output_file,
                     l_binds = l_info["BOWTIE_BINDS"]
                     l_alt_binds = l_info["ALT_BINDS"]
                     # find the paralogs that are hybridized by both primers
+                    # start with paralog copies that are bound by the
+                    # original primers (not alts).
                     paralogs = list(set(l_binds).intersection(e_binds))
                     for p in paralogs:
                         try:
@@ -6133,21 +6142,34 @@ def pick_paralog_primer_pairs(extension, ligation, output_file,
                                     p_position = lp_end < ep_end
                                     pair_ori = "reverse"
                                 if p_position:
-                                    p_coord = [ep_start, ep_end, lp_start, lp_end]
+                                    p_coord = [ep_start, ep_end,
+                                               lp_start, lp_end]
                                     p_coord.sort()
                                     prod_size = p_coord[-1] - p_coord[0] + 1
-                                    pairs[p] = {"capture_size":prod_size,"extension_start": ep_start,
-                                                "extension_end": ep_end, "ligation_start": lp_start,
-                                                "ligation_end": lp_end, "mip_start":p_coord[0],
-                                                "mip_end":p_coord[3], "capture_start":p_coord[1]+1,
-                                                "capture_end":p_coord[2]-1, "chrom":lp_chrom,
-                                                "orientation":pair_ori
-                                                 }
-
-
+                                    pairs[p] = {
+                                        "capture_size": prod_size,
+                                        "extension_start": ep_start,
+                                        "extension_end": ep_end,
+                                        "ligation_start": lp_start,
+                                        "ligation_end": lp_end,
+                                        "mip_start": p_coord[0],
+                                        "mip_end": p_coord[3],
+                                        "capture_start": p_coord[1] + 1,
+                                        "capture_end": p_coord[2] - 1,
+                                        "chrom": lp_chrom,
+                                        "orientation": pair_ori
+                                    }
                         except KeyError:
                             continue
                     # check if any pairs' product is within size limits
+                    # taking into account reported insertions within
+                    # the target region. If there are insertions, we reduce
+                    # the max size to accomodate those insertions.
+                    # Deletions are handled differently because their impact
+                    # on the captures will be different. Any deletion that
+                    # is small enough to be captured will still be captured
+                    # without any alterations. However the capture size will
+                    # become smaller, which is not detrimental.
                     pair_found = 0
                     captured_copies = []
                     for p in list(pairs.keys()):
@@ -6155,23 +6177,26 @@ def pick_paralog_primer_pairs(extension, ligation, output_file,
                             max_insertion_size = region_insertions.loc[
                                 (region_insertions["copy_chrom"]
                                  == pairs[p]["chrom"])
-                                &(region_insertions["copy_begin"]
-                                  > pairs[p]["capture_start"])
-                                &(region_insertions["copy_end"]
-                                  < pairs[p]["capture_end"]),
+                                & (region_insertions["copy_begin"]
+                                   > pairs[p]["capture_start"])
+                                & (region_insertions["copy_end"]
+                                   < pairs[p]["capture_end"]),
                                 "max_size"].sum()
                         else:
                             max_insertion_size = 0
-                        adjusted_max_size = max((max_size - max_insertion_size),
+                        adjusted_max_size = max((max_size
+                                                 - max_insertion_size),
                                                 min_size)
+                        # we do not have to adsjust min_size unless the max
+                        # size get too close to min_size, in which case
+                        # we leave a 30 bp distance between min an max so
+                        # that we're not very limited in primer  pair choices.
                         adjusted_min_size = min(adjusted_max_size - 30,
-                                               min_size)
+                                                min_size)
                         if (adjusted_max_size
-                            >= pairs[p]["capture_size"]
-                            >= adjusted_min_size):
+                                >= pairs[p]["capture_size"]
+                                >= adjusted_min_size):
                             captured_copies.append(p)
-                            # only take mips that capture the reference copy
-                            # remove the if statement if any copy captured would work
                             pair_found = 1
                     if pair_found:
                         # if a pair is found for any copy
@@ -6183,36 +6208,47 @@ def pick_paralog_primer_pairs(extension, ligation, output_file,
                                 max_insertion_size = region_insertions.loc[
                                     (region_insertions["copy_chrom"]
                                      == pairs[p]["chrom"])
-                                    &(region_insertions["copy_begin"]
-                                      > pairs[p]["capture_start"])
-                                    &(region_insertions["copy_end"]
-                                      < pairs[p]["capture_end"]),
+                                    & (region_insertions["copy_begin"]
+                                       > pairs[p]["capture_start"])
+                                    & (region_insertions["copy_end"]
+                                       < pairs[p]["capture_end"]),
                                     "max_size"].sum()
                             else:
                                 max_insertion_size = 0
-                            adjusted_max_size = max((max_size - max_insertion_size),
+                            adjusted_max_size = max((max_size
+                                                     - max_insertion_size),
                                                     min_size)
-                            if adjusted_max_size >= pairs[p]["capture_size"] >= 0:
+                            if (adjusted_max_size
+                                    >= pairs[p]["capture_size"] >= 0):
                                 captured_copies.append(p)
-                        # create a pair name as PAIR_extension primer number
-                        # _ligation primer number
+                        # create a pair name as
+                        # PAIR_extension primer number_ligation primer number
                         ext_name = e.split('_')[2]
                         lig_name = l.split('_')[2]
-                        pair_name = "PAIR_" + subregion_name + "_"+ ext_name + "_" + lig_name
+                        pair_name = ("PAIR_" + subregion_name + "_" + ext_name
+                                     + "_" + lig_name)
                         if ext_ori:
                             orientation = "forward"
                         else:
                             orientation = "reverse"
-                        primer_pairs["pair_information"][pair_name] = {"pairs":pairs,                                   "extension_primer_information":ext[e],                                   "ligation_primer_information":lig[l], "orientation": orientation,                                   "captured_copies": captured_copies}
-                        alt_paralogs = list(
-                            (set(l_alt_binds).union(e_alt_binds)
-                            ).difference(paralogs)
-                        )
+                        primer_pairs["pair_information"][pair_name] = {
+                            "pairs": pairs,
+                            "extension_primer_information": ext[e],
+                            "ligation_primer_information": lig[l],
+                            "orientation": orientation,
+                            "captured_copies": captured_copies
+                        }
+                        # Check if there are any paralog copies that require
+                        # alt primers to be used. If so, create those pairs.
+                        alt_paralogs = list((set(l_alt_binds).union(
+                                            e_alt_binds)).difference(paralogs))
                         alts = {}
                         for a in alt_paralogs:
                             try:
                                 alt_arms = []
                                 p_coord = []
+                                # check if the extension primer is the
+                                # original or alt.
                                 if ep_info[a]["BOWTIE_BOUND"]:
                                     ep_start = ep_info[a]["BOWTIE_START"]
                                     ep_end = ep_info[a]["BOWTIE_END"]
@@ -6224,6 +6260,8 @@ def pick_paralog_primer_pairs(extension, ligation, output_file,
                                     except KeyError:
                                         continue
                                 ep_ori = ep_end > ep_start
+                                # check if ligation primer is the original
+                                # or alternative designed.
                                 if lp_info[a]["BOWTIE_BOUND"]:
                                     lp_start = lp_info[a]["BOWTIE_START"]
                                     lp_end = lp_info[a]["BOWTIE_END"]
@@ -6244,69 +6282,98 @@ def pick_paralog_primer_pairs(extension, ligation, output_file,
                                         p_position = lp_end < ep_end
                                         pair_ori = "reverse"
                                     if p_position:
-                                        p_coord = [ep_start, ep_end, lp_start, lp_end]
+                                        p_coord = [ep_start, ep_end,
+                                                   lp_start, lp_end]
                                         p_coord.sort()
-                                        prod_size = p_coord[-1] - p_coord[0] + 1
-                                        alts[a] = {"capture_size":prod_size,"extension_start": ep_start,
-                                                    "extension_end": ep_end, "ligation_start": lp_start,
-                                                    "ligation_end": lp_end, "mip_start":p_coord[0],
-                                                    "mip_end":p_coord[3], "capture_start":p_coord[1]+1,
-                                                    "capture_end":p_coord[2]-1, "chrom":lp_chrom,
-                                                    "orientation":pair_ori, "alternative_arms":alt_arms
-                                                     }
+                                        prod_size = (p_coord[-1]
+                                                     - p_coord[0] + 1)
+                                        alts[a] = {
+                                            "capture_size": prod_size,
+                                            "extension_start": ep_start,
+                                            "extension_end": ep_end,
+                                            "ligation_start": lp_start,
+                                            "ligation_end": lp_end,
+                                            "mip_start": p_coord[0],
+                                            "mip_end": p_coord[3],
+                                            "capture_start": p_coord[1] + 1,
+                                            "capture_end": p_coord[2] - 1,
+                                            "chrom": lp_chrom,
+                                            "orientation": pair_ori,
+                                            "alternative_arms": alt_arms
+                                        }
                             except KeyError:
+                                # if extension or ligation primer coordinates
+                                # are not available for the paralog copy
+                                # for any reason, e.g. the copy does not align
+                                # to the ref for this primer, there will be
+                                # a key error and it should be caught in this
+                                # block.
                                 continue
                         # check if any pairs' product is within size limits
                         captured_copies = []
                         for a in list(alts.keys()):
                             # does it satisfy arm setting?
                             good_alt = 0
+                            # "any" means both ligation and extension arms
+                            # are allowed to have alt sequences.
                             if alternative_arms == "any":
                                 good_alt = 1
-                            elif (len(alts[a]["alternative_arms"]) == 1) and                                 ((alternative_arms == alts[a]["alternative_arms"][0]) or                                   (alternative_arms == "one")):
+                            # if only one arm is allowed to have alt sequence,
+                            # it could be specified as "one" or the specific
+                            # arm (extension or ligation).
+                            elif ((len(alts[a]["alternative_arms"]) == 1)
+                                  and ((alternative_arms
+                                        == alts[a]["alternative_arms"][0])
+                                       or (alternative_arms == "one"))):
                                 good_alt = 1
+                            # if the alt capture is valid, check the capture
+                            # size and determined if it is likely to be
+                            # captured.
                             if good_alt:
                                 if not region_insertions.empty:
                                     max_insertion_size = region_insertions.loc[
                                         (region_insertions["copy_chrom"]
                                          == alts[a]["chrom"])
-                                        &(region_insertions["copy_begin"]
-                                          > alts[a]["capture_start"])
-                                        &(region_insertions["copy_end"]
-                                          < alts[a]["capture_end"]),
+                                        & (region_insertions["copy_begin"]
+                                           > alts[a]["capture_start"])
+                                        & (region_insertions["copy_end"]
+                                           < alts[a]["capture_end"]),
                                         "max_size"].sum()
                                 else:
                                     max_insertion_size = 0
-                                adjusted_max_size = max((max_size - max_insertion_size),
+                                adjusted_max_size = max((max_size
+                                                         - max_insertion_size),
                                                         min_size)
-                                if adjusted_max_size >= alts[a]["capture_size"] >= 0:
+                                if (adjusted_max_size
+                                        >= alts[a]["capture_size"] >= 0):
                                     captured_copies.append(a)
-                                    primer_pairs["pair_information"][pair_name]["pairs"][a] = alts[a]
-                        primer_pairs["pair_information"][pair_name]["alt_copies"] = captured_copies
+                                    primer_pairs["pair_information"][
+                                        pair_name]["pairs"][a] = alts[a]
+                        primer_pairs["pair_information"][pair_name][
+                            "alt_copies"] = captured_copies
     # return if no pairs found
     if len(primer_pairs["pair_information"]) == 0:
         print("No primer pairs found.")
         return 1
-    # print how many primer pairs are found
-    #print str(len(primer_pairs["pair_information"])) + " primer pairs found!"
-    # write dic to file in primer_output_DIR
+    # write dict to file in primer_output_DIR
     if outp:
-        outfile = open(primer3_output_DIR + output_file, 'w')
-        json.dump (primer_pairs, outfile, indent=1)
-        outfile.close()
+        with open(primer3_output_DIR + output_file, 'w') as outfile:
+            json.dump(primer_pairs, outfile, indent=1)
     return primer_pairs
-def add_capture_sequence(pairs_file, output_file, primer3_output_DIR,species,
-                        outp = 1):
+
+
+def add_capture_sequence(primer_pairs, output_file, primer3_output_DIR,
+                         species, outp=1):
     """
-    with open(primer3_output_DIR + pairs_file) as infile:
-        primer_pairs = json.load(infile)
+    Extract the sequence between primers using the genome sequence and
+    primer coordinates.
     """
-    primer_pairs = pairs_file
     capture_keys = []
     for p_pair in primer_pairs["pair_information"]:
         pairs = primer_pairs["pair_information"][p_pair]["pairs"]
         for p in pairs:
-            paralog_key = pairs[p]["chrom"] + ":" +                           str(pairs[p]["capture_start"]) + "-" +                          str(pairs[p]["capture_end"])
+            paralog_key = pairs[p]["chrom"] + ":" + str(pairs[p][
+                "capture_start"]) + "-" + str(pairs[p]["capture_end"])
             pairs[p]["capture_key"] = paralog_key
             capture_keys.append(paralog_key)
     capture_sequence_dic = get_fasta_list(capture_keys, species)
@@ -6314,77 +6381,83 @@ def add_capture_sequence(pairs_file, output_file, primer3_output_DIR,species,
         pairs = primer_pairs["pair_information"][p_pair]["pairs"]
         for p in pairs:
             if pairs[p]["orientation"] == "forward":
-                pairs[p]["capture_sequence"] =                    capture_sequence_dic[pairs[p]["capture_key"]]
+                pairs[p]["capture_sequence"] = capture_sequence_dic[pairs[p][
+                    "capture_key"]]
             else:
                 pairs[p]["capture_sequence"] = reverse_complement(
-                    capture_sequence_dic[pairs[p]["capture_key"]])
+                    capture_sequence_dic[pairs[p]["capture_key"]]
+                )
     if outp:
         with open(primer3_output_DIR + output_file, "w") as outfile:
             json.dump(primer_pairs, outfile, indent=1)
     return primer_pairs
-def make_mips (primer_pairs,
-               output_file,
-               primer3_output_DIR,
-               mfold_input_DIR,
-               backbone=None,
-              outp = 1):
+
+
+def make_mips(pairs, output_file, primer3_output_DIR, mfold_input_DIR,
+              backbone, outp=1):
     """ Make mips from primer pairs by taking reverse complement
     of ligation primer sequence, adding a backbone sequence and
     the extension primer. Standard backbone is used if none
     specified. Add a new key to each primer pair:
     "mip_information" with a dictionary that has SEQUENCE key
     and mip sequence as value."""
-    # load primer pair dictionary
-    """
-    infile = open(primer3_output_DIR + primer_pairs, 'r')
-    pairs = json.load(infile)
-    infile.close()
-    """
-    pairs = primer_pairs
     # check if the primer dictionary is empty
     if len(pairs["pair_information"]) == 0:
         print("There are no primer pairs in dictionary")
         return 1
-    # use standard backbone if none is specified
-    if backbone == None:
-        backbone = "NNNNNNCTTCAGCTTCCCGATCCGACGGTAGTGTNNNNNN"
     # get primer sequences for each primer pair
     for primers in pairs["pair_information"]:
-        extension_sequence = pairs["pair_information"][primers]        ["extension_primer_information"]["SEQUENCE"]
-        ligation_sequence = pairs["pair_information"][primers]        ["ligation_primer_information"]["SEQUENCE"]
+        extension_sequence = pairs["pair_information"][primers][
+            "extension_primer_information"]["SEQUENCE"]
+        ligation_sequence = pairs["pair_information"][primers][
+            "ligation_primer_information"]["SEQUENCE"]
         # reverse complement ligation primer
         ligation_rc = reverse_complement(ligation_sequence)
         # add sequences to make the mip
-        mip = ligation_rc + backbone + extension_sequence
+        mip_sequence = ligation_rc + backbone + extension_sequence
         # create a dictionary to hold mip information
-        mip_dic = {"ref":{'SEQUENCE':mip,
-                           "captures": copy.deepcopy(pairs["pair_information"]\
-                                                [primers]["captured_copies"])}}
-        # add it to the pair dictionary
-
+        mip_dic = {"ref": {"SEQUENCE": mip_sequence,
+                           "captures": copy.deepcopy(
+                               pairs["pair_information"][primers]
+                               ["captured_copies"]
+                           )}}
+        # create alternative mips where necessary
         if "alt_copies" in list(pairs["pair_information"][primers].keys()):
             alt_sequences = {}
             alt_counter = 0
             alt = pairs["pair_information"][primers]["alt_copies"]
             p_para = pairs["pair_information"][primers]["pairs"]
-            e_para = pairs["pair_information"][primers]                    ["extension_primer_information"]["PARALOG_COORDINATES"]
-            l_para = pairs["pair_information"][primers]                    ["ligation_primer_information"]["PARALOG_COORDINATES"]
+            e_para = pairs["pair_information"][primers][
+                "extension_primer_information"]["PARALOG_COORDINATES"]
+            l_para = pairs["pair_information"][primers][
+                "ligation_primer_information"]["PARALOG_COORDINATES"]
+            # since alt primers are created for each copy, it is possible
+            # that some copies have the same primer pair. Pick just one
+            # such pair and remove the others.
             for a in alt:
                 if "extension" in p_para[a]["alternative_arms"]:
                     extension_sequence = e_para[a]["ALT_SEQUENCE"].upper()
                 if "ligation" in p_para[a]["alternative_arms"]:
                     ligation_sequence = l_para[a]["ALT_SEQUENCE"].upper()
                 value_found = 0
-                for key,value in list(alt_sequences.items()):
-                    if [extension_sequence, ligation_sequence] == value["sequences"]:
+                # search through already created alt pairs to see if this one
+                # is  already there.
+                for key, value in list(alt_sequences.items()):
+                    if ([extension_sequence, ligation_sequence]
+                            == value["sequences"]):
                         value_found = 1
+                        # add the copy name to the dict and not create
+                        # a new key for this copy.
                         value["copies"].append(a)
                         break
+                # create new entry if this alt pair is new
                 if not value_found:
-                    alt_sequences[alt_counter] = {"sequences":[extension_sequence, ligation_sequence],
-                                                  "copies":[a]}
+                    alt_sequences[alt_counter] = {
+                        "sequences": [extension_sequence, ligation_sequence],
+                        "copies": [a]
+                    }
                     alt_counter += 1
-
+            # create mip sequence and dict for the alt pairs
             for alt_pair in alt_sequences:
                 seq_dic = alt_sequences[alt_pair]["sequences"]
                 alt_copies = alt_sequences[alt_pair]["copies"]
@@ -6398,17 +6471,19 @@ def make_mips (primer_pairs,
 
     # write mip sequences to a fasta file in mfold_input_DIR
     # to check hairpin formation
-    outfile = open(mfold_input_DIR + output_file, "w")
-    for primers in pairs["pair_information"]:
-        outline = ">" + primers + "\n" + pairs["pair_information"]        [primers]["mip_information"]["ref"]['SEQUENCE'] + "\n"
-        outfile.write(outline)
-    outfile.close()
+    with open(mfold_input_DIR + output_file, "w") as outfile:
+        for primers in pairs["pair_information"]:
+            outline = (">" + primers + "\n" + pairs["pair_information"]
+                       [primers]["mip_information"]["ref"]['SEQUENCE'] + "\n")
+            outfile.write(outline)
     # write mip dictionary to file in primer3_output_DIR
     if outp:
         outfile = open(primer3_output_DIR + output_file, 'w')
         json.dump(pairs, outfile, indent=1)
         outfile.close()
     return pairs
+
+
 def check_hairpin (input_fasta, output_json, primer3_output_DIR, bowtie2_input_DIR, mfold_input_DIR, dg=0.8):
     """ Check free energy values of secondary structures formed by mips @60°C.
     Run mfold_quiker script with mip condition parameters, get dG, dH, dS and TM
