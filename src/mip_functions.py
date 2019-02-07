@@ -1889,7 +1889,7 @@ def update_variation(settings):
             variation = json.load(infile)
     except IOError:
         variation = {}
-    var_key_to_uniq_file = wdir +  settings["variationKeyToUniqueKey"]
+    var_key_to_uniq_file = wdir + settings["variationKeyToUniqueKey"]
     try:
         with open(var_key_to_uniq_file) as infile:
             var_key_to_uniq = json.load(infile)
@@ -1906,7 +1906,8 @@ def update_variation(settings):
                 except KeyError:
                     left_normalized = True
                     for c in haplotypes[m][h]["mapped_copies"]:
-                        differences = haplotypes[m][h]["mapped_copies"][c]["differences"]
+                        differences = haplotypes[m][h]["mapped_copies"][c][
+                            "differences"]
                         for d in differences:
                             var_key = d["vcf_raw"]
                             try:
@@ -1917,10 +1918,11 @@ def update_variation(settings):
                                 left_normalized = False
                                 temp_variations.append(var_key)
                     if left_normalized:
-                         haplotypes[m][h]["left_normalized"] = True
-    temp_variations = [temp_var.split(":") for temp_var in set(temp_variations)]
+                        haplotypes[m][h]["left_normalized"] = True
+    temp_variations = [temp_var.split(":")
+                       for temp_var in set(temp_variations)]
     temp_variations = [[v[0], int(v[1])] + v[2:] for v in temp_variations]
-    temp_variations = sorted(temp_variations, key = itemgetter(0, 1))
+    temp_variations = sorted(temp_variations, key=itemgetter(0, 1))
     temp_variations_lines = ["\t".join(map(str, v)) for v in temp_variations]
     temp_variation_keys = [":".join(map(str, v)) for v in temp_variations]
     outfile_list.extend(temp_variations_lines)
@@ -1931,12 +1933,14 @@ def update_variation(settings):
         outfile.write("\n".join(outfile_list))
     with open(wdir + zipped_vcf, "w") as outfile:
         dump = subprocess.call(["bgzip", "-c", "-f", raw_vcf_file],
-                               cwd = wdir, stdout=outfile)
-    dump = subprocess.call(["bcftools", "index", "-f", raw_vcf_file + ".gz"], cwd = wdir)
+                               cwd=wdir, stdout=outfile)
+    dump = subprocess.call(["bcftools", "index", "-f", raw_vcf_file + ".gz"],
+                           cwd=wdir)
     unmasked_genome = get_file_locations()[species]["unmasked_fasta_genome"]
     dump = subprocess.call(["bcftools", "norm", "-f", unmasked_genome,
                             "-cw", "-w", "0",
-                           "-o", norm_vcf_file, raw_vcf_file + ".gz"], cwd = wdir)
+                           "-o", norm_vcf_file, raw_vcf_file + ".gz"],
+                           cwd=wdir)
     ann_db_dir = get_file_locations()[species]["annotation_db_dir"]
     ann_build = settings["annotationBuildVersion"]
     ann_protocol = settings["annotationProtocol"].replace(";", ",")
@@ -1948,17 +1952,15 @@ def update_variation(settings):
     except KeyError:
         ann_script = "table_annovar.pl"
     ann_command = [ann_script,
-                    norm_vcf_file,
-                    ann_db_dir,
-                    "-buildver", ann_build,
-                    "-vcfinput",
-                    "-protocol",  ann_protocol,
-                    "-operation", ann_operation,
-                    "-nastring", ann_nastring,
-                    "-out", ann_out]
-    #print " ".join(ann_command)
-    dump = subprocess.check_call(ann_command,
-                           cwd=wdir)
+                   norm_vcf_file,
+                   ann_db_dir,
+                   "-buildver", ann_build,
+                   "-vcfinput",
+                   "-protocol",  ann_protocol,
+                   "-operation", ann_operation,
+                   "-nastring", ann_nastring,
+                   "-out", ann_out]
+    dump = subprocess.check_call(ann_command, cwd=wdir)
     normalized_variation_keys = []
     with open(wdir + norm_vcf_file) as infile:
         line_num = 0
@@ -1981,12 +1983,13 @@ def update_variation(settings):
                 colnames = newline
             else:
                 normalized_key = normalized_variation_keys[line_num]
-                if not normalized_key in variation:
-                    variation[normalized_key] = {colnames[i] : newline[i]                                                  for i in range(len(colnames))}
+                if normalized_key not in variation:
+                    variation[normalized_key] = {
+                        colnames[i]: newline[i] for i in range(len(colnames))
+                    }
                 line_num += 1
     if line_num != len(temp_variation_keys):
         print("There are more variation keys then annotated variants.")
-
     for m in haplotypes:
         for h in haplotypes[m]:
             if haplotypes[m][h]["mapped"]:
@@ -1994,14 +1997,28 @@ def update_variation(settings):
                     haplotypes[m][h]["left_normalized"]
                 except KeyError:
                     for c in haplotypes[m][h]["mapped_copies"]:
-                        differences = haplotypes[m][h]["mapped_copies"][c]["differences"]
+                        differences = haplotypes[m][h]["mapped_copies"][c][
+                            "differences"]
                         for d in differences:
                             var_key = d["vcf_raw"]
                             uniq_var_key = var_key_to_uniq[var_key]
                             d["annotation"] = variation[uniq_var_key]
                             d["vcf_normalized"] = uniq_var_key
+                            annotation_dict = d["annotation"]
+                            for ak in annotation_dict.keys():
+                                if ak.startswith("AAChange."):
+                                    annotation_dict["AAChangeClean"] = (
+                                        annotation_dict.pop(ak)
+                                    )
+                                elif ak.startswith("ExonicFunc."):
+                                    annotation_dict["ExonicFunc"] = (
+                                        annotation_dict.pop(ak)
+                                    )
+                                elif ak.startswith("Gene."):
+                                    annotation_dict["GeneID"] = (
+                                        annotation_dict.pop(ak)
+                                    )
                     haplotypes[m][h]["left_normalized"] = True
-
     with open(unique_haplotype_file, "w") as outfile:
         json.dump(haplotypes, outfile)
     with open(variation_file, "w") as outfile:
@@ -2009,10 +2026,11 @@ def update_variation(settings):
     with open(var_key_to_uniq_file, "w") as outfile:
         json.dump(var_key_to_uniq, outfile)
     try:
-        if int(settings["mergeSNPs"]):
-            dump = merge_snps(settings)
+        m_snps = int(settings["mergeSNPs"])
     except KeyError:
-        pass
+        m_snps = False
+    if m_snps:
+        dump = merge_snps(settings)
     return
 
 
@@ -8293,7 +8311,7 @@ def get_haplotypes(settings):
                 call_dict["copy"] = c
                 call_dict["mip_number"] = mip_number
                 call_dict["sub_number"] = sub_number
-                call_df_list.append(pd.DataFrame(call_dict))
+                call_df_list.append(pd.DataFrame(call_dict, index=[0]))
     call_df = pd.concat(call_df_list)
     gene_df = call_df.groupby(["gene", "copy"]).agg(
         {"chrom": "first",
@@ -8383,12 +8401,12 @@ def get_haplotypes(settings):
                                 haplotypes[m].pop(h)
                             )
                             break
-    if len(secondary_haplotypes > 0):
+    if len(secondary_haplotypes) > 0:
         secondary_haplotypes = pd.DataFrame(
             secondary_haplotypes,
             columns=["gene", "copy", "original_hap_ID", "chrom",
                      "capture_start", "capture_end", "orientation",
-                      "region_key"]
+                     "region_key"]
         )
         secondary_haplotypes = secondary_haplotypes.merge(
             gene_df[["gene", "copy", "copyname", "mip_number", "sub_number"]]
@@ -8416,6 +8434,8 @@ def get_haplotypes(settings):
         json.dump(haplotypes, out1, indent=1)
         json.dump(off_target_haplotypes, out2, indent=1)
     return
+
+
 def rename_mipster_haplotypes(settings):
     """ 1) Extract all haplotypes from new data.
         2) Remove known haplotypes using previous data (if any).
@@ -9821,7 +9841,8 @@ def process_haplotypes(settings_file):
 
 def make_snp_vcf(variant_file, haplotype_file, call_info_file,
                  haplotype_counts_file, vcf_chrom, barcode_count_file,
-                 min_cov, min_count, min_freq, vcf_file, header_count=11):
+                 min_cov, min_count, min_freq, vcf_file,
+                 settings_file, header_count=11):
     """
     Create a vcf file for SNV only. This will be integrated to process_results
     in the future.
@@ -9833,8 +9854,10 @@ def make_snp_vcf(variant_file, haplotype_file, call_info_file,
     # Add variant type to tables, convert position to integer
     cols = variant_counts.columns
     new_index = pd.MultiIndex.from_tuples(
-        [(c[0], ) + (int(c[1]), ) + c[2:] + ("SNV", ) if len(c[3]) == len(c[4])
-         else (c[0], ) + (int(c[1]), ) + c[2:] + ("indel", ) for c in cols],
+        [(c[0], ) + (int(float(c[1])), ) + c[2:] + ("SNV", )
+         if len(c[3]) == len(c[4])
+         else (c[0], ) + (int(float(c[1])), ) + c[2:] + ("indel", )
+         for c in cols],
         names=cols.names + ["Variant Type"])
     variant_counts.columns = new_index
     # filter indels
@@ -9875,26 +9898,36 @@ def make_snp_vcf(variant_file, haplotype_file, call_info_file,
             vp = set([pos])
         variant_positions.update(vp)
     variant_position_set = variant_positions
+    # load the probe set dictionary to extract the
+    # probes that were used in this run
+    settings = get_analysis_settings(settings_file)
+    probe_sets_file = settings["mipSetsDictionary"]
+    probe_set_keys = settings["mipSetKey"]
+    used_probes = set()
+    for psk in probe_set_keys:
+        with open(probe_sets_file) as infile:
+            used_probes.update(json.load(infile)[psk])
     # Create a position_to_mip dictionary that maps each genomic position
     # to all MIPs covering that position
     mip_positions = {}
     position_to_mip = {}
     for g in call_info:
         for m in call_info[g]:
-            for c in call_info[g][m]["copies"]:
-                chrom = call_info[g][m]["copies"][c]["chrom"]
-                if chrom == vcf_chrom:
-                    start = call_info[g][m]["copies"][c]["capture_start"]
-                    end = call_info[g][m]["copies"][c]["capture_end"]
-                    cov_pos = variant_position_set.intersection(
-                        range(start, end + 1)
-                    )
-                    mip_positions[(m, c)] = cov_pos
-                    for p in cov_pos:
-                        try:
-                            position_to_mip[p].add((m, c))
-                        except KeyError:
-                            position_to_mip[p] = set([(m, c)])
+            if m in used_probes:
+                for c in call_info[g][m]["copies"]:
+                    chrom = call_info[g][m]["copies"][c]["chrom"]
+                    if chrom == vcf_chrom:
+                        start = call_info[g][m]["copies"][c]["capture_start"]
+                        end = call_info[g][m]["copies"][c]["capture_end"]
+                        cov_pos = variant_position_set.intersection(
+                            range(start, end + 1)
+                        )
+                        mip_positions[(m, c)] = cov_pos
+                        for p in cov_pos:
+                            try:
+                                position_to_mip[p].add((m, c))
+                            except KeyError:
+                                position_to_mip[p] = set([(m, c)])
     # Create a dataframe that maps whether a genomic position is the same
     # as the reference or not for each haplotype
     references = []
@@ -10000,6 +10033,13 @@ def make_snp_vcf(variant_file, haplotype_file, call_info_file,
     collapsed_vars.sort_index(axis=1, level=["CHROM", "POS"], inplace=True)
     collapsed_refs.sort_index(axis=1, level=["CHROM", "POS"], inplace=True)
     collapsed_cov.sort_index(axis=1, level=["CHROM", "POS"], inplace=True)
+    """
+    try:
+        collapsed_refs.columns = collapsed_vars.columns
+        collapsed_cov.columns = collapsed_vars.columns
+    except ValueError:
+        return collapsed_refs, collapsed_vars
+    """
     collapsed_refs.columns = collapsed_vars.columns
     collapsed_cov.columns = collapsed_vars.columns
     # merge the variant, reference and coverage count tables to get a "variant
@@ -10230,17 +10270,7 @@ def process_results(wdir,
                 "PSV", "Gene", "MIP", "Copy", "Haplotype ID",
                 "RAW_VKEY", "Original Position", "Start Index",
                 "End Index", "Multi Mapping"]
-    clean_annotation_keys = []
-    for ak in annotation_keys:
-        if ak.startswith("AAChange."):
-            clean_annotation_keys.append("AAChangeClean")
-        elif ak.startswith("ExonicFunc."):
-            clean_annotation_keys.append("ExonicFunc")
-        elif ak.startswith("Gene."):
-            clean_annotation_keys.append("RefGene")
-        else:
-            clean_annotation_keys.append(ak)
-    colnames = colnames + clean_annotation_keys
+    colnames = colnames + annotation_keys
     variation_df = pd.DataFrame(variation_list,
                                 columns=colnames)
     # create pandas dataframe for reference haplotypes
@@ -12215,6 +12245,8 @@ def aa_to_coordinate(gene, species, aa_number, alias = False):
         )
     aa = translate(codon)
     return [chrom, cds_start, cds_end, ori, codon, aa]
+
+
 def merge_snps(settings):
     """
     When more than one SNP affects the same codon of a gene,
@@ -12229,8 +12261,8 @@ def merge_snps(settings):
         haplotypes = json.load(infile)
     # create output information list to report all changes
     outlist = [["HaplotypeID", "Copy", "New AA", "Reference AA",
-               "ReplacedCDNAchanges", "New Codon", "Reference Codon",
-               "ReplacedAaChanges"]]
+                "ReplacedCDNAchanges", "New Codon", "Reference Codon",
+                "ReplacedAaChanges"]]
     # go through each annotated haplotype and merge SNPs
     for m in haplotypes:
         for h in haplotypes[m]:
@@ -12239,7 +12271,8 @@ def merge_snps(settings):
                     # get sequence of the haplotype
                     hap_seq = haplotypes[m][h]["sequence"]
                     # get SNPs present in the haplotype
-                    diffs = haplotypes[m][h]["mapped_copies"][cp]["differences"]
+                    diffs = haplotypes[m][h]["mapped_copies"][cp][
+                        "differences"]
                     aa_changes = {}
                     multi_indels = []
                     for i in range(len(diffs)):
@@ -12258,7 +12291,8 @@ def merge_snps(settings):
                             # or noncoding changes). Those should not be
                             # merged.
                             try:
-                                # add the aa change position to the changes dict.
+                                # add the aa change position to the changes
+                                # dict.
                                 aa_changes[aa_pos].append(i)
                             except KeyError:
                                 aa_changes[aa_pos] = [i]
@@ -12388,9 +12422,9 @@ def merge_snps(settings):
                                 'Alt': Alt,
                                 'Chr': d["chrom"],
                                 'End': g_end,
-                                'ExonicFunc.refGene': ExonicFunc,
+                                'ExonicFunc': ExonicFunc,
                                 'Func.refGene': 'exonic',
-                                'Gene.refGene': d["annotation"]['Gene.refGene'],
+                                'GeneID': d["annotation"]['GeneID'],
                                 'GeneDetail.refGene': d["annotation"]['GeneDetail.refGene'],
                                 'Otherinfo': d["annotation"]["Otherinfo"],
                                 'Ref': Ref,

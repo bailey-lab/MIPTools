@@ -174,7 +174,8 @@ From: amd64/ubuntu:18.04
     cluster_script="runMIPWranglerCurrent.sh"
     server_number=1
     cpu_count=1
-    while getopts p:l:e:s:w:n:c: OPT; do
+    keep_files=""
+    while getopts p:l:e:s:w:n:c:k OPT; do
         case "$OPT" in
             e)
               experiment_id="$OPTARG";;
@@ -190,18 +191,20 @@ From: amd64/ubuntu:18.04
               server_number="$OPTARG";;
             c)
               cpu_count="$OPTARG";;
+            k)
+              keep_files="-k";;
 
             *)
               echo "Invalid option. Use 'wrangler \
-              -e experiment_id -l sample_list.file -m probe_sets\
+              -e experiment_id -l sample_list.file -p  probe_sets\
               -s sample_sets -w cluster_script -n server_number \
-              -c  cpu_count'  "
+              -c  cpu_count'  [-k]"
         esac
     done
     python /opt/src/generate_wrangler_scripts.py \
     -e $experiment_id -l /opt/analysis/$sample_list \
     -p $probe_sets -s $sample_sets -w $cluster_script -n $server_number \
-    -c $cpu_count
+    -c $cpu_count $keep_files
     script_name=$sample_sets"_"$(echo $probe_sets|tr "," "_")".sh"
     . /opt/analysis/$script_name
 
@@ -212,7 +215,7 @@ From: amd64/ubuntu:18.04
         case $opt in
             r)  run_id=$OPTARG;;
             ?)  echo "Usage: singularity run --app download \\"
-                echo "           -B /path_to_output_dir:/opt/data \\"
+                echo "           -B /path_to_output_dir:/opt/analysis \\"
                 echo "           -B /path_to_base_resources:/opt/resources \\"
                 echo "            mycontainer.sif -r my_Illumina_run_ID"
                 echo "An 'access_token.txt' file with a valid access token is "
@@ -227,7 +230,8 @@ From: amd64/ubuntu:18.04
     echo "It is recommended to run this app in a screen (GNU screen)."
     echo "A message indicating the end of download will be printed when done."
     echo "Check nohup.out file in your output directory for the download log."
-    nohup python /usr/bin/BaseSpaceRunDownloader_v2.py \
+    cd /opt/analysis
+    nohup python /opt/bin/BaseSpaceRunDownloader_v2.py \
      -r $run_id -a "$(cat /opt/resources/access_token.txt)"
     echo "Download finished."
 
@@ -269,7 +273,6 @@ From: amd64/ubuntu:18.04
     nohup bcl2fastq -o /opt/analysis/fastq \
         --sample-sheet /opt/analysis/SampleSheet.csv \
         --no-lane-splitting
-    python /opt/src/demux_qc.py -p $platform
 
 %apprun demux_qc
     set -e

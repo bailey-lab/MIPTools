@@ -2212,19 +2212,14 @@ class Subregion(Locus):
 
     def score_mips(self):
         for m in list(self.mips["hairpin"].keys()):
-            try:
-                self.mips["hairpin"][m].add_capture_info()
-            except:
-                self.mips["hairpin"].pop(m)
-
+            self.mips["hairpin"][m].add_capture_info()
         for m in list(self.mips["hairpin"].keys()):
-            try:
-                self.mips["hairpin"][m].score_mips()
-            except:
-                self.mips["hairpin"].pop(m)
-        selection_low = int(self.locus.rinfo["SELECTION"]["compatibility"]["low"])
+            self.mips["hairpin"][m].score_mips()
+        selection_low = int(self.locus.rinfo["SELECTION"]["compatibility"][
+            "low"])
         try:
-            selection_skip = int(self.locus.rinfo["SELECTION"]["compatibility"]["skip"])
+            selection_skip = int(self.locus.rinfo["SELECTION"][
+                "compatibility"]["skip"])
         except KeyError:
             selection_skip = False
         if selection_skip:
@@ -2233,68 +2228,84 @@ class Subregion(Locus):
             self.skip_compatibility = False
         temp_dic = copy.deepcopy(self.mips["hairpin"])
         if (self.end - self.begin) > selection_low:
-            trim_size = int(self.locus.rinfo["SELECTION"]["compatibility"]["trim_size"])
-            trim_increment = int(self.locus.rinfo["SELECTION"]["compatibility"]["trim_increment"])
-            trim_limit = int(self.locus.rinfo["SELECTION"]["compatibility"]["trim_limit"])
-            mip_limit = int(self.locus.rinfo["SELECTION"]["compatibility"]["mip_limit"])
-            while (len(temp_dic) > mip_limit)                  and (trim_size <= trim_limit):
+            trim_size = int(self.locus.rinfo["SELECTION"]["compatibility"][
+                "trim_size"])
+            trim_increment = int(self.locus.rinfo["SELECTION"][
+                "compatibility"]["trim_increment"])
+            trim_limit = int(self.locus.rinfo["SELECTION"]["compatibility"][
+                "trim_limit"])
+            mip_limit = int(self.locus.rinfo["SELECTION"]["compatibility"][
+                "mip_limit"])
+            while (len(temp_dic) > mip_limit) and (trim_size <= trim_limit):
                 mip.filter_mips(temp_dic, trim_size, mip_limit)
                 trim_size += trim_increment
         temp_scored = copy.deepcopy(self.primers["hairpin"]["dictionary"])
-        self.mips["scored_filtered"]= {"dictionary": temp_scored,
-                                      "filename": self.fullname + "_scored_filtered"}
+        self.mips["scored_filtered"] = {"dictionary": temp_scored,
+                                        "filename": self.fullname
+                                        + "_scored_filtered"}
 
-        for m in list(self.mips["scored_filtered"]["dictionary"]["pair_information"].keys()):
+        for m in list(self.mips["scored_filtered"]["dictionary"][
+                "pair_information"].keys()):
             if m not in list(temp_dic.keys()):
-                self.mips["scored_filtered"]["dictionary"]["pair_information"].pop(m)
-        with open(self.primer3_output_DIR + self.mips["scored_filtered"]["filename"], "w") as infile:
-            json.dump(self.mips["scored_filtered"]["dictionary"], infile, indent=1)
-
+                self.mips["scored_filtered"]["dictionary"][
+                    "pair_information"].pop(m)
+        with open(self.primer3_output_DIR + self.mips["scored_filtered"][
+                "filename"], "w") as infile:
+            json.dump(self.mips["scored_filtered"]["dictionary"], infile,
+                      indent=1)
         return
 
     def compatible(self):
         try:
-            overlap_same = int(self.locus.rinfo["SELECTION"]["compatibility"]                                               ["same_strand_overlap"])
-            overlap_opposite = int(self.locus.rinfo["SELECTION"]["compatibility"]                                              ["opposite_strand_overlap"])
+            overlap_same = int(self.locus.rinfo["SELECTION"]["compatibility"]
+                               ["same_strand_overlap"])
+            overlap_opposite = int(self.locus.rinfo["SELECTION"][
+                "compatibility"]["opposite_strand_overlap"])
         except KeyError:
             overlap_same = overlap_opposite = 0
-        compatible_chains = int(self.locus.rinfo["SELECTION"]["compatibility"]["chain"])
+        compatible_chains = int(self.locus.rinfo["SELECTION"][
+            "compatibility"]["chain"])
         if compatible_chains:
             self.chain_mips = True
         else:
             self.chain_mips = False
-        self.primers["compatible"] = {"filename":self.fullname + "_compat",
-                                      "listname":self.fullname + "_compatibles"}
+        self.primers["compatible"] = {
+            "filename": self.fullname + "_compat",
+            "listname": self.fullname + "_compatibles"
+        }
         if not self.skip_compatibility:
-            compatible_sets = mip.compatible_chains(self.mips["scored_filtered"]["filename"],
-                               self.primer3_output_DIR,
-                               self.primers["compatible"]["filename"],
-                               self.primers["compatible"]["listname"],
-                               overlap_same = overlap_same,
-                               overlap_opposite = overlap_opposite,
-                                                   outp = int(self.locus.rinfo["CAPTURE"]["S0"]["output_level"]))
+            compatible_sets = mip.compatible_chains(
+                self.mips["scored_filtered"]["filename"],
+                self.primer3_output_DIR,
+                self.primers["compatible"]["filename"],
+                self.primers["compatible"]["listname"],
+                overlap_same=overlap_same,
+                overlap_opposite=overlap_opposite,
+                outp=int(self.locus.rinfo["CAPTURE"]["S0"]["output_level"])
+            )
             self.primers["compatible"]["list"] = compatible_sets
         return
-    def score_mipsets(self):
-        pass
+
     def best_mipset(self):
         self.mips["best_mipset"] = {"filename": self.fullname + "_best_set",
-                                     "dictionary":{"mips":{}} }
+                                    "dictionary": {"mips": {}}}
         try:
-            overlap_same = int(self.locus.rinfo["SELECTION"]["compatibility"]                                               ["same_strand_overlap"])
-            overlap_opposite = int(self.locus.rinfo["SELECTION"]["compatibility"]                                              ["opposite_strand_overlap"])
+            overlap_same = int(self.locus.rinfo["SELECTION"][
+                "compatibility"]["same_strand_overlap"])
+            overlap_opposite = int(self.locus.rinfo["SELECTION"][
+                "compatibility"]["opposite_strand_overlap"])
         except KeyError:
             overlap_same = overlap_opposite = 0
         try:
-            max_overlap_same = int(self.locus.rinfo["SELECTION"]["compatibility"]                                               ["max_same_strand_overlap"])
-            max_overlap_opposite = int(self.locus.rinfo["SELECTION"]["compatibility"]                                              ["max_opposite_strand_overlap"])
+            max_overlap_same = int(self.locus.rinfo["SELECTION"][
+                "compatibility"]["max_same_strand_overlap"])
+            max_overlap_opposite = int(self.locus.rinfo["SELECTION"][
+                "compatibility"]["max_opposite_strand_overlap"])
         except KeyError:
             max_overlap_same = max_overlap_opposite = 0
         intervals = self.intervals
         subregion_size = intervals[1] - intervals[0] + 1
-        chained_count = 0
         best_set_chained = False
-        chained = False
         chain_bonus = self.scoring["chain_bonus"]
         coverage_threshold = self.scoring["chain_coverage"]
         must_bonus = self.scoring["must_bonus"]
@@ -2302,59 +2313,56 @@ class Subregion(Locus):
         scored_filtered = (self.mips["scored_filtered"]
                            ["dictionary"]["pair_information"])
         if not self.skip_compatibility:
-            # load dict file that has the compatibility information and mip information
-            """
-            with open(self.primer3_output_DIR + self.primers["compatible"]["listname"], "r") as infile:
-                mip_sets = json.load(infile)
-
-            """
-            with open(self.primer3_output_DIR + self.primers["compatible"]["filename"], "r") as infile:
+            # load dict file that has the compatibility information and mip
+            # information
+            with open(self.primer3_output_DIR + self.primers["compatible"][
+                    "filename"], "r") as infile:
                 mip_dic = json.load(infile)
             # if there is any sets in the list
-            # open file containing compatible mip lists
             if not self.single:
-                """
-                with open(self.primer3_output_DIR + self.primers["compatible"]["listname"],
-                          "r") as infile:
-                """
-                all_mip_sets = [list(s) for s in self.primers["compatible"]["list"]]
+                all_mip_sets = [list(s) for s in self.primers[
+                    "compatible"]["list"]]
                 for mip_set in all_mip_sets:
-                    #mip_set = line.strip().split(",")
-                    # create a dic for diffs captured cumulatively by all mips in the set
+                    # create a dic for diffs captured cumulatively by all
+                    # mips in the set
                     merged_caps = []
-                    # create a list for mip scores based on mip sequence and not the captured diffs
+                    # create a list for mip scores based on mip sequence and
+                    # not the captured diffs
                     mip_scores = []
-                    # create a list for what is captured by the set (only must captures)
+                    # create a list for what is captured by the set (only must
+                    # captures)
                     must_captured = []
                     # create a list for other targets captured
                     targets_captured = []
                     # a list for mip coordinates
                     capture_coordinates = []
-                    #for m in mip_set:
                     for mip_key in mip_set:
                         # extract the mip name
-                        #mip_key = num_lookup[m]
-                        # extract the captured diffs from the mip_dic and append to capture list
+                        # extract the captured diffs from the mip_dic and
+                        # append to capture list
                         mip_obj = self.mips["hairpin"][mip_key]
                         uniq = mip_obj.capture_info["unique_captures"]
-                        #uniq = mip_obj.captured_copies
                         merged_caps.extend(uniq)
                         must_captured.extend(mip_obj.captures)
                         targets_captured.extend(mip_obj.captured_targets)
                         if mip_obj.tech_score > 0 and mip_obj.func_score > 0:
                             mip_scores.append(
-                                float(mip_obj.tech_score * mip_obj.func_score)/1000
+                                float(mip_obj.tech_score * mip_obj.func_score)
+                                / 1000
                             )
                         else:
                             mip_scores.append(
-                                float(mip_obj.tech_score + mip_obj.func_score)/1000
+                                float(mip_obj.tech_score + mip_obj.func_score)
+                                / 1000
                             )
-                        mcoord = sorted([mip_obj.extension["C0"]["GENOMIC_START"],
-                              mip_obj.ligation["C0"]["GENOMIC_START"],
-                              mip_obj.extension["C0"]["GENOMIC_END"],
-                              mip_obj.ligation["C0"]["GENOMIC_END"]])
+                        mcoord = sorted(
+                            [mip_obj.extension["C0"]["GENOMIC_START"],
+                             mip_obj.ligation["C0"]["GENOMIC_START"],
+                             mip_obj.extension["C0"]["GENOMIC_END"],
+                             mip_obj.ligation["C0"]["GENOMIC_END"]]
+                        )
                         capture_coordinates.append([mcoord[1] + 1,
-                                               mcoord[2] - 1])
+                                                    mcoord[2] - 1])
                     merged_capture_coordinates = mip.merge_overlap(
                         capture_coordinates
                     )
@@ -2366,7 +2374,7 @@ class Subregion(Locus):
                                               - target_overlap[0] + 1)
                         except IndexError:
                             coverage_size += 0
-                    chain_coverage = float(coverage_size)                                            /subregion_size
+                    chain_coverage = float(coverage_size) / subregion_size
                     cb = chain_coverage * chain_bonus
                     scp = len(set(merged_caps)) * set_copy_bonus
                     must_set = list(set(must_captured))
@@ -2390,17 +2398,18 @@ class Subregion(Locus):
                 new_mip_found = False
                 while (self.chain_mips
                        and not best_set_chained
-                      and cover_attempt <= 100):
+                       and cover_attempt <= 100):
                     # check coverage of best set found
                     capture_coordinates = []
                     for mip_key in best_set:
                         mip_obj = self.mips["hairpin"][mip_key]
-                        mcoord = sorted([mip_obj.extension["C0"]["GENOMIC_START"],
-                          mip_obj.ligation["C0"]["GENOMIC_START"],
-                          mip_obj.extension["C0"]["GENOMIC_END"],
-                          mip_obj.ligation["C0"]["GENOMIC_END"]])
+                        mcoord = sorted(
+                            [mip_obj.extension["C0"]["GENOMIC_START"],
+                             mip_obj.ligation["C0"]["GENOMIC_START"],
+                             mip_obj.extension["C0"]["GENOMIC_END"],
+                             mip_obj.ligation["C0"]["GENOMIC_END"]])
                         capture_coordinates.append([mcoord[1] + 1,
-                                           mcoord[2] - 1])
+                                                    mcoord[2] - 1])
                     merged_capture_coordinates = mip.merge_overlap(
                         capture_coordinates
                     )
@@ -2412,7 +2421,7 @@ class Subregion(Locus):
                                               - target_overlap[0] + 1)
                         except IndexError:
                             coverage_size += 0
-                    chain_coverage = float(coverage_size)                                            /subregion_size
+                    chain_coverage = float(coverage_size) / subregion_size
                     if chain_coverage >= coverage_threshold:
                         best_set_chained = True
                     else:
@@ -2429,12 +2438,13 @@ class Subregion(Locus):
                         capture_coordinates_copy = []
                         for mip_key in best_copy:
                             mip_obj = self.mips["hairpin"][mip_key]
-                            mcoord = sorted([mip_obj.extension["C0"]["GENOMIC_START"],
-                              mip_obj.ligation["C0"]["GENOMIC_START"],
-                              mip_obj.extension["C0"]["GENOMIC_END"],
-                              mip_obj.ligation["C0"]["GENOMIC_END"]])
+                            mcoord = sorted(
+                                [mip_obj.extension["C0"]["GENOMIC_START"],
+                                 mip_obj.ligation["C0"]["GENOMIC_START"],
+                                 mip_obj.extension["C0"]["GENOMIC_END"],
+                                 mip_obj.ligation["C0"]["GENOMIC_END"]])
                             capture_coordinates_copy.append([mcoord[1] + 1,
-                                               mcoord[2] - 1])
+                                                             mcoord[2] - 1])
                         merged_capture_coordinates_copy = mip.merge_overlap(
                             capture_coordinates_copy
                         )
@@ -2448,27 +2458,39 @@ class Subregion(Locus):
                             for bm in best_copy:
                                 bm_obj = self.mips["hairpin"][bm]
                                 if not mip.compatible_mip_check(
-                                    new_mip_obj, bm_obj, overlap_same, overlap_opposite
+                                    new_mip_obj, bm_obj, overlap_same,
+                                    overlap_opposite
                                 ):
                                     break
                             else:
-                                mcoord = sorted([new_mip_obj.extension["C0"]["GENOMIC_START"],
-                                      new_mip_obj.ligation["C0"]["GENOMIC_START"],
-                                      new_mip_obj.extension["C0"]["GENOMIC_END"],
-                                      new_mip_obj.ligation["C0"]["GENOMIC_END"]])
+                                mcoord = sorted(
+                                    [new_mip_obj.extension["C0"]
+                                     ["GENOMIC_START"],
+                                     new_mip_obj.ligation["C0"]
+                                     ["GENOMIC_START"],
+                                     new_mip_obj.extension["C0"]
+                                     ["GENOMIC_END"],
+                                     new_mip_obj.ligation["C0"]
+                                     ["GENOMIC_END"]]
+                                )
                                 cap_coord = [mcoord[1] + 1,
                                              mcoord[2] - 1]
-                                so = mip.subtract_overlap([cap_coord],
-                                                    merged_capture_coordinates_copy)
+                                so = mip.subtract_overlap(
+                                    [cap_coord],
+                                    merged_capture_coordinates_copy
+                                )
                                 if len(so) < 1:
                                     continue
                                 mip_set = copy.deepcopy(best_copy)
                                 mip_set.append(new_mip_key)
-                                # create a dic for diffs captured cumulatively by all mips in the set
+                                # create a dic for diffs captured cumulatively
+                                # by all mips in the set
                                 merged_caps = []
-                                # create a list for mip scores based on mip sequence and not the captured diffs
+                                # create a list for mip scores based on mip
+                                # sequence and not the captured diffs
                                 mip_scores = []
-                                # create a list for what is captured by the set (only must captures)
+                                # create a list for what is captured by the
+                                # set (only must captures)
                                 must_captured = []
                                 # create a list for other targets captured
                                 targets_captured = []
@@ -2598,6 +2620,7 @@ class Subregion(Locus):
                     best_mipset.pop(mip_key)
         return
 
+
 class Mip():
     """
     Mip class provides a construct to represent a MIP probeself.
@@ -2605,8 +2628,10 @@ class Mip():
     """
     def __init__(self, subregion, name, mip_dic, backbone):
         try:
-            self.extension = mip_dic["extension_primer_information"]["PARALOG_COORDINATES"]
-            self.ligation = mip_dic["ligation_primer_information"]["PARALOG_COORDINATES"]
+            self.extension = mip_dic["extension_primer_information"][
+                "PARALOG_COORDINATES"]
+            self.ligation = mip_dic["ligation_primer_information"][
+                "PARALOG_COORDINATES"]
         except KeyError:
             self.extension = {"C0": mip_dic["extension_primer_information"]}
             self.ligation = {"C0": mip_dic["ligation_primer_information"]}
@@ -2624,38 +2649,34 @@ class Mip():
             self.alt_copies = []
         self.captured_copies = mip_dic["captured_copies"]
         self.captured_copies.extend(self.alt_copies)
+
     def add_capture_info(self):
-        # calculate what is captured by a mip
+        # find what is captured by a mip
         self.capture_info = {
             "captured_targets": {},
-             "unique_captures": []
+            "unique_captures": []
         }
         cap_targets = self.capture_info["captured_targets"]
-        pdiffs = self.subregion.locus.pdiffs
         # get target dictionary
         targets = self.subregion.targets
-        extension_read_len = int(self.subregion.settings["extension"]["read_length"])
-        ligation_read_len = int(self.subregion.settings["ligation"]["read_length"])
-        extension_min_trim = int(self.subregion.settings["extension"]["minimum_trim"])
-        ligation_min_trim = int(self.subregion.settings["ligation"]["minimum_trim"])
-        extension_umi_len = int(self.subregion.settings["extension"]["umi_length"])
-        ligation_umi_len = int(self.subregion.settings["ligation"]["umi_length"])
-        minimum_read_overlap = int(self.subregion.settings["mip"]["minimum_read_overlap"])
-        maximum_read_overlap = int(self.subregion.settings["mip"]["maximum_read_overlap"])
+        extension_read_len = int(self.subregion.settings["extension"][
+            "read_length"])
+        ligation_read_len = int(self.subregion.settings["ligation"][
+            "read_length"])
+        extension_min_trim = int(self.subregion.settings["extension"][
+            "minimum_trim"])
+        ligation_min_trim = int(self.subregion.settings["ligation"][
+            "minimum_trim"])
+        extension_umi_len = int(self.subregion.settings["extension"][
+            "umi_length"])
+        ligation_umi_len = int(self.subregion.settings["ligation"][
+            "umi_length"])
         try:
             arms = self.subregion.capture["arms"]
         except KeyError:
             arms = "capture"
-        if arms not in ["extension",
-                       "ligation",
-                       "any",
-                       "both",
-                       "capture"]:
+        if arms not in ["extension",  "ligation",  "any", "both", "capture"]:
             arms = "capture"
-        size_min = (extension_read_len + ligation_read_len
-                   - extension_umi_len - ligation_umi_len - maximum_read_overlap)
-        size_max = (extension_read_len + ligation_read_len
-                   - extension_umi_len - ligation_umi_len - minimum_read_overlap)
         insertions = self.subregion.locus.insertions
         for target_type in targets:
             for copy_id in targets[target_type]:
@@ -2679,12 +2700,12 @@ class Mip():
                                 (insertions["copy_chrom"] == cc)
                                 & (insertions["copy_begin"] > ext_cs)
                                 & (insertions["copy_end"] < ext_ce),
-                            "max_size"].sum()
+                                "max_size"].sum()
                             lig_insertion_len = insertions.loc[
                                 (insertions["copy_chrom"] == cc)
                                 & (insertions["copy_begin"] > lig_cs)
                                 & (insertions["copy_end"] < lig_ce),
-                            "max_size"].sum()
+                                "max_size"].sum()
                         else:
                             ext_insertion_len = lig_insertion_len = 0
                     else:
@@ -2701,12 +2722,12 @@ class Mip():
                                 (insertions["copy_chrom"] == cc)
                                 & (insertions["copy_begin"] > lig_cs)
                                 & (insertions["copy_end"] < lig_ce),
-                            "max_size"].sum()
+                                "max_size"].sum()
                             ext_insertion_len = insertions.loc[
                                 (insertions["copy_chrom"] == cc)
                                 & (insertions["copy_begin"] > ext_cs)
                                 & (insertions["copy_end"] < ext_ce),
-                            "max_size"].sum()
+                                "max_size"].sum()
                     for t in targets[target_type][copy_id]:
                         tar = targets[target_type][copy_id][t]
                         tbeg = tar["copy_begin"]
@@ -2737,21 +2758,19 @@ class Mip():
                         if tchrom == cc:
                             if cs <= tbeg <= tend <= ce:
                                 covered_by_capture = True
-                            if (ext_coverage_start
-                                <= tbeg <= tend
-                                <= ext_coverage_end):
+                            if (ext_coverage_start <= tbeg <= tend
+                                    <= ext_coverage_end):
                                 covered_by_ext = True
-                            if (lig_coverage_start
-                                <= tbeg <= tend
-                                <= lig_coverage_end):
+                            if (lig_coverage_start <= tbeg <= tend
+                                    <= lig_coverage_end):
                                 covered_by_lig = True
                         covered_by_both = covered_by_ext and covered_by_lig
                         covered_by_any = covered_by_ext or covered_by_lig
                         if (((arms == "capture") and covered_by_capture)
-                            or ((arms == "extension") and covered_by_ext)
-                            or ((arms == "ligation") and covered_by_lig)
-                            or (((arms == "both") and covered_by_both))
-                            or ((arms == "any") and covered_by_any)):
+                                or ((arms == "extension") and covered_by_ext)
+                                or ((arms == "ligation") and covered_by_lig)
+                                or (((arms == "both") and covered_by_both))
+                                or ((arms == "any") and covered_by_any)):
                             try:
                                 cap_targets[
                                     target_type][copy_id][t] = tar
@@ -2761,9 +2780,7 @@ class Mip():
                                         target_type][copy_id] = {t: tar}
                                 except KeyError:
                                     cap_targets[target_type] = {
-                                        copy_id:{
-                                            t: tar
-                                        }
+                                        copy_id: {t: tar}
                                     }
         all_captured_sequences = []
         for c in self.captured_copies:
@@ -2775,6 +2792,7 @@ class Mip():
             if all_captured_sequences.count(copy_seq) == 1:
                 self.capture_info["unique_captures"].append(c)
         return
+
     def score_mips(self):
         """
         Score a mip object technically and functionally.
