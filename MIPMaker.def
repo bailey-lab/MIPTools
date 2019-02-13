@@ -38,7 +38,9 @@ From: amd64/ubuntu:18.04
     pigz \
     perl-tk \
     less \
-    software-properties-common
+    software-properties-common \
+    libxext6 \
+    libxrender1
     # install conda
     cd /tmp && \
         wget --quiet https://repo.continuum.io/miniconda/Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh && \
@@ -70,9 +72,14 @@ From: amd64/ubuntu:18.04
     "seaborn=0.9" \
     "scikit-learn=0.20" \
     "scandir=1.9.0"
+    # install R and epitools R library
+    conda install -qy -c r r
+    conda install -qy -c nnsrl r-epitools
+    conda install -qy -c r rpy2
     conda clean -tipsy
 
     pip install primer3-py==0.5.7
+    pip install simplegeneric
     # install lastZ
     cd /opt/programs/lastz/src
     make lastz_32 && install lastz_32 /usr/bin/

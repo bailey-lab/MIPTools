@@ -375,11 +375,23 @@ def merge_coordinates(coordinates, capture_size, min_region_size = 0):
                 r_end += int(min_region_size - r_len/2)
             target_coordinates[region_name] = [c, r_start, r_end]
     return target_coordinates, target_names
+
+
 def create_target_fastas(res_dir, targets, species, flank):
+    """ Create fasta files for a list of region coordinates provided as a dict
+    in the form {target1: [chrx, start, end], target2: [chrx, start, end], ..},
+    flank on both sides with the specified length. If beginning  coordinate is
+    less than zero, reset the beginning coordinate to zero..
+    """
     for t in targets:
-        rk = targets[t][0] + ":" + str(targets[t][1] - flank + 1)           + "-" + str(targets[t][2] + flank)
+        chrom = targets[t][0]
+        begin = targets[t][1] - flank + 1
+        if begin < 0:
+            begin = 0
+        end = targets[t][2] + flank
+        rk = chrom + ":" + str(begin) + "-" + str(end)
         with open(res_dir + t + ".fa", "w") as outfile:
-            outfile.write(get_fasta(rk, species, header = t))
+            outfile.write(get_fasta(rk, species, header=t))
     return
 def coordinate_to_target(coordinates, snp_locations, capture_size):
     """ Create MIP targets starting from a snp file that is produced offline,
@@ -760,106 +772,116 @@ def tm_calculator(sequence, conc, Na,
     return Tm -  273.15
 
 
-def align_region_worker_for_design(l):
-    try:
-        # get parameters from the input list
-        #####
-        # first item is the query sequence, if a fasta file, should be file name excluding path
-        # it can either be a genomic location (chr1:10-100) or a fasta file.
-        # If the item does not start with chr, it is assumed to be a fasta file
-        region_key = l[0]
-        # second item holds the run directory for lastz, should contain
-        resource_dir = l[1]
-        output_file = l[2]
-        # target file, if a fasta file, should be pathname, not file name
-        # if starts with chr, a fasta file will be created in the resource directory
-        # if it is self, each sequence in query fasta will be aligned to each sequence
-        # in the query fasta
-        target_fasta = l[3]
-        # each action item will be appended to the target or query argument
-        # within brackets. [unmask] and [multiple] are important target actions
-        # unmask: allows starting alignments in masked(lowercase) parts of the target
-        # multiple: indicates there are multiple sequences in the target file (e.g. chromosomes)
-        target_actions = l[4]
-        # query file is treated as multiple sequence file without the multiple action
-        query_actions = l[5]
-        # percent cutoff value for identity/coverage of query to target. This only affects
-        # reporting and not the alignment process itself.
-        identity_cutoff = l[6]
-        coverage_cutoff = l[7]
-        # format of the output, follows --format: argument in lastz
-        # if format is general, it should be followed by a comma separated list of
-        # fields to output, e.g. general:name1,text1,name2,text2,diff,score would output
-        # the name of the query, sequence of the query, name of the target, seq of target,
-        # a string showing the alignment and the alignment score
-        output_format = l[8]
-        # additional options to pass to lastz
-        options = l[9]
-        species = l[10]
-        # create a query fasta file from region key, if a key is provided instead of fasta
-        query_fasta = resource_dir + region_key + ".fa"
-        if target_fasta == "self":
-            target_fasta = query_fasta
-        """
-        if not os.path.exists(query_fasta):
-            e = get_exons(get_gene(region_key,
-                                   get_file_locations()[species]["refgene"],
-                                   alternative_chr=1))
-            rk = e["chrom"] + ":" + str(e["begin"]) + "-" +\
-                str(e["end"])
-            with open(query_fasta, "w") as outfile:
-                outfile.write(get_fasta(rk, species, header = region_key))
-        if target_fasta == "self":
-            target_fasta = query_fasta
-        # create a target fasta file from region key, if a key is provided instead of fasta
-        elif target_fasta.startswith("chr"):
-            target_key = str(target_fasta)
-            target_fasta = resource_dir + target_fasta
-            if not os.path.exists(target_fasta):
-                with open(target_fasta, "w") as outfile:
-                    outfile.write(get_fasta(target_key, species))
-        """
-        # create target actions text
-        if len(target_actions) > 0:
-            target_act = "[" + ",".join(target_actions) + "]"
-        else:
-            target_act = ""
-        # create query actions text
-        if len(query_actions) > 0:
-            query_act = "[" + ",".join(query_actions) + "]"
-        else:
-            query_act = ""
-        # create the command list to pass to the processor
-        comm = ["lastz_32",
-                 target_fasta + target_act,
-                 query_fasta + query_act ,
-                 "--output=" + resource_dir + output_file,
-                 "--format=" + output_format,
-                 "--filter=identity:" + str(identity_cutoff),
-                 "--filter=coverage:" + str(coverage_cutoff)]
-        # add any extra options to the end of the command
-        comm.extend(options)
-        #print " ".join(comm)
-        # run the command using subprocess module
-        subprocess.check_output(comm)
-        return 0
-    except Exception as e:
-        return str(e)
-def align_region_multi_for_design(alignment_list, pro):
-    res = []
-    try:
-        p = Pool(pro)
-        p.map_async(align_region_worker_for_design, alignment_list, callback=res.append)
-        p.close()
-        p.join()
-    except Exception as e:
-        res.append(str(e))
-    return res
+def align_genes_for_design_worker(l):
+    # get parameters from the input list
+    #####
+    # first item is the query sequence, it must be a fasta file and it
+    # must be in the resource dir (second item in the list)
+    region_key = l[0]
+    # second item holds the run directory for lastz
+    resource_dir = l[1]
+    output_file = l[2]
+    # target file, if a fasta file, should be pathname, not file name
+    # if starts with chr, a fasta file will be created in the resource directory
+    # if it is self, each sequence in query fasta will be aligned to each sequence
+    # in the query fasta
+    target_fasta = l[3]
+    # each action item will be appended to the target or query argument
+    # within brackets. [unmask] and [multiple] are important target actions
+    # unmask: allows starting alignments in masked(lowercase) parts of the target
+    # multiple: indicates there are multiple sequences in the target file (e.g. chromosomes)
+    target_actions = l[4]
+    # query file is treated as multiple sequence file without the multiple action
+    query_actions = l[5]
+    # percent cutoff value for identity/coverage of query to target. This only affects
+    # reporting and not the alignment process itself.
+    identity_cutoff = l[6]
+    coverage_cutoff = l[7]
+    # format of the output, follows --format: argument in lastz
+    # if format is general, it should be followed by a comma separated list of
+    # fields to output, e.g. general:name1,text1,name2,text2,diff,score would output
+    # the name of the query, sequence of the query, name of the target, seq of target,
+    # a string showing the alignment and the alignment score
+    output_format = l[8]
+    # additional options to pass to lastz
+    options = l[9]
+    species = l[10]
+    # create a query fasta file from region key, if a key is provided instead of fasta
+    query_fasta = resource_dir + region_key + ".fa"
+    if target_fasta == "self":
+        target_fasta = query_fasta
+    # create target actions text
+    if len(target_actions) > 0:
+        target_act = "[" + ",".join(target_actions) + "]"
+    else:
+        target_act = ""
+    # create query actions text
+    if len(query_actions) > 0:
+        query_act = "[" + ",".join(query_actions) + "]"
+    else:
+        query_act = ""
+    # create the command list to pass to the processor
+    comm = ["lastz_32",
+            target_fasta + target_act,
+            query_fasta + query_act ,
+            "--output=" + resource_dir + output_file,
+            "--format=" + output_format,
+            "--filter=identity:" + str(identity_cutoff),
+            "--filter=coverage:" + str(coverage_cutoff)]
+    # add any extra options to the end of the command
+    comm.extend(options)
+    # run the command using subprocess module
+    subprocess.check_output(comm)
+    return
+
+
+def align_genes_for_design(fasta_list, res_dir,
+                           alignment_types=["differences", "general"],
+                           species="hs", num_processor=30):
+    """ Align sequences given in a list of fasta files to the reference genome.
+    This function merely prepares a list of commands to pass to
+    align_genes_for_design_worker function to carry out alignments in
+    parallel where multiple processors are available.
+    """
+    region_list = []
+    for gene_dict in fasta_list:
+        gene_name = gene_dict["gene_name"]
+        identity = gene_dict["identity"]
+        coverage = gene_dict["coverage"]
+        options = gene_dict["options"]
+        target = get_file_locations()[species]["fasta_genome"]
+        out_fields = ["name1", "strand1", "zstart1", "end1", "length1",
+                      "name2", "strand2", "zstart2", "end2", "zstart2+",
+                      "end2+", "length2", "identity", "coverage"]
+        out_fields = ",".join(out_fields)
+        gen_out = "general:" + out_fields
+        dif_out = "differences"
+        if not os.path.exists(res_dir):
+            os.makedirs(res_dir)
+        if "general" in alignment_types:
+            al = [gene_name, res_dir, gene_name + ".al", target,
+                  ["multiple", "unmask", "nameparse=darkspace"],
+                  ["unmask", "nameparse=darkspace"],
+                  identity, coverage, gen_out, options, species]
+            region_list.append(al)
+        if "differences" in alignment_types:
+            al = [gene_name, res_dir, gene_name + ".differences", target,
+                  ["multiple", "unmask", "nameparse=darkspace"],
+                  ["unmask", "nameparse=darkspace"],
+                  identity,  coverage, dif_out, options, species]
+            region_list.append(al)
+    p = Pool(num_processor)
+    p.map_async(align_genes_for_design_worker, region_list)
+    p.close()
+    p.join()
+    return
+
+
 def align_region_worker(l):
     try:
         # get parameters from the input list
         #####
-        # first item is the query sequence, if a fasta file, should be file name excluding path
+        # first item is the query sequence,
         # it can either be a genomic location (chr1:10-100) or a fasta file.
         # If the item does not start with chr, it is assumed to be a fasta file
         region_key = l[0]
@@ -901,7 +923,8 @@ def align_region_worker(l):
             query_fasta = resource_dir + region_key
         if target_fasta == "self":
             target_fasta = query_fasta
-        # create a target fasta file from region key, if a key is provided instead of fasta
+        # create a target fasta file from region key
+        # if a key is provided instead of a fasta file
         elif target_fasta.startswith("chr"):
             target_key = str(target_fasta)
             target_fasta = resource_dir + target_fasta
@@ -934,6 +957,8 @@ def align_region_worker(l):
         return 0
     except Exception as e:
         return str(e)
+
+
 def align_region_multi(alignment_list, pro):
     res = []
     try:
@@ -1011,60 +1036,11 @@ def merge_alignments (resource_dir, fasta_list, output_prefix = "merged"):
         alignment_file.write("\n".join(als_out))
         diff_file.write("\n".join(diffs_out))
     return
-def align_genes_for_design(gene_name_list, res_dir,
-                           alignment_types = ["differences", "general"],
-                species = "hs", num_processor=30 ):
-    """ Align genes given in a list to the reference genome of given species.
-    Extract gene sequence of the gene from refgene file of the species, starting
-    from the first exon and ending with the last exon. Any alternatively spliced
-    exons will be added. Exonic sequence will be flanked by specified number of
-    bases. Each alignment type and gene will be passed to the align_region_multi
-    function to be processed by a separate processor. Alignment results will be
-    written to files in wdir + gene_name/resources. All alignments will be checked
-    and if there are genes whose alignments overlap (e.g. duplications) they will
-    be returned in a list.
-    """
-    region_list = []
-    for gene_dict in gene_name_list:
-        gene_name = gene_dict["gene_name"]
-        identity = gene_dict["identity"]
-        coverage = gene_dict["coverage"]
-        options = gene_dict["options"]
-        target = get_file_locations()[species]["fasta_genome"]
-        out_fields = "name1,strand1,zstart1,end1,length1,name2,strand2,zstart2,end2,zstart2+,end2+,length2,identity,coverage"
-        gen_out = "general:"+ out_fields
-        dif_out = "differences"
-        if not os.path.exists(res_dir):
-            os.makedirs(res_dir)
-        if "general" in alignment_types:
-            al = [gene_name,
-              res_dir,
-              gene_name + ".al",
-              target,
-              ["multiple", "unmask", "nameparse=darkspace"],
-              ["unmask", "nameparse=darkspace"],
-              identity,
-              coverage,
-              gen_out,
-              options,
-              species]
-            region_list.append(al)
-        if "differences" in alignment_types:
-            al = [gene_name,
-                  res_dir,
-                  gene_name + ".differences",
-                  target,
-                  ["multiple", "unmask", "nameparse=darkspace"],
-                  ["unmask", "nameparse=darkspace"],
-                  identity,
-                  coverage,
-                  dif_out,
-                  options,
-                  species]
-            region_list.append(al)
-    align_region_multi_for_design(region_list, num_processor)
-    #check = alignment_check(region_list)
-    return
+
+
+
+
+
 def align_genes(gene_name_list, wdir, alignment_types = ["differences", "general"],
                 species = "hs", num_processor=30, flank=150, identity=90, coverage=5,
                 options = ["--notransition", "--step=100"]):
@@ -3485,14 +3461,11 @@ def alignment_check(region_list):
     return alignments
 
 
-def intra_alignment_checker(family_name,
-                            res_dir,
-                           target_regions,
-                            region_names
-                           ):
+def intra_alignment_checker(family_name, res_dir, target_regions,
+                            region_names):
     alignment_file = family_name + ".aligned"
     new_regions = {}
-    with open (res_dir + alignment_file, "r") as alignment:
+    with open(res_dir + alignment_file, "r") as alignment:
         for line in alignment:
             # extract the column names from the first line
             if line.startswith("#"):
@@ -3515,31 +3488,23 @@ def intra_alignment_checker(family_name,
                     end = tr[1] + int(temp_dict["end1"])
                     size = end - start + 1
                     try:
-                        new_regions[cn].append([tr[0],
-                                                 start,
-                                                 end,
-                                                0 - len(tr[0]),
-                                                 size])
+                        new_regions[cn].append([tr[0], start, end,
+                                               0 - len(tr[0]), size])
                     except KeyError:
-                        new_regions[cn] = [[tr[0],
-                                             start,
-                                             end,
-                                            0 - len(tr[0]),
-                                             size]]
-    ret_regions =  []
+                        new_regions[cn] = [[tr[0], start, end,
+                                           0 - len(tr[0]), size]]
+    ret_regions = []
     rnames = []
     for ci in sorted(new_regions):
         ret_regions.extend(sorted(new_regions[ci]))
         if len(new_regions[ci]) > 1:
             for i in range(len(new_regions[ci])):
-                rnames.append(
-                    region_names[ci] + "-" + str(i)
-                )
+                rnames.append(region_names[ci] + "-" + str(i))
         else:
-            rnames.append(
-            region_names[ci]
-            )
+            rnames.append(region_names[ci])
     return [ret_regions, rnames]
+
+
 def alignment_mapper(family_name, res_dir):
     """ Once alignment files (.al and .differences) have been created,
     MODIFY .al file to include copyname, copynumber and query columns.
@@ -5594,6 +5559,8 @@ def process_bowtie(primers, primer_out, primer3_output_DIR,
                                         continue
                                     alt_start = bt_begin + j
                                     alt_end = bt_end
+                                    if (alt_start < 0) or (alt_end < 0):
+                                        continue
                                     if para_ori == "forward":
                                         alt_primer_key = create_region(
                                             bt_chrom,
@@ -5624,7 +5591,7 @@ def process_bowtie(primers, primer_out, primer3_output_DIR,
                                     al[j]["ALT_END"] = alt_end
                                     al[j]["ALT_SEQUENCE"] = alt_primer_seq
                                     al[j]["ALT_TM"] = calcHeterodimerTm(
-                                        primer_seq,
+                                        alt_primer_seq,
                                         reverse_complement(alt_primer_seq),
                                         mv_conc=Na,
                                         dv_conc=Mg,
@@ -5679,6 +5646,8 @@ def process_bowtie(primers, primer_out, primer3_output_DIR,
                                     continue
                                 alt_start = bt_begin + j
                                 alt_end = bt_end
+                                if (alt_start < 0) or (alt_end < 0):
+                                    continue
                                 if para_ori == "forward":
                                     alt_primer_key = create_region(
                                         bt_chrom,
@@ -5709,7 +5678,7 @@ def process_bowtie(primers, primer_out, primer3_output_DIR,
                                 al[j]["ALT_END"] = alt_end
                                 al[j]["ALT_SEQUENCE"] = alt_primer_seq
                                 al[j]["ALT_TM"] = calcHeterodimerTm(
-                                    primer_seq,
+                                    alt_primer_seq,
                                     reverse_complement(alt_primer_seq),
                                     mv_conc=Na,
                                     dv_conc=Mg,
@@ -6578,11 +6547,11 @@ def check_hairpin(pairs, output_file, settings, outp=1):
                 alt_copies = list(set(alt_copies).difference(lost_captures))
                 mip_dict.pop(m)
             else:
-                mip_dict[m]["Melting Temps"] = {{"arms_hp": ext_lig,
-                                                 "ext_hp": bb_ext_arm,
-                                                 "lig_hp": bb_lig_arm,
-                                                 "ext_backbone": bb_ext,
-                                                 "lig_backbone": bb_lig}}
+                mip_dict[m]["Melting Temps"] = {"arms_hp": ext_lig,
+                                                "ext_hp": bb_ext_arm,
+                                                "lig_hp": bb_lig_arm,
+                                                "ext_backbone": bb_ext,
+                                                "lig_backbone": bb_lig}
         if len(mip_dict) == 0:
             pairs["pair_information"].pop(p)
     for p in pairs["pair_information"].keys():
@@ -9233,6 +9202,8 @@ def cnv_stats(hom_case, hom_control,
     output.extend(fish)
     output.append(chi[1])
     return output
+
+
 def design_mips(design_dir, g):
     print(("Designing MIPs for ", g))
     try:
@@ -9249,6 +9220,8 @@ def design_mips(design_dir, g):
     except Exception as e:
         print((g, str(e), " FAILED!!!"))
     return
+
+
 def design_mips_worker(design_list):
     design_dir, g = design_list
     print(("Designing MIPs for ", g))

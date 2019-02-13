@@ -13,7 +13,7 @@ import mip_functions as mip
 import copy
 import numpy as np
 import pandas as pd
-
+print("Classes reloading.")
 
 class Locus:
     """
@@ -2728,6 +2728,8 @@ class Mip():
                                 & (insertions["copy_begin"] > ext_cs)
                                 & (insertions["copy_end"] < ext_ce),
                                 "max_size"].sum()
+                        else:
+                            ext_insertion_len = lig_insertion_len = 0
                     for t in targets[target_type][copy_id]:
                         tar = targets[target_type][copy_id][t]
                         tbeg = tar["copy_begin"]
@@ -2740,8 +2742,8 @@ class Mip():
                             size_diff = int(tar["size_difference"])
                         except KeyError:
                             size_diff = 0
-                        ext_size_diff = max(size_diff, ext_insertion_len)
-                        lig_size_diff = max(size_diff, lig_insertion_len)
+                        ext_size_diff = max([size_diff, ext_insertion_len])
+                        lig_size_diff = max([size_diff, lig_insertion_len])
                         if co == "forward":
                             ext_coverage_start = ext_cs
                             ext_coverage_end = ext_ce - ext_size_diff
