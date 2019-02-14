@@ -1280,201 +1280,303 @@ def intraparalog_aligner(resource_dir,
     return align_region_multi(alignment_commands, num_process)
 
 
-def align_region_worker_del(l):
-    try:
-        # get parameters from the input list
-        #####
-        # first item is the query sequence,
-        # it can either be a genomic location (chr1:10-100) or a fasta file.
-        # If the item does not start with chr, it is assumed to be a fasta file
-        region_key = l[0]
-        # second item holds the run directory for lastz, should contain
-        resource_dir = l[1]
-        output_file = l[2]
-        # target file, if a fasta file, should be pathname, not file name
-        # if starts with chr, a fasta file will be created in the resource directory
-        # if it is self, each sequence in query fasta will be aligned to each sequence
-        # in the query fasta
-        target_fasta = l[3]
-        # each action item will be appended to the target or query argument
-        # within brackets. [unmask] and [multiple] are important target actions
-        # unmask: allows starting alignments in masked(lowercase) parts of the target
-        # multiple: indicates there are multiple sequences in the target file (e.g. chromosomes)
-        target_actions = l[4]
-        # query file is treated as multiple sequence file without the multiple action
-        query_actions = l[5]
-        # percent cutoff value for identity/coverage of query to target. This only affects
-        # reporting and not the alignment process itself.
-        identity_cutoff = l[6]
-        coverage_cutoff = l[7]
-        # format of the output, follows --format: argument in lastz
-        # if format is general, it should be followed by a comma separated list of
-        # fields to output, e.g. general:name1,text1,name2,text2,diff,score would output
-        # the name of the query, sequence of the query, name of the target, seq of target,
-        # a string showing the alignment and the alignment score
-        output_format = l[8]
-        # additional options to pass to lastz
-        options = l[9]
-        species = l[10]
-        # create a query fasta file from region key, if a key is provided instead of fasta
-        if region_key.startswith("chr"):
-            query_fasta = resource_dir + region_key + ".fa"
-            if not os.path.exists(query_fasta):
-                with open(query_fasta, "w") as infile:
-                    infile.write(get_fasta(region_key, species))
+def alignment_check(region_list):
+    """ Check if any region in the given region list produces overlapping
+    alignments. Return offending regions. Region list must have two alignment
+    options for each region: one with general output and .al file extension,
+    which will be used to check the alignment."""
+    alignments = {}
+    for i in range(0, len(region_list), 2):
+        alignment_dir = region_list[i][1]
+        alignment_file = region_list[i][2]
+        alignment_dic = alignments[alignment_file.split(".")[0]] = {"overlap":
+                                                                    []}
+        alignment_list = alignment_dic["alignments"] = []
+        full_alignments = alignment_dic["full_alignments"] = []
+        with open(alignment_dir + alignment_file) as infile:
+            for line in infile:
+                if not line.startswith("#"):
+                    newline = line.strip().split("\t")
+                    alignment_chrom = newline[0]
+                    alignment_start = int(newline[1])
+                    alignment_end = int(newline[2])
+                    alignment_list.append([alignment_chrom,
+                                           alignment_start,
+                                           alignment_end])
+                    newline[1] = alignment_start
+                    newline[2] = alignment_end
+                    full_alignments.append(newline)
+    for a1 in alignments:
+        for a2 in alignments:
+            if a1 != a2:
+                a_list1 = alignments[a1]["alignments"]
+                a_list2 = alignments[a2]["alignments"]
+                overlap_found = False
+                for i in a_list1:
+                    if not overlap_found:
+                        for j in a_list2:
+                            if check_overlap(i, j):
+                                alignments[a1]["overlap"].append(a2)
+                                overlap_found = True
+                                break
+    return alignments
+
+
+def intra_alignment_checker(family_name, res_dir, target_regions,
+                            region_names):
+    alignment_file = family_name + ".aligned"
+    new_regions = {}
+    with open(res_dir + alignment_file, "r") as alignment:
+        for line in alignment:
+            # extract the column names from the first line
+            if line.startswith("#"):
+                newline = line.strip().split("\t")
+                newline[0] = newline[0][1:]
+                colnames = list(newline)
+            # assign values of each column for each alignment
+            else:
+                newline = line.strip().split("\t")
+                temp_dict = {}
+                for i in range(len(colnames)):
+                    temp_dict[colnames[i]] = newline[i]
+                alignment_id = temp_dict["name1"]
+                ci = alignment_id.split("_")[-1]
+                ct = ci[0]
+                if ct == "C":
+                    cn = int(ci[1:])
+                    tr = target_regions[cn]
+                    start = tr[1] + int(temp_dict["zstart1"])
+                    end = tr[1] + int(temp_dict["end1"])
+                    size = end - start + 1
+                    try:
+                        new_regions[cn].append([tr[0], start, end,
+                                               0 - len(tr[0]), size])
+                    except KeyError:
+                        new_regions[cn] = [[tr[0], start, end,
+                                           0 - len(tr[0]), size]]
+    ret_regions = []
+    rnames = []
+    for ci in sorted(new_regions):
+        ret_regions.extend(sorted(new_regions[ci]))
+        if len(new_regions[ci]) > 1:
+            for i in range(len(new_regions[ci])):
+                rnames.append(region_names[ci] + "-" + str(i))
         else:
-            query_fasta = resource_dir + region_key
-        if target_fasta == "self":
-            target_fasta = query_fasta
-        # create a target fasta file from region key
-        # if a key is provided instead of a fasta file
-        elif target_fasta.startswith("chr"):
-            target_key = str(target_fasta)
-            target_fasta = resource_dir + target_fasta
-            if not os.path.exists(target_fasta):
-                with open(target_fasta, "w") as infile:
-                    infile.write(get_fasta(target_key, species))
-        # create target actions text
-        if len(target_actions) > 0:
-            target_act = "[" + ",".join(target_actions) + "]"
-        else:
-            target_act = ""
-        # create query actions text
-        if len(query_actions) > 0:
-            query_act = "[" + ",".join(query_actions) + "]"
-        else:
-            query_act = ""
-        # create the command list to pass to the processor
-        comm = ["lastz_32",
-                 target_fasta + target_act,
-                 query_fasta + query_act ,
-                 "--output=" + resource_dir + output_file,
-                 "--format=" + output_format,
-                 "--filter=identity:" + str(identity_cutoff),
-                 "--filter=coverage:" + str(coverage_cutoff)]
-        # add any extra options to the end of the command
-        comm.extend(options)
-        #print comm
-        # run the command using subprocess module
-        subprocess.check_output(comm)
-        return 0
-    except Exception as e:
-        return str(e)
+            rnames.append(region_names[ci])
+    return [ret_regions, rnames]
 
 
-def align_region(l):
-    try:
-        region_key = l[0]
-        resource_dir = l[1]
-        output_file = l[2]
-        target_fasta = l[3]
-        target_actions = l[4]
-        query_actions = l[5]
-        identity_cutoff = l[6]
-        coverage_cutoff = l[7]
-        output_format = l[8]
-        options = l[9]
-        query_fasta = resource_dir + region_key + ".fa"
-        if not os.path.exists(query_fasta):
-            with open(query_fasta, "w") as infile:
-                infile.write(get_fasta(region_key, "hs"))
-        if target_fasta == "self":
-            target_fasta = query_fasta
-        elif target_fasta.startswith("chr"):
-            target_key = str(target_fasta)
-            target_fasta = resource_dir + target_fasta
-            if not os.path.exists(target_fasta):
-                with open(target_fasta, "w") as infile:
-                    infile.write(get_fasta(target_key, "hs"))
-
-        if len(target_actions) > 0:
-            target_act = "[" + ",".join(target_actions) + "]"
-        else:
-            target_act = ""
-        if len(query_actions) > 0:
-            query_act = "[" + ",".join(query_actions) + "]"
-        else:
-            query_act = ""
-        comm = ["lastz_32",
-                                 target_fasta + target_act,
-                                 query_fasta + query_act ,
-                                 "--output=" + resource_dir + output_file,
-                                 "--format=" + output_format,
-                                 "--filter=identity:" + str(identity_cutoff),
-                                 "--filter=coverage:" + str(coverage_cutoff)]
-        comm.extend(options)
-        subprocess.check_output(comm)
-        return 0
-    except Exception as e:
-        return str(e)
-
-
-
-
-
-
-def align_genes(gene_name_list, wdir, alignment_types = ["differences", "general"],
-                species = "hs", num_processor=30, flank=150, identity=90, coverage=5,
-                options = ["--notransition", "--step=100"]):
-    """ Align genes given in a list to the reference genome of given species.
-    Extract gene sequence of the gene from refgene file of the species, starting
-    from the first exon and ending with the last exon. Any alternatively spliced
-    exons will be added. Exonic sequence will be flanked by specified number of
-    bases. Each alignment type and gene will be passed to the align_region_multi
-    function to be processed by a separate processor. Alignment results will be
-    written to files in wdir + gene_name/resources. All alignments will be checked
-    and if there are genes whose alignments overlap (e.g. duplications) they will
-    be returned in a list.
+def alignment_mapper(family_name, res_dir):
+    """ Once alignment files (.al and .differences) have been created,
+    MODIFY .al file to include copyname, copynumber and query columns.
+    If copynumbers are "none", copies will be numbered in ascending size.
+    1) Create segments from alignments
+    2) create rinfo_0 file
+    3) return alignment and segment dictionaries, in case they are needed.
     """
-    region_list = []
-    for gene_name in gene_name_list:
-        if gene_name.startswith("chr"):
-            query = gene_name
-            res_dir = wdir
-        elif gene_name.endswith(".fasta"):
-            query = gene_name
-            res_dir = wdir
-        else:
-            e = get_exons(
-                get_gene(gene_name, get_file_locations()[species]["refgene"], alternative_chr=1)
-                )
-            query = e["chrom"] + ":" + str(e["begin"] - flank) + "-" + str(e["end"] + flank)
-            res_dir = wdir + gene_name + "/resources/"
-        target = get_file_locations()[species]["fasta_genome"]
-        out_fields = "name1,strand1,zstart1,end1,length1,name2,strand2,zstart2,end2,zstart2+,end2+,length2,identity,coverage"
-        gen_out = "general:"+ out_fields
-        dif_out = "differences"
-        if not os.path.exists(res_dir):
-            os.makedirs(res_dir)
-        if "general" in alignment_types:
-            al = [query,
-              res_dir,
-              gene_name + ".al",
-              target,
-              ["multiple", "unmask"],
-              ["unmask"],
-              identity,
-              coverage,
-              gen_out,
-              options,
-              species]
-            region_list.append(al)
-        if "differences" in alignment_types:
-            al = [query,
-                  res_dir,
-                  gene_name + ".differences",
-                  target,
-                  ["multiple", "unmask"],
-                  ["unmask"],
-                  identity,
-                  coverage,
-                  dif_out,
-                  options,
-                  species]
-            region_list.append(al)
-    align_region_multi(region_list, num_processor)
-    #check = alignment_check(region_list)
-    return
+    try:
+        alignment_file = family_name + ".aligned"
+        difference_file = family_name + ".differences"
+        with open (res_dir + alignment_file, "r") as alignment,              open(res_dir + difference_file, "r") as difference:
+            # create an alignment dictionary for each region that a query aligns to
+            # these correspond to each line in the alignment file
+            alignment_dic = {}
+            alignment_number = 0
+            for line in alignment:
+                # extract the column names from the first line
+                if line.startswith("#"):
+                    newline = line.strip().split("\t")
+                    newline[0] = newline[0][1:]
+                    colnames = list(newline)
+                # assign values of each column for each alignment
+                else:
+                    newline = line.strip().split("\t")
+                    temp_dict = {"differences": []}
+                    for i in range(len(colnames)):
+                        temp_dict[colnames[i]] = newline[i]
+                    alignment_id = temp_dict["name1"] + ":"                     + str(alignment_number)
+                    alignment_dic[alignment_id] = temp_dict
+                    cov = float(alignment_dic[alignment_id]["covPct"][:-1])
+                    idt = float(alignment_dic[alignment_id]["idPct"][:-1])
+                    alignment_dic[alignment_id]["score"] = np.mean([idt, cov])
+                    alignment_number += 1
+            # differences file is a continuous file for all alignments
+            # extract differences for each alignment
+            for line in difference:
+                newline = line.strip().split("\t")
+                dname = newline[0]
+                for aname in alignment_dic:
+                    if aname.startswith(dname):
+                        alignment_dic[aname]["differences"].append(newline[:-2])
+            # map each position in each alignment to the query
+            for a in alignment_dic:
+                snps = alignment_dic[a]["snps"] = {}
+                co = alignment_dic[a]["coordinates"] = {}
+                rev_co = alignment_dic[a]["reverse_coordinates"] = {}
+                alignment_length = int(alignment_dic[a]["length2"])
+                # if alignment on reverse strand
+                if alignment_dic[a]["strand2"] == "-":
+                    # genomic coordinate of target start
+                    # this position is zstart2+ away from query end (when it is a - alignment)
+                    al_start = int(alignment_dic[a]["zstart1"])
+                    query_plus_end = int(alignment_dic[a]["end2+"])
+                    # assign start to the first key of the coord dictionary
+                    first_key = query_plus_end - 1
+                    co[first_key] = al_start
+                    rev_co[al_start] = first_key
+                    last_key = first_key
+                    inserted = 0
+                    for d in alignment_dic[a]["differences"]:
+                        # start/end coordinates of diff relative to the query
+                        diff_start = int(d[6])
+                        diff_end = int(d[7])
+                        query_length = int(d[9])
+                        # for each diff, fill in the coordinates
+                        # between the last_key in the coord dic and start_key - diff start
+                        for j in range(last_key - 1, query_length - diff_start -1, -1):
+                            # j decreases by one, starting from the last available key
+                            # the value will be 1 more than the previous key (j+1)
+                            if j == last_key -1:
+                                co[j] = round(co[j + 1] - 0.1) + 1 + inserted
+                            else:
+                                co[j] = round(co[j + 1] - 0.1) + 1
+                            rev_co[co[j]] = j
+                        # current last key is now first_key - diff_start
+                        last_key = query_length - diff_start -1
+                        query_diff_end = last_key + 1
+                        # genomic coordinate of target at diff start
+                        tar_start = int(d[1])
+                        # genomic coordinate of target at diff end
+                        tar_end = int(d[2])
+                        # if end and start are the same, there is a deletion
+                        # in target compared to query
+                        # all nucleotides from diff start to diff end will have
+                        # the same coordinate
+                        if tar_start == tar_end:
+                            inserted = 0
+                            for i in range(diff_end - diff_start):
+                                co[last_key - i] = tar_start - 0.5
+                            last_key -= diff_end - diff_start - 1
+                        # in cases of deletion in query, only rev_co will be updated
+                        elif diff_start == diff_end:
+                            inserted = 0
+                            for i in range(tar_end - tar_start):
+                                rev_co[co[last_key + 1] + i + 1] = last_key + 0.5
+                                inserted += 1
+                            last_key += 1
+                        # last_key will be mapped to target start
+                        # if there is only a SNP and no indel
+                        else:
+                            inserted = 0
+                            co[last_key] = tar_start
+                            rev_co[tar_start] = last_key
+                        query_diff_start = last_key
+                        diff_key = str(query_diff_start) + "-" + str(query_diff_end)
+                        snps[diff_key] = {"chrom": d[0],
+                                          "target_begin": int(d[1]),
+                                          "target_end": int(d[2]),
+                                          "target_orientation": d[3],
+                                          "query_start": diff_start,
+                                          "query_end": diff_end,
+                                          "query_orientation": d[8],
+                                          "target_base": d[10],
+                                          "query_base": d[11]}
+
+                    # fill in the coordinates between last diff
+                    # and the alignment end
+                    query_plus_start = int(alignment_dic[a]["zstart2+"])
+                    for k in range(last_key -1, query_plus_start - 1, -1):
+                        co[k] = round(co[k+1] - 0.1) + 1
+                        rev_co[co[k]] = k
+                # when the alignment is on the forward strand
+                else:
+                    # where on target sequence the alignment starts
+                    tar_start = int(alignment_dic[a]["zstart1"])
+                    # where in the query sequence the alinment starts
+                    q_start = int(alignment_dic[a]["zstart2"])
+                    co[q_start] = tar_start
+                    rev_co[tar_start] = q_start
+                    # last key used is q_start, last key is updated each time
+                    # something is added to the coordinate dict.
+                    last_key = first_key = q_start
+                    inserted = 0
+                    for d in alignment_dic[a]["differences"]:
+                        # where on query sequence the difference starts and ends
+                        diff_start = int(d[6])
+                        diff_end = int(d[7])
+                        diff_key = d[6] + "-" + d[7]
+                        query_length = d[9]
+                        snps[diff_key] = {"chrom": d[0],
+                                          "target_begin": int(d[1]),
+                                          "target_end": int(d[2]),
+                                          "target_orientation": d[3],
+                                          "query_start": diff_start,
+                                          "query_end": diff_end,
+                                          "query_orientation": d[8],
+                                          "target_base": d[10],
+                                          "query_base": d[11]}
+                        # from the last key to the diff start the query and
+                        # target sequences are the same in length and co dict is filled so
+                        for i in range(last_key + 1, diff_start):
+                            if i == last_key + 1:
+                                co[i] = round(co[i-1] - 0.1) + 1 + inserted
+                                inserted = 0
+                            else:
+                                co[i] = round(co[i-1] - 0.1) + 1
+                            rev_co[co[i]] = i
+                        # update last used key in co dict
+                        last_key = diff_start
+                        # genomic coordinate of target at diff start
+                        tar_start = int(d[1])
+                        # genomic coordinate of target at diff end
+                        tar_end = int(d[2])
+                        # if end and start are the same, there is a deletion
+                        # in target compared to query
+                        # all nucleotides from diff start to diff end will have
+                        # the same coordinate
+                        if tar_start == tar_end:
+                            inserted = 0
+                            for i in range(diff_end - diff_start):
+                                co[last_key + i] = tar_start - 0.5
+                            last_key += diff_end - diff_start - 1
+                        # in cases of deletion in query (insertion in target)
+                        # position will be mapped to the target end coordinate
+                        elif diff_start == diff_end:
+                            inserted = 0
+                            for i in range(tar_end - tar_start):
+                                rev_co[co[last_key - 1] + 1 + i] = last_key - 0.5
+                                inserted += 1
+                            last_key -= 1
+                        # if there is no indel
+                        # last_key will be mapped to target start
+                        else:
+                            inserted = 0
+                            co[last_key] = tar_start
+                            rev_co[tar_start] = last_key
+                    # fill in the coordinates between last diff
+                    # and the alignment end
+                    q_end = int(alignment_dic[a]["end2"])
+                    for k in range(last_key + 1, q_end):
+                        co[k] = round(co[k-1] - 0.1) + 1
+                        rev_co[co[k]] = k
+
+        return_dic = {}
+        for aname in alignment_dic:
+            qname = aname.split(":")[0]
+            snps = alignment_dic[aname]["snps"]
+            co = alignment_dic[aname]["coordinates"]
+            rev_co = alignment_dic[aname]["reverse_coordinates"]
+            if qname not in return_dic:
+                return_dic[qname] = alignment_dic[aname]
+                return_dic[qname]["covered"] = [list(map(int, [alignment_dic[aname]["zstart1"],
+                                                 alignment_dic[aname]["end1"]]))]
+            else:
+                qname_cov = [alignment_dic[aname]["zstart1"],
+                            alignment_dic[aname]["end1"]]
+                return_dic[qname]["covered"].append(list(map(int, qname_cov)))
+        return alignment_dic, return_dic
+    except Exception as e:
+        return [family_name, e]
 
 
 def align_haplotypes(settings,
@@ -3650,303 +3752,7 @@ def check_overlap (r1, r2, padding = 0):
     return o1 & o2
 
 
-def alignment_check(region_list):
-    """ Check if any region in the given region list produces overlapping
-    alignments. Return offending regions. Region list must have two alignment
-    options for each region: one with general output and .al file extension,
-    which will be used to check the alignment."""
-    alignments = {}
-    for i in range(0, len(region_list), 2):
-        alignment_dir = region_list[i][1]
-        alignment_file = region_list[i][2]
-        alignment_dic = alignments[alignment_file.split(".")[0]] = {"overlap":
-                                                                    []}
-        alignment_list = alignment_dic["alignments"] = []
-        full_alignments = alignment_dic["full_alignments"] = []
-        with open(alignment_dir + alignment_file) as infile:
-            for line in infile:
-                if not line.startswith("#"):
-                    newline = line.strip().split("\t")
-                    alignment_chrom = newline[0]
-                    alignment_start = int(newline[1])
-                    alignment_end = int(newline[2])
-                    alignment_list.append([alignment_chrom,
-                                           alignment_start,
-                                           alignment_end])
-                    newline[1] = alignment_start
-                    newline[2] = alignment_end
-                    full_alignments.append(newline)
-    for a1 in alignments:
-        for a2 in alignments:
-            if a1 != a2:
-                a_list1 = alignments[a1]["alignments"]
-                a_list2 = alignments[a2]["alignments"]
-                overlap_found = False
-                for i in a_list1:
-                    if not overlap_found:
-                        for j in a_list2:
-                            if check_overlap(i, j):
-                                alignments[a1]["overlap"].append(a2)
-                                overlap_found = True
-                                break
-    return alignments
 
-
-def intra_alignment_checker(family_name, res_dir, target_regions,
-                            region_names):
-    alignment_file = family_name + ".aligned"
-    new_regions = {}
-    with open(res_dir + alignment_file, "r") as alignment:
-        for line in alignment:
-            # extract the column names from the first line
-            if line.startswith("#"):
-                newline = line.strip().split("\t")
-                newline[0] = newline[0][1:]
-                colnames = list(newline)
-            # assign values of each column for each alignment
-            else:
-                newline = line.strip().split("\t")
-                temp_dict = {}
-                for i in range(len(colnames)):
-                    temp_dict[colnames[i]] = newline[i]
-                alignment_id = temp_dict["name1"]
-                ci = alignment_id.split("_")[-1]
-                ct = ci[0]
-                if ct == "C":
-                    cn = int(ci[1:])
-                    tr = target_regions[cn]
-                    start = tr[1] + int(temp_dict["zstart1"])
-                    end = tr[1] + int(temp_dict["end1"])
-                    size = end - start + 1
-                    try:
-                        new_regions[cn].append([tr[0], start, end,
-                                               0 - len(tr[0]), size])
-                    except KeyError:
-                        new_regions[cn] = [[tr[0], start, end,
-                                           0 - len(tr[0]), size]]
-    ret_regions = []
-    rnames = []
-    for ci in sorted(new_regions):
-        ret_regions.extend(sorted(new_regions[ci]))
-        if len(new_regions[ci]) > 1:
-            for i in range(len(new_regions[ci])):
-                rnames.append(region_names[ci] + "-" + str(i))
-        else:
-            rnames.append(region_names[ci])
-    return [ret_regions, rnames]
-
-
-def alignment_mapper(family_name, res_dir):
-    """ Once alignment files (.al and .differences) have been created,
-    MODIFY .al file to include copyname, copynumber and query columns.
-    If copynumbers are "none", copies will be numbered in ascending size.
-    1) Create segments from alignments
-    2) create rinfo_0 file
-    3) return alignment and segment dictionaries, in case they are needed.
-    """
-    try:
-        alignment_file = family_name + ".aligned"
-        difference_file = family_name + ".differences"
-        with open (res_dir + alignment_file, "r") as alignment,              open(res_dir + difference_file, "r") as difference:
-            # create an alignment dictionary for each region that a query aligns to
-            # these correspond to each line in the alignment file
-            alignment_dic = {}
-            alignment_number = 0
-            for line in alignment:
-                # extract the column names from the first line
-                if line.startswith("#"):
-                    newline = line.strip().split("\t")
-                    newline[0] = newline[0][1:]
-                    colnames = list(newline)
-                # assign values of each column for each alignment
-                else:
-                    newline = line.strip().split("\t")
-                    temp_dict = {"differences": []}
-                    for i in range(len(colnames)):
-                        temp_dict[colnames[i]] = newline[i]
-                    alignment_id = temp_dict["name1"] + ":"                     + str(alignment_number)
-                    alignment_dic[alignment_id] = temp_dict
-                    cov = float(alignment_dic[alignment_id]["covPct"][:-1])
-                    idt = float(alignment_dic[alignment_id]["idPct"][:-1])
-                    alignment_dic[alignment_id]["score"] = np.mean([idt, cov])
-                    alignment_number += 1
-            # differences file is a continuous file for all alignments
-            # extract differences for each alignment
-            for line in difference:
-                newline = line.strip().split("\t")
-                dname = newline[0]
-                for aname in alignment_dic:
-                    if aname.startswith(dname):
-                        alignment_dic[aname]["differences"].append(newline[:-2])
-            # map each position in each alignment to the query
-            for a in alignment_dic:
-                snps = alignment_dic[a]["snps"] = {}
-                co = alignment_dic[a]["coordinates"] = {}
-                rev_co = alignment_dic[a]["reverse_coordinates"] = {}
-                alignment_length = int(alignment_dic[a]["length2"])
-                # if alignment on reverse strand
-                if alignment_dic[a]["strand2"] == "-":
-                    # genomic coordinate of target start
-                    # this position is zstart2+ away from query end (when it is a - alignment)
-                    al_start = int(alignment_dic[a]["zstart1"])
-                    query_plus_end = int(alignment_dic[a]["end2+"])
-                    # assign start to the first key of the coord dictionary
-                    first_key = query_plus_end - 1
-                    co[first_key] = al_start
-                    rev_co[al_start] = first_key
-                    last_key = first_key
-                    inserted = 0
-                    for d in alignment_dic[a]["differences"]:
-                        # start/end coordinates of diff relative to the query
-                        diff_start = int(d[6])
-                        diff_end = int(d[7])
-                        query_length = int(d[9])
-                        # for each diff, fill in the coordinates
-                        # between the last_key in the coord dic and start_key - diff start
-                        for j in range(last_key - 1, query_length - diff_start -1, -1):
-                            # j decreases by one, starting from the last available key
-                            # the value will be 1 more than the previous key (j+1)
-                            if j == last_key -1:
-                                co[j] = round(co[j + 1] - 0.1) + 1 + inserted
-                            else:
-                                co[j] = round(co[j + 1] - 0.1) + 1
-                            rev_co[co[j]] = j
-                        # current last key is now first_key - diff_start
-                        last_key = query_length - diff_start -1
-                        query_diff_end = last_key + 1
-                        # genomic coordinate of target at diff start
-                        tar_start = int(d[1])
-                        # genomic coordinate of target at diff end
-                        tar_end = int(d[2])
-                        # if end and start are the same, there is a deletion
-                        # in target compared to query
-                        # all nucleotides from diff start to diff end will have
-                        # the same coordinate
-                        if tar_start == tar_end:
-                            inserted = 0
-                            for i in range(diff_end - diff_start):
-                                co[last_key - i] = tar_start - 0.5
-                            last_key -= diff_end - diff_start - 1
-                        # in cases of deletion in query, only rev_co will be updated
-                        elif diff_start == diff_end:
-                            inserted = 0
-                            for i in range(tar_end - tar_start):
-                                rev_co[co[last_key + 1] + i + 1] = last_key + 0.5
-                                inserted += 1
-                            last_key += 1
-                        # last_key will be mapped to target start
-                        # if there is only a SNP and no indel
-                        else:
-                            inserted = 0
-                            co[last_key] = tar_start
-                            rev_co[tar_start] = last_key
-                        query_diff_start = last_key
-                        diff_key = str(query_diff_start) + "-" + str(query_diff_end)
-                        snps[diff_key] = {"chrom": d[0],
-                                          "target_begin": int(d[1]),
-                                          "target_end": int(d[2]),
-                                          "target_orientation": d[3],
-                                          "query_start": diff_start,
-                                          "query_end": diff_end,
-                                          "query_orientation": d[8],
-                                          "target_base": d[10],
-                                          "query_base": d[11]}
-
-                    # fill in the coordinates between last diff
-                    # and the alignment end
-                    query_plus_start = int(alignment_dic[a]["zstart2+"])
-                    for k in range(last_key -1, query_plus_start - 1, -1):
-                        co[k] = round(co[k+1] - 0.1) + 1
-                        rev_co[co[k]] = k
-                # when the alignment is on the forward strand
-                else:
-                    # where on target sequence the alignment starts
-                    tar_start = int(alignment_dic[a]["zstart1"])
-                    # where in the query sequence the alinment starts
-                    q_start = int(alignment_dic[a]["zstart2"])
-                    co[q_start] = tar_start
-                    rev_co[tar_start] = q_start
-                    # last key used is q_start, last key is updated each time
-                    # something is added to the coordinate dict.
-                    last_key = first_key = q_start
-                    inserted = 0
-                    for d in alignment_dic[a]["differences"]:
-                        # where on query sequence the difference starts and ends
-                        diff_start = int(d[6])
-                        diff_end = int(d[7])
-                        diff_key = d[6] + "-" + d[7]
-                        query_length = d[9]
-                        snps[diff_key] = {"chrom": d[0],
-                                          "target_begin": int(d[1]),
-                                          "target_end": int(d[2]),
-                                          "target_orientation": d[3],
-                                          "query_start": diff_start,
-                                          "query_end": diff_end,
-                                          "query_orientation": d[8],
-                                          "target_base": d[10],
-                                          "query_base": d[11]}
-                        # from the last key to the diff start the query and
-                        # target sequences are the same in length and co dict is filled so
-                        for i in range(last_key + 1, diff_start):
-                            if i == last_key + 1:
-                                co[i] = round(co[i-1] - 0.1) + 1 + inserted
-                                inserted = 0
-                            else:
-                                co[i] = round(co[i-1] - 0.1) + 1
-                            rev_co[co[i]] = i
-                        # update last used key in co dict
-                        last_key = diff_start
-                        # genomic coordinate of target at diff start
-                        tar_start = int(d[1])
-                        # genomic coordinate of target at diff end
-                        tar_end = int(d[2])
-                        # if end and start are the same, there is a deletion
-                        # in target compared to query
-                        # all nucleotides from diff start to diff end will have
-                        # the same coordinate
-                        if tar_start == tar_end:
-                            inserted = 0
-                            for i in range(diff_end - diff_start):
-                                co[last_key + i] = tar_start - 0.5
-                            last_key += diff_end - diff_start - 1
-                        # in cases of deletion in query (insertion in target)
-                        # position will be mapped to the target end coordinate
-                        elif diff_start == diff_end:
-                            inserted = 0
-                            for i in range(tar_end - tar_start):
-                                rev_co[co[last_key - 1] + 1 + i] = last_key - 0.5
-                                inserted += 1
-                            last_key -= 1
-                        # if there is no indel
-                        # last_key will be mapped to target start
-                        else:
-                            inserted = 0
-                            co[last_key] = tar_start
-                            rev_co[tar_start] = last_key
-                    # fill in the coordinates between last diff
-                    # and the alignment end
-                    q_end = int(alignment_dic[a]["end2"])
-                    for k in range(last_key + 1, q_end):
-                        co[k] = round(co[k-1] - 0.1) + 1
-                        rev_co[co[k]] = k
-
-        return_dic = {}
-        for aname in alignment_dic:
-            qname = aname.split(":")[0]
-            snps = alignment_dic[aname]["snps"]
-            co = alignment_dic[aname]["coordinates"]
-            rev_co = alignment_dic[aname]["reverse_coordinates"]
-            if qname not in return_dic:
-                return_dic[qname] = alignment_dic[aname]
-                return_dic[qname]["covered"] = [list(map(int, [alignment_dic[aname]["zstart1"],
-                                                 alignment_dic[aname]["end1"]]))]
-            else:
-                qname_cov = [alignment_dic[aname]["zstart1"],
-                            alignment_dic[aname]["end1"]]
-                return_dic[qname]["covered"].append(list(map(int, qname_cov)))
-        return alignment_dic, return_dic
-    except Exception as e:
-        return [family_name, e]
 def make_region (chromosome, begin, end):
     """ Create region string from coordinates.
     takes 2 (1 for human 1-9) digit chromosome,
