@@ -769,47 +769,53 @@ def tm_calculator(sequence, conc, Na,
                      (-48.2 + 52.5 * log(divalent_conc) + g_con *
                       (log(divalent_conc)) ** 2))
                * pow(10, -5) + 1))
-    return Tm -  273.15
+    return Tm - 273.15
 
 
-def align_genes_for_design_worker(l):
+def align_region_multi(alignment_list, pro):
+    """ Perform lastZ alignment between two fasta files in parallel. """
+    p = Pool(pro)
+    p.map_async(align_region_worker, alignment_list)
+    p.close()
+    p.join()
+    return
+
+
+def align_region_worker(l):
+    """ Worker function for align_genes_for_design.
+    Aligns a single fasta file to a target fasta file.
+    """
     # get parameters from the input list
-    #####
-    # first item is the query sequence, it must be a fasta file and it
-    # must be in the resource dir (second item in the list)
     region_key = l[0]
     # second item holds the run directory for lastz
     resource_dir = l[1]
+    # output file is the target name + ".al" where the alignment output
+    # will be saved.
     output_file = l[2]
-    # target file, if a fasta file, should be pathname, not file name
-    # if starts with chr, a fasta file will be created in the resource directory
-    # if it is self, each sequence in query fasta will be aligned to each sequence
-    # in the query fasta
+    # target fasta file is usually the reference genome
     target_fasta = l[3]
     # each action item will be appended to the target or query argument
     # within brackets. [unmask] and [multiple] are important target actions
-    # unmask: allows starting alignments in masked(lowercase) parts of the target
-    # multiple: indicates there are multiple sequences in the target file (e.g. chromosomes)
+    # unmask: allows starting alignments in masked(lowercase) parts of the
+    # target multiple: indicates there are multiple sequences in the target
+    # file (e.g. chromosomes, contigs)
     target_actions = l[4]
-    # query file is treated as multiple sequence file without the multiple action
+    # query file is always treated as a multiple sequence file
+    # so there is no need for the multiple action
     query_actions = l[5]
-    # percent cutoff value for identity/coverage of query to target. This only affects
-    # reporting and not the alignment process itself.
+    # percent cutoff value for identity/coverage of query to target. This only
+    # affects reporting and not the alignment process itself.
     identity_cutoff = l[6]
     coverage_cutoff = l[7]
     # format of the output, follows --format: argument in lastz
     # if format is general, it should be followed by a comma separated list of
-    # fields to output, e.g. general:name1,text1,name2,text2,diff,score would output
-    # the name of the query, sequence of the query, name of the target, seq of target,
-    # a string showing the alignment and the alignment score
+    # fields to output, e.g. general:name1,text1,name2,text2,diff,score would
+    # seq of target, output the name of the query, sequence of the query, name
+    # of the target, a string showing the alignment and the alignment score
     output_format = l[8]
     # additional options to pass to lastz
     options = l[9]
-    species = l[10]
-    # create a query fasta file from region key, if a key is provided instead of fasta
     query_fasta = resource_dir + region_key + ".fa"
-    if target_fasta == "self":
-        target_fasta = query_fasta
     # create target actions text
     if len(target_actions) > 0:
         target_act = "[" + ",".join(target_actions) + "]"
@@ -823,7 +829,7 @@ def align_genes_for_design_worker(l):
     # create the command list to pass to the processor
     comm = ["lastz_32",
             target_fasta + target_act,
-            query_fasta + query_act ,
+            query_fasta + query_act,
             "--output=" + resource_dir + output_file,
             "--format=" + output_format,
             "--filter=identity:" + str(identity_cutoff),
@@ -838,46 +844,443 @@ def align_genes_for_design_worker(l):
 def align_genes_for_design(fasta_list, res_dir,
                            alignment_types=["differences", "general"],
                            species="hs", num_processor=30):
-    """ Align sequences given in a list of fasta files to the reference genome.
-    This function merely prepares a list of commands to pass to
+    """ Align sequences given in an alignment dict which contains alignment
+    specifics. Each entry in this dict must have a corresponding fasta file in
+    the res_dir specified. The alignment is performed against the reference
+    genome. This function merely prepares a list of commands to pass to
     align_genes_for_design_worker function to carry out alignments in
-    parallel where multiple processors are available.
+    parallel where multiple processors are available. Two types of alignment
+    outputs will be generated; one "general" informative about the alignment
+    such as where the alignment starts and ends, what is the percent identity,
+    coverage etc. The second output is the differences between the aligned
+    sequences, showing at which positions there are nucleotide changes and
+    what the changes are.
+
+    Parameters
+    ----------
+    fasta_list: list
+        A list of dictionaries each of which contains specifics
+        for a single alignment, such as the name of the fasta file, coverage
+        and identity cut offs and any additional alignment parameters that are
+        passed to LastZ.
+    res_dir: str
+        Path to working directory where input and output files are located.
+    alignment_types: list
+        List of alignment types to be performed. Only "general" and/or
+        "differences" options are allowed.
+    species: str
+        Species whose reference genome will be used for alignment.
+    num_processor: int
+        Number of processors available for parallel processing.
     """
     region_list = []
     for gene_dict in fasta_list:
         gene_name = gene_dict["gene_name"]
+        # percent cutoff value for identity/coverage of query to target.
+        # This only affects reporting and not the alignment process itself.
         identity = gene_dict["identity"]
         coverage = gene_dict["coverage"]
         options = gene_dict["options"]
+        # alignment target is the reference genome of the specified species.
         target = get_file_locations()[species]["fasta_genome"]
+        # alignment output should have the following fields.
+        # These are the bare minimum to be able to parse the alignment later.
         out_fields = ["name1", "strand1", "zstart1", "end1", "length1",
                       "name2", "strand2", "zstart2", "end2", "zstart2+",
                       "end2+", "length2", "identity", "coverage"]
         out_fields = ",".join(out_fields)
         gen_out = "general:" + out_fields
+        # output fields for "differences" is fixed; it outputs the differences
+        # between the aligned sequence and the target.
         dif_out = "differences"
         if not os.path.exists(res_dir):
             os.makedirs(res_dir)
+        # prepare a list of commands to feed to lastz for both alignment types
+        # i.e.  "general" and "differences". Some of the additional parameters
+        # we are supplying here are the target and query actions.
+        # each action item will be appended to the target or query argument
+        # within brackets. [unmask] and [multiple] are important target actions
+        # unmask: allows starting alignments in masked(lowercase) parts of the
+        # target multiple: indicates there are multiple sequences in the target
+        # file (e.g. chromosomes, contigs)
         if "general" in alignment_types:
             al = [gene_name, res_dir, gene_name + ".al", target,
                   ["multiple", "unmask", "nameparse=darkspace"],
                   ["unmask", "nameparse=darkspace"],
-                  identity, coverage, gen_out, options, species]
+                  identity, coverage, gen_out, options]
             region_list.append(al)
         if "differences" in alignment_types:
             al = [gene_name, res_dir, gene_name + ".differences", target,
                   ["multiple", "unmask", "nameparse=darkspace"],
                   ["unmask", "nameparse=darkspace"],
-                  identity,  coverage, dif_out, options, species]
+                  identity,  coverage, dif_out, options]
             region_list.append(al)
-    p = Pool(num_processor)
-    p.map_async(align_genes_for_design_worker, region_list)
-    p.close()
-    p.join()
+    align_region_multi(region_list, num_processor)
     return
 
 
-def align_region_worker(l):
+def merge_alignments(resource_dir, fasta_list, output_prefix="merged"):
+    """ Merge the results of lastZ alignments into a single file.
+    This is used to process the alignment results from the
+    align_genes_for_design function where target sequences are aligned
+    against the reference genome.
+
+    Parameters
+    ----------
+    resource_dir: str
+        Path to working directory where the alignment outputs are.
+    fasta_list: list
+        A list of dictionaries each of which has the specifics for a single
+        sequence alignment. It is used only to get alignment file names here.
+    output_prefix: str
+        Name for the output file. This will be appended by ".al" extension.
+    """
+    # create a list for each alignment type (general and differences)
+    als_out = []
+    diffs_out = []
+    with open(resource_dir + output_prefix + ".al",
+              "w") as alignment_file, open(resource_dir + output_prefix
+                                           + ".differences", "w") as diff_file:
+        for f in fasta_list:
+            fnum = 0
+            with open(
+                resource_dir + f + ".al"
+            ) as alignment, open(resource_dir + f + ".differences") as diffs:
+                linenum = 0
+                for line in alignment:
+                    if linenum > 0:
+                        als_out.append(line.strip())
+                    elif fnum == 0:
+                        als_out.append(line.strip())
+                        linenum += 1
+                    else:
+                        linenum += 1
+                for d in diffs:
+                    diffs_out.append(d.strip())
+            fnum += 0
+        alignment_file.write("\n".join(als_out))
+        diff_file.write("\n".join(diffs_out))
+    return
+
+
+def alignment_parser(wdir, name, spacer=0, gene_names=[]):
+    """ Parse merged genome alignment results file which is generated by
+    align_genes_for_design function to align design targets to reference
+    genomes. One query (target region) may have multiple alignments to the
+    genome.
+
+    Parameters
+    ----------
+    wdir: str
+        Path to working directory
+    name: str
+        File name for the merged alignment file
+    spacer: int
+        Spacer length to use when merging overlapping regions. If two regions
+        are not overlapping but the distance between them is smaller than the
+        spacer, they will be merged.
+
+    Returns
+    -------
+    A list of dictionaries:
+    regions: merged genomic coordinates for grouped targets.
+        This dictionary is used as the final target regions.
+        For example: {r1: {chr1: [100, 200],
+                           chr3: [30, 300]},
+                      r3: {chr4: [0, 300]}}
+    region_names: names for each region.
+        For example: {r1: [r1, r2], r3: [r3]}
+    imperfect_aligners: names of the target regions for which a perfect
+        alignment to the reference genome has not been found.
+    """
+    alignment_dict = {}
+    # open alignment files
+    with open(wdir + name + ".al") as infile:
+        # each line in the file is a separate alignment for which we'll
+        # prepare a dictionary.
+        for line in infile:
+            newline = line.strip().split("\t")
+            # first line has column names
+            if line.startswith("#"):
+                colnames = [newline[0][1:]]
+                colnames.extend(newline[1:])
+            else:
+                temp_dict = {}
+                for i in range(len(colnames)):
+                    col = colnames[i]
+                    value = newline[i]
+                    temp_dict[col] = value
+                query_name = temp_dict["name2"]
+                try:
+                    alignment_dict[query_name].append(temp_dict)
+                except KeyError:
+                    alignment_dict[query_name] = [temp_dict]
+    # go through each target sequence and each alignment for that
+    # target to where in the genome it was aligned to.
+    aligned_regions = {}
+    for query in alignment_dict:
+        aligned_regions[query] = []
+        for a in alignment_dict[query]:
+            chrom = a["name1"]
+            begin = int(a["zstart1"])
+            end = int(a["end1"])
+            aligned_regions[query].append([chrom, begin, end])
+    # check for overlapping alignments. These can be the same target aligning
+    # to overlapping regions in the genome (internal duplications) or
+    # different targets aligning to the same (or overlapping) regions in the
+    # genome (paralogus sequences).
+    # overlapping regions will be grouped together to form the final target
+    # regions for probe design.
+    overlaps = {}
+    for q1 in aligned_regions:
+        # each target will have itself as overlapping
+        overlaps[q1] = [q1]
+        # get the genomic regions q1 was aligned to
+        reg1 = aligned_regions[q1]
+        # go through each region
+        for r1 in reg1:
+            # check overlap with other target regions
+            for q2 in aligned_regions:
+                if q1 == q2:
+                    continue
+                reg2 = aligned_regions[q2]
+                for r2 in reg2:
+                    if check_overlap(r1, r2, spacer):
+                        overlaps[q1].append(q2)
+                        break
+    # go through the overlaps and remove the overlapping overlaps
+    # e.g. if a overlaps b, b overlaps a also. We'll have {a: [a,b], b: [b, a]}
+    # in the overlaps dict. We want only one of these, so reduce to {a:[a, b]}
+    overlap_found = True
+    while overlap_found:
+        overlap_found = False
+        for o in list(overlaps.keys()):
+            # check if o is still in the overlaps and has not been removed
+            if o in overlaps:
+                val = overlaps[o]
+                # get the overlapping regions for "val" and add them
+                # to overlapping regions for "o", then remove "val"
+                for v in val:
+                    if (v in overlaps) and (o in overlaps) and (o != v):
+                        overlaps[o].extend(overlaps[v])
+                        overlaps.pop(v)
+                        overlap_found = True
+    # clean up overlapping region lists by removing duplicates.
+    for o in overlaps:
+        overlaps[o] = sorted(list(set(overlaps[o])))
+    #########################################
+    # create a new dictionary for target regions.
+    # for each target group in overlaps, we'll have genomic coordinates
+    # that will be used as final targets.
+    #########################################
+    # group regions according to their chromosomes
+    separated_regions = {}
+    for o in overlaps:
+        sep = separated_regions[o] = {}
+        for g in overlaps[o]:
+            regs = aligned_regions[g]
+            for r in regs:
+                try:
+                    sep[r[0]].append(r[1:])
+                except KeyError:
+                    sep[r[0]] = [r[1:]]
+    # merge each overlapping region
+    separated_merged_regions = {}
+    for s in separated_regions:
+        merged_sep = separated_merged_regions[s] = {}
+        for chrom in separated_regions[s]:
+            merged_region = merge_overlap(separated_regions[s][chrom])
+            merged_sep[chrom] = merged_region
+    # organize target regions, assign region names based on the original
+    # target names. Assign a reference target.
+    ###########################################
+    # sort target regions based on the length of
+    # chromosome name and the length of region. Chromosome name is used
+    # to distinguish alternate contigs and not use them as reference, but
+    # it is not absolutely necessary and it would not behave as expected
+    # when chromosome names do not follow that convention, i.e, chr6 and
+    # chr6_altXYZ
+    for ar in aligned_regions:
+        regs = aligned_regions[ar]
+        for r in regs:
+            r.append(0 - len(r[0]))
+            r.append(r[2] - r[1] + 1)
+        aligned_regions[ar] = sorted(regs, key=itemgetter(4, 3),
+                                     reverse=True)
+    target_regions = {}
+    region_names = {}
+    regions = separated_merged_regions
+    for r in regions:
+        target_regions[r] = []
+        for chrom in regions[r]:
+            for l in regions[r][chrom]:
+                temp_region = [chrom]
+                temp_region.extend(l)
+                temp_region.append(-len(chrom))
+                temp_region.append(l[1] - l[0])
+                target_regions[r].append(temp_region)
+        # sort target regions per target group based on the length of
+        # chromosome name and the length of region. Chromosome name is used
+        # to distinguish alternate contigs and not use them as reference, but
+        # it is not absolutely necessary and it would not behave as expected
+        # when chromosome names do not follow that convention, i.e, chr6 and
+        # chr6_altXYZ
+        target_regions[r] = sorted(target_regions[r], key=itemgetter(4, 3),
+                                   reverse=True)
+        # assign names to grouped targets
+        reg_names = []
+        # for each region we go back to individual region alignments and see
+        # if the individual alignment overlaps with this region. If it does
+        # we use the individual regions name for this region within the group.
+        for i in range(len(target_regions[r])):
+            reg = target_regions[r][i]
+            reg_chrom = reg[0]
+            reg_begin = reg[1]
+            reg_end = reg[2]
+            for c in aligned_regions:
+                main_region = aligned_regions[c][0]
+                if (reg_chrom == main_region[0]
+                        and reg_begin <= main_region[1]
+                        and reg_end >= main_region[2]):
+                    reg_names.append(c)
+                    break
+            else:
+                reg_names.append("na")
+        # assign a reference region for each group based on gene names provided
+        # this is mainly to used to have better names for regions. For example,
+        # if a gene is a target as well as a snp, we would like the gene name
+        # to be the name of the group as opposed to the SNP's name.
+        ref_found = False
+        for g in gene_names:
+            if g in reg_names:
+                ref_found = True
+                ref_index = reg_names.index(g)
+                ref_name = g
+                break
+        if not ref_found:
+            ref_name = r
+            ref_index = 0
+        ref_region = target_regions[r].pop(ref_index)
+        reg_names.pop(ref_index)
+        target_regions[r] = [ref_region] + target_regions[r]
+        reg_names = [ref_name] + reg_names
+        region_names[ref_name] = reg_names
+        target_regions[reg_names[0]] = target_regions.pop(r)
+        overlaps[reg_names[0]] = overlaps.pop(r)
+    # after the alignments are done, some regions will not have proper names
+    # and some will have "na". We'll change those to avoid name repeating
+    # names.
+    for r in region_names:
+        rnames = region_names[r]
+        nnames = []
+        rn_counts = {}
+        for rn in rnames:
+            rnc = rnames.count(rn)
+            rn_counts[rn] = {"total_count": rnc,
+                             "used_count": 0}
+        for rn in rnames:
+            if rn_counts[rn]["total_count"] > 1:
+                nnames.append(rn + "-" + str(rn_counts[rn]["used_count"]))
+                rn_counts[rn]["used_count"] += 1
+            else:
+                nnames.append(rn)
+        region_names[r] = nnames
+    # find target regions that could not be perfectly aligned to the genome
+    # these are usually extragenomic sequences supplied in fasa files, such as
+    # certain TCR haplotypes.
+    imperfect_aligners = []
+    for r in alignment_dict:
+        best_score = 0
+        alignments = alignment_dict[r]
+        for a in alignments:
+            cov = int(a["covPct"].split(".")[0])
+            idt = int(a["idPct"].split(".")[0])
+            score = cov * idt
+            if score > best_score:
+                best_score = score
+        if best_score != 10000:
+            imperfect_aligners.append(r)
+    return [regions, region_names, imperfect_aligners]
+
+
+def intraparalog_aligner(resource_dir,
+                         target_regions,
+                         region_names,
+                         imperfect_aligners,
+                         fasta_sequences,
+                         species,
+                         identity,
+                         coverage,
+                         num_process,
+                         alignment_options_dict={}):
+    """ Align all regions within a target group to the region selected
+    as the reference region.
+
+    Returns
+    -------
+    Returns nothing. It creates query.fa target.fa and .aligned files for each
+    target region group. These alignment have no genomic coordinates, so
+    all coordinates are relative to the given sequence. Also, the region names
+    are indicated as the reference gene name + copy name as this is originally
+    intended for use in paralog genes.
+    """
+    alignment_commands = []
+    out_fields = "name1,strand1,zstart1,end1,length1,name2,strand2,zstart2,"
+    out_fields = out_fields + "end2,zstart2+,end2+,length2,identity,coverage"
+    gen_out = "general:" + out_fields
+    diff_out = "differences"
+    for t in target_regions:
+        if len(alignment_options_dict) == 0:
+            alignment_options = []
+        else:
+            alignment_options = alignment_options_dict[t]["options"]
+            identity = alignment_options_dict[t]["identity"]
+            coverage = alignment_options_dict[t]["coverage"]
+        alignment_options.append("--noytrim")
+        tar_regs = target_regions[t]
+        # create a fasta file for the reference copy (or reference region)
+        target_keys = [tr[0] + ":" + str(tr[1] + 1)
+                       + "-" + str(tr[2]) for tr in tar_regs]
+        query_key = target_keys[0]
+        with open(resource_dir + t + ".query.fa", "w") as outfile:
+            outfile.write(">" + t + "_ref\n")
+            outfile.write(get_sequence(query_key, species))
+        # create a fasta file that includes all target regions within a group.
+        with open(resource_dir + t + ".targets.fa", "w") as outfile:
+            outfile_list = []
+            for i in range(len(target_keys)):
+                k = target_keys[i]
+                cname = "_C" + str(i)
+                outfile_list.append(">" + t + cname)
+                outfile_list.append(get_sequence(k, species))
+            # add extragenomic (i.e. imperfect_aligners)
+            ols = region_names[t]
+            o_count = 0
+            for o in ols:
+                if o in imperfect_aligners:
+                    outfile_list.append(">" + t + "_X" + str(o_count))
+                    outfile_list.append(fasta_sequences[o])
+                    o_count += 1
+            outfile.write("\n".join(outfile_list))
+        comm = [t + ".query.fa", resource_dir, t + ".aligned",
+                resource_dir + t + ".targets.fa",
+                ["multiple", "unmask", "nameparse=darkspace"],
+                ["unmask", "nameparse=darkspace"],
+                identity, coverage, gen_out,
+                alignment_options, species]
+        alignment_commands.append(comm)
+        comm = [t + ".query.fa", resource_dir,
+                t + ".differences",
+                resource_dir + t + ".targets.fa",
+                ["multiple", "unmask", "nameparse=darkspace"],
+                ["unmask", "nameparse=darkspace"],
+                identity, coverage,
+                diff_out, alignment_options, species]
+        alignment_commands.append(comm)
+    return align_region_multi(alignment_commands, num_process)
+
+
+def align_region_worker_del(l):
     try:
         # get parameters from the input list
         #####
@@ -959,16 +1362,6 @@ def align_region_worker(l):
         return str(e)
 
 
-def align_region_multi(alignment_list, pro):
-    res = []
-    try:
-        p = Pool(pro)
-        p.map_async(align_region_worker, alignment_list, callback=res.append)
-        p.close()
-        p.join()
-    except Exception as e:
-        res.append(str(e))
-    return res
 def align_region(l):
     try:
         region_key = l[0]
@@ -1014,28 +1407,7 @@ def align_region(l):
         return 0
     except Exception as e:
         return str(e)
-def merge_alignments (resource_dir, fasta_list, output_prefix = "merged"):
-    als_out = []
-    diffs_out = []
-    with open(resource_dir + output_prefix + ".al", "w") as alignment_file,         open(resource_dir + output_prefix + ".differences", "w") as diff_file:
-        for f in fasta_list:
-            fnum = 0
-            with open(resource_dir + f + ".al") as alignment,             open(resource_dir + f + ".differences") as diffs:
-                linenum = 0
-                for line in alignment:
-                    if linenum > 0:
-                        als_out.append(line.strip())
-                    elif fnum == 0:
-                        als_out.append(line.strip())
-                        linenum += 1
-                    else:
-                        linenum += 1
-                for d in diffs:
-                    diffs_out.append(d.strip())
-            fnum += 0
-        alignment_file.write("\n".join(als_out))
-        diff_file.write("\n".join(diffs_out))
-    return
+
 
 
 
@@ -1106,10 +1478,10 @@ def align_genes(gene_name_list, wdir, alignment_types = ["differences", "general
 
 
 def align_haplotypes(settings,
-                     target_actions = ["unmask", "multiple"],
-                     query_actions = ["unmask"],
+                     target_actions=["unmask", "multiple"],
+                     query_actions=["unmask"],
                      output_format="general:name1,text1,name2,text2,diff,score",
-                     alignment_options = ["--noytrim"], identity=75, coverage=75):
+                     alignment_options=["--noytrim"], identity=75, coverage=75):
     """ Get a haplotypes dict and a call_info dict, align each haplotype to reference
     sequences from the call_info dict."""
     wdir = settings["workingDir"]
@@ -3264,148 +3636,7 @@ def clean_alignment(alignment_file, output_file, directory):
             outline = "\t".join(newline) + '\n'
             outfile.write(outline)
     return
-def alignment_parser(wdir, name, spacer = 0):
-    alignment_dict = {}
-    # open alignment files
-    # open(wdir + name + ".differences") as infile:
-    with open(wdir + name + ".al") as infile:
-        for line in infile:
-            newline = line.strip().split("\t")
-            if line.startswith("#"):
-                colnames = [newline[0][1:]]
-                colnames.extend(newline[1:])
-            else:
-                temp_dict = {}
-                for i in range(len(colnames)):
-                    col = colnames[i]
-                    value = newline[i]
-                    temp_dict[col] = value
-                query_name = temp_dict["name2"]
-                try:
-                    alignment_dict[query_name].append(temp_dict)
-                except KeyError:
-                    alignment_dict[query_name] = [temp_dict]
-    aligned_regions = {}
-    for query in alignment_dict:
-        aligned_regions[query] = []
-        for a in alignment_dict[query]:
-            chrom = a["name1"]
-            begin = int(a["zstart1"])
-            end = int(a["end1"])
-            aligned_regions[query].append([chrom, begin, end])
-    overlaps = {}
-    for q1 in aligned_regions:
-        overlaps[q1] = [q1]
-        reg1 = aligned_regions[q1]
-        for r1 in reg1:
-            for q2 in aligned_regions:
-                if q1 == q2:
-                    continue
-                reg2 = aligned_regions[q2]
-                for r2 in reg2:
-                    if check_overlap(r1,r2,spacer):
-                        overlaps[q1].append(q2)
-                        overlap_found = True
-                        break
-    overlap_found = True
-    while overlap_found:
-        overlap_found = False
-        for o in list(overlaps.keys()):
-            if o in overlaps:
-                val = overlaps[o]
-                for v in val:
-                    if (v in overlaps) and (o in overlaps) and (o!=v):
-                        overlaps[o].extend(overlaps[v])
-                        overlaps.pop(v)
-                        overlap_found = True
-    for o in overlaps:
-        overlaps[o] = sorted(list(set(overlaps[o])))
-    # group regions according to their chromosomes
-    separated_regions = {}
-    for o in overlaps:
-        sep = separated_regions[o] = {}
-        for g in overlaps[o]:
-            regs = aligned_regions[g]
-            for r in regs:
-                try:
-                    sep[r[0]].append(r[1:])
-                except KeyError:
-                    sep[r[0]] = [r[1:]]
-    # merge each overlapping region
-    separated_merged_regions = {}
-    for s in separated_regions:
-        merged_sep = separated_merged_regions[s] = {}
-        for chrom in separated_regions[s]:
-            merged_region = merge_overlap(separated_regions[s][chrom])
-            merged_sep[chrom] = merged_region
-    # return the initial alignment dictionary,
-    # each genomic region for each query (aligned_regions)
-    # which queries have overlapping alignments with each other (overlaps)
-    # for each query in overlaps, non overlapping genomic regions (separated_merged
-    return [alignment_dict, aligned_regions, overlaps, separated_merged_regions]
-def intraparalog_aligner(resource_dir,
-                         target_regions,
-                         region_names,
-                         overlaps,
-                         imperfect_aligners,
-                         fasta_sequences,
-                         species,
-                         identity,
-                         coverage,
-                         num_process,
-                        alignment_options_dict = {}):
-    # align all the target regions to each other
-    alignment_commands = []
-    out_fields = "name1,strand1,zstart1,end1,length1,name2,strand2,zstart2,end2,zstart2+,end2+,length2,identity,coverage"
-    gen_out = "general:"+ out_fields
-    diff_out = "differences"
-    for t in target_regions:
-        if len(alignment_options_dict) == 0:
-            alignment_options = []
-        else:
-            alignment_options = alignment_options_dict[t]["options"]
-            identity = alignment_options_dict[t]["identity"]
-            coverage = alignment_options_dict[t]["coverage"]
-        alignment_options.append("--noytrim")
-        tar_regs = target_regions[t]
-        target_keys = [tr[0] + ":" + str(tr[1] + 1)
-                       + "-" + str(tr[2]) for tr in tar_regs]
-        query_key = target_keys[0]
-        with open(resource_dir + t + ".query.fa", "w") as outfile:
-            outfile.write(">" + t + "_ref\n")
-            outfile.write(get_sequence(query_key, species))
-        with open(resource_dir + t + ".targets.fa", "w") as outfile:
-            outfile_list = []
-            for i in range(len(target_keys)):
-                k = target_keys[i]
-                cname = "_C" + str(i)
-                outfile_list.append(">" + t + cname)
-                outfile_list.append(get_sequence(k, species))
-            # add imgt fastas to targets
-            ols = overlaps[t]
-            o_count = 0
-            for o in ols:
-                if o in imperfect_aligners:
-                    outfile_list.append(">" + t + "_X" + str(o_count))
-                    outfile_list.append(fasta_sequences[o])
-                    o_count += 1
-            outfile.write("\n".join(outfile_list))
-        comm = [t + ".query.fa", resource_dir, t + ".aligned",
-                resource_dir + t + ".targets.fa",
-                ["multiple", "unmask", "nameparse=darkspace"],
-                ["unmask", "nameparse=darkspace"],
-                identity, coverage, gen_out,
-                alignment_options, species]
-        alignment_commands.append(comm)
-        comm = [t + ".query.fa", resource_dir,
-                t + ".differences",
-                resource_dir + t + ".targets.fa",
-                ["multiple", "unmask", "nameparse=darkspace"],
-                ["unmask", "nameparse=darkspace"],
-                identity, coverage,
-                diff_out, alignment_options, species]
-        alignment_commands.append(comm)
-    return align_region_multi(alignment_commands, num_process)
+
 
 
 def check_overlap (r1, r2, padding = 0):
