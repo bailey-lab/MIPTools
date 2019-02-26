@@ -331,7 +331,7 @@ def rinfo_converter(rinfo_file, output_file, flank, species="hs", host_species="
     return
 
 
-def merge_coordinates(coordinates, capture_size, min_region_size=0):
+def merge_coordinates(coordinates, capture_size):
     """ Merge overlapping coordinates for MIP targets.
 
     Parameters
@@ -342,12 +342,6 @@ def merge_coordinates(coordinates, capture_size, min_region_size=0):
     capture_size: int
         Anticipated MIP capture size. If two regions are as close as 2 times
         this value, they will be merged.
-    min_region_size: int
-        The output of the merged coordinates will be used to generate the
-        target sequence which will be used to align to the reference genome.
-        If the region is to small, there will be spurious alignments. If the
-        region size is smaller than this value, it will be brought to this
-        value by flanking both sides with the required length.
 
     Returns
     -------
@@ -389,15 +383,6 @@ def merge_coordinates(coordinates, capture_size, min_region_size=0):
             target_names[region_name] = targets_in_region
             r_start = reg[0]
             r_end = reg[1]
-            r_len = r_end - r_start + 1
-            if r_len < min_region_size:
-                r_start -= int(min_region_size - r_len/2)
-                r_end += int(min_region_size - r_len/2)
-                # start should not be smaller than 0, if so reset it to zero
-                # and flank the equal amount to the end.
-                if r_start < 0:
-                    r_end -= r_start
-                    r_start = 0
             target_coordinates[region_name] = [c, r_start, r_end]
     return target_coordinates, target_names
 
