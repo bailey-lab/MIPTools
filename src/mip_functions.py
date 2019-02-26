@@ -329,11 +329,32 @@ def rinfo_converter(rinfo_file, output_file, flank, species="hs", host_species="
             outfile.write(comment)
             outfile.write(sep)
     return
-def merge_coordinates(coordinates, capture_size, min_region_size = 0):
-    """ Create MIP targets starting from a snp file that is produced offline,
-    usually from Annovar. This is a tab separated file with the following content:
-    chr1	2595307	2595307	A	G	rs3748816.
-    This can be generalized to any target with coordinates.
+
+
+def merge_coordinates(coordinates, capture_size, min_region_size=0):
+    """ Merge overlapping coordinates for MIP targets.
+
+    Parameters
+    ----------
+    coordinates: python dictionary
+        Coordinates to be merged in the form {target-name: {chrom: chrx,
+        begin: start-coordinate, end: end-coordinate}, ..}
+    capture_size: int
+        Anticipated MIP capture size. If two regions are as close as 2 times
+        this value, they will be merged.
+    min_region_size: int
+        The output of the merged coordinates will be used to generate the
+        target sequence which will be used to align to the reference genome.
+        If the region is to small, there will be spurious alignments. If the
+        region size is smaller than this value, it will be brought to this
+        value by flanking both sides with the required length.
+
+    Returns
+    -------
+    target_coordinates: python dictionary
+        merged coordinates dictionary
+    target_names: python dictionary
+        names of included targets in each merged region.
     """
     # create target regions to cover all snps
     # start by getting snps on same chromosome together
@@ -361,10 +382,9 @@ def merge_coordinates(coordinates, capture_size, min_region_size = 0):
             targets_in_region = []
             for co in coordinates:
                 if (coordinates[co]["chrom"] == c
-                and reg[0] <= coordinates[co]["begin"]
-                 <= coordinates[co]["end"] <= reg[1]):
+                    and reg[0] <= coordinates[co]["begin"]
+                        <= coordinates[co]["end"] <= reg[1]):
                     targets_in_region.append(co)
-            #region_name = "-".join(targets_in_region)
             region_name = targets_in_region[0]
             target_names[region_name] = targets_in_region
             r_start = reg[0]
@@ -373,6 +393,11 @@ def merge_coordinates(coordinates, capture_size, min_region_size = 0):
             if r_len < min_region_size:
                 r_start -= int(min_region_size - r_len/2)
                 r_end += int(min_region_size - r_len/2)
+                # start should not be smaller than 0, if so reset it to zero
+                # and flank the equal amount to the end.
+                if r_start < 0:
+                    r_end -= r_start
+                    r_start = 0
             target_coordinates[region_name] = [c, r_start, r_end]
     return target_coordinates, target_names
 
@@ -1576,7 +1601,7 @@ def align_haplotypes(
         query_actions=["unmask"],
         output_format="general:name1,text1,name2,text2,diff,score",
         alignment_options=["--noytrim"], identity=75, coverage=75
-    ):
+        ):
     """ Get a haplotypes dict and a call_info dict, align each haplotype to
     reference sequences from the call_info dict."""
     wdir = settings["workingDir"]
