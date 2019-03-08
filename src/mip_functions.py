@@ -7854,7 +7854,7 @@ def compatible_chains(primer_file, primer3_output_DIR, primer_out, output_file,
             with open(primer3_output_DIR + output_file, "w") as outfile:
                 outfile.write("\n".join([",".join(s) for s in mip_sets])
                               + "\n")
-        with open(primer3_output_DIR + primer_out, "w") as outfile:
+        with open(primer3_output_DIR + primer_out, "wb") as outfile:
             pickle.dump(scored_mips, outfile)
     return mip_sets
 
@@ -9375,51 +9375,52 @@ def fasta_to_fastq(fasta_file, fastq_file):
     return
 
 
-def parasight (resource_dir,
-               design_info_file,
-               designed_gene_list=None,
-               extra_extension=".extra"):
+def parasight(resource_dir,
+              design_info_file,
+              designed_gene_list=None,
+              extra_extension=".extra"):
     with open(design_info_file, "rb") as infile:
         design_info = pickle.load(infile)
     output_list = ["#!/usr/bin/env bash"]
-    script_dir = get_file_locations()["all"]["script_DIR"]
-    pdf_dir = script_dir + resource_dir + "pdfs/"
+    pdf_dir = os.path.join(resource_dir, "pdfs")
     backup_list = ["#!/usr/bin/env bash"]
     gs_list = ["#!/usr/bin/env bash"]
     pdf_list = ["#!/usr/bin/env bash"]
-    pdf_merge_list = ["#!/usr/bin/env bash",
-                     "cd " + pdf_dir]
-    pdf_convert_list = ["gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite " +             "-dPDFSETTINGS=/prepress -dAutoRotatePages=/All             -sOutputFile=merged.pdf"]
+    pdf_merge_list = ["#!/usr/bin/env bash", "cd " + pdf_dir]
+    pdf_convert_list = ["gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite "
+                        + "-dPDFSETTINGS=/prepress -dAutoRotatePages=/All "
+                        "-sOutputFile=merged.pdf"]
     if not os.path.exists(pdf_dir):
         os.makedirs(pdf_dir)
     for t in design_info:
-        basename = script_dir + design_info[t]["design_dir"] + t + "/" + t
+        basename = os.path.join(design_info[t]["design_dir"], t,  t)
         backup_name = basename + ".extra"
         filtered_name = basename + "_filtered.pse"
         backup_list.append("scp " + backup_name + " " + backup_name + ".bak")
         backup_list.append("mv " + filtered_name + " " + backup_name)
         psname = basename + ".01.01.ps"
         pdfname = basename + ".pdf"
-        gs_command = "gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite " +             "-dPDFSETTINGS=/prepress -dAutoRotatePages=/All -sOutputFile="            + pdfname + " " + psname
-        if designed_gene_list != None:
+        gs_command = ("gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite "
+                      + "-dPDFSETTINGS=/prepress -dAutoRotatePages=/All "
+                      "-sOutputFile=" + pdfname + " " + psname)
+        if designed_gene_list is not None:
             if t in designed_gene_list:
                 pdf_convert_list.append(t + ".pdf")
         else:
             pdf_convert_list.append(t + ".pdf")
         gs_list.append(gs_command)
-        pdf_list.append("cp " + basename + ".pdf " +                            pdf_dir + t + ".pdf")
+        pdf_list.append("cp " + basename + ".pdf " + pdf_dir + t + ".pdf")
         outlist = ["parasight76.pl",
-                   "-showseq",
-                   basename + ".show",
-                   "-extra",
-                   basename + extra_extension,
-                   "-template",
-                   script_dir + "resources/nolabel.pst",
-                   "-precode file:" + basename + ".precode" ,
+                   "-showseq", basename + ".show",
+                   "-extra", basename + extra_extension,
+                   "-template", "/opt/resources/nolabel.pst",
+                   "-precode file:" + basename + ".precode",
                    "-die"]
         output_list.append(" ".join(outlist))
-        with open(basename + ".precode" , "w") as outfile:
-            outfile.write("$opt{'filename'}='" + t +                          "';&fitlongestline; &print_all (0,'" + basename + "')")
+        with open(basename + ".precode", "w") as outfile:
+            outfile.write("$opt{'filename'}='" + t
+                          + "';&fitlongestline; &print_all (0,'"
+                          + basename + "')")
     with open(resource_dir + "backup_commands", "w") as outfile:
         outfile.write("\n".join(backup_list))
     with open(resource_dir + "parasight_commands", "w") as outfile:
@@ -9447,28 +9448,24 @@ def parasight (resource_dir,
     return
 
 
-def parasight_mod (resource_dir,
-               design_info_file,
-                  species,
-               designed_gene_list = None,
-               extra_extension = ".extra",
-                  maf = 0.1,
-                  height = 200):
+def parasight_mod(resource_dir,  design_info_file, species,
+                  designed_gene_list=None, extra_extension=".extra",
+                  maf=0.1, height=200):
     with open(design_info_file, "rb") as infile:
         design_info = pickle.load(infile)
     output_list = ["#!/usr/bin/env bash"]
-    script_dir = get_file_locations()["all"]["script_DIR"]
-    pdf_dir = script_dir + resource_dir + "mod_pdfs/"
+    pdf_dir = os.path.join(resource_dir, "mod_pdfs")
     backup_list = ["#!/usr/bin/env bash"]
     gs_list = ["#!/usr/bin/env bash"]
     pdf_list = ["#!/usr/bin/env bash"]
-    pdf_merge_list = ["#!/usr/bin/env bash",
-                     "cd " + pdf_dir]
-    pdf_convert_list = ["gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite " +             "-dPDFSETTINGS=/prepress -dAutoRotatePages=/All             -sOutputFile=merged.pdf"]
+    pdf_merge_list = ["#!/usr/bin/env bash", "cd " + pdf_dir]
+    pdf_convert_list = ["gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite "
+                        + "-dPDFSETTINGS=/prepress -dAutoRotatePages=/All "
+                        "-sOutputFile=merged.pdf"]
     if not os.path.exists(pdf_dir):
         os.makedirs(pdf_dir)
     for t in design_info:
-        basename = script_dir + design_info[t]["design_dir"] + t + "/" + t
+        basename = os.path.join(design_info[t]["design_dir"], t, t)
         showname = basename + ".show"
         try:
             with open(showname) as infile:
@@ -9477,7 +9474,7 @@ def parasight_mod (resource_dir,
         except IOError:
             continue
         reg_snps = get_snps(show_region,
-                           get_file_locations()[species]["snps"])
+                            get_file_locations()[species]["snps"])
         indels_low = []
         indels_high = []
         snvs_low = []
@@ -9586,38 +9583,30 @@ def parasight_mod (resource_dir,
     with open(resource_dir + "visualize_mod", "w") as outfile:
         outfile.write("\n".join(visualization_list))
     return
-def parasight_shift (resource_dir,
-               design_info_file,
-                  species,
-               designed_gene_list = None,
-               extra_extension = ".extra",
-                  maf = 0.1,
-                  height = 200):
+
+
+def parasight_shift(resource_dir, design_info_file, species,
+                    designed_gene_list=None, extra_extension=".extra",
+                    height=200):
     with open(design_info_file, "rb") as infile:
         design_info = pickle.load(infile)
     output_list = ["#!/usr/bin/env bash"]
-    script_dir = get_file_locations()["all"]["script_DIR"]
-    pdf_dir = script_dir + resource_dir + "mod_pdfs/"
+    pdf_dir = os.path.join(resource_dir, "mod_pdfs")
     backup_list = ["#!/usr/bin/env bash"]
     gs_list = ["#!/usr/bin/env bash"]
     pdf_list = ["#!/usr/bin/env bash"]
-    pdf_merge_list = ["#!/usr/bin/env bash",
-                     "cd " + pdf_dir]
-    pdf_convert_list = ["gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite " +             "-dPDFSETTINGS=/prepress -dAutoRotatePages=/All             -sOutputFile=merged.pdf"]
+    pdf_merge_list = ["#!/usr/bin/env bash", "cd " + pdf_dir]
+    pdf_convert_list = ["gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite "
+                        + "-dPDFSETTINGS=/prepress -dAutoRotatePages=/All "
+                        "-sOutputFile=merged.pdf"]
     if not os.path.exists(pdf_dir):
         os.makedirs(pdf_dir)
     for t in design_info:
-        basename = script_dir + design_info[t]["design_dir"] + t + "/" + t
-        showname = basename + ".show"
-        try:
-            with open(showname) as infile:
-                sln = infile.readlines()[-1].strip().split("\t")
-                show_region = sln[0] + ":" + sln[2] + "-" + sln[3]
-        except IOError:
-            continue
+        basename = os.path.join(design_info[t]["design_dir"], t, t)
         backup_name = basename + ".extra"
         try:
-            with open(backup_name) as infile, open(backup_name + ".mod", "w") as outfile:
+            with open(backup_name) as infile, open(
+                    backup_name + ".mod", "w") as outfile:
                 thirds = 0
                 rd_range = list(range(height))
                 for line in infile:
@@ -9627,7 +9616,7 @@ def parasight_shift (resource_dir,
                         newline[6] = "4"
                         outfile.write("\t".join(newline))
                     elif newline[3] in ["capture", "extension", "ligation"]:
-                        if (thirds % 3)== 0:
+                        if (thirds % 3) == 0:
                             rd = random.choice(rd_range)
                         thirds += 1
                         newline[5] = str(-30 - rd)
@@ -9639,26 +9628,27 @@ def parasight_shift (resource_dir,
             continue
         psname = basename + ".01.01.ps"
         pdfname = basename + ".mod.pdf"
-        gs_command = "gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite " +             "-dPDFSETTINGS=/prepress -dAutoRotatePages=/All -sOutputFile="            + pdfname + " " + psname
-        if designed_gene_list != None:
+        gs_command = ("gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite "
+                      + "-dPDFSETTINGS=/prepress -dAutoRotatePages=/All "
+                      "-sOutputFile=" + pdfname + " " + psname)
+        if designed_gene_list is not None:
             if t in designed_gene_list:
                 pdf_convert_list.append(t + ".mod.pdf")
         else:
             pdf_convert_list.append(t + ".mod.pdf")
         gs_list.append(gs_command)
-        pdf_list.append("cp " + basename + ".mod.pdf " +                            pdf_dir + t + ".mod.pdf")
+        pdf_list.append("cp " + basename + ".mod.pdf "
+                        + pdf_dir + t + ".mod.pdf")
         outlist = ["parasight76.pl",
-                   "-showseq",
-                   basename + ".show",
-                   "-extra",
-                   basename + extra_extension + ".mod",
-                   "-template",
-                   script_dir + "resources/nolabel.pst",
-                   "-precode file:" + basename + ".precode" ,
-                   "-die"]
+                   "-showseq", basename + ".show",
+                   "-extra", basename + extra_extension + ".mod",
+                   "-template", "/opt/resources/nolabel.pst",
+                   "-precode file:" + basename + ".precode", "-die"]
         output_list.append(" ".join(outlist))
-        with open(basename + ".precode" , "w") as outfile:
-            outfile.write("$opt{'filename'}='" + t +                          "';&fitlongestline; &print_all (0,'" + basename + "')")
+        with open(basename + ".precode", "w") as outfile:
+            outfile.write("$opt{'filename'}='" + t
+                          + "';&fitlongestline; &print_all (0,'"
+                          + basename + "')")
     with open(resource_dir + "backup_commands", "w") as outfile:
         outfile.write("\n".join(backup_list))
     with open(resource_dir + "parasight_commands", "w") as outfile:
@@ -9686,10 +9676,10 @@ def parasight_shift (resource_dir,
     return
 
 
-def parasight_print(gene_list, extra_suffix = ".extra"):
+def parasight_print(gene_list, extra_suffix=".extra"):
     for g in gene_list:
         print(("cd ../" + g))
-        print(("parasight76.pl -showseq "+ g + ".show "
+        print(("parasight76.pl -showseq " + g + ".show "
                + "-extra " + g + extra_suffix))
 
 

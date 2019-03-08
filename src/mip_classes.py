@@ -2348,8 +2348,8 @@ class Subregion(Locus):
             # load dict file that has the compatibility information and mip
             # information
             with open(self.primer3_output_DIR + self.primers["compatible"][
-                    "filename"], "r") as infile:
-                mip_dic = json.load(infile)
+                    "filename"], "rb") as infile:
+                mip_dic = pickle.load(infile)
             # if there is any sets in the list
             if not self.single:
                 all_mip_sets = [list(s) for s in self.primers[
