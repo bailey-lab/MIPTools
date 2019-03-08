@@ -76,6 +76,7 @@ From: amd64/ubuntu:18.04
     conda install -qy -c r r
     conda install -qy -c nnsrl r-epitools
     conda install -qy -c r rpy2
+    conda install openpyxl
     conda clean -tipsy
 
     pip install primer3-py==0.5.7

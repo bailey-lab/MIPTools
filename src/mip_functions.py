@@ -7,13 +7,10 @@ from multiprocessing import Pool
 import multiprocessing
 import multiprocessing.pool
 from operator import itemgetter
-import shutil
 import random
 import string
-from ast import literal_eval as evaluate
 import pickle
 import copy
-from Bio import SeqIO
 import numpy as np
 from sklearn.cluster import MeanShift, DBSCAN
 import matplotlib.pyplot as plt
@@ -36,7 +33,8 @@ mip_backbones = {
 }
 
 """
-# > Below class allows processors from a pool from multiprocessing module to create processor pools of their own.
+# Below class allows processors from a pool from multiprocessing module to
+create processor pools of their own.
 # http://mindcache.io/2015/08/09/python-multiprocessing-module-daemonic-processes-are-not-allowed-to-have-children.html
 class NoDaemonProcess(multiprocessing.Process):
     # make 'daemon' attribute always return False
@@ -50,6 +48,8 @@ class NoDaemonProcess(multiprocessing.Process):
 class NoDaemonProcessPool(multiprocessing.pool.Pool):
     Process = NoDaemonProcess
 """
+
+
 # above code was broken when switching to python 3. Below is taken from:
 # https://stackoverflow.com/questions/6974695/python-process-pool-non-daemonic/8963618#8963618
 class NoDaemonProcess(multiprocessing.Process):
@@ -77,335 +77,25 @@ class NoDaemonProcessPool(multiprocessing.pool.Pool):
 def get_file_locations():
     """ All static files such as fasta genomes, snp files, etc. must be listed
     in a file in the working directory. File name is file_locations.
-    It is a tab separated text file. First tab has 2 letter species name, or "all"
-    for general files used for all species. Second tab is the file name and third is
-    the location of the file, either relative to script working directory, or
-    the absolute path."""
+    It is a tab separated text file. First tab has 2 letter species name, or
+    "all" for general files used for all species. Second tab is the file name
+    and third is the location of the file, either relative to script working
+    directory, or the absolute path."""
     file_locations = {}
     with open("/opt/resources/file_locations", "r") as infile:
         for line in infile:
             if not line.startswith("#"):
                 newline = line.strip().split("\t")
                 if newline[0] not in list(file_locations.keys()):
-                    file_locations[newline[0]] = {newline[1]:newline[2]}
+                    file_locations[newline[0]] = {newline[1]: newline[2]}
                 else:
                     file_locations[newline[0]][newline[1]] = newline[2]
     return file_locations
-def rinfo_converter(rinfo_file, output_file, flank, species="hs", host_species="none",
-                    capture_type="targets", target_snps="functional", must_snps=[],
-                    target_diffs="filtered", target_dic=None):
-    """ Convert 0 offset rinfo file to 1 offset. In addition, make some
-    formatting changes such as changing start/stop position names from
-    seqb to begin and from seqe to end etc. More importantly, add all capture information
-    that will be used by the mip module.
-    capture_type options : "targets", "exons", "whole",
-    target_snps options: "functional" (human), "functional_pf", "none" (both human and pf)
-    target_diffs options: "must"(must only), "exonic", (must + exonic), "filtered" (must+exonic+filtered)
-    must_snps: a list of dictionaries with following keys;
-        "name", "snp_id", "segment", "chrom", "begin", "end", "weight"
-    """
-    target_snp_options = {"functional":
-                      {"names": "nonsense,missense,stop-loss,frameshift,cds-indel,splice-3,splice-5",
-                       "scores": "50,50,50,50,50,50,50"},
-                   "none":{"names": "none", "scores":"none"},
-                   "all": {"names": "all", "scores": "50"},
-                   "functional_pf":{"names":"nonsynonymous", "scores":"50"},
-                   "all_pf":{"names":"genic,non-genic,exon,intron,nonsynonymous,synonymous",
-                             "scores":"100,100,100,100,100,100"}
-                   }
-    target_diffs_options_segments = {"filtered":{"names": "must,exonic_diffs,filtered_diffs",
-                                       "scores": "20000,200,50"},
-                           "exonic":{"names": "must,exonic_diffs",
-                                     "scores": "20000,200"},
-                           "must":{"names":"must", "scores":"200"},
-                           "none":{"names": "none", "scores":"none"}
-                   }
-    target_diffs_options_genes = {"filtered":{"names": "must,exonic_diffs",
-                                       "scores": "20000,20"},
-                           "exonic":{"names": "must,exonic_diffs",
-                                     "scores": "20000,20"},
-                           "must":{"names":"must", "scores":"2000"},
-                           "none":{"names": "none", "scores":"none"}
-                   }
-    settings = {}
-    settings_file = "resources/settings_" + species
-    with open(settings_file) as infile:
-        for line in infile:
-            if not line.startswith("#"):
-                newline = line.strip().split("\t")
-                if newline[0] not in settings:
-                    settings[newline[0]] = {}
-                if newline[2] == "none":
-                    settings[newline[0]][newline[1]] = newline[2]
-                else:
-                    try:
-                        settings[newline[0]][newline[1]] = evaluate(newline[2])
-                    except Exception:
-                        settings[newline[0]][newline[1]] = newline[2]
-    """
-    segment_capture = {
-                    "capture_type": capture_type,
-                    "maf_for_arm_design": 0.01,
-                    "mta_for_arm_design":100,
-                    "maf_for_targeting":0.01,
-                    "mta_for_targeting":100,
-                    "target_snp_functions":target_snp_options[target_snps]["names"],
-                    "score_snp_functions": target_snp_options[target_snps]["scores"],
-                    "target_diffs":target_diffs_options[target_diffs]["names"],
-                    "score_target_diffs":target_diffs_options[target_diffs]["scores"],
-                    "min_mips":0,
-                    "max_mips":50,
-                    "flank":75,
-                    "mask_diffs_lig":1,
-                    "mask_diffs_ext":1,
-                    "mask_snps_lig":0,
-                    "mask_snps_ext":0}
-    gene_capture = {
-                    "capture_type": capture_type,
-                    "maf_for_arm_design": 0.01,
-                    "mta_for_arm_design":100,
-                    "maf_for_targeting":0.01,
-                    "mta_for_targeting":100,
-                    "target_snp_functions":target_snp_options[target_snps]["names"],
-                    "score_snp_functions": target_snp_options[target_snps]["scores"],
-                    "target_diffs":target_diffs_options[target_diffs]["names"],
-                    "score_target_diffs":target_diffs_options[target_diffs]["scores"],
-                    "min_mips":0,
-                    "max_mips":50,
-                    "flank":75,
-                    "mask_diffs_lig":0,
-                    "mask_diffs_ext":0,
-                    "mask_snps_lig":0,
-                    "mask_snps_ext":0}
-    selection_settings = {
-                         "type": "compatibility",
-                         "low": 1000,
-                         "high": 3000,
-                         "mip_limit": 50,
-                         "trim_size": 10,
-                         "trim_increment": 10,
-                         "trim_limit": 100}
-
-    """
-    with open(rinfo_file, "r") as filein:
-        infile = filein.readlines()
-        segments = []
-        segment_dic = {}
-        for line in infile:
-            if line.startswith("BASE"):
-                newline = line.strip().split('\t')
-                if newline[1] != "0":
-                    print("File is not zero offset, exiting.")
-                    return
-        with open(output_file, "w") as outfile:
-            for line in infile:
-                if line.startswith("BASE"):
-                    newline = line.strip().split('\t')
-                    newline[1] = "1"
-                    outline = "\t".join(newline) + '\n'
-                    outfile.write(outline)
-                elif line.startswith("COL:REGION"):
-                    outlist = ["COL:REGION", "region_name", "copyname", "chrom", "begin",                               "end", "orient", "length"]
-                    outline = "\t".join(outlist) + '\n'
-                    outfile.write(outline)
-                elif line.startswith("REGION"):
-                    newline = line.strip().split("\t")
-                    outlist = []
-                    outlist.append(newline[0].split(":")[0])
-                    outlist.append(":".join(newline[0].split(":")[1:]))
-                    segmentname = newline[0].split(":")[1]
-                    copynumber = newline[0].split(":")[2]
-                    if not segmentname in segment_dic:
-                        segment_dic[segmentname] = [copynumber]
-                    else:
-                        segment_dic[segmentname].append(copynumber)
-                    segments.append(newline[0].split(":")[1])
-                    outlist.extend(newline[1:3])
-                    outlist.append(str(int(newline[3]) + 1))
-                    outlist.extend(newline[4:])
-                    outline = "\t".join(outlist) + '\n'
-                    outfile.write(outline)
-                else:
-                    outfile.write(line)
-            sep = "#####################################################################\n"
-            comment = "# comment here\n"
-            outfile.write(sep)
-            outfile.write("SPECIES\t" + species + "\n")
-            outfile.write("HOST_SPECIES\t" + host_species + "\n")
-            outfile.write(sep)
-            must_list = ["COL:MUST", "name", "snp_id", "segment",
-                         "chrom", "begin", "end", "weight"]
-            outfile.write("\t".join(must_list) + "\n")
-            outfile.write(comment)
-            outfile.write(sep)
-            for m in must_snps:
-                must_line = ["MUST"]
-                for i in must_list[1:]:
-                    must_line.append(m[i])
-                outfile.write("\t".join(map(str,must_line)) + "\n")
-                outfile.write(comment)
-
-            selection_list = ["COL:SELECTION", "type", "low", "high", "mip_limit",
-                              "trim_size", "trim_increment", "trim_limit"]
-            outfile.write("\t".join(selection_list) + "\n")
-            outfile.write(comment)
-            select_line = ["SELECTION:"]
-            for i in selection_list[1:]:
-                if i in settings["selection"]:
-                    select_line.append(settings["selection"][i])
-                elif i in settings["all"]:
-                    select_line.append(settings["all"][i])
-                else:
-                    select_line.append(none)
-            outfile.write("\t".join(map(str, select_line)) + "\n")
-            outfile.write(sep)
-            capture_list = ["COL:CAPTURE", "segment", "flank","capture_type",
-                            "target_snp_functions", "score_snp_functions",
-                            "target_diffs", "score_target_diffs",
-                            "maf_for_arm_design", "mta_for_arm_design",
-	                        "maf_for_targeting", "mta_for_targeting",
-                            "min_mips", "max_mips",  "mask_diffs_lig",
-                            "mask_diffs_ext", "mask_snps_lig", "mask_snps_ext"]
-            outfile.write("\t".join(capture_list) + "\n")
-            segment_list = list(segment_dic.keys())
-            segment_list.sort()
-            for seg in segment_list:
-                if len(segment_dic[seg])> 1:
-                    cap_line = ["CAPTURE:", seg, flank, capture_type,
-                            target_snp_options[target_snps]["names"],
-                            target_snp_options[target_snps]["scores"],
-                            target_diffs_options_segments[target_diffs]["names"],
-                            target_diffs_options_segments[target_diffs]["scores"]]
-                    for i in capture_list[8:]:
-                            if i in settings["segment_capture"]:
-                                cap_line.append(settings["segment_capture"][i])
-                            elif i in settings["all"]:
-                                cap_line.append(settings["all"][i])
-                            else:
-                                cap_line.append("none")
-                else:
-                    cap_line = ["CAPTURE:", seg, flank, capture_type,
-                            target_snp_options[target_snps]["names"],
-                            target_snp_options[target_snps]["scores"],
-                            target_diffs_options_genes[target_diffs]["names"],
-                            target_diffs_options_genes[target_diffs]["scores"]]
-                    for i in capture_list[8:]:
-                        if i in settings["gene_capture"]:
-                            cap_line.append(settings["gene_capture"][i])
-                        elif i in settings["all"]:
-                            cap_line.append(settings["all"][i])
-                        else:
-                            cap_line.append("none")
-
-                outfile.write("\t".join(map(str, cap_line)) + "\n")
-            outfile.write(comment)
-            outfile.write(sep)
-            settings_list = ["COL:SETTINGS", "settings_for", "settings_file",
-                             "Na", "Mg", "oligo_conc", "tm", "hit_threshold",
-                             "lower_tm", "lower_hit_threshold", "tm_diff",
-                             "3p_identity", "primer3_output_name", "update_primers",
-                             "filtered", "bin_size", "pick_size", "hairpin_tm",
-                             "dg", "size_min", "size_max", "backbone", "alternative_arms",
-                             "seed_len", "bowtie_mode", "hit_limit", "upper_hit_limit",
-                             "local", "processors"]
-            outfile.write("\t".join(settings_list) + "\n")
-            outfile.write(comment)
-            for i, j in zip(["extension", "ligation", "mip"],                     [settings["extension"], settings["ligation"], settings["mip"]]):
-                set_line = ["SETTINGS", i]
-                for k in settings_list[2:]:
-                    if target_dic:
-                        try:
-                            set_line.append(target_dic[k])
-                            continue
-                        except KeyError:
-                            pass
-                    if k in j:
-                        set_line.append(j[k])
-                    elif k in settings["all"]:
-                        set_line.append(settings["all"][k])
-                    else:
-                        set_line.append("none")
-                outfile.write("\t".join(map(str, set_line)) + "\n")
-            outfile.write(comment)
-            outfile.write(sep)
-    return
 
 
-def merge_coordinates(coordinates, capture_size):
-    """ Merge overlapping coordinates for MIP targets.
-
-    Parameters
-    ----------
-    coordinates: python dictionary
-        Coordinates to be merged in the form {target-name: {chrom: chrx,
-        begin: start-coordinate, end: end-coordinate}, ..}
-    capture_size: int
-        Anticipated MIP capture size. If two regions are as close as 2 times
-        this value, they will be merged.
-
-    Returns
-    -------
-    target_coordinates: python dictionary
-        merged coordinates dictionary
-    target_names: python dictionary
-        names of included targets in each merged region.
-    """
-    # create target regions to cover all snps
-    # start by getting snps on same chromosome together
-    chroms = {}
-    for c in coordinates:
-        chrom = coordinates[c]["chrom"]
-        try:
-            chroms[chrom].append([coordinates[c]["begin"],
-                                  coordinates[c]["end"]])
-        except KeyError:
-            chroms[chrom] = [[coordinates[c]["begin"],
-                              coordinates[c]["end"]]]
-    # merge snps that are too close to get separate regions
-    # the length should be twice the capture size
-    merged_chroms = {}
-    for c in chroms:
-        merged_chroms[c] = merge_overlap(chroms[c], 2 * capture_size)
-    # create regions for alignment
-    # create target coordinate for each region
-    target_coordinates = {}
-    target_names = {}
-    for c in merged_chroms:
-        regions = merged_chroms[c]
-        for reg in regions:
-            targets_in_region = []
-            for co in coordinates:
-                if (coordinates[co]["chrom"] == c
-                    and reg[0] <= coordinates[co]["begin"]
-                        <= coordinates[co]["end"] <= reg[1]):
-                    targets_in_region.append(co)
-            region_name = targets_in_region[0]
-            target_names[region_name] = targets_in_region
-            r_start = reg[0]
-            r_end = reg[1]
-            target_coordinates[region_name] = [c, r_start, r_end]
-    return target_coordinates, target_names
-
-
-def create_target_fastas(res_dir, targets, species, flank):
-    """ Create fasta files for a list of region coordinates provided as a dict
-    in the form {target1: [chrx, start, end], target2: [chrx, start, end], ..},
-    flank on both sides with the specified length. If beginning  coordinate is
-    less than zero, reset the beginning coordinate to zero..
-    """
-    for t in targets:
-        chrom = targets[t][0]
-        begin = targets[t][1] - flank + 1
-        if begin < 0:
-            begin = 0
-        end = targets[t][2] + flank
-        rk = chrom + ":" + str(begin) + "-" + str(end)
-        with open(res_dir + t + ".fa", "w") as outfile:
-            outfile.write(get_fasta(rk, species, header=t))
-    return
 def coordinate_to_target(coordinates, snp_locations, capture_size):
     """ Create MIP targets starting from a snp file that is produced offline,
-    usually from Annovar. This is a tab separated file with the following content:
+    usually from Annovar. This is a tab separated file with the following
     chr1	2595307	2595307	A	G	rs3748816.
     This can be generalized to any target with coordinates.
     """
@@ -472,14 +162,9 @@ def coordinate_to_target(coordinates, snp_locations, capture_size):
                     print((reg_name, " is already in targets!"))
                 else:
                     target_coordinates[reg_name] = region_targets[i]
-    """
-    for t in target_coordinates:
-        reg_key = create_region(*target_coordinates[t])
-        fasta = get_fasta(reg_key, species, header = t)
-        with open(resource_dir + t + ".fa", "w") as outfile:
-            outfile.write(fasta)
-    """
     return target_coordinates
+
+
 def rsid_to_target(resource_dir, snp_file):
     """ Create MIP targets starting from a snp file that is produced offline,
     usually from Annovar. This is a tab separated file with the following content:
@@ -670,8 +355,7 @@ def oligoTM(s, Na=25, Mg=10, conc=0.4,
     return float(ntt_res.decode("UTF-8").strip())
 
 
-def tm_calculator(sequence, conc, Na,
-            Mg, dNTP_conc=0):
+def tm_calculator(sequence, conc, Na, Mg, dNTP_conc=0):
     from math import log
     from math import sqrt
     monovalent_conc = Na/1000
@@ -780,6 +464,272 @@ def tm_calculator(sequence, conc, Na,
                       (log(divalent_conc)) ** 2))
                * pow(10, -5) + 1))
     return Tm - 273.15
+
+
+def get_target_coordinates(res_dir, species, capture_size,
+                           coordinates_file=None, snps_file=None,
+                           genes_file=None, capture_types={}):
+    """ Extract MIP target coordinates from provided files. """
+    # Get target coordinates specified as genomic coordinates
+    if coordinates_file is not None:
+        coordinates_file = os.path.join(res_dir, coordinates_file)
+        try:
+            coord_df = pd.read_table(coordinates_file, index_col=False)
+            coord_df.rename(columns={"Name": "name", "Chrom": "chrom",
+                            "Start": "begin", "End": "end"}, inplace=True)
+            region_coordinates = coord_df.set_index("name").to_dict(
+                orient="index")
+            # update capture types of targets
+            for g in region_coordinates:
+                if g not in capture_types:
+                    capture_types[g] = region_coordinates[g]["Capture Type"]
+        except IOError:
+            print(("Target coordinates file {} could not be found.").format(
+                (coordinates_file)))
+            region_coordinates = {}
+
+    # Get Gene target coordinates
+    if genes_file is not None:
+        # get the alias file (gene name to gene id mapping) if available
+        try:
+            with open(get_file_locations()[species]["alias"]) as infile:
+                alias = json.load(infile)
+        except (KeyError, IOError):
+            pass
+        try:
+            genes_file = os.path.join(res_dir, genes_file)
+            genes_df = pd.read_table(genes_file, index_col=False)
+            genes = genes_df.set_index("Gene").to_dict(orient="index")
+            gene_names = list(genes.keys())
+            gene_id_to_gene = {}
+            gene_ids = []
+            gene_coordinates = {}
+            for g in genes:
+                try:
+                    if np.isnan(genes[g]["Gene ID"]):
+                        try:
+                            gene_id = alias[g]
+                            genes[g]["Gene ID"] = gene_id
+                        except KeyError:
+                            print("""Alias for gene %s is not found.
+                                Either provide a gene ID or use an alias
+                                which is present in refgene file.""" % g)
+                            continue
+                        except NameError:
+                            print(""" Gene ID is not provided for %s.
+                                If gene name will be used to extract gene
+                                ID an alias dictionary must be specified.
+                                """ % g)
+                            continue
+                except TypeError:
+                    pass
+                gene_ids.append(genes[g]["Gene ID"])
+                gene_id_to_gene[genes[g]["Gene ID"]] = g
+                capture_types[g] = genes[g]["Capture Type"]
+            gene_id_coordinates = gene_to_target(gene_ids, species)
+            for gid in gene_id_coordinates:
+                gene_coordinates[gene_id_to_gene[gid]] = gene_id_coordinates[
+                    gid]
+        except IOError:
+            print(("Target genes file {} could not be found.").format(
+                (genes_file)))
+            gene_coordinates = {}
+            gene_names = []
+
+    # Get SNP target coordinates
+    try:
+        snps_file = os.path.join(res_dir, snps_file)
+        snp_df = pd.read_table(snps_file, index_col=False)
+        snp_df.rename(columns={"Name": "name", "Chrom": "chrom",
+                               "Start": "begin", "End": "end"},
+                      inplace=True)
+        snp_coordinates = snp_df.set_index("name").to_dict(orient="index")
+        for g in snp_coordinates:
+            if g not in capture_types:
+                capture_types[g] = "targets"
+    except IOError:
+        print(("Target SNPs file {} could not be found.").format(
+            (snps_file)))
+        snp_coordinates = {}
+
+    # merge coordinates dictionaries
+    all_coordinates = {}
+    all_coordinates.update(snp_coordinates)
+    all_coordinates.update(gene_coordinates)
+    all_coordinates.update(region_coordinates)
+
+    # Fix names that has unwanted characters
+    for c in all_coordinates.keys():
+        clist = []
+        for ch in c:
+            if ch.isalnum():
+                clist.append(ch)
+            else:
+                clist.append("-")
+        newc = "".join(clist)
+        if newc != c:
+            print("%s is replaced with %s" % (c, newc))
+            all_coordinates[newc] = all_coordinates.pop(c)
+            capture_types[newc] = capture_types.pop(c)
+    target_regions, target_names = merge_coordinates(all_coordinates,
+                                                     capture_size)
+    # prioritize gene names over snp or other names
+    for t in list(target_names.keys()):
+        for n in target_names[t]:
+            if n in gene_names:
+                target_names[n] = target_names.pop(t)
+                target_regions[n] = target_regions.pop(t)
+                break
+    out_dict = {"target_regions": target_regions,
+                "target_names": target_names,
+                "capture_types": capture_types,
+                "gene_names": gene_names,
+                "snp_coordinates": snp_coordinates,
+                "gene_coordinates": gene_coordinates,
+                "region_coordinates": region_coordinates}
+
+    return out_dict
+
+
+def merge_coordinates(coordinates, capture_size):
+    """ Merge overlapping coordinates for MIP targets.
+
+    Parameters
+    ----------
+    coordinates: python dictionary
+        Coordinates to be merged in the form {target-name: {chrom: chrx,
+        begin: start-coordinate, end: end-coordinate}, ..}
+    capture_size: int
+        Anticipated MIP capture size. If two regions are as close as 2 times
+        this value, they will be merged.
+
+    Returns
+    -------
+    target_coordinates: python dictionary
+        merged coordinates dictionary
+    target_names: python dictionary
+        names of included targets in each merged region.
+    """
+    # create target regions to cover all snps
+    # start by getting snps on same chromosome together
+    chroms = {}
+    for c in coordinates:
+        chrom = coordinates[c]["chrom"]
+        try:
+            chroms[chrom].append([coordinates[c]["begin"],
+                                  coordinates[c]["end"]])
+        except KeyError:
+            chroms[chrom] = [[coordinates[c]["begin"],
+                              coordinates[c]["end"]]]
+    # merge snps that are too close to get separate regions
+    # the length should be twice the capture size
+    merged_chroms = {}
+    for c in chroms:
+        merged_chroms[c] = merge_overlap(chroms[c], 2 * capture_size)
+    # create regions for alignment
+    # create target coordinate for each region
+    target_coordinates = {}
+    target_names = {}
+    for c in merged_chroms:
+        regions = merged_chroms[c]
+        for reg in regions:
+            targets_in_region = []
+            for co in coordinates:
+                if (coordinates[co]["chrom"] == c
+                    and reg[0] <= coordinates[co]["begin"]
+                        <= coordinates[co]["end"] <= reg[1]):
+                    targets_in_region.append(co)
+            region_name = targets_in_region[0]
+            target_names[region_name] = targets_in_region
+            r_start = reg[0]
+            r_end = reg[1]
+            target_coordinates[region_name] = [c, r_start, r_end]
+    return target_coordinates, target_names
+
+
+def create_target_fastas(res_dir, targets, species, flank):
+    """ Create fasta files for a list of region coordinates provided as a dict
+    in the form {target1: [chrx, start, end], target2: [chrx, start, end], ..},
+    flank on both sides with the specified length. If beginning  coordinate is
+    less than zero, reset the beginning coordinate to zero..
+    """
+    for t in list(targets.keys()):
+        chrom = targets[t][0]
+        begin = targets[t][1] - flank + 1
+        if begin < 0:
+            begin = 0
+        end = targets[t][2] + flank
+        rk = chrom + ":" + str(begin) + "-" + str(end)
+        try:
+            with open(res_dir + t + ".fa", "w") as outfile:
+                outfile.write(get_fasta(rk, species, header=t))
+        except Exception as e:
+            print(("Fasta file for {} could not be created, "
+                   "due to error {}. It will be removed"
+                   " from the target list.").format(t, e))
+            targets.pop(t)
+    return
+
+
+def add_fasta_targets(res_dir, fasta_files, fasta_capture_type):
+    fasta_sequences = {}
+    capture_types = {}
+    for f in fasta_files:
+        f_file = os.path.join(res_dir, f)
+        try:
+            fasta_sequences.update(fasta_parser(f_file))
+        except IOError:
+            print(("Fasta file {} could not be found.").format(f_file))
+    for f in fasta_sequences.keys():
+        flist = []
+        for fch in f:
+            if fch.isalnum():
+                flist.append(fch)
+            else:
+                flist.append("-")
+        newf = "".join(flist)
+        if f != newf:
+            print("%s is changed to %s." % (f, newf))
+            fasta_sequences[newf] = fasta_sequences.pop(f)
+        if newf not in capture_types:
+            capture_types[newf] = fasta_capture_type
+        with open(res_dir + newf + ".fa", "w") as outfile:
+            outfile.write(">" + newf + "\n" + fasta_sequences[newf] + "\n")
+    return {"fasta_sequences": fasta_sequences, "capture_types": capture_types}
+
+
+def set_genomic_target_alignment_options(target_regions, fasta_sequences,
+                                         identity, coverage, flank):
+    alignment_list = []
+    fasta_list = list(fasta_sequences.keys()) + list(target_regions.keys())
+    for t in fasta_list:
+        temp_dict = {"gene_name": t, "identity": identity}
+        try:
+            target_size = target_regions[t][2] - target_regions[t][1]
+            fasta_size = target_size + 2 * flank
+        except KeyError:
+            fasta_size = len(fasta_sequences[t])
+        cover = round(coverage * 100 / fasta_size, 1)
+        temp_dict["options"] = []
+        if cover > 100:
+            cover = 100
+        temp_dict["coverage"] = cover
+        if fasta_size < 100:
+            temp_dict["options"].extend(["--notransition", "--step=10",
+                                         "--ambiguous=iupac"])
+        elif fasta_size < 1000:
+            temp_dict["options"].extend(["--notransition", "--step=10",
+                                         "--ambiguous=iupac"])
+        elif fasta_size < 5000:
+            temp_dict["options"].extend(["--notransition",
+                                         "--step=" + str(int(fasta_size/10)),
+                                         "--ambiguous=iupac"])
+        else:
+            temp_dict["options"].extend(["--notransition",
+                                         "--step=" + str(int(fasta_size/10)),
+                                         "--ambiguous=iupac"])
+        alignment_list.append(temp_dict)
+    return alignment_list
 
 
 def align_region_multi(alignment_list, pro):
@@ -1199,7 +1149,7 @@ def alignment_parser(wdir, name, spacer=0, gene_names=[]):
         target_regions[reg_names[0]] = target_regions.pop(r)
         overlaps[reg_names[0]] = overlaps.pop(r)
     # after the alignments are done, some regions will not have proper names
-    # and some will have "na". We'll change those to avoid name repeating
+    # and some will have "na". We'll change those to avoid repeating
     # names.
     for r in region_names:
         rnames = region_names[r]
@@ -1231,7 +1181,45 @@ def alignment_parser(wdir, name, spacer=0, gene_names=[]):
                 best_score = score
         if best_score != 10000:
             imperfect_aligners.append(r)
-    return [target_regions, region_names, imperfect_aligners, aligned_regions]
+    return [target_regions, region_names, imperfect_aligners, aligned_regions,
+            overlaps]
+
+
+def set_intra_alignment_options(target_regions, identity, coverage,
+                                max_allowed_indel_size,
+                                match_score=1, mismatch_score=5,
+                                gap_open_penalty=20, gap_extend_penalty=5
+                                ):
+    alignment_options_dict = {}
+    for t in target_regions:
+        temp_dict = {"gene_name": t, "identity": identity}
+        reference_len = target_regions[t][0][-1]
+        small_target = 0
+        for r in target_regions[t]:
+            if r[-1] < coverage:
+                small_target += 1
+                try:
+                    smallest_target = min([smallest_target, r[-1]])
+                except NameError:
+                    smallest_target = int(r[-1])
+        if small_target > 0:
+            print(("{} targets within {} are smaller than intra_coverage"
+                   " value. This means that those targets will not be aligned."
+                   " Smallest target's length was {}. Set intra_coverage"
+                   " to a value smaller than this value to align all regions."
+                   ).format(small_target, t, smallest_target))
+        cover = round(coverage * 100 / reference_len, 1)
+        ydrop = max_allowed_indel_size * gap_extend_penalty + gap_open_penalty
+        alignment_opts = ["--match=" + str(match_score) + "," + str(
+            mismatch_score), "--gap=" + str(gap_open_penalty) + "," + str(
+            gap_extend_penalty), "--ydrop=" + str(ydrop), "--notransition",
+            "--ambiguous=iupac", "--noytrim"]
+        temp_dict["options"] = alignment_opts
+        if cover > 100:
+            cover = 100
+        temp_dict["coverage"] = cover
+        alignment_options_dict[t] = temp_dict
+    return alignment_options_dict
 
 
 def intraparalog_aligner(resource_dir,
@@ -1240,8 +1228,6 @@ def intraparalog_aligner(resource_dir,
                          imperfect_aligners,
                          fasta_sequences,
                          species,
-                         identity,
-                         coverage,
                          num_process,
                          alignment_options_dict={}):
     """ Align all regions within a target group to the region selected
@@ -1261,13 +1247,9 @@ def intraparalog_aligner(resource_dir,
     gen_out = "general:" + out_fields
     diff_out = "differences"
     for t in target_regions:
-        if len(alignment_options_dict) == 0:
-            alignment_options = []
-        else:
-            alignment_options = alignment_options_dict[t]["options"]
-            identity = alignment_options_dict[t]["identity"]
-            coverage = alignment_options_dict[t]["coverage"]
-        alignment_options.append("--noytrim")
+        alignment_options = alignment_options_dict[t]["options"]
+        identity = alignment_options_dict[t]["identity"]
+        coverage = alignment_options_dict[t]["coverage"]
         tar_regs = target_regions[t]
         # create a fasta file for the reference copy (or reference region)
         target_keys = [tr[0] + ":" + str(tr[1] + 1)
@@ -1359,226 +1341,350 @@ def intra_alignment_checker(family_name, res_dir, target_regions,
     return [ret_regions, rnames]
 
 
+def align_paralogs(res_dir, target_regions, region_names, imperfect_aligners,
+                   fasta_sequences, species, identity, coverage,
+                   max_allowed_indel_size, num_process):
+    alignment_options = set_intra_alignment_options(
+        target_regions, identity, coverage, max_allowed_indel_size)
+    intraparalog_aligner(res_dir, target_regions, region_names,
+                         imperfect_aligners, fasta_sequences, species,
+                         num_process, alignment_options)
+    for r in target_regions.keys():
+        ntr = intra_alignment_checker(r, res_dir, target_regions[r],
+                                      region_names[r])
+        target_regions[r] = ntr[0]
+        region_names[r] = ntr[1]
+    alignment_options = set_intra_alignment_options(
+        target_regions, identity, coverage, max_allowed_indel_size)
+    intraparalog_aligner(res_dir, target_regions, region_names,
+                         imperfect_aligners, fasta_sequences, species,
+                         num_process, alignment_options)
+
+
+def get_missed_targets(original_target_regions, target_regions,
+                       aligned_regions, min_target_size, flank, capture_types):
+    org_chroms = {}
+    new_chroms = {}
+    for o in original_target_regions:
+        org_regs = original_target_regions[o]
+        for org in org_regs:
+            try:
+                org_chroms[org[0]].append(org[1:3])
+            except KeyError:
+                org_chroms[org[0]] = [org[1:3]]
+        new_regs = target_regions[o]
+        for nrg in new_regs:
+            try:
+                new_chroms[nrg[0]].append(nrg[1:3])
+            except KeyError:
+                new_chroms[nrg[0]] = [nrg[1:3]]
+    uncovered_chroms = {}
+    for chrom in org_chroms:
+        try:
+            uncov = subtract_overlap(org_chroms[chrom], new_chroms[chrom])
+            if len(uncov) > 0:
+                uncovered_chroms[chrom] = uncov
+        except KeyError:
+            uncovered_chroms[chrom] = org_chroms[chrom]
+    not_aligned_coordinates = {}
+    for ar in aligned_regions:
+        main_region = aligned_regions[ar][0]
+        extra_count = 0
+        for uc in uncovered_chroms:
+            unc_regs = uncovered_chroms[uc]
+            for ur in unc_regs:
+                if overlap(main_region[1:3], ur):
+                    not_aligned_coordinates[
+                        ar + "-extra-" + str(extra_count)
+                    ] = {"chrom": uc,
+                         "begin": ur[0],
+                         "end": ur[1]}
+    missed_target_regions, missed_target_names = merge_coordinates(
+        not_aligned_coordinates, flank)
+    for t in list(missed_target_regions.keys()):
+        target_size = (missed_target_regions[t][-1]
+                       - missed_target_regions[t][-2] + 1)
+        if target_size < min_target_size:
+            missed_target_regions.pop(t)
+            missed_target_names.pop(t)
+    missed_capt_types = {}
+    for t in missed_target_names:
+        try:
+            missed_capt_types[t] = capture_types[t.split("extra")[0][:-1]]
+        except KeyError:
+            print(("Capture type not found for {}."
+                   " Setting capture type to 'whole'").format(t))
+            missed_capt_types[t] = "whole"
+    return [missed_target_regions, missed_target_names, missed_capt_types]
+
+
+def align_targets(res_dir, target_regions, species, flank, fasta_files,
+                  fasta_capture_type, genome_identity, genome_coverage,
+                  num_process, gene_names, max_allowed_indel_size,
+                  intra_identity, intra_coverage, capture_types,
+                  min_target_size):
+    # create fasta files for each target coordinate
+    create_target_fastas(res_dir, target_regions, species, flank)
+
+    # add target sequences provided by fasta files
+    fasta_targets = add_fasta_targets(res_dir, fasta_files,
+                                      fasta_capture_type=fasta_capture_type)
+    fasta_sequences = fasta_targets["fasta_sequences"]
+    fasta_capture_types = fasta_targets["capture_types"]
+    capture_types.update(fasta_capture_types)
+
+    # create a list of target names from all sources
+    targets_list = (list(target_regions.keys())
+                    + list(fasta_sequences.keys()))
+
+    # align target sequences to reference genome
+    # create alignment options
+    genomic_alignment_list = set_genomic_target_alignment_options(
+        target_regions, fasta_sequences, genome_identity, genome_coverage,
+        flank)
+    # perform genome alignment
+    align_genes_for_design(genomic_alignment_list, res_dir,
+                           alignment_types="general", species=species,
+                           num_processor=num_process)
+
+    # merge all alignment files
+    merge_alignments(res_dir, targets_list, output_prefix="merged")
+
+    # parse genome alignment file
+    genome_alignment = alignment_parser(res_dir, "merged", spacer=0,
+                                        gene_names=gene_names)
+    target_regions = copy.deepcopy(genome_alignment[0])
+    region_names = copy.deepcopy(genome_alignment[1])
+    imperfect_aligners = genome_alignment[2]
+    aligned_regions = genome_alignment[3]
+    overlaps = genome_alignment[4]
+
+    # align sequences within target groups (paralog sequences)
+    align_paralogs(res_dir, target_regions, region_names, imperfect_aligners,
+                   fasta_sequences, species, intra_identity, intra_coverage,
+                   max_allowed_indel_size, num_process)
+
+    # compare original target_regions to the final target regions
+    # to determine if any region is missing due to alignments performed
+    original_target_regions = genome_alignment[0]
+    missed_target_regions, missed_target_names, missed_capture_types = (
+        get_missed_targets(original_target_regions, target_regions,
+                           aligned_regions, min_target_size, flank,
+                           capture_types))
+
+    out_dict = {"original_target_regions": original_target_regions,
+                "target_regions": target_regions,
+                "region_names": region_names,
+                "aligned_regions": aligned_regions,
+                "capture_types": capture_types,
+                "imperfect_aligners": imperfect_aligners,
+                "overlaps": overlaps,
+                "missed_target_regions": missed_target_regions,
+                "missed_target_names": missed_target_names,
+                "missed_capture_types": missed_capture_types}
+    return out_dict
+
+
 def alignment_mapper(family_name, res_dir):
     """ Create a coordinate map of within group alignments.
     """
-    try:
-        alignment_file = family_name + ".aligned"
-        difference_file = family_name + ".differences"
-        with open(
-            res_dir + alignment_file, "r"
-        ) as alignment, open(res_dir + difference_file, "r") as difference:
-            # create an alignment dictionary for each region that a query
-            # aligns to these correspond to each line in the alignment file
-            # and thus, are relative coordinates.
-            alignment_dic = {}
-            alignment_number = 0
-            for line in alignment:
-                # extract the column names from the first line
-                if line.startswith("#"):
-                    newline = line.strip().split("\t")
-                    newline[0] = newline[0][1:]
-                    colnames = list(newline)
-                # assign values of each column for each alignment
-                else:
-                    newline = line.strip().split("\t")
-                    temp_dict = {"differences": []}
-                    for i in range(len(colnames)):
-                        temp_dict[colnames[i]] = newline[i]
-                    alignment_id = temp_dict["name1"] + ":" + str(
-                        alignment_number)
-                    alignment_dic[alignment_id] = temp_dict
-                    cov = float(alignment_dic[alignment_id]["covPct"][:-1])
-                    idt = float(alignment_dic[alignment_id]["idPct"][:-1])
-                    alignment_dic[alignment_id]["score"] = np.mean([idt, cov])
-                    alignment_number += 1
-            # differences file is a continuous file for all alignments
-            # extract differences for each alignment
-            for line in difference:
+    alignment_file = family_name + ".aligned"
+    difference_file = family_name + ".differences"
+    with open(
+        res_dir + alignment_file, "r"
+    ) as alignment, open(res_dir + difference_file, "r") as difference:
+        # create an alignment dictionary for each region that a query
+        # aligns to these correspond to each line in the alignment file
+        # and thus, are relative coordinates.
+        alignment_dic = {}
+        for line in alignment:
+            # extract the column names from the first line
+            if line.startswith("#"):
                 newline = line.strip().split("\t")
-                dname = newline[0]
-                for aname in alignment_dic:
-                    if aname.startswith(dname):
-                        alignment_dic[aname]["differences"].append(
-                            newline[:-2])
-            # map each position in each alignment to the query
-            for a in alignment_dic:
-                snps = alignment_dic[a]["snps"] = {}
-                co = alignment_dic[a]["coordinates"] = {}
-                rev_co = alignment_dic[a]["reverse_coordinates"] = {}
-                # if alignment on reverse strand
-                if alignment_dic[a]["strand2"] == "-":
-                    # genomic coordinate of target start
-                    # this position is zstart2+ away from query end
-                    # (when it is a - alignment)
-                    al_start = int(alignment_dic[a]["zstart1"])
-                    query_plus_end = int(alignment_dic[a]["end2+"])
-                    # assign start to the first key of the coord dictionary
-                    first_key = query_plus_end - 1
-                    co[first_key] = al_start
-                    rev_co[al_start] = first_key
-                    last_key = first_key
-                    inserted = 0
-                    for d in alignment_dic[a]["differences"]:
-                        # start/end coordinates of diff relative to the query
-                        diff_start = int(d[6])
-                        diff_end = int(d[7])
-                        query_length = int(d[9])
-                        # for each diff, fill in the coordinates
-                        # between the last_key in the coord dic and
-                        # start_key - diff start
-                        for j in range(last_key - 1, query_length
-                                       - diff_start - 1, -1):
-                            # j decreases by one, starting from the last
-                            # available key the value will be 1 more than the
-                            # previous key (j+1)
-                            if j == last_key - 1:
-                                co[j] = round(co[j + 1] - 0.1) + 1 + inserted
-                            else:
-                                co[j] = round(co[j + 1] - 0.1) + 1
-                            rev_co[co[j]] = j
-                        # current last key is now first_key - diff_start
-                        last_key = query_length - diff_start - 1
-                        query_diff_end = last_key + 1
-                        # genomic coordinate of target at diff start
-                        tar_start = int(d[1])
-                        # genomic coordinate of target at diff end
-                        tar_end = int(d[2])
-                        # if end and start are the same, there is a deletion
-                        # in target compared to query
-                        # all nucleotides from diff start to diff end will have
-                        # the same coordinate
-                        if tar_start == tar_end:
-                            inserted = 0
-                            for i in range(diff_end - diff_start):
-                                co[last_key - i] = tar_start - 0.5
-                            last_key -= diff_end - diff_start - 1
-                        # in cases of deletion in query, only rev_co will be
-                        # updated
-                        elif diff_start == diff_end:
-                            inserted = 0
-                            for i in range(tar_end - tar_start):
-                                rev_co[co[last_key + 1] + i + 1] = (
-                                    last_key + 0.5)
-                                inserted += 1
-                            last_key += 1
-                        # last_key will be mapped to target start
-                        # if there is only a SNP and no indel
-                        else:
-                            inserted = 0
-                            co[last_key] = tar_start
-                            rev_co[tar_start] = last_key
-                        query_diff_start = last_key
-                        diff_key = str(query_diff_start) + "-" + str(
-                            query_diff_end)
-                        snps[diff_key] = {"chrom": d[0],
-                                          "target_begin": int(d[1]),
-                                          "target_end": int(d[2]),
-                                          "target_orientation": d[3],
-                                          "query_start": diff_start,
-                                          "query_end": diff_end,
-                                          "query_orientation": d[8],
-                                          "target_base": d[10],
-                                          "query_base": d[11]}
-                    # fill in the coordinates between last diff
-                    # and the alignment end
-                    query_plus_start = int(alignment_dic[a]["zstart2+"])
-                    for k in range(last_key - 1, query_plus_start - 1, -1):
-                        co[k] = round(co[k+1] - 0.1) + 1
-                        rev_co[co[k]] = k
-                # when the alignment is on the forward strand
-                else:
-                    # where on target sequence the alignment starts
-                    tar_start = int(alignment_dic[a]["zstart1"])
-                    # where in the query sequence the alinment starts
-                    q_start = int(alignment_dic[a]["zstart2"])
-                    co[q_start] = tar_start
-                    rev_co[tar_start] = q_start
-                    # last key used is q_start, last key is updated each time
-                    # something is added to the coordinate dict.
-                    last_key = first_key = q_start
-                    inserted = 0
-                    for d in alignment_dic[a]["differences"]:
-                        # where on query sequence the difference starts and
-                        # ends
-                        diff_start = int(d[6])
-                        diff_end = int(d[7])
-                        diff_key = d[6] + "-" + d[7]
-                        query_length = d[9]
-                        snps[diff_key] = {"chrom": d[0],
-                                          "target_begin": int(d[1]),
-                                          "target_end": int(d[2]),
-                                          "target_orientation": d[3],
-                                          "query_start": diff_start,
-                                          "query_end": diff_end,
-                                          "query_orientation": d[8],
-                                          "target_base": d[10],
-                                          "query_base": d[11]}
-                        # from the last key to the diff start the query and
-                        # target sequences are the same in length and co dict
-                        # is filled so
-                        for i in range(last_key + 1, diff_start):
-                            if i == last_key + 1:
-                                co[i] = round(co[i-1] - 0.1) + 1 + inserted
-                                inserted = 0
-                            else:
-                                co[i] = round(co[i-1] - 0.1) + 1
-                            rev_co[co[i]] = i
-                        # update last used key in co dict
-                        last_key = diff_start
-                        # genomic coordinate of target at diff start
-                        tar_start = int(d[1])
-                        # genomic coordinate of target at diff end
-                        tar_end = int(d[2])
-                        # if end and start are the same, there is a deletion
-                        # in target compared to query
-                        # all nucleotides from diff start to diff end will have
-                        # the same coordinate
-                        if tar_start == tar_end:
-                            inserted = 0
-                            for i in range(diff_end - diff_start):
-                                co[last_key + i] = tar_start - 0.5
-                            last_key += diff_end - diff_start - 1
-                        # in cases of deletion in query (insertion in target)
-                        # position will be mapped to the target end coordinate
-                        elif diff_start == diff_end:
-                            inserted = 0
-                            for i in range(tar_end - tar_start):
-                                rev_co[co[last_key - 1] + 1 + i] = (
-                                    last_key - 0.5)
-                                inserted += 1
-                            last_key -= 1
-                        # if there is no indel
-                        # last_key will be mapped to target start
-                        else:
-                            inserted = 0
-                            co[last_key] = tar_start
-                            rev_co[tar_start] = last_key
-                    # fill in the coordinates between last diff
-                    # and the alignment end
-                    q_end = int(alignment_dic[a]["end2"])
-                    for k in range(last_key + 1, q_end):
-                        co[k] = round(co[k-1] - 0.1) + 1
-                        rev_co[co[k]] = k
-
-        return_dic = {}
-        for aname in alignment_dic:
-            qname = aname.split(":")[0]
-            snps = alignment_dic[aname]["snps"]
-            co = alignment_dic[aname]["coordinates"]
-            rev_co = alignment_dic[aname]["reverse_coordinates"]
-            if qname not in return_dic:
-                return_dic[qname] = alignment_dic[aname]
-                return_dic[qname]["covered"] = [
-                    list(map(int, [alignment_dic[aname]["zstart1"],
-                                   alignment_dic[aname]["end1"]]))]
+                newline[0] = newline[0][1:]
+                colnames = list(newline)
+            # assign values of each column for each alignment
             else:
-                qname_cov = [alignment_dic[aname]["zstart1"],
-                             alignment_dic[aname]["end1"]]
-                return_dic[qname]["covered"].append(list(map(int, qname_cov)))
-        return alignment_dic, return_dic
-    except Exception as e:
-        return [family_name, e]
+                newline = line.strip().split("\t")
+                temp_dict = {"differences": []}
+                for i in range(len(colnames)):
+                    temp_dict[colnames[i]] = newline[i]
+                alignment_id = temp_dict["name1"]
+                if alignment_id in alignment_dic:
+                    print(("{} aligned to the reference copy multiple times. "
+                           "Only the first alignment will be used for "
+                           "coordinate mapping.").format(alignment_id))
+                    continue
+                alignment_dic[alignment_id] = temp_dict
+                cov = float(alignment_dic[alignment_id]["covPct"][:-1])
+                idt = float(alignment_dic[alignment_id]["idPct"][:-1])
+                alignment_dic[alignment_id]["score"] = np.mean([idt, cov])
+        # differences file is a continuous file for all alignments
+        # extract differences for each alignment
+        for line in difference:
+            newline = line.strip().split("\t")
+            dname = newline[0]
+            alignment_dic[dname]["differences"].append(newline[:-2])
+        # map each position in each alignment to the query
+        for a in alignment_dic:
+            snps = alignment_dic[a]["snps"] = {}
+            co = alignment_dic[a]["coordinates"] = {}
+            rev_co = alignment_dic[a]["reverse_coordinates"] = {}
+            # if alignment on reverse strand
+            if alignment_dic[a]["strand2"] == "-":
+                # genomic coordinate of target start
+                # this position is zstart2+ away from query end
+                # (when it is a - alignment)
+                al_start = int(alignment_dic[a]["zstart1"])
+                query_plus_end = int(alignment_dic[a]["end2+"])
+                # assign start to the first key of the coord dictionary
+                first_key = query_plus_end - 1
+                co[first_key] = al_start
+                rev_co[al_start] = first_key
+                last_key = first_key
+                inserted = 0
+                for d in alignment_dic[a]["differences"]:
+                    # start/end coordinates of diff relative to the query
+                    diff_start = int(d[6])
+                    diff_end = int(d[7])
+                    query_length = int(d[9])
+                    # for each diff, fill in the coordinates
+                    # between the last_key in the coord dic and
+                    # start_key - diff start
+                    for j in range(last_key - 1, query_length
+                                   - diff_start - 1, -1):
+                        # j decreases by one, starting from the last
+                        # available key the value will be 1 more than the
+                        # previous key (j+1)
+                        if j == last_key - 1:
+                            co[j] = round(co[j + 1] - 0.1) + 1 + inserted
+                        else:
+                            co[j] = round(co[j + 1] - 0.1) + 1
+                        rev_co[co[j]] = j
+                    # current last key is now first_key - diff_start
+                    last_key = query_length - diff_start - 1
+                    query_diff_end = last_key + 1
+                    # genomic coordinate of target at diff start
+                    tar_start = int(d[1])
+                    # genomic coordinate of target at diff end
+                    tar_end = int(d[2])
+                    # if end and start are the same, there is a deletion
+                    # in target compared to query
+                    # all nucleotides from diff start to diff end will have
+                    # the same coordinate
+                    if tar_start == tar_end:
+                        inserted = 0
+                        for i in range(diff_end - diff_start):
+                            co[last_key - i] = tar_start - 0.5
+                        last_key -= diff_end - diff_start - 1
+                    # in cases of deletion in query, only rev_co will be
+                    # updated
+                    elif diff_start == diff_end:
+                        inserted = 0
+                        for i in range(tar_end - tar_start):
+                            rev_co[co[last_key + 1] + i + 1] = (
+                                last_key + 0.5)
+                            inserted += 1
+                        last_key += 1
+                    # last_key will be mapped to target start
+                    # if there is only a SNP and no indel
+                    else:
+                        inserted = 0
+                        co[last_key] = tar_start
+                        rev_co[tar_start] = last_key
+                    query_diff_start = last_key
+                    diff_key = str(query_diff_start) + "-" + str(
+                        query_diff_end)
+                    snps[diff_key] = {"chrom": d[0],
+                                      "target_begin": int(d[1]),
+                                      "target_end": int(d[2]),
+                                      "target_orientation": d[3],
+                                      "query_start": diff_start,
+                                      "query_end": diff_end,
+                                      "query_orientation": d[8],
+                                      "target_base": d[10],
+                                      "query_base": d[11]}
+                # fill in the coordinates between last diff
+                # and the alignment end
+                query_plus_start = int(alignment_dic[a]["zstart2+"])
+                for k in range(last_key - 1, query_plus_start - 1, -1):
+                    co[k] = round(co[k+1] - 0.1) + 1
+                    rev_co[co[k]] = k
+            # when the alignment is on the forward strand
+            else:
+                # where on target sequence the alignment starts
+                tar_start = int(alignment_dic[a]["zstart1"])
+                # where in the query sequence the alinment starts
+                q_start = int(alignment_dic[a]["zstart2"])
+                co[q_start] = tar_start
+                rev_co[tar_start] = q_start
+                # last key used is q_start, last key is updated each time
+                # something is added to the coordinate dict.
+                last_key = first_key = q_start
+                inserted = 0
+                for d in alignment_dic[a]["differences"]:
+                    # where on query sequence the difference starts and
+                    # ends
+                    diff_start = int(d[6])
+                    diff_end = int(d[7])
+                    diff_key = d[6] + "-" + d[7]
+                    query_length = d[9]
+                    snps[diff_key] = {"chrom": d[0],
+                                      "target_begin": int(d[1]),
+                                      "target_end": int(d[2]),
+                                      "target_orientation": d[3],
+                                      "query_start": diff_start,
+                                      "query_end": diff_end,
+                                      "query_orientation": d[8],
+                                      "target_base": d[10],
+                                      "query_base": d[11]}
+                    # from the last key to the diff start the query and
+                    # target sequences are the same in length and co dict
+                    # is filled so
+                    for i in range(last_key + 1, diff_start):
+                        if i == last_key + 1:
+                            co[i] = round(co[i-1] - 0.1) + 1 + inserted
+                            inserted = 0
+                        else:
+                            co[i] = round(co[i-1] - 0.1) + 1
+                        rev_co[co[i]] = i
+                    # update last used key in co dict
+                    last_key = diff_start
+                    # genomic coordinate of target at diff start
+                    tar_start = int(d[1])
+                    # genomic coordinate of target at diff end
+                    tar_end = int(d[2])
+                    # if end and start are the same, there is a deletion
+                    # in target compared to query
+                    # all nucleotides from diff start to diff end will have
+                    # the same coordinate
+                    if tar_start == tar_end:
+                        inserted = 0
+                        for i in range(diff_end - diff_start):
+                            co[last_key + i] = tar_start - 0.5
+                        last_key += diff_end - diff_start - 1
+                    # in cases of deletion in query (insertion in target)
+                    # position will be mapped to the target end coordinate
+                    elif diff_start == diff_end:
+                        inserted = 0
+                        for i in range(tar_end - tar_start):
+                            rev_co[co[last_key - 1] + 1 + i] = (
+                                last_key - 0.5)
+                            inserted += 1
+                        last_key -= 1
+                    # if there is no indel
+                    # last_key will be mapped to target start
+                    else:
+                        inserted = 0
+                        co[last_key] = tar_start
+                        rev_co[tar_start] = last_key
+                # fill in the coordinates between last diff
+                # and the alignment end
+                q_end = int(alignment_dic[a]["end2"])
+                for k in range(last_key + 1, q_end):
+                    co[k] = round(co[k-1] - 0.1) + 1
+                    rev_co[co[k]] = k
+    return alignment_dic
 
 
 def align_haplotypes(
@@ -3793,7 +3899,7 @@ def get_coordinates (region):
     return [chromosome, begin, end]
 
 
-def get_fasta (region, species="pf", offset=1, header="na"):
+def get_fasta(region, species="pf", offset=1, header="na"):
     """ Take a region string (chrX:begin-end (1 indexed)),
     and species (human=hs, plasmodium= pf),Return fasta record.
     """
@@ -3813,27 +3919,31 @@ def get_fasta (region, species="pf", offset=1, header="na"):
 
 def get_fasta_list(regions, species):
     """ Take a list of regions and return fasta sequences."""
+    if len(regions) == 0:
+        print("Region list is empty.")
+        return
     file_locations = get_file_locations()
     genome_fasta = file_locations[species]["fasta_genome"]
-    region_subs = make_chunks(regions, 25000)
+    region_file = "/tmp/regions_" + id_generator(10) + ".txt"
+    with open(region_file, "w") as outfile:
+        for r in regions:
+            outfile.write(r + "\n")
     fasta_dic = {}
-    for region_list in region_subs:
-        command = ["samtools",  "faidx", genome_fasta]
-        command.extend(region_list)
-        out = subprocess.check_output(command).decode("UTF-8")
-        fasta_list = out.split(">")[1:]
-        for f in fasta_list:
-            fl = f.strip().split("\n")
-            fhead = fl[0]
-            fseq = "".join(fl[1:])
-            fasta_dic[fhead] = fseq
+    command = ["samtools",  "faidx", "-r", region_file, genome_fasta]
+    out = subprocess.check_output(command).decode("UTF-8")
+    fasta_list = out.split(">")[1:]
+    for f in fasta_list:
+        fl = f.strip().split("\n")
+        fhead = fl[0]
+        fseq = "".join(fl[1:])
+        fasta_dic[fhead] = fseq
     return fasta_dic
 
 
-def create_fasta_file (region, species, output_file):
+def create_fasta_file(region, species, output_file):
     if not os.path.exists(output_file):
         os.makedirs(output_file)
-    with open (output_file, "w") as outfile:
+    with open(output_file, "w") as outfile:
         outfile.write(get_fasta(region, species))
 
 
@@ -4457,98 +4567,6 @@ def make_targets_dic(targets_file):
 
 
     return targets
-def make_subregions (target_region,
-                     gene_name,
-                     capture_type,
-                     capture_targets, maf, mta, refseq, flank):
-    """ Take a region with its genomic coordinates, a dictionary of possible targets in the region
-    which is the output of targets function. Return subregions depending on the capture type that
-    is planned. Capture type can be exons, in which case the sequence is split into
-    exons unless the intron between two exons are too small, than those exons will be merged.
-    Second option for capture type is targets only, which eliminates sequence regions devoid of
-    targets. """
-
-    # define possible capture types and check if specified type is correct
-    possible_capture_types = ["exons", "targets", "whole"]
-    if capture_type not in possible_capture_types:
-        print(("Specified capture type %s is not available." %capture_type))
-        return 1
-    # convert region to coordinates
-    coord = get_coordinates(target_region)
-    chrom = coord[0]
-    begin = int(coord[1])
-    end = int(coord[2])
-    # create a list of subregions
-    sub = []
-    # create an output list
-    subregions = []
-    # get exon coordinates if the capture type is exons
-    # this function is not available at the moment but it should return
-    # a list of coordinates in [[e1_begin, e1_end], [e2_begin, e2_end]]
-    # subregion will be the target region if all of the capture type is "whole"
-    if capture_type == "whole":
-        subregions = [[begin, end]]
-    elif capture_type == "exons":
-        exons = get_exons(get_snps(target_region, hs_refgene_tabix), refseq)["exons"]
-        for i in range(len(exons) - 1):
-            # define the current exon
-            current_exon = exons[i]
-            # and its coordinates
-            e_start = current_exon[0]
-            e_end = current_exon[1]
-            # the next exon in the list
-            next_exon = exons[i+1]
-            # and its coordinates
-            n_start = next_exon[0]
-            n_end = next_exon[1]
-            # the intron between should be at least 2 flanks long so that we can have
-            # non-overlapping templates. Append a 1 for standalone exons and 0 for exons to be merged
-            if (n_start - e_end - 1) > (2 * flank):
-                sub.append(1)
-            else:
-                # if the intron is too small, current and next exons should be merged
-                sub.append(0)
-        # merge each exon that has a 0 value in sub list, until no more exons left to be merged
-        while 0 in sub:
-            for i in range(len(sub)):
-                if sub[i] == 0:
-                    exons[i] = [exons[i][0], exons[i+1][1]]
-                    exons.pop(i+1)
-                    sub.pop(i)
-                    break
-        subregions = exons
-    # get the target coordinates if the capture type is "targets"
-    elif capture_type == "targets":
-        # capture targets should be a target dictionary with "chrx:begin-end" keys.
-        # create a list of target coordinates
-        target_coordinates = []
-        for t in capture_targets:
-            # add begin coordinate of the target
-            target_coordinates.append([int(capture_targets[t]["begin"]),
-                                       int(capture_targets[t]["end"])])
-        # sort target coordinates
-        target_coordinates.sort()
-        # create an end coordinates list to have index numbers coordinates where target region should
-        # be split because the next target is too far away
-        end_coordinates = []
-        for i in range(len(target_coordinates)-1):
-            if (target_coordinates[i+1] - target_coordinates[i]) > (2 * flank):
-                end_coordinates.append(target_coordinates[i])
-                end_coordinates.append(target_coordinates[i+1])
-        # initialize the subregion list with the first target
-        subregion_list = [target_coordinates[0]]
-        subregion_list.extend(end_coordinates)
-        # finalize list with the last target
-        subregion_list.append(target_coordinates[-1])
-        for i in range(0, len(subregion_list), 2):
-            subregions.append([subregion_list[i], subregion_list[i+1]])
-    regs = []
-    counter = 0
-    for reg in subregions:
-        tar_region = chrom + ":" + str(reg[0]) + "-" + str(reg[1])
-        regs.append([gene_name + "_S" + str(counter), tar_region])
-        counter += 1
-    return regs
 def mask_snps (region, snp_file, count_col, min_maf=0.03, min_count=10):
     """lower case mask SNPs in plasmodium genome, return fasta record"""
     # get sequence of the region
@@ -4577,6 +4595,7 @@ def mask_snps (region, snp_file, count_col, min_maf=0.03, min_count=10):
     # masked sequence
     fasta_rec = fasta_head + "\n" + fasta_seq
     return fasta_rec
+
 def exclude_snps (region, snp_file, maf_col=6, count_col=9, min_maf=0.03, min_count=10):
     """Prepare an exclude list to be used in boulder record.
     Gets SNPs from plasmodium snp file and assumes SNP length
@@ -4903,10 +4922,8 @@ def make_primers_multi(ext_list, lig_list, pro):
     return
 
 
-def primer_parser3 (input_file,
-                    primer3_output_DIR,
-                    bowtie2_input_DIR,
-                    parse_out, fasta=1, outp=1):
+def primer_parser3(input_file, primer3_output_DIR, bowtie2_input_DIR,
+                   parse_out, fasta=1, outp=1):
     """ parse a primer3 output file and generate a fasta file in bowtie
     input directory that only contains primer names and sequences to be
     used as bowtie2 input.
@@ -4938,36 +4955,19 @@ def primer_parser3 (input_file,
         if tag.startswith("SEQUENCE"):
             if tag == "SEQUENCE_ID":
                 new_value = value.split(",")[-1].replace("CHR", "chr")
-                """
-                # if chromosome name is chrx or chry, they should be changed to
-                # chrX and chrY.
-                temp_coord = get_coordinates(new_value)
-                temp_chrom = temp_coord[0]
-                if temp_chrom == "chrx":
-                    temp_chrom = "chrX"
-                elif temp_chrom == "chry":
-                    temp_chrom = "chrY"
-                # if the chromosome name is coming from an alternative assembly
-                # it looks like CHR7_KI270803V1_ALT in primer file while
-                # in the original files it looks like chr7_KI270803v1_alt
-                # so "ki" must be replaced with "KI"
-                elif "ki" in temp_chrom:
-                    temp_chrom = temp_chrom.replace("ki", "KI")
-                new_value = temp_chrom + ":" + str(temp_coord[1]) + "-" +\
-                            str(temp_coord[2])
-                """
-                primer_dic["sequence_information"][tag]= new_value
+                primer_dic["sequence_information"][tag] = new_value
             else:
                 primer_dic["sequence_information"][tag] = value
     # find how many left primers returned and create empty dictionary
     # for each primer in primer_information dict.
     for pair in lines:
         tag = pair[0]
-        value = pair [1]
+        value = pair[1]
         if tag == "PRIMER_LEFT_NUM_RETURNED":
-            # Add this to sequence information dic because it is sequence specific information
-            primer_dic["sequence_information"]["SEQUENCE_LEFT_NUM_RETURNED"] = value
-            num_left = value
+            # Add this to sequence information dic because it is sequence
+            # specific information
+            primer_dic["sequence_information"][
+                "SEQUENCE_LEFT_NUM_RETURNED"] = value
             # create empty dictionaries with primer name keys
             for i in range(int(value)):
                 primer_key = "PRIMER_LEFT_" + str(i)
@@ -4975,75 +4975,88 @@ def primer_parser3 (input_file,
     # do the same for right primers found
     for pair in lines:
         tag = pair[0]
-        value = pair [1]
+        value = pair[1]
         if tag == "PRIMER_RIGHT_NUM_RETURNED":
-            primer_dic["sequence_information"]["SEQUENCE_RIGHT_NUM_RETURNED"] = value
-            num_right = value
+            primer_dic["sequence_information"][
+                "SEQUENCE_RIGHT_NUM_RETURNED"] = value
             for i in range(int(value)):
                 primer_key = "PRIMER_RIGHT_" + str(i)
                 primer_dic["primer_information"][primer_key] = {}
-    # get sequence coordinate information to determine genomic coordinates of primers
-    # because primer information is relative to template sequence
-    sequence_coordinates = get_coordinates(primer_dic["sequence_information"]["SEQUENCE_ID"])
+    # get sequence coordinate information to determine genomic coordinates of
+    # primers because primer information is relative to template sequence
+    sequence_coordinates = get_coordinates(primer_dic[
+        "sequence_information"]["SEQUENCE_ID"])
     seq_chr = sequence_coordinates[0]
-    """
-    if seq_chr == "chrx":
-        seq_chr = "chrX"
-    elif seq_chr == "chry":
-        seq_chr = "chrY"
-    """
     seq_start = int(sequence_coordinates[1])
-    seq_end = int(sequence_coordinates[2])
     # get primer information from input file and add to primer dictionary
     for pair in lines:
         tag = pair[0]
-        value = pair [1]
-        if ((tag.startswith("PRIMER_LEFT_") or tag.startswith("PRIMER_RIGHT_")) and             (tag != "PRIMER_LEFT_NUM_RETURNED") and (tag != "PRIMER_RIGHT_NUM_RETURNED")):
+        value = pair[1]
+        if ((tag.startswith("PRIMER_LEFT_")
+             or tag.startswith("PRIMER_RIGHT_"))
+            and (tag != "PRIMER_LEFT_NUM_RETURNED")
+                and (tag != "PRIMER_RIGHT_NUM_RETURNED")):
             attributes = tag.split('_')
             # primer coordinates tag does not include an attribute value
             # it is only primer name = coordinates, so:
-            if len(attributes)>3:
-                # then this attribute is not coordinates and should have an attribute value
-                # such as TM or HAIRPIN etc.
+            if len(attributes) > 3:
+                # then this attribute is not coordinates and should have an
+                # attribute value such as TM or HAIRPIN etc.
                 primer_name = '_'.join(attributes[0:3])
                 attribute_value = '_'.join(attributes[3:])
-                primer_dic["primer_information"][primer_name][attribute_value] = value
+                primer_dic["primer_information"][primer_name][
+                    attribute_value] = value
             else:
                 # then this attribute is coordinates and has no attribute value
                 # give it an attribute valute "COORDINATES"
                 primer_name = '_'.join(attributes[0:3])
-                primer_dic["primer_information"][primer_name]['COORDINATES'] = value
+                primer_dic["primer_information"][primer_name][
+                    'COORDINATES'] = value
                 # the coordinates are relative to sequence template
                 # find the genomic coordinates
                 coordinate_values = value.split(",")
                 if tag.startswith("PRIMER_LEFT"):
-                    # sequence start is added to primer start to get genomic primer start
+                    # sequence start is added to primer start to get genomic
+                    # primer start
                     genomic_start = seq_start + int(coordinate_values[0])
-                    # primer len is added "to genomic start because it is a left primer
+                    # primer len is added "to genomic start because it is a
+                    # left primer
                     genomic_end = genomic_start + int(coordinate_values[1]) - 1
-                    primer_dic["primer_information"][primer_name]['GENOMIC_START'] = genomic_start
-                    primer_dic["primer_information"][primer_name]['GENOMIC_END'] = genomic_end
-                    primer_dic["primer_information"][primer_name]['CHR'] = seq_chr
-                    primer_dic["primer_information"][primer_name]['ORI'] = "forward"
+                    primer_dic["primer_information"][primer_name][
+                        'GENOMIC_START'] = genomic_start
+                    primer_dic["primer_information"][primer_name][
+                        'GENOMIC_END'] = genomic_end
+                    primer_dic["primer_information"][primer_name][
+                        'CHR'] = seq_chr
+                    primer_dic["primer_information"][primer_name][
+                        'ORI'] = "forward"
                 else:
-                    # sequence start is added to primer start to get genomic primer start
+                    # sequence start is added to primer start to get genomic
+                    # primer start
                     genomic_start = seq_start + int(coordinate_values[0])
-                    # primer len is subtracted from genomic start because it is a right primer
+                    # primer len is subtracted from genomic start because it is
+                    # a right primer
                     genomic_end = genomic_start - int(coordinate_values[1]) + 1
-                    primer_dic["primer_information"][primer_name]['GENOMIC_START'] = genomic_start
-                    primer_dic["primer_information"][primer_name]['GENOMIC_END'] = genomic_end
-                    primer_dic["primer_information"][primer_name]['CHR'] = seq_chr
-                    primer_dic["primer_information"][primer_name]['ORI'] = "reverse"
+                    primer_dic["primer_information"][primer_name][
+                        'GENOMIC_START'] = genomic_start
+                    primer_dic["primer_information"][primer_name][
+                        'GENOMIC_END'] = genomic_end
+                    primer_dic["primer_information"][primer_name][
+                        'CHR'] = seq_chr
+                    primer_dic["primer_information"][primer_name][
+                        'ORI'] = "reverse"
             # add NAME as a key to primer information dictionary
             primer_dic["primer_information"][primer_name]['NAME'] = primer_name
-    # if some primers were eliminated from initial primer3 output, remove from dictionary
+    # if some primers were eliminated from initial primer3 output, remove from
+    # dictionary
     for primer in list(primer_dic["primer_information"].keys()):
         if primer_dic["primer_information"][primer] == {}:
             primer_dic["primer_information"].pop(primer)
-    # dump the dictionary to json file in primer3_output_DIR if outp parameter is true
+    # dump the dictionary to json file in primer3_output_DIR if outp parameter
+    # is true
     if outp:
-        dict_file = open (primer3_output_DIR + parse_out, 'w')
-        json.dump(primer_dic, dict_file,indent=1)
+        dict_file = open(primer3_output_DIR + parse_out, 'w')
+        json.dump(primer_dic, dict_file, indent=1)
         dict_file.close()
     # generate a simple fasta file with primer names
     if fasta:
@@ -5052,7 +5065,7 @@ def primer_parser3 (input_file,
             # primer name is fasta header and sequence is fasta sequence
             fasta_head = primer
             fasta_line = primer_dic["primer_information"][primer]["SEQUENCE"]
-            outfile.write(">" + fasta_head + "\n" + fasta_line +"\n")
+            outfile.write(">" + fasta_head + "\n" + fasta_line + "\n")
         outfile.close()
     return primer_dic
 
@@ -5062,27 +5075,23 @@ def paralog_primer_worker(chores):
     p_dic = chores[1]
     p_coord = chores[2]
     p_copies = chores[3]
-    p_tm_diff = chores[4]
-    p_end_identity = chores[5]
-    p_temp_dir = chores[6]
-    p_settings = chores[7]
-    p_spec = chores[8]
-    Na = float(p_settings["Na"])
-    Mg = float(p_settings["Mg"])
-    conc = float(p_settings["oligo_conc"])
     chroms = p_coord["C0"]["chromosomes"]
     start = p_dic["GENOMIC_START"]
     end = p_dic["GENOMIC_END"]
     ref_coord = p_dic["COORDINATES"]
     primer_ori = p_dic["ORI"]
-    #para_start = p_coord["C0"][start]
-    #para_end = p_coord["C0"][end]
     p_dic["PARALOG_COORDINATES"] = {}
     primer_seq = p_dic["SEQUENCE"]
     # add reference copy as paralog
-    p_dic["PARALOG_COORDINATES"]["C0"] = {"SEQUENCE": primer_seq,                      "ORI": primer_ori,"CHR":chroms["C0"], "NAME":p_name,                      "GENOMIC_START": start, "GENOMIC_END": end, "COORDINATES":ref_coord,                      }
+    p_dic["PARALOG_COORDINATES"]["C0"] = {"SEQUENCE": primer_seq,
+                                          "ORI": primer_ori,
+                                          "CHR": chroms["C0"],
+                                          "NAME": p_name,
+                                          "GENOMIC_START": start,
+                                          "GENOMIC_END": end,
+                                          "COORDINATES": ref_coord}
     for c in p_copies:
-        if c!= "C0":
+        if c != "C0":
             # check if both ends of the primer has aligned with the reference
             try:
                 para_start = p_coord["C0"][c][start]
@@ -5092,18 +5101,31 @@ def paralog_primer_worker(chores):
                 continue
             para_primer_ori = para_start < para_end
             if para_primer_ori:
-                para_primer_key = chroms[c] + ":" + str(para_start) + "-" + str(para_end)
-                para_primer_seq = fasta_to_sequence(get_fasta(para_primer_key, p_spec))
-                p_dic["PARALOG_COORDINATES"][c] = {"SEQUENCE": para_primer_seq,                          "ORI": "forward","CHR":chroms[c], "NAME":p_name,                          "GENOMIC_START": para_start, "GENOMIC_END": para_end,                          "COORDINATES":ref_coord}
+                para_primer_key = (chroms[c] + ":" + str(para_start) + "-"
+                                   + str(para_end))
+                p_dic["PARALOG_COORDINATES"][c] = {"ORI": "forward",
+                                                   "CHR": chroms[c],
+                                                   "NAME": p_name,
+                                                   "GENOMIC_START": para_start,
+                                                   "GENOMIC_END": para_end,
+                                                   "COORDINATES": ref_coord,
+                                                   "KEY": para_primer_key}
             else:
-                para_primer_key = chroms[c] + ":" + str(para_end) + "-" + str(para_start)
-                para_primer_seq = reverse_complement(                                  fasta_to_sequence(get_fasta(para_primer_key, p_spec)))
-                p_dic["PARALOG_COORDINATES"][c] = {"SEQUENCE": para_primer_seq,                          "ORI": "reverse","CHR":chroms[c], "NAME":p_name,                          "GENOMIC_START": para_start, "GENOMIC_END": para_end,                          "COORDINATES":ref_coord}
+                para_primer_key = chroms[c] + ":" + str(para_end) + "-" + str(
+                   para_start)
+                p_dic["PARALOG_COORDINATES"][c] = {"ORI": "reverse",
+                                                   "CHR": chroms[c],
+                                                   "NAME": p_name,
+                                                   "GENOMIC_START": para_start,
+                                                   "GENOMIC_END": para_end,
+                                                   "COORDINATES": ref_coord,
+                                                   "KEY": para_primer_key}
 
     return [p_name, p_dic]
 
 
-def paralog_primers_multi (primer_dic, copies, coordinate_converter, settings,                           primer3_output_DIR, outname, species, outp = 0):
+def paralog_primers_multi(primer_dict, copies, coordinate_converter, settings,
+                          primer3_output_DIR, outname, species, outp=0):
     """ Take a primer dictionary file and add genomic start and end coordinates
     of all its paralogs."""
     # uncomment for using json object instead of dic
@@ -5112,42 +5134,71 @@ def paralog_primers_multi (primer_dic, copies, coordinate_converter, settings,  
     #     primer_dic = json.load(infile)
     # primer dict consists of 2 parts, sequence_information dict
     # and primer information dict. We wont'change the sequence_info part
-    primers = copy.deepcopy(primer_dic["primer_information"])
-    # get chromosomes of the paralog copies
-    chromosomes = coordinate_converter["C0"]["chromosomes"]
-    # allowed temperature difference for a primer to be considered binding
-    # to a paralog. For example, if its tm for ref copy is 60°C, and for C1 59,
-    # it will be considered satisfying tm restriction, if tm_diff is 2, but
-    # not satisfying if tm_diff is 0.
-    tm_diff = float(settings["tm_diff"])
-    # A specified number of nucleotides at the 3' of a primer and its paralog primer
-    # need to be identical for paralog primers to be considered valid.
-    end_identity = -1 * int(settings["3p_identity"])
-    # add paralog coordinate information for each primer in primers dic
-    chore_list = []
-    dics = []
-    # create a temp directory in temp_dir
-    tmp = primer3_output_DIR + "tmp/"
-    if not os.path.exists(tmp):
-        os.makedirs(tmp)
+    primers = primer_dict["primer_information"]
+    primer_keys = set()
     for primer in list(primers.keys()):
-        chore_list.append([primer, primers[primer], coordinate_converter,                          copies, tm_diff, end_identity, tmp, settings, species])
-    num_process = int(settings["processors"])
-    p = Pool(num_process)
-    p.map_async(paralog_primer_worker, chore_list, callback=dics.extend)
-    p.close()
-    p.join()
-    #print dics
-    for dic in dics:
-        primers[dic[0]] = dic[1]
-    out_dic = {}
-    out_dic["sequence_information"] = primer_dic["sequence_information"]
-    out_dic["primer_information"] = primers
+        p_name = primer
+        p_dic = primers[primer]
+        p_coord = coordinate_converter
+        p_copies = copies
+        chroms = p_coord["C0"]["chromosomes"]
+        start = p_dic["GENOMIC_START"]
+        end = p_dic["GENOMIC_END"]
+        ref_coord = p_dic["COORDINATES"]
+        primer_ori = p_dic["ORI"]
+        p_dic["PARALOG_COORDINATES"] = {}
+        primer_seq = p_dic["SEQUENCE"]
+        # add reference copy as paralog
+        p_dic["PARALOG_COORDINATES"]["C0"] = {"SEQUENCE": primer_seq,
+                                              "ORI": primer_ori,
+                                              "CHR": chroms["C0"],
+                                              "NAME": p_name,
+                                              "GENOMIC_START": start,
+                                              "GENOMIC_END": end,
+                                              "COORDINATES": ref_coord}
+        for c in p_copies:
+            if c != "C0":
+                # check if both ends of the primer has aligned with reference
+                try:
+                    para_start = p_coord["C0"][c][start]
+                    para_end = p_coord["C0"][c][end]
+                except KeyError:
+                    # do not add that copy if it is not aligned
+                    continue
+                para_primer_ori = para_start < para_end
+                if para_primer_ori:
+                    para_primer_key = (chroms[c] + ":" + str(para_start) + "-"
+                                       + str(para_end))
+                    p_dic["PARALOG_COORDINATES"][c] = {
+                        "ORI": "forward", "CHR": chroms[c], "NAME": p_name,
+                        "GENOMIC_START": para_start, "GENOMIC_END": para_end,
+                        "COORDINATES": ref_coord, "KEY": para_primer_key}
+                    primer_keys.add(para_primer_key)
+                else:
+                    para_primer_key = chroms[c] + ":" + str(
+                        para_end) + "-" + str(para_start)
+                    p_dic["PARALOG_COORDINATES"][c] = {
+                        "ORI": "reverse", "CHR": chroms[c], "NAME": p_name,
+                        "GENOMIC_START": para_start, "GENOMIC_END": para_end,
+                        "COORDINATES": ref_coord, "KEY": para_primer_key}
+                    primer_keys.add(para_primer_key)
+    if len(primer_keys) > 0:
+        primer_sequences = get_fasta_list(primer_keys, species)
+        for p in primers:
+            para = primers[p]["PARALOG_COORDINATES"]
+            for c in para:
+                if c != "C0":
+                    copy_dict = para[c]
+                    p_ori = copy_dict["ORI"]
+                    p_key = copy_dict["KEY"]
+                    p_seq = primer_sequences[p_key]
+                    if p_ori == "reverse":
+                        p_seq = reverse_complement(p_seq)
+                    copy_dict["SEQUENCE"] = primer_sequences[p_key]
     if outp:
         with open(primer3_output_DIR + outname, "w") as outf:
-            json.dump(out_dic, outf, indent=1)
-    shutil.rmtree(tmp)
-    return out_dic
+            json.dump(primer_dict, outf, indent=1)
+    return primer_dict
 
 
 def fasta_parser(fasta):
@@ -5161,7 +5212,7 @@ def fasta_parser(fasta):
             if line.startswith(">"):
                 header = line[1:-1].split(" ")[0]
                 if header in fasta_dic:
-                    print(("%s occurs multiple times in fasta file" %header))
+                    print(("%s occurs multiple times in fasta file" % header))
                 fasta_dic[header] = ""
                 continue
             try:
@@ -5178,9 +5229,15 @@ def fasta_to_sequence(fasta):
         return "".join(f[1:])
     else:
         return ""
+
+
 def get_sequence(region, species):
-    return fasta_to_sequence(get_fasta(region,species))
-def bowtie2_run (fasta_file, output_file, bowtie2_input_DIR, bowtie2_output_DIR, species,process_num=4,                 seed_MM=1, mode="-a", seed_len=18, gbar=1, local=0):
+    return fasta_to_sequence(get_fasta(region, species))
+
+
+def bowtie2_run(fasta_file, output_file, bowtie2_input_DIR,
+                bowtie2_output_DIR, species, process_num=4,
+                seed_MM=1, mode="-a", seed_len=18, gbar=1, local=0):
     """ Extract primer sequences from the fasta file,
     check alignments for given species genome(s), create
     sam output file(s). Species must be a list!"""
@@ -5326,6 +5383,7 @@ def parse_cigar(cigar):
             values = []
     return cig
 
+
 def get_cigar_length(cigar):
     """ Get the length of the reference sequence that a read is aligned to,
     given their cigar string."""
@@ -5365,7 +5423,7 @@ def parse_bowtie(primer_dict, bt_file, primer_out, primer3_output_DIR,
     # will need to have sequence information with them
     # region keys for hits (in chrx:begin-end format) will be
     # kept in a list for mass fasta extraction later.
-    keys = []
+    keys = set()
     #
     # read bowtie hits
     for line in infile:
@@ -5426,7 +5484,7 @@ def parse_bowtie(primer_dict, bt_file, primer_out, primer3_output_DIR,
                     hit_region_key = (chrom + ":" + str(hit_start)
                                       + "-" + str(hit_end))
                 # add region key to keys list for fasta retrieval later
-                keys.append(hit_region_key)
+                keys.add(hit_region_key)
                 # add all hit information to primer dictionary
                 try:
                     primers["primer_information"][primer_name][bowtie_key][
@@ -5460,7 +5518,7 @@ def parse_bowtie(primer_dict, bt_file, primer_out, primer3_output_DIR,
         # forward strand hits are added directly
         # reverse strand hits are reversed-complemented
         # so the hit is always in the primer orientation and
-        # and similar in sequence
+        # and similar in sequence"
         try:
             for h in primers["primer_information"][p][bowtie_key]:
                 if (primers["primer_information"][p]
@@ -5506,6 +5564,7 @@ def process_bowtie(primers, primer_out, primer3_output_DIR,
     # are alternative mip arms allowed/desired
     alt_arm = int(settings["alternative_arms"])
     bowtie_key = "bowtie_information_" + species
+    alt_keys = set([])
     # read bowtie hits
     for primer_name in primers['primer_information']:
         try:
@@ -5546,13 +5605,13 @@ def process_bowtie(primers, primer_out, primer3_output_DIR,
                 # for non-CNV regions, bowtie mapping should be exactly the
                 # same as genomic coordinates, so even if there is 1 bp
                 # difference, we'll count this as off target. For CNV regions,
-                # a more generous 100 bp padding will be allowed to account for
+                # a more generous 20 bp padding will be allowed to account for
                 # differences in our mapping and bowtie mapping. Bowtie mapping
                 # will be accepted as the accurate mapping and paralog
                 # coordinates will be changed accordingly.
                 map_padding = 1
                 if len(para) > 1:
-                    map_padding = 100
+                    map_padding = 20
                 for k in para:
                     para_ori = para[k]["ORI"]
                     para_chr = para[k]["CHR"]
@@ -5607,37 +5666,18 @@ def process_bowtie(primers, primer_out, primer3_output_DIR,
                                             alt_start,
                                             alt_end
                                         )
-                                        alt_primer_seq = get_sequence(
-                                            alt_primer_key,
-                                            species
-                                        )
                                     else:
                                         alt_primer_key = create_region(
                                             bt_chrom,
                                             alt_end,
                                             alt_start
                                         )
-                                        alt_primer_seq = get_sequence(
-                                            alt_primer_key,
-                                            species
-                                        )
-                                        alt_primer_seq = reverse_complement(
-                                            alt_primer_seq
-                                        )
-                                    if alt_primer_seq == "":
-                                        continue
                                     al[j] = {}
                                     al[j]["ALT_START"] = alt_start
                                     al[j]["ALT_END"] = alt_end
-                                    al[j]["ALT_SEQUENCE"] = alt_primer_seq
-                                    al[j]["ALT_TM"] = calcHeterodimerTm(
-                                        alt_primer_seq,
-                                        reverse_complement(alt_primer_seq),
-                                        mv_conc=Na,
-                                        dv_conc=Mg,
-                                        dntp_conc=0,
-                                        dna_conc=conc
-                                    )
+                                    al[j]["ALT_ORI"] = para_ori
+                                    al[j]["ALT_KEY"] = alt_primer_key
+                                    alt_keys.add(alt_primer_key)
                                 para[k]["ALTERNATIVES"] = al
                             else:
                                 para[k]["ALTERNATIVES"] = {}
@@ -5684,47 +5724,28 @@ def process_bowtie(primers, primer_out, primer3_output_DIR,
                             for j in range(-3, 4):
                                 if j == 0:
                                     continue
-                                alt_start = bt_begin + j
-                                alt_end = bt_end
+                                alt_start = para_begin + j
+                                alt_end = para_end
                                 if (alt_start < 0) or (alt_end < 0):
                                     continue
                                 if para_ori == "forward":
                                     alt_primer_key = create_region(
-                                        bt_chrom,
+                                        para_chr,
                                         alt_start,
                                         alt_end
                                     )
-                                    alt_primer_seq = get_sequence(
-                                        alt_primer_key,
-                                        species
-                                    )
                                 else:
                                     alt_primer_key = create_region(
-                                        bt_chrom,
+                                        para_chr,
                                         alt_end,
                                         alt_start
                                     )
-                                    alt_primer_seq = get_sequence(
-                                        alt_primer_key,
-                                        species
-                                    )
-                                    alt_primer_seq = reverse_complement(
-                                        alt_primer_seq
-                                    )
-                                if alt_primer_seq == "":
-                                    continue
                                 al[j] = {}
                                 al[j]["ALT_START"] = alt_start
                                 al[j]["ALT_END"] = alt_end
-                                al[j]["ALT_SEQUENCE"] = alt_primer_seq
-                                al[j]["ALT_TM"] = calcHeterodimerTm(
-                                    alt_primer_seq,
-                                    reverse_complement(alt_primer_seq),
-                                    mv_conc=Na,
-                                    dv_conc=Mg,
-                                    dntp_conc=0,
-                                    dna_conc=conc
-                                )
+                                al[j]["ALT_ORI"] = para_ori
+                                al[j]["ALT_KEY"] = alt_primer_key
+                                alt_keys.add(alt_primer_key)
                             para[k]["ALTERNATIVES"] = al
                         else:
                             para[k]["ALTERNATIVES"] = {}
@@ -5734,8 +5755,38 @@ def process_bowtie(primers, primer_out, primer3_output_DIR,
 
         except KeyError:
             continue
-
-    # write the (if specified) updated dictionary to the file
+    if len(alt_keys) > 0:
+        alt_sequences = get_fasta_list(alt_keys, species)
+        for primer_name in primers['primer_information']:
+            para = (primers['primer_information'][primer_name]
+                    ["PARALOG_COORDINATES"])
+            for k in para:
+                try:
+                    alt_candidates = para[k]["ALTERNATIVES"]
+                except KeyError:
+                    continue
+                for c in list(alt_candidates.keys()):
+                    try:
+                        alt_candidates[c]["ALT_TM"]
+                    except KeyError:
+                        alt_ori = alt_candidates[c]["ALT_ORI"]
+                        alt_key = alt_candidates[c]["ALT_KEY"]
+                        alt_seq = alt_sequences[alt_key]
+                        if alt_ori == "reverse":
+                            alt_seq = reverse_complement(alt_seq)
+                        if alt_seq != "":
+                            alt_tm = calcHeterodimerTm(
+                                alt_seq,
+                                reverse_complement(alt_seq),
+                                mv_conc=Na,
+                                dv_conc=Mg,
+                                dntp_conc=0,
+                                dna_conc=conc
+                            )
+                            alt_candidates[c]["ALT_TM"] = alt_tm
+                            alt_candidates[c]["ALT_SEQUENCE"] = alt_seq
+                        else:
+                            alt_candidates.pop(c)
     if outp:
         with open(primer3_output_DIR + primer_out, 'w') as outfile:
             json.dump(primers, outfile, indent=1)
@@ -5834,7 +5885,7 @@ def alternative(primer_dic, output_file,
 
 
 def score_paralog_primers(primer_dict, output_file, primer3_output_DIR,
-                           ext, mask_penalty, species, outp=1):
+                          ext, mask_penalty, species, outp=1):
     """ Score primers in a dictionary according to a scoring matrix.
     Scoring matrices are somewhat crude at this time.
     Arm GC content weighs the most, then arms GC clamp and arm length
@@ -6403,14 +6454,14 @@ def add_capture_sequence(primer_pairs, output_file, primer3_output_DIR,
     Extract the sequence between primers using the genome sequence and
     primer coordinates.
     """
-    capture_keys = []
+    capture_keys = set()
     for p_pair in primer_pairs["pair_information"]:
         pairs = primer_pairs["pair_information"][p_pair]["pairs"]
         for p in pairs:
             paralog_key = pairs[p]["chrom"] + ":" + str(pairs[p][
                 "capture_start"]) + "-" + str(pairs[p]["capture_end"])
             pairs[p]["capture_key"] = paralog_key
-            capture_keys.append(paralog_key)
+            capture_keys.add(paralog_key)
     capture_sequence_dic = get_fasta_list(capture_keys, species)
     for p_pair in primer_pairs["pair_information"]:
         pairs = primer_pairs["pair_information"][p_pair]["pairs"]
@@ -6476,7 +6527,7 @@ def make_mips(pairs, output_file, primer3_output_DIR, mfold_input_DIR,
                     ligation_sequence = l_para[a]["ALT_SEQUENCE"].upper()
                 value_found = 0
                 # search through already created alt pairs to see if this one
-                # is  already there.
+                # is already there.
                 for key, value in list(alt_sequences.items()):
                     if ([extension_sequence, ligation_sequence]
                             == value["sequences"]):
@@ -6519,7 +6570,7 @@ def make_mips(pairs, output_file, primer3_output_DIR, mfold_input_DIR,
     return pairs
 
 
-def check_hairpin(pairs, output_file, settings, outp=1):
+def check_hairpin(pairs, output_file, settings, output_dir, outp=1):
     """ Check possible hiybridization between the MIP arms themselves or
     between the MIP arms and the probe backbone. Remove MIPs with likely
     hairpins.
@@ -6583,8 +6634,10 @@ def check_hairpin(pairs, output_file, settings, outp=1):
                 lost_captures = mip_dict[m]["captures"]
                 mip_copies = pair_dict["captured_copies"]
                 mip_copies = list(set(mip_copies).difference(lost_captures))
+                pair_dict["captured_copies"] = mip_copies
                 alt_copies = pair_dict["alt_copies"]
                 alt_copies = list(set(alt_copies).difference(lost_captures))
+                pair_dict["alt_copies"] = alt_copies
                 mip_dict.pop(m)
             else:
                 mip_dict[m]["Melting Temps"] = {"arms_hp": ext_lig,
@@ -6601,13 +6654,14 @@ def check_hairpin(pairs, output_file, settings, outp=1):
         for m in mip_dict:
             hp_dict[m] = mip_dict[m]["Melting Temps"]
     if outp:
+        output_file = os.path.join(output_dir, output_file)
         with open(output_file, "w") as outfile:
             json.dump(pairs, outfile)
     return pairs
 
 
 def make_chunks(l, n):
-    """ Yield successive n-sized chunks from l.
+    """ Yield successive n-sized chunks from list l.
     """
     for i in range(0, len(l), n):
         yield l[i:i+n]
@@ -7523,6 +7577,8 @@ def strip_fasta (sequence):
     seq_list = sequence.split('\n')[1:]
     seq_join = "".join(seq_list)
     return seq_join
+
+
 def calculate_gc (sequence, fasta=0):
     if fasta:
         seq_list = sequence.split('\n')[1:]
@@ -7533,8 +7589,10 @@ def calculate_gc (sequence, fasta=0):
         seq = sequence.lower()
     gc_count = seq.count('g') + seq.count('c')
     at_count = seq.count('a') + seq.count('t')
-    percent = int (gc_count * 100 / (gc_count + at_count))
+    percent = int(gc_count * 100 / (gc_count + at_count))
     return percent
+
+
 def translate(sequence, three_letter = False):
     gencode = {
     'ATA':'I', 'ATC':'I', 'ATT':'I', 'ATG':'M',
@@ -7634,10 +7692,12 @@ def compatible_mip_check(m1, m2, overlap_same, overlap_opposite):
         return overlap <= overlap_same
     else:
         return overlap <= overlap_opposite
-def compatible_chains (primer_file, primer3_output_DIR, primer_out, output_file,
-                      overlap_same = 0, overlap_opposite = 0, outp = 1):
+
+
+def compatible_chains(primer_file, primer3_output_DIR, primer_out, output_file,
+                      overlap_same=0, overlap_opposite=0, outp=1):
     try:
-        with open (primer3_output_DIR + primer_file, "r") as infile:
+        with open(primer3_output_DIR + primer_file, "r") as infile:
             scored_mips = json.load(infile)
     except IOError:
         print("Primer file does not exist.")
@@ -7647,22 +7707,30 @@ def compatible_chains (primer_file, primer3_output_DIR, primer_out, output_file,
         for k in list(scored_mips["pair_information"].keys()):
             # get coordinates of mip arms
             d = scored_mips["pair_information"][k]
-            es = ext_start = d["extension_primer_information"]["GENOMIC_START"]
-            ee = ext_end = d["extension_primer_information"]["GENOMIC_END"]
-            ls = lig_start = d["ligation_primer_information"]["GENOMIC_START"]
-            le = lig_end = d["ligation_primer_information"]["GENOMIC_END"]
+            # extension arm start position
+            es = d["extension_primer_information"]["GENOMIC_START"]
+            # extension arm end position
+            ee = d["extension_primer_information"]["GENOMIC_END"]
+            # ligation arm start position
+            ls = d["ligation_primer_information"]["GENOMIC_START"]
+            # ligation arm end position
+            le = d["ligation_primer_information"]["GENOMIC_END"]
             # get mip orientation
             ori = d["orientation"]
-            #print k, es, ee, ls, le, ori
-            # create an incompatibility list
-            incompatible = []
-            compatible = []
+            # create an in/compatibility list
+            incompatible = set()
+            compatible = set()
+            # loop through all mips to populate compatibility lists
             for mip in list(scored_mips["pair_information"].keys()):
                 m = scored_mips["pair_information"][mip]
-                nes = next_ext_start = m["extension_primer_information"]                ["GENOMIC_START"]
-                nee = next_ext_end = m["extension_primer_information"]                ["GENOMIC_END"]
-                nls = next_lig_start = m["ligation_primer_information"]                ["GENOMIC_START"]
-                nle = next_lig_end = m["ligation_primer_information"]                ["GENOMIC_END"]
+                # next MIP's extension arm start position
+                nes = m["extension_primer_information"]["GENOMIC_START"]
+                # next MIP's extension arm end position
+                nee = m["extension_primer_information"]["GENOMIC_END"]
+                # next MIP's ligation arm start position
+                nls = m["ligation_primer_information"]["GENOMIC_START"]
+                # next MIP's ligation arm end position
+                nle = m["ligation_primer_information"]["GENOMIC_END"]
                 # get mip orientation
                 next_ori = m["orientation"]
                 compat = 0
@@ -7670,36 +7738,49 @@ def compatible_chains (primer_file, primer3_output_DIR, primer_out, output_file,
                 # check if the two mips are compatible in terms of
                 # orientation and coordinates
                 if ori == next_ori == "forward":
-                    if ((ls < nls) and (ls < nes + overlap_same)) or                      ((ls > nls) and (es + overlap_same> nls)):
+                    if (((ls < nls) and (ls < nes + overlap_same))
+                            or ((ls > nls) and (es + overlap_same > nls))):
                         compat = 1
                 elif ori == next_ori == "reverse":
-                    if ((ls < nls) and (es < nls + overlap_same)) or                       ((ls > nls) and (ls + overlap_same> nes)):
+                    if (((ls < nls) and (es < nls + overlap_same))
+                            or ((ls > nls) and (ls + overlap_same > nes))):
                         compat = 1
                 elif (ori == "forward") and (next_ori == "reverse"):
-                    if (ls < nls + overlap_opposite) or                     (es  + overlap_opposite> nes):
+                    if ((ls < nls + overlap_opposite)
+                            or (es + overlap_opposite > nes)):
                         compat = 1
-                    elif (es < nls) and (ee < nls + overlap_opposite) and                         (le  + overlap_opposite> nle) and                         (ls < nee + overlap_opposite):
+                    elif ((es < nls) and (ee < nls + overlap_opposite)
+                          and (le + overlap_opposite > nle)
+                          and (ls < nee + overlap_opposite)):
                         compat = 1
                         next_compat = 1
-                    elif (es > nls) and (es  + overlap_opposite> nle) and                          (ee < nee + overlap_opposite) and                         (le + overlap_opposite > nes):
+                    elif ((es > nls) and (es + overlap_opposite > nle)
+                          and (ee < nee + overlap_opposite)
+                          and (le + overlap_opposite > nes)):
                         compat = 1
                 elif (ori == "reverse") and (next_ori == "forward"):
-                    if (ls + overlap_opposite > nls) or                     (es < nes + overlap_opposite):
+                    if ((ls + overlap_opposite > nls)
+                            or (es < nes + overlap_opposite)):
                         compat = 1
-                    elif (ls > nes) and (ls + overlap_opposite > nee) and                         (le < nle + overlap_opposite) and                         (ee + overlap_opposite>nls):
+                    elif ((ls > nes) and (ls + overlap_opposite > nee)
+                          and (le < nle + overlap_opposite)
+                          and (ee + overlap_opposite > nls)):
                         compat = 1
-                    elif (ls < nes) and (le < nes + overlap_opposite) and                          (ee + overlap_opposite > nee) and                         (es < nle + overlap_opposite):
+                    elif ((ls < nes) and (le < nes + overlap_opposite)
+                          and (ee + overlap_opposite > nee)
+                          and (es < nle + overlap_opposite)):
                         compat = 1
                         next_compat = 1
                 if not compat:
-                    incompatible.append(mip)
+                    incompatible.add(mip)
                 if next_compat:
-                    compatible.append(mip)
+                    compatible.add(mip)
             d["incompatible"] = incompatible
             d["compatible"] = compatible
-        #f = open(primer3_output_DIR + output_file, "w")
-        f = []
-        def compatible_recurse (l):
+
+        mip_sets = set()
+
+        def compatible_recurse(l):
             """
             Take a list, l,  of numbers that represent a mip set with
             their corresponding "place" in the mip dictionary, and index
@@ -7709,31 +7790,25 @@ def compatible_chains (primer_file, primer3_output_DIR, primer_out, output_file,
             in the rest of the list. Recurse until the subset does not have
             any mips. Append each compatible subset to a final result list, f.
             """
-            incomp = list(l)
+            # create a set of mips that are incompatible with any mip in
+            # the starting list.
+            incomp = set(l)
             for il in l:
-                incomp.extend(scored_mips["pair_information"][il]["incompatible"])
-            comp = set(
-                scored_mips["pair_information"][l[-1]]["compatible"]
-            ).difference(incomp)
+                incomp.update(scored_mips["pair_information"][il][
+                    "incompatible"])
+            # create a set of mips that can be the "next" mip that can be
+            # added to the mip list
+            comp = scored_mips["pair_information"][l[-1]][
+                "compatible"].difference(incomp)
+            # if there are mips that can be added, call compatible_recurse
+            # function for each of those mips
             if len(comp) > 0:
                 for n in comp:
                     compatible_recurse(l + [n])
+            # stop recursing when the mip chain cannot be elongated
             else:
-                #f.write(",".join(l) + "\n")
-                """
-                l_co = []
-                for member in l:
-                    d = scored_mips["pair_information"][member]
-                    es = d["extension_primer_information"]["GENOMIC_START"]
-                    ee = d["extension_primer_information"]["GENOMIC_END"]
-                    ls = d["ligation_primer_information"]["GENOMIC_START"]
-                    le = d["ligation_primer_information"]["GENOMIC_END"]
-                    l_co.extend([es, ee, ls, le])
-                l.append([[min(l_co),
-                          max(l_co)]])
+                mip_sets.add(frozenset(l))
 
-                """
-                f.append(l)
         keys = list(scored_mips["pair_information"].keys())
         for k in keys:
             comp_list = scored_mips["pair_information"][k]["compatible"]
@@ -7744,67 +7819,46 @@ def compatible_chains (primer_file, primer3_output_DIR, primer_out, output_file,
                     # compatible_recurse function
                     compatible_recurse([k, m])
             else:
-                #comp_list = [k]
-                #f.write(k + "\n")
-                """
-                d = scored_mips["pair_information"][k]
-                es = d["extension_primer_information"]["GENOMIC_START"]
-                ee = d["extension_primer_information"]["GENOMIC_END"]
-                ls = d["ligation_primer_information"]["GENOMIC_START"]
-                le = d["ligation_primer_information"]["GENOMIC_END"]
-                f.append([k, [[min([es, ee, ls, le]),
-                          max([es, ee, ls, le])]]])
-                """
-                f.append([k])
-        fs = [frozenset(fset) for fset in f]
-        set_count = len(fs)
+                mip_sets.add(frozenset([k]))
+        # the initial mip sets only contain mip chains. We can expand each
+        # such set by merging with other sets after removing incompatible
+        # mips from the second set.
+        set_count = len(mip_sets)
         counter = 0
-        while((set_count < 10000) and (counter <= 20)):
+        expanded_mipset = True
+        while((set_count < 10000) and (counter <= 20) and expanded_mipset):
             counter += 1
-            new_fs = set()
-            for s1 in fs:
+            new_mip_sets = set()
+            expanded_mipset = False
+            for s1 in mip_sets:
                 inc = set()
                 for m in s1:
-                    inc.update(scored_mips["pair_information"][m]["incompatible"])
-                for s2 in fs:
-                    if s1 != s2:
-                        s3 = s2.difference(inc)
-                        if len(s3) > 0:
-                            new_fs.add(s1.union(s3))
-                        else:
-                            new_fs.add(s1)
-            fs = new_fs
-            if len(fs) < 30000:
-                new_fs = set()
-                for s1 in fs:
-                    for s2 in fs:
-                        if s1 != s2:
-                            if s1.issubset(s2):
-                                break
-                    else:
-                        new_fs.add(s1)
-                fs = new_fs
-            set_count = len(fs)
-            if 30000 > set_count > 10000:
-                fs = [set(s) for s in fs]
-                new_fs = set()
-                for s1 in fs:
-                    inc = set()
-                    for m in s1:
-                        inc.update(scored_mips["pair_information"][m]["incompatible"])
-                    for s2 in fs:
-                        if s1 != s2:
-                            s1.update(s2.difference(inc))
-                    new_fs.add(frozenset(s1))
-                fs = new_fs
+                    inc.update(scored_mips["pair_information"][m][
+                        "incompatible"])
+                for s2 in mip_sets.difference(s1):
+                    s3 = s2.difference(inc).difference(s1)
+                    if len(s3) > 0:
+                        new_mip_sets.add(frozenset(s1.union(s3)))
+                        expanded_mipset = True
+            mip_sets = new_mip_sets
+            new_mip_sets = set()
+            for s1 in mip_sets:
+                for s2 in mip_sets.difference(s1):
+                    if s1.issubset(s2):
+                        break
+                else:
+                    new_mip_sets.add(s1)
+            mip_sets = new_mip_sets
+            set_count = len(mip_sets)
         if outp:
             with open(primer3_output_DIR + output_file, "w") as outfile:
-                outfile.write("\n".join([",".join(s) for s in fs]) + "\n")
-        #f.close()
-        #print len(output)
+                outfile.write("\n".join([",".join(s) for s in mip_sets])
+                              + "\n")
         with open(primer3_output_DIR + primer_out, "w") as outfile:
-            json.dump(scored_mips, outfile, indent=1)
-    return fs
+            pickle.dump(scored_mips, outfile)
+    return mip_sets
+
+
 def compatible_mips(primer_file, primer3_output_DIR, primer_out, output_file,
                overlap_same = 0, overlap_opposite = 0):
     try:
@@ -9248,11 +9302,12 @@ def design_mips(design_dir, g):
     print(("Designing MIPs for ", g))
     try:
         Par = mod.Paralog(design_dir + g + "/resources/" + g + ".rinfo")
-        Par.run()
+        Par.run_paralog()
         if Par.copies_captured:
             print(("All copies were captured for paralog ", Par.paralog_name))
         else:
-            print(("Some copies were NOT captured for paralog ", Par.paralog_name))
+            print(("Some copies were NOT captured for paralog ",
+                   Par.paralog_name))
         if Par.chained_mips:
             print(("All MIPs are chained for paralog ", Par.paralog_name))
         else:
@@ -9267,11 +9322,12 @@ def design_mips_worker(design_list):
     print(("Designing MIPs for ", g))
     try:
         Par = mod.Paralog(design_dir + g + "/resources/" + g + ".rinfo")
-        Par.run()
+        Par.run_paralog()
         if Par.copies_captured:
             print(("All copies were captured for paralog ", Par.paralog_name))
         else:
-            print(("Some copies were NOT captured for paralog ", Par.paralog_name))
+            print(("Some copies were NOT captured for paralog ",
+                   Par.paralog_name))
         if Par.chained_mips:
             print(("All MIPs are chained for paralog ", Par.paralog_name))
         else:
@@ -9279,6 +9335,8 @@ def design_mips_worker(design_list):
     except Exception as e:
         print((g, str(e), " FAILED!!!"))
     return 0
+
+
 def design_mips_multi(design_dir, g_list, num_processor):
     chore_list = [[design_dir, g] for g in g_list]
     res = []
@@ -9290,6 +9348,8 @@ def design_mips_multi(design_dir, g_list, num_processor):
     except Exception as e:
         res.append(str(e))
     return res
+
+
 def unmask_fasta(masked_fasta, unmasked_fasta):
     """ Unmask lowercased masked fasta file, save """
     with open(masked_fasta) as infile, open(unmasked_fasta, "w") as outfile:
@@ -9299,22 +9359,26 @@ def unmask_fasta(masked_fasta, unmasked_fasta):
             else:
                 outfile.write(line)
     return
+
+
 def fasta_to_fastq(fasta_file, fastq_file):
     """ Create a fastq file from fasta file with dummy quality scores."""
     fasta = fasta_parser(fasta_file)
     fastq_list = []
     for f in fasta:
-        fastq_list.append("@" + f )
+        fastq_list.append("@" + f)
         fastq_list.append(fasta[f])
         fastq_list.append("+")
         fastq_list.append("H" * len(fasta[f]))
     with open(fastq_file, "w") as outfile:
         outfile.write("\n".join(fastq_list))
     return
+
+
 def parasight (resource_dir,
                design_info_file,
-               designed_gene_list = None,
-               extra_extension = ".extra"):
+               designed_gene_list=None,
+               extra_extension=".extra"):
     with open(design_info_file, "rb") as infile:
         design_info = pickle.load(infile)
     output_list = ["#!/usr/bin/env bash"]
@@ -9381,6 +9445,8 @@ def parasight (resource_dir,
     with open(resource_dir + "visualize", "w") as outfile:
         outfile.write("\n".join(visualization_list))
     return
+
+
 def parasight_mod (resource_dir,
                design_info_file,
                   species,
@@ -9618,11 +9684,15 @@ def parasight_shift (resource_dir,
     with open(resource_dir + "visualize_mod", "w") as outfile:
         outfile.write("\n".join(visualization_list))
     return
+
+
 def parasight_print(gene_list, extra_suffix = ".extra"):
     for g in gene_list:
         print(("cd ../" + g))
         print(("parasight76.pl -showseq "+ g + ".show "
                + "-extra " + g + extra_suffix))
+
+
 def rescue_mips(design_dir,
                 paralog_name,
                 redesign_list,
@@ -10046,13 +10116,6 @@ def make_snp_vcf(variant_file, haplotype_file, call_info_file,
     collapsed_vars.sort_index(axis=1, level=["CHROM", "POS"], inplace=True)
     collapsed_refs.sort_index(axis=1, level=["CHROM", "POS"], inplace=True)
     collapsed_cov.sort_index(axis=1, level=["CHROM", "POS"], inplace=True)
-    """
-    try:
-        collapsed_refs.columns = collapsed_vars.columns
-        collapsed_cov.columns = collapsed_vars.columns
-    except ValueError:
-        return collapsed_refs, collapsed_vars
-    """
     collapsed_refs.columns = collapsed_vars.columns
     collapsed_cov.columns = collapsed_vars.columns
     # merge the variant, reference and coverage count tables to get a "variant
@@ -10500,7 +10563,7 @@ def process_results(wdir,
     # merging. These will be used for corresponding columns
     # for targets that are not observed
     if targets_file is not None:
-        targets = pd.read_table(targets_file)
+        targets = pd.read_table(targets_file).drop_duplicates()
         join_dict = {"intersection": "inner",
                      "union": "outer",
                      "targets": "right",
@@ -10651,6 +10714,8 @@ def process_results(wdir,
         variant_counts.shape[0],
         len(variant_counts["VKEY"].unique())
     ))
+    # remove "Targeted" column from var counts prior to merge
+    var_counts.drop("Targeted", axis=1, inplace=True)
     variant_counts = variant_counts.merge(var_counts,
                                           how="inner").drop(
         ["Variant Samples",

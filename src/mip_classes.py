@@ -418,7 +418,6 @@ class Locus:
                     alleles.pop(-1)
                     allele_counts.pop(-1)
                     allele_counts = list(map(int, list(map(float, allele_counts))))
-                    #major_allele_count = max(allele_counts)
                     reference_allele_count = allele_counts[0]
                     total_allele_count = sum(allele_counts)
                     maf = float(total_allele_count
@@ -448,13 +447,13 @@ class Locus:
                 # snps from ucsc are 0-offset. change to 1-offset
                 if d["copy_begin"] != d["copy_end"]:
                     d["copy_begin"] += 1
-                if c!= "C0":
+                if c != "C0":
                     try:
                         begin = pcoordinates[c][d["copy_begin"]]
                         end = pcoordinates[c][d["copy_end"]]
                     except KeyError:
-                        # if the snp is in a region of the copy
-                        # that is not aligned to the ref, we will not add the SNP
+                        # if the snp is in a region of the copy that is not
+                        # aligned to the ref, we will not add the SNP
                         continue
                 else:
                     begin = d["copy_begin"]
@@ -466,7 +465,8 @@ class Locus:
                 else:
                     d["begin"] = begin
                     d["end"] = end
-                snps[c][d["chrom"] + ":" + str(d["begin"]) + "-" + str(d["end"])] = d
+                snps[c][d["chrom"] + ":" + str(d["begin"]) + "-" + str(
+                    d["end"])] = d
         return snps
 
     def get_snps(self):
@@ -572,15 +572,15 @@ class Locus:
 
     def get_variants(self):
         columns = ["chrom", "begin", "end", "base",
-         "copy_chrom", "copy_begin", "copy_end", "copy_base",
-         "size_difference", "orientation",
-         "AN", "AC", "snp_id", "type", "variant_type", "copy_id"]
+                   "copy_chrom", "copy_begin", "copy_end", "copy_base",
+                   "size_difference", "orientation",
+                   "AN", "AC", "snp_id", "type", "variant_type", "copy_id"]
         coordinate_converter = self.pcoordinates
         chrom = coordinate_converter["C0"]["chromosomes"]["C0"]
         variant_dicts = {"pdiffs": self.pdiffs,
-                        "snps": self.snps,
-                        "extra_snps": self.extra_snps,
-                        "must": self.must}
+                         "snps": self.snps,
+                         "extra_snps": self.extra_snps,
+                         "must": self.must}
         all_variants = []
         for variant_type in variant_dicts:
             vd = variant_dicts[variant_type]
@@ -603,10 +603,11 @@ class Locus:
                         copy_begin = snp["copy_begin"]
                         alleles = snp["alleles"]
                         allele_counts = list(map(int, snp["info"]["AC"]))
-                        a_total = max_alleles = max(list(map(int, snp["info"]["AN"])))
+                        a_total = max_alleles = max(list(map(
+                            int, snp["info"]["AN"])))
                         for allele_index in range(len(alleles)):
                             split_snp = {"copy_chrom": copy_chrom,
-                                        "chrom": chrom}
+                                         "chrom": chrom}
                             a = alleles[allele_index]
                             a_count = allele_counts[allele_index]
                             # check if allele is insertion/deletion or snp
@@ -633,19 +634,19 @@ class Locus:
                                 split_snp["AC"] = a_count
                                 split_snp["AN"] = a_total
                                 split_snp["type"] = "SNV"
-                            elif a_len < 0: # deletion allele
-                                # deletions in vcf are represented so: 100 ATTT AT
-                                # meaning the bases at positions 102 and 103 are deleted
+                            elif a_len < 0:  # deletion allele
+                                # deletions in vcf are represented so:
+                                # 100 ATTT AT meaning the bases at
+                                # positions 102 and 103 are deleted
                                 # the position we have as begin is 100
                                 copy_deletion_begin = (copy_begin
-                                                       + len(a)
-                                                       - 1
-                                                      )# this corresponds
-                                # to the last undeleted base before deletion, 101
+                                                       + len(a) - 1)
+                                # this corresponds to the last undeleted base
+                                # before deletion, 101
                                 copy_deletion_end = (copy_begin
-                                                     + len(copy_base)
-                                                    )# this corresponds
-                                # to the first undeleted base after deletion, 104
+                                                     + len(copy_base))
+                                # this corresponds to the first undeleted base
+                                # after deletion, 104
                                 if copy_id != "C0":
                                     deletion_coord = [
                                         coordinate_converter[copy_id]
@@ -658,7 +659,8 @@ class Locus:
                                 else:
                                     deletion_begin = copy_deletion_begin
                                     deletion_end = copy_deletion_end
-                                split_snp["copy_begin"] = copy_deletion_begin + 1
+                                split_snp["copy_begin"] = (copy_deletion_begin
+                                                           + 1)
                                 split_snp["copy_end"] = copy_deletion_end - 1
                                 split_snp["copy_base"] = copy_base[len(a):]
                                 split_snp["begin"] = deletion_begin + 1
@@ -668,20 +670,22 @@ class Locus:
                                 split_snp["AC"] = a_count
                                 split_snp["AN"] = a_total
                                 split_snp["type"] = "deletion"
-                            elif a_len > 0: # insertion allele
+                            elif a_len > 0:  # insertion allele
                                 # insertions are represented so: 100 AAA AAATT
                                 # showing a 2 bp insertion between positions
-                                # 102 and 103, the begin position we have is 100
-                                copy_insertion_begin = copy_begin + len(copy_base) - 1
-                                # this position corresponds to the position before
-                                # the insertion, 102
+                                # 102 and 103, the begin position we have is
+                                # 100
+                                copy_insertion_begin = copy_begin + len(
+                                    copy_base) - 1
+                                # this position corresponds to the position
+                                # before the insertion, 102
                                 copy_insertion_end = copy_insertion_begin + 1
                                 if copy_id != "C0":
                                     insertion_coord = [
                                         coordinate_converter[copy_id]
-                                            [copy_insertion_begin],
+                                        [copy_insertion_begin],
                                         coordinate_converter[copy_id]
-                                            [copy_insertion_end]
+                                        [copy_insertion_end]
                                     ]
                                     insertion_begin = min(insertion_coord)
                                     insertion_end = max(insertion_coord)
@@ -693,7 +697,7 @@ class Locus:
                                 split_snp["copy_base"] = copy_base[-1]
                                 split_snp["begin"] = insertion_begin
                                 split_snp["end"] = insertion_begin
-                                split_snp["base"] = a[-a_len -1 :]
+                                split_snp["base"] = a[-a_len - 1:]
                                 split_snp["size_difference"] = a_len
                                 split_snp["AC"] = a_count
                                 split_snp["AN"] = a_total
@@ -707,9 +711,12 @@ class Locus:
                             var.append(variant_type)
                             var.append(copy_id)
                             all_variants.append(var)
-        self.all_variants = pd.DataFrame(all_variants, columns = columns)
-        self.all_variants["AF"] = self.all_variants["AC"]/self.all_variants["AN"]
-        snp_df = self.all_variants.loc[self.all_variants["variant_type"] == "snps"]
+        self.all_variants = pd.DataFrame(all_variants, columns=columns)
+        self.all_variants["AF"] = self.all_variants["AC"]/self.all_variants[
+            "AN"]
+        snp_df = self.all_variants.loc[self.all_variants["variant_type"]
+                                       == "snps"]
+
         def split_snps(r):
             r_chrom = r["chrom"]
             r_begin = r["begin"]
@@ -728,37 +735,33 @@ class Locus:
                 split_snps(snp_df.loc[i])
             )
         try:
-            split = pd.concat(split_result_list, ignore_index = True)
+            split = pd.concat(split_result_list, ignore_index=True)
         except ValueError:
             split = pd.DataFrame(split_result_list,
-                                 columns = ["chrom",
-                                           "position",
-                                           "AC",
-                                           "AN"])
+                                 columns=["chrom", "position", "AC", "AN"])
         # if there are no snps, skip groupby
         # to avoid losing chrom and position columns
         if not split.empty:
             split = split.groupby(["chrom", "position"]).aggregate(
-                        {"AC": sum,
-                        "AN": max}
-                    ).reset_index()
+                {"AC": sum, "AN": max}).reset_index()
         split["AF"] = split["AC"]/split["AN"]
         maf_filter = float(self.rinfo["CAPTURE"]["S0"]["maf_for_arm_design"])
         split = split.loc[split["AF"] >= maf_filter]
         self.split_snps = split
-        diff_df = self.all_variants.loc[self.all_variants["variant_type"] != "snps"]
+        diff_df = self.all_variants.loc[self.all_variants["variant_type"]
+                                        != "snps"]
         split_diff_list = [
             pd.DataFrame([[diff_df.loc[diff_index]["chrom"],
                            i] for i in range(
                 diff_df.loc[diff_index]["begin"],
                 diff_df.loc[diff_index]["end"] + 1)],
-                     columns = ["chrom", "position"])
+                     columns=["chrom", "position"])
             for diff_index in diff_df.index]
         try:
             split_diff_df = pd.concat(split_diff_list).drop_duplicates()
         except ValueError:
             split_diff_df = pd.DataFrame(split_diff_list,
-                                        columns = ["chrom", "position"])
+                                         columns=["chrom", "position"])
         self.split_pdiffs = split_diff_df
         ######################################################################
         # prepare a dataframe with potential size variation in the region
@@ -766,28 +769,28 @@ class Locus:
         # for each position we'll try to find the largest indel which
         # has a minor allele frequency of >= insertion_filter
 
-        insertion_df = self.all_variants.loc[(self.all_variants["type"] == "insertion")
-                     & (self.all_variants["variant_type"] == "snps")]
+        insertion_df = self.all_variants.loc[
+            (self.all_variants["type"] == "insertion")
+            & (self.all_variants["variant_type"] == "snps")]
         insertion_filter = float(self.rinfo["CAPTURE"]["S0"]["maf_for_indels"])
         filt_insertions = insertion_df.loc[(insertion_df["AF"]
                                            >= insertion_filter)]
         if not filt_insertions.empty:
-            max_sizes = filt_insertions.groupby(["copy_chrom",
-                                     "copy_begin"])["size_difference"].max().reset_index(
-            ).rename(columns = {"size_difference": "max_size"})
-            insertion_df = insertion_df.merge(max_sizes, how = "inner")
+            max_sizes = filt_insertions.groupby(
+                ["copy_chrom", "copy_begin"])["size_difference"].max()
+            max_sizes = max_sizes.reset_index().rename(
+                columns={"size_difference": "max_size"})
+            insertion_df = insertion_df.merge(max_sizes, how="inner")
             # Collapse on position and select the largest insertion
             collapsed_insertions = insertion_df.groupby(["copy_chrom",
-                                                       "copy_begin"]).agg(
-                {"copy_end": "first",
-                "AC": sum,
-                "AN": max,
-                "max_size": max}
+                                                         "copy_begin"]).agg(
+                {"copy_end": "first", "AC": sum, "AN": max, "max_size": max}
             ).reset_index()
             # filter for maf
-            collapsed_insertions["AF"] = collapsed_insertions["AC"]/collapsed_insertions["AN"]
-            filt_insertions = collapsed_insertions.loc[collapsed_insertions["AF"]
-                                                 >= maf_filter]
+            collapsed_insertions["AF"] = (collapsed_insertions["AC"]
+                                          / collapsed_insertions["AN"])
+            filt_insertions = collapsed_insertions.loc[collapsed_insertions[
+                "AF"] >= maf_filter]
         self.insertions = filt_insertions
         return
 
@@ -906,9 +909,10 @@ class Locus:
                             [capture_targets[ct][c][t]["begin"],
                              capture_targets[ct][c][t]["end"]])
             subregions = mip.merge_overlap(target_coordinates,
-                                           spacer = 2 * flank)
+                                           spacer=2*flank)
 
         return subregions
+
     def rinfo_parser(self, rinfo_file):
         settings_dict = {}
         must_list = []
@@ -934,9 +938,11 @@ class Locus:
                             for i in range(len(values)):
                                 fname = field_names[key][i]
                                 try:
-                                    settings_dict[key][fname][field] = values[i]
+                                    settings_dict[key][fname][field] = values[
+                                        i]
                                 except KeyError:
-                                    settings_dict[key][fname] = {field : values[i]}
+                                    settings_dict[key][fname] = {
+                                        field: values[i]}
         must_dict = {}
         must_list = np.transpose(must_list).tolist()
         try:
@@ -948,53 +954,55 @@ class Locus:
             pass
         settings_dict["MUST"] = must_dict
         return settings_dict
+
     def get_gene_names(self, rinfo):
         """ Currently Unused """
         gene_names = []
         region_dic = rinfo["REGION"]
         for r in region_dic:
-            gene_names.append([region_dic[r]["copyname"], region_dic[r]["chrom"]])
+            gene_names.append([region_dic[r]["copyname"],
+                              region_dic[r]["chrom"]])
         r = []
         for g in gene_names:
             if g not in r:
                 r.append(g)
         return r
-    def add_subregion (self, name, subregion):
-        """ Add a subregion object to subregions dictionary of a segment or gene."""
+
+    def add_subregion(self, name, subregion):
+        """ Add a subregion object to subregions dictionary of a segment."""
         self.subregions[name] = Subregion(self, name, subregion)
+
     def make_primers(self):
         ext_list = []
         lig_list = []
         ext_set = self.rinfo["SETTINGS"]["extension"]["settings_file"]
         lig_set = self.rinfo["SETTINGS"]["ligation"]["settings_file"]
-        ext_out_name = self.rinfo["SETTINGS"]["extension"]["primer3_output_name"]
-        lig_out_name = self.rinfo["SETTINGS"]["ligation"]["primer3_output_name"]
         processors = int(self.rinfo["SETTINGS"]["mip"]["processors"])
-        if ext_out_name == "none":
-            ext_out_name = ""
-        if lig_out_name == "none":
-            lig_out_name = ""
         for s in self.subregions:
             dir_in = self.subregions[s].primer3_input_DIR
             extension_boulder = self.subregions[s].fullname + "_ext"
             ligation_boulder = self.subregions[s].fullname + "_lig"
             dir_out = self.subregions[s].primer3_output_DIR
-            extension_out = self.subregions[s].fullname + ext_out_name + "_ext"
-            ligation_out = self.subregions[s].fullname + lig_out_name + "_lig"
-            ext_list.append([extension_boulder, ext_set, extension_out, dir_in, dir_out])
-            lig_list.append([ligation_boulder, lig_set, ligation_out, dir_in, dir_out])
-            self.subregions[s].primers = {"original":{"extension":extension_out, "ligation":ligation_out}}
+            extension_out = self.subregions[s].fullname + "_ext"
+            ligation_out = self.subregions[s].fullname + "_lig"
+            ext_list.append([extension_boulder, ext_set, extension_out, dir_in,
+                             dir_out])
+            lig_list.append([ligation_boulder, lig_set, ligation_out, dir_in,
+                             dir_out])
+            self.subregions[s].primers = {"original": {
+                "extension": extension_out, "ligation": ligation_out}}
         mip.make_primers_multi(ext_list, lig_list, processors)
         return
 
         return
+
     def set_segment_rinfo(self):
-        #self.rinfo = self.rinfo_parser(self.rinfo_file)
         # this function is only to be called from
         # set_rinfo function of the paralog class
         self.rinfo = self.paralog.rinfo
         for s in self.subregions:
             self.subregions[s].update_subregion()
+
 
 class Paralog(Locus):
     """ Represent a gene or a paralogus gene family family.
@@ -1079,6 +1087,7 @@ class Paralog(Locus):
                 break
         else:
             self.copies_captured = True
+
     def run_segments(self, seg):
         """ Make subregions and primers for each segment/gene."""
         if seg.designed:
@@ -1087,7 +1096,7 @@ class Paralog(Locus):
             s = seg.make_subregions()
             if len(s) == 0:
                 print(("Nothing interesting in segment %s of paralog %s"
-                       %(seg.segment_name, seg.paralog.paralog_name)))
+                       % (seg.segment_name, seg.paralog.paralog_name)))
                 return "failed"
             s.sort(key=itemgetter(0))
             counter = 0
@@ -1102,7 +1111,8 @@ class Paralog(Locus):
             with open(self.cwd + self.paralog_name, "wb") as savefile:
                 pickle.dump(self, savefile)
             return
-    def run_subregions (self, sub):
+
+    def run_subregions(self, sub):
         """ Run mip design pipeline for the given subregion."""
         if sub.designed:
             return
@@ -1113,13 +1123,20 @@ class Paralog(Locus):
                 sub.score_primers()
                 sub.pick_primer_pairs()
                 sub.make_mips()
+
+                subprocess.call(["mv", self.cwd + self.paralog_name,
+                                 self.cwd + self.paralog_name + ".last"])
+
+                with open(self.cwd + self.paralog_name, "wb") as savefile:
+                    pickle.dump(self, savefile)
+
                 sub.hairpin()
                 sub.score_mips()
                 sub.compatible()
                 sub.best_mipset()
                 sub.designed = True
                 subprocess.call(["mv", self.cwd + self.paralog_name,
-                             self.cwd + self.paralog_name + ".last"])
+                                 self.cwd + self.paralog_name + ".last"])
 
                 with open(self.cwd + self.paralog_name, "wb") as savefile:
                     pickle.dump(self, savefile)
@@ -1127,23 +1144,23 @@ class Paralog(Locus):
                 sub.failed = True
                 print(sub.fullname, " failed due to error ", str(e))
         else:
-            print(sub.fullname, " design has failed before and will not be repeated.")
+            print(sub.fullname, " design has failed before",
+                  " and will not be repeated.")
             return
-    def run(self):
-        """ Top function that runs other functions in the design pipeline.
-        Runs run_segments for segments and genes, run_subregions for subregions."""
+
+    def run_paralog(self):
+        """ Top function that runs other functions in the design pipeline. Runs
+        run_segments for segments and genes, run_subregions for subregions."""
         if self.designed:
             return
         else:
             for s in self.segments:
                 seg = self.segments[s]
-                #print "making subregions and primers for segment", seg.segment_name
                 if not seg.designed:
                     run_result = self.run_segments(seg)
                     if run_result == "failed":
                         continue
                 for subregion in seg.subregions:
-                    #print "Working on subregion", subregion, "of segment", seg.segment_name
                     sub = seg.subregions[subregion]
                     self.run_subregions(sub)
             self.check_chained()
@@ -1157,6 +1174,7 @@ class Paralog(Locus):
 
             with open(self.cwd + self.paralog_name, "wb") as savefile:
                     pickle.dump(self, savefile)
+
     def order_mips(self):
         """ Extract summary information from mips in the paralog and
         output text files for ordering mips."""
@@ -1165,42 +1183,52 @@ class Paralog(Locus):
         outfile = open(self.mipfile, "w")
         # create a list to hold all lines to be output
         outfile_list = []
-        # create mips attribute for the paralog, a dictionary to hold mip objects
+        # create mips attribute for the paralog, a dictionary to hold
+        # mip objects
         self.mips = {}
         # create locus info dictionary that holds coordinate information about
         # everything in the locus. This will be used in drawing by Parasight.
-        locus_info = {"segments":{}, "exons":[], "subregions":{}, "snps":{},                      "primers":{}, "all_targets":{}}
+        locus_info = {"segments": {}, "exons": [], "subregions": {},
+                      "snps": {}, "primers": {}, "all_targets": {}}
         # populate the locus info dictionary
-        l = self.segments
-        for s in l:
+        paralog_segments = self.segments
+        for s in paralog_segments:
             # make sure each segment is designed and there was no failure
-            if l[s].designed and not l[s].failed:
+            if paralog_segments[s].designed and not paralog_segments[s].failed:
                 # add segment coordinates
-                locus_info["segments"][l[s].segment_name] = {"chrom":l[s].chrom,
-                                                             "begin":l[s].begin,
-                                                             "end":l[s].end,
-                                                             "copies":",".join(l[s].copies)}
+                locus_info["segments"][paralog_segments[s].segment_name] = {
+                    "chrom": paralog_segments[s].chrom,
+                    "begin": paralog_segments[s].begin,
+                    "end": paralog_segments[s].end,
+                    "copies": ",".join(paralog_segments[s].copies)}
                 # add exons in the segment
-                locus_info["exons"].extend(list(l[s].exons))
-                # add targets in the segment (snps, must capture regions, pdiffs etc.)
-                locus_info["all_targets"].update(l[s].targets)
+                locus_info["exons"].extend(list(paralog_segments[s].exons))
+                # add targets in the segment (snps, must capture regions,
+                # pdiffs etc.)
+                locus_info["all_targets"].update(paralog_segments[s].targets)
                 # add subregion information
-                for sub in l[s].subregions:
+                for sub in paralog_segments[s].subregions:
                     # make sure all subregions run through without error
-                    if  l[s].subregions[sub].designed and not l[s].subregions[sub].failed:
-                        # add each mip from this subregion to the paralog object
-                        self.mips.update(l[s].subregions[sub].mips                                         ["best_mipset"]["dictionary"]["mips"])
+                    if (
+                        paralog_segments[s].subregions[sub].designed
+                        and not paralog_segments[s].subregions[sub].failed
+                    ):
+                        # add each mip from this subregion to the paralog
+                        self.mips.update(paralog_segments[s].subregions[
+                            sub].mips["best_mipset"]["dictionary"]["mips"])
                     # add subregion coordinates
-                    locus_info["subregions"][l[s].subregions[sub].fullname] =                         {"chrom":l[s].subregions[sub].chrom,
-                         "begin": l[s].subregions[sub].begin,
-                         "end": l[s].subregions[sub].end}
+                    locus_info["subregions"][paralog_segments[s].subregions[
+                        sub].fullname] = {
+                        "chrom": paralog_segments[s].subregions[sub].chrom,
+                        "begin": paralog_segments[s].subregions[sub].begin,
+                        "end": paralog_segments[s].subregions[sub].end}
                     # all potential primers in the subregion
-                    locus_info["primers"][l[s].subregions[sub].fullname] = (
-                       {"extension":
-                        l[s].subregions[sub].primers["parsed"]["extension"]["dictionary"],
-                        "ligation":
-                        l[s].subregions[sub].primers["parsed"]["ligation"]["dictionary"]
-                       }
+                    locus_info["primers"][paralog_segments[s].subregions[
+                        sub].fullname] = (
+                       {"extension": paralog_segments[s].subregions[
+                           sub].primers["parsed"]["extension"]["dictionary"],
+                        "ligation": paralog_segments[s].subregions[
+                            sub].primers["parsed"]["ligation"]["dictionary"]}
                     )
         # add copies in the segment to locus info
         segment_dic = self.segment_dic["S0"]
@@ -1228,17 +1256,22 @@ class Paralog(Locus):
         locus_info["targets"] = {}
         for c in self.must:
             for t in self.must[c]:
-                locus_info["targets"][self.must[c][t]["name"]] = {"chrom": self.must[c][t]["chrom"],
-                                                                   "begin": self.must[c][t]["begin"],
-                                                                   "end": self.must[c][t]["end"]}
+                locus_info["targets"][self.must[c][t]["name"]] = {
+                    "chrom": self.must[c][t]["chrom"],
+                    "begin": self.must[c][t]["begin"],
+                    "end": self.must[c][t]["end"]
+                }
         # header for mip order output
-        outline =   ["#pair_name", "mip_name", "chrom", "mip_start", "capture_start",
-                "capture_end", "mip_end", "orientation", "tech_score", "func_score",
-                "mip_sequence", "unique_captures", "must_captured", "captured_copies"]
+        outline = ["#pair_name", "mip_name", "chrom", "mip_start",
+                   "capture_start", "capture_end", "mip_end", "orientation",
+                   "tech_score", "func_score", "mip_sequence",
+                   "unique_captures", "must_captured", "captured_copies"]
         outfile_list.append("\t".join(outline))
         must_cap = copy.deepcopy(self.must)
-        # order mip names in the paralog object according to their genomic start location
-        mip_names_ordered = sorted(self.mips, key=lambda mip_key: self.mips[mip_key].                                                        mip["C0"]["mip_start"])
+        # order mip names in the paralog object according to their genomic
+        # start location
+        mip_names_ordered = sorted(self.mips, key=lambda mip_key: self.mips[
+            mip_key].mip["C0"]["mip_start"])
         locus_info["mips"] = []
         # rename mips showing their place on the genome
         name_counter = 0
@@ -1262,11 +1295,11 @@ class Paralog(Locus):
                 for t in self.must[c]:
                     try:
                         if t in caps:
-                            line = "Target " + self.must[c][t]["name"] + " is captured."
-                            #print line
+                            line = ("Target " + self.must[c][t]["name"]
+                                    + " is captured.")
                             print(("Target %s of %s is captured."
-                                  %(self.must[c][t]["name"],
-                                   self.paralog_name)))
+                                   % (self.must[c][t]["name"],
+                                      self.paralog_name)))
                             outfile_list.append("#" + line)
                             # add the name of captured target to list
                             ms.append(self.must[c][t]["name"])
@@ -1274,12 +1307,12 @@ class Paralog(Locus):
                             must_cap[c].pop(t)
                     except KeyError:
                         continue
-            # if none of the must-targets captured by this mip, add none to ms list
+            # if none of the must-targets captured by this mip, add none to ms
             if len(ms) == 0:
                 ms = ["none"]
             # create extensions for mips to account for alternative mips for
-            # different copies. A mip that captures reference copy will have _ref
-            # extension, alternatives will have _alt#
+            # different copies. A mip that captures reference copy will have
+            # _ref extension, alternatives will have _alt#
             for key in m.mip_dic["mip_information"]:
                 if key == "ref":
                     fullname_extension = "_ref"
@@ -1287,16 +1320,14 @@ class Paralog(Locus):
                     fullname_extension = "_" + key
                 else:
                     continue
-                # ["#pair_name", "mip_name", "chrom", "mip_start", "capture_start",
-                # "capture_end", "mip_end", "orientation", "tech_score", "func_score","mip_sequence",
-                # "unique_captures", "must_captured", "captured_copies"]
-                outlist = [m.name, m.fullname + fullname_extension, m.chromosome, m.mip_start,
-                           m.capture_start, m.capture_end, m.mip_end, m.orientation,
-                            m.tech_score, m.func_score,
-                            m.mip_dic["mip_information"][key]["SEQUENCE"],
-                           ",".join(unique_caps), ",".join(ms), ",".join(m.captured_copies)]
+                outlist = [m.name, m.fullname + fullname_extension,
+                           m.chromosome, m.mip_start, m.capture_start,
+                           m.capture_end, m.mip_end, m.orientation,
+                           m.tech_score, m.func_score,
+                           m.mip_dic["mip_information"][key]["SEQUENCE"],
+                           ",".join(unique_caps), ",".join(ms),
+                           ",".join(m.captured_copies)]
                 locus_info["mips"].append(outlist)
-                #print key, m.mip_dic["mip_information"][key]["captures"]
                 outline = "\t".join(map(str, outlist))
                 outfile_list.append(outline)
             name_counter += 1
@@ -1306,17 +1337,16 @@ class Paralog(Locus):
             if len(must_cap[c]) > 0:
                 target_remaining = True
                 for t in must_cap[c]:
-                    line = "Target" + " " + self.must[c][t]["name"] + " is NOT captured."
+                    line = ("Target" + " " + self.must[c][t]["name"]
+                            + " is NOT captured.")
                     outfile_list.append("#" + line)
-                    #print line
                     print(("Target %s of %s is NOT captured."
-                          %(self.must[c][t]["name"],
-                           self.paralog_name)))
+                           % (self.must[c][t]["name"],
+                              self.paralog_name)))
         if not target_remaining:
             line = "All targets have been captured."
             self.must_captured = True
             outfile_list.append("#" + line + "\n")
-            #print line
             print(("All targets have been captured for %s."
                   % self.paralog_name))
         else:
@@ -1331,6 +1361,7 @@ class Paralog(Locus):
         outfile.close()
         self.locus_info = locus_info
         return
+
     def print_info(self):
         """ Create visualization files for parasight."""
         # set drawing parameters for each label: color, vertical placement, thickness
@@ -1684,7 +1715,7 @@ class Subregion(Locus):
         self.chrom = self.locus.chrom
         self.snps = self.locus.snps
         self.capture = self.locus.rinfo["CAPTURE"]["S0"]
-        if int(self.capture["max_mips"]) == 1:
+        if int(self.capture["single_mip"]):
             self.single = True
         else:
             self.single = False
@@ -2201,6 +2232,7 @@ class Subregion(Locus):
             self.primers["original"]["mip"]["dictionary"],
             self.primers["hairpin"]["filename"],
             self.settings,
+            self.primer3_output_DIR,
             outp=int(self.locus.rinfo["CAPTURE"]["S0"]["output_level"])
         )
         self.primers["hairpin"]["dictionary"] = hp
@@ -2385,12 +2417,10 @@ class Subregion(Locus):
                             best_score = total_score
                             best_set = mip_set
                             best_caps = list(set(merged_caps))
-                            best_must = must_set
                     except NameError:
                         best_score = total_score
                         best_set = mip_set
                         best_caps = list(set(merged_caps))
-                        best_must = must_set
                 # check if mips need to be chained and
                 # run the while loop for chained mips
                 best_set_chained = False
@@ -2498,32 +2528,46 @@ class Subregion(Locus):
                                 capture_coordinates = []
                                 for mip_key in mip_set:
                                     mip_obj = self.mips["hairpin"][mip_key]
-                                    uniq = mip_obj.capture_info["unique_captures"]
+                                    uniq = mip_obj.capture_info[
+                                        "unique_captures"]
                                     merged_caps.extend(uniq)
                                     must_captured.extend(mip_obj.captures)
-                                    targets_captured.extend(mip_obj.captured_targets)
-                                    if mip_obj.tech_score > 0 and mip_obj.func_score > 0:
-                                        mip_scores.append(float(mip_obj.tech_score * mip_obj.func_score)/1000)
+                                    targets_captured.extend(
+                                        mip_obj.captured_targets)
+                                    if (mip_obj.tech_score > 0
+                                            and mip_obj.func_score > 0):
+                                        mip_scores.append(float(
+                                            mip_obj.tech_score
+                                            * mip_obj.func_score)/1000)
                                     else:
-                                        mip_scores.append(float(mip_obj.tech_score + mip_obj.func_score)/1000)
-                                    mcoord = sorted([mip_obj.extension["C0"]["GENOMIC_START"],
-                                          mip_obj.ligation["C0"]["GENOMIC_START"],
-                                          mip_obj.extension["C0"]["GENOMIC_END"],
-                                          mip_obj.ligation["C0"]["GENOMIC_END"]])
-                                    capture_coordinates.append([mcoord[1] + 1,
-                                                           mcoord[2] - 1])
+                                        mip_scores.append(float(
+                                            mip_obj.tech_score
+                                            + mip_obj.func_score)/1000)
+                                    mcoord = sorted(
+                                        [mip_obj.extension["C0"][
+                                         "GENOMIC_START"],
+                                         mip_obj.ligation["C0"][
+                                         "GENOMIC_START"],
+                                         mip_obj.extension["C0"][
+                                         "GENOMIC_END"],
+                                         mip_obj.ligation["C0"][
+                                         "GENOMIC_END"]])
+                                    capture_coordinates.append(
+                                        [mcoord[1] + 1, mcoord[2] - 1])
                                 merged_capture_coordinates = mip.merge_overlap(
-                                    capture_coordinates
-                                )
+                                    capture_coordinates)
                                 coverage_size = 0
                                 for covered_region in merged_capture_coordinates:
-                                    target_overlap = mip.overlap(intervals, covered_region)
+                                    target_overlap = mip.overlap(
+                                        intervals, covered_region)
                                     try:
                                         coverage_size += (target_overlap[1]
-                                                          - target_overlap[0] + 1)
+                                                          - target_overlap[0]
+                                                          + 1)
                                     except IndexError:
                                         coverage_size += 0
-                                chain_coverage = float(coverage_size)                                                        /subregion_size
+                                chain_coverage = float(
+                                    coverage_size) / subregion_size
                                 cb = chain_coverage * chain_bonus
                                 scp = len(set(merged_caps)) * set_copy_bonus
                                 must_set = list(set(must_captured))
@@ -2534,20 +2578,19 @@ class Subregion(Locus):
                                     best_score = total_score
                                     best_set = mip_set
                                     best_caps = list(set(merged_caps))
-                                    best_must = must_set
                 for mip_key in best_set:
                     mip_obj = self.mips["hairpin"][mip_key]
-                    self.mips["best_mipset"]["dictionary"]["mips"][mip_key] = mip_obj
+                    self.mips["best_mipset"]["dictionary"]["mips"][mip_key] = (
+                        mip_obj)
                 self.mips["best_mipset"]["dictionary"]["caps"] = best_caps
                 self.mips["best_mipset"]["dictionary"]["score"] = best_score
                 # if there are no compatible mipsets, then find the best mip
-            elif self.single and (len(list(mip_dic["pair_information"].keys())) > 0):
-                #best_score = 0
-                #best_mip = ""
+            elif (self.single
+                  and (len(list(mip_dic["pair_information"].keys())) > 0)):
                 for mip_key in list(mip_dic["pair_information"].keys()):
                     mip_obj = self.mips["hairpin"][mip_key]
                     uniq = mip_obj.capture_info["unique_captures"]
-                    if  mip_obj.tech_score != 0 and  mip_obj.func_score != 0:
+                    if mip_obj.tech_score != 0 and mip_obj.func_score != 0:
                         total_score = mip_obj.tech_score * mip_obj.func_score
                     else:
                         total_score = mip_obj.tech_score + mip_obj.func_score
@@ -2560,43 +2603,52 @@ class Subregion(Locus):
                         best_score = total_score
                         best_mip = mip_key
                         best_caps = uniq
-                self.mips["best_mipset"]["dictionary"]["mips"][best_mip] = self.mips["original"][best_mip]
+                self.mips["best_mipset"]["dictionary"]["mips"][best_mip] = (
+                    self.mips["original"][best_mip])
                 self.mips["best_mipset"]["dictionary"]["caps"] = best_caps
                 self.mips["best_mipset"]["dictionary"]["score"] = best_score
                 best_set_chained = False
             else:
-                print("No mips available for target region %s" %self.fullname)
+                print("No mips available for target region %s" % self.fullname)
         # if compatibility test should be skipped
         else:
-            with open(self.primer3_output_DIR + self.mips["scored_filtered"]["filename"], "r") as infile:
+            with open(self.primer3_output_DIR + self.mips["scored_filtered"][
+                    "filename"], "r") as infile:
                 scored_dic = json.load(infile)
             mip_dic = scored_dic["pair_information"]
-            # create a dic for diffs captured cumulatively by all mips in the set
+            # create a dic for diffs captured cumulatively by all mips in the
+            # set
             merged_caps = []
-            # create a list for mip scores based on mip sequence and not the captured diffs
+            # create a list for mip scores based on mip sequence and not the
+            # captured diffs
             mip_scores = []
             mip_coordinates = []
             for mip_key in mip_dic:
-                # extract the captured diffs from the mip_dic and append to capture list
+                # extract the captured diffs from the mip_dic and append to
+                # capture list
                 mip_obj = self.mips["original"][mip_key]
                 uniq = mip_obj.capture_info["unique_captures"]
                 merged_caps.extend(uniq)
                 if mip_obj.tech_score != 0 and mip_obj.func_score != 0:
-                    mip_scores.append(float(mip_obj.tech_score * mip_obj.func_score)/1000)
+                    mip_scores.append(float(mip_obj.tech_score
+                                      * mip_obj.func_score)/1000)
                 else:
-                    mip_scores.append(float(mip_obj.tech_score + mip_obj.func_score)/1000)
+                    mip_scores.append(float(mip_obj.tech_score
+                                      + mip_obj.func_score)/1000)
                 mip_scores.append(mip_obj.tech_score * mip_obj.func_score)
                 mcoor = sorted([mip_obj.extension["C0"]["GENOMIC_START"],
-                                     mip_obj.extension["C0"]["GENOMIC_END"],
-                                     mip_obj.ligation["C0"]["GENOMIC_START"],
-                                     mip_obj.ligation["C0"]["GENOMIC_END"]])
+                                mip_obj.extension["C0"]["GENOMIC_END"],
+                                mip_obj.ligation["C0"]["GENOMIC_START"],
+                                mip_obj.ligation["C0"]["GENOMIC_END"]])
                 mip_coordinates.append([mcoor[1]+1, mcoor[2]+1])
             # calculate total score of mip set
             total_score = ((len(set(merged_caps))**2) + 1) * sum(mip_scores)
             self.mips["best_mipset"]["dictionary"]["mips"] = {}
             for smip in scored_dic["pair_information"]:
-                self.mips["best_mipset"]["dictionary"]["mips"][smip] = self.mips["hairpin"][smip]
-            self.mips["best_mipset"]["dictionary"]["caps"] = list(set(merged_caps))
+                self.mips["best_mipset"]["dictionary"]["mips"][smip] = (
+                    self.mips["hairpin"][smip])
+            self.mips["best_mipset"]["dictionary"]["caps"] = list(set(
+                merged_caps))
             self.mips["best_mipset"]["dictionary"]["score"] = total_score
             # get the overlap of mip coordinates
             # the overlap should have only a single coordinate
@@ -2610,13 +2662,15 @@ class Subregion(Locus):
         # remove MIPs that do not capture any targets
         # only if capture type is "targets"
         try:
-            selection_skip = int(self.locus.rinfo["SELECTION"]["compatibility"]["skip"])
+            selection_skip = int(self.locus.rinfo["SELECTION"][
+                "compatibility"]["skip"])
         except KeyError:
             selection_skip = False
         if (self.capture["capture_type"] == "targets") and not selection_skip:
             best_mipset = self.mips["best_mipset"]["dictionary"]["mips"]
             for mip_key in list(best_mipset.keys()):
-                if len(best_mipset[mip_key].capture_info["captured_targets"]) == 0:
+                if len(best_mipset[mip_key].capture_info[
+                        "captured_targets"]) == 0:
                     best_mipset.pop(mip_key)
         return
 
@@ -2817,7 +2871,7 @@ class Mip():
         # define matrix
         cap_gc_con = {}
         for i in range(100):
-            if i<20:
+            if i < 20:
                 cap_gc_con[i] = worst
             elif i < 35:
                 cap_gc_con[i] = mid
