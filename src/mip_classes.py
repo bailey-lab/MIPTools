@@ -15,6 +15,7 @@ import numpy as np
 import pandas as pd
 print("Classes reloading.")
 
+
 class Locus:
     """
     Locus class provides a construct for creating objects representing
@@ -603,7 +604,7 @@ class Locus:
                         copy_begin = snp["copy_begin"]
                         alleles = snp["alleles"]
                         allele_counts = list(map(int, snp["info"]["AC"]))
-                        a_total = max_alleles = max(list(map(
+                        a_total = max(list(map(
                             int, snp["info"]["AN"])))
                         for allele_index in range(len(alleles)):
                             split_snp = {"copy_chrom": copy_chrom,
@@ -612,7 +613,7 @@ class Locus:
                             a_count = allele_counts[allele_index]
                             # check if allele is insertion/deletion or snp
                             a_len = len(a) - len(copy_base)
-                            if a_len == 0: # snv allele
+                            if a_len == 0:  # snv allele
                                 split_snp["copy_begin"] = copy_begin
                                 split_snp["copy_end"] = copy_begin
                                 split_snp["copy_base"] = copy_base
@@ -688,10 +689,8 @@ class Locus:
                                         [copy_insertion_end]
                                     ]
                                     insertion_begin = min(insertion_coord)
-                                    insertion_end = max(insertion_coord)
                                 else:
                                     insertion_begin = copy_insertion_begin
-                                    insertion_end = copy_insertion_end
                                 split_snp["copy_begin"] = copy_insertion_begin
                                 split_snp["copy_end"] = copy_insertion_begin
                                 split_snp["copy_base"] = copy_base[-1]
@@ -1175,9 +1174,8 @@ class Paralog(Locus):
             with open(self.cwd + self.paralog_name, "wb") as savefile:
                     pickle.dump(self, savefile)
 
-    def order_mips(self):
-        """ Extract summary information from mips in the paralog and
-        output text files for ordering mips."""
+    def summarize_mips(self):
+        """ Extract summary information from mips in the paralog."""
         # output for listing brief mip information such as name and sequence
         self.mipfile = self.cwd + self.paralog_name + ".mips"
         outfile = open(self.mipfile, "w")
@@ -1360,37 +1358,49 @@ class Paralog(Locus):
         outfile.write("\n".join(outfile_list))
         outfile.close()
         self.locus_info = locus_info
+        # Below attributes will be assigned by sort_mips function
+        # when some mips are selected to be included or excluded from
+        # the design. If no such selection is used, we assign them here
+        # to the "unselected" values.
+        self.selected_mips = self.mips
+        self.selectedfile = self.extrafile
+        self.selected_mipfile = self.mipfile
         return
 
     def print_info(self):
         """ Create visualization files for parasight."""
-        # set drawing parameters for each label: color, vertical placement, thickness
+        # set drawing parameters for each label: color, vertical placement,
+        # thickness
         info = {"exons": {"color": "steel blue", "offset": -15, "width": 4},
-                     "copies":{"color":["dark slate blue", "slate blue"],
-                                "offset": [-10, 1.5], "width": 2},
-                     "extension":{"color": ["cyan4"], "offset":[-35, -10, -30], "width":4},
-                     "ligation":{"color": ["maroon"], "offset":[-35, -10, -30], "width": 4},
-                     "capture":{"color": ["black", "gray"], "offset":[-35, -10, -30], "width": 2},
-                     "subregions":{"color":"rosy brown", "offset": -21, "width": 4},
-                     "targets":{"color":"gold", "offset": -26, "width": 8},
-                     "snps":{"color":"red", "offset": -26, "width": 4},
-                     "pdiffs":{"color":"dark green", "offset": -26, "width": 4},
-                     "primers":{"color": {"forward_extension": "cyan4",
-                                         "reverse_extension": "maroon",
-                                         "forward_ligation": "maroon",
-                                         "reverse_ligation": "cyan4"},
-                                "offset": {"forward_extension": -22.5,
-                                         "reverse_extension": -20.5,
-                                         "forward_ligation":  -22,
-                                         "reverse_ligation": -20},
-                                "width": {"forward_extension": 0.5,
-                                         "reverse_extension": 0.5,
-                                         "forward_ligation":  0.5,
-                                         "reverse_ligation": 0.5}}}
+                "copies": {"color": ["dark slate blue", "slate blue"],
+                           "offset": [-10, 1.5], "width": 2},
+                "extension": {"color": ["cyan4"], "offset": [-35, -10, -30],
+                              "width": 4},
+                "ligation": {"color": ["maroon"], "offset": [-35, -10, -30],
+                             "width": 4},
+                "capture": {"color": ["black", "gray"],
+                            "offset": [-35, -10, -30], "width": 2},
+                "subregions": {"color": "rosy brown", "offset": -21,
+                               "width": 4},
+                "targets": {"color": "gold", "offset": -26, "width": 8},
+                "snps": {"color": "red", "offset": -26, "width": 4},
+                "pdiffs": {"color": "dark green", "offset": -26, "width": 4},
+                "primers": {"color": {"forward_extension": "cyan4",
+                                      "reverse_extension": "maroon",
+                                      "forward_ligation": "maroon",
+                                      "reverse_ligation": "cyan4"},
+                            "offset": {"forward_extension": -22.5,
+                                       "reverse_extension": -20.5,
+                                       "forward_ligation": -22,
+                                       "reverse_ligation": -20},
+                            "width": {"forward_extension": 0.5,
+                                      "reverse_extension": 0.5,
+                                      "forward_ligation":  0.5,
+                                      "reverse_ligation": 0.5}}}
 
         outlist = ["seq", "begin", "end", "label", "color", "offset", "width",
-                    "name", "uniq_copies", "targets_capped", "copies_bound",
-                  "tech_score"]
+                   "name", "uniq_copies", "targets_capped", "copies_bound",
+                   "tech_score"]
 
         begin_coordinates = []
         end_coordinates = []
@@ -1401,60 +1411,45 @@ class Paralog(Locus):
         mips = self.locus_info["mips"]
         targets = self.locus_info["targets"]
         primers = self.locus_info["primers"]
-        snps = self.segments["S0"].split_snps.to_dict(orient = "index")
-        pdiffs = self.segments["S0"].split_pdiffs.to_dict(orient = "index")
-        all_targets = self.locus_info["all_targets"]
+        snps = self.segments["S0"].split_snps.to_dict(orient="index")
+        pdiffs = self.segments["S0"].split_pdiffs.to_dict(orient="index")
         for c in sorted(copies):
             chrom = copies[c]["chrom"]
             copy_number = int(c[1:])
-            #copynum =  len(segments[s]["copies"].split(","))
-            #width = info["segments"]["width"] * copynum
             width = info["copies"]["width"]
             begin_coordinates.append(copies[c]["begin"])
             end_coordinates.append(copies[c]["end"])
-            outlist = [copies[c]["chrom"],
-                       copies[c]["begin"],
-                       copies[c]["end"],
-                       "copy",
-                       info["copies"]["color"][copy_number%2],
-                       info["copies"]["offset"][0] + \
-                       width * copy_number * info["copies"]["offset"][1],
-                       width,
-                       copies[c]["name"], c]
+            outlist = [copies[c]["chrom"], copies[c]["begin"],
+                       copies[c]["end"], "copy",
+                       info["copies"]["color"][copy_number % 2],
+                       (info["copies"]["offset"][0] +
+                        width * copy_number * info["copies"]["offset"][1]),
+                       width, copies[c]["name"], c]
             outfile_list.append("\t".join(map(str, outlist)))
         for s in subregions:
-            outlist = [subregions[s]["chrom"],
-                       subregions[s]["begin"],
-                       subregions[s]["end"],
-                       "subregion",
+            outlist = [subregions[s]["chrom"], subregions[s]["begin"],
+                       subregions[s]["end"], "subregion",
                        info["subregions"]["color"],
                        info["subregions"]["offset"],
                        info["subregions"]["width"], s]
             outfile_list.append("\t".join(map(str, outlist)))
         for s in exons:
-            outlist = [chrom,
-                       s[0],
-                       s[1],
-                       "exon",
-                       info["exons"]["color"],
-                       info["exons"]["offset"],
-                       info["exons"]["width"], s]
+            outlist = [chrom, s[0], s[1], "exon", info["exons"]["color"],
+                       info["exons"]["offset"], info["exons"]["width"], s]
             outfile_list.append("\t".join(map(str, outlist)))
         for s in targets:
-            outlist = [targets[s]["chrom"],
-                       targets[s]["begin"],
-                       targets[s]["end"]+1,
-                       "target",
-                       info["targets"]["color"],
-                       info["targets"]["offset"],
+            outlist = [targets[s]["chrom"], targets[s]["begin"],
+                       targets[s]["end"] + 1,  "target",
+                       info["targets"]["color"], info["targets"]["offset"],
                        info["targets"]["width"], s]
             outfile_list.append("\t".join(map(str, outlist)))
         # information in mips is organized in a list
         # ["#pair_name", "mip_name", "chrom", "mip_start", "capture_start",
-        # "capture_end", "mip_end", "orientation", "tech_score", "func_score","mip_sequence",
-        # "unique_captures", "must_captured", "captured_copies"]
+        # "capture_end", "mip_end", "orientation", "tech_score", "func_score",
+        # "mip_sequence", "unique_captures", "must_captured",
+        # "captured_copies"]
         for i in mips:
-            coordinates = [[i[2], i[3], i[4] -1],
+            coordinates = [[i[2], i[3], i[4] - 1],
                            [i[2], i[4], i[5]],
                            [i[2], i[5] + 1, i[6]]]
             # check if the mip covers the reference (ending with _ref)
@@ -1464,7 +1459,6 @@ class Paralog(Locus):
             except ValueError:
                 mip_number = -1
             mip_number += 1
-            #print mip_number
             if i[7] == "forward":
                 this_arm = "extension"
                 next_arm = "capture"
@@ -1484,7 +1478,8 @@ class Paralog(Locus):
                 prt.extend(coordinates[j])
                 prt.append(armtype)
                 prt.append(info[armtype]["color"][color_index])
-                prt.append(info[armtype]["offset"][offset_index] +                            info[armtype]["offset"][1] * mip_number)
+                prt.append(info[armtype]["offset"][offset_index]
+                           + info[armtype]["offset"][1] * mip_number)
                 prt.append(info[armtype]["width"])
                 prt.append(i[1])
                 if armtype == "capture":
@@ -1503,21 +1498,14 @@ class Paralog(Locus):
 
                 outfile_list.append("\t".join(map(str, prt)))
         for s in snps:
-            outlist = [snps[s]["chrom"],
-                       snps[s]["position"],
-                       snps[s]["position"] + 1,
-                       "snp",
-                       info["snps"]["color"],
-                       info["snps"]["offset"],
-                       info["snps"]["width"], s]
+            outlist = [snps[s]["chrom"], snps[s]["position"],
+                       snps[s]["position"] + 1, "snp", info["snps"]["color"],
+                       info["snps"]["offset"], info["snps"]["width"], s]
             outfile_list.append("\t".join(map(str, outlist)))
         for s in pdiffs:
-            outlist = [pdiffs[s]["chrom"],
-                       pdiffs[s]["position"],
-                       pdiffs[s]["position"] + 1,
-                       "pdiffs",
-                       info["pdiffs"]["color"],
-                       info["pdiffs"]["offset"],
+            outlist = [pdiffs[s]["chrom"], pdiffs[s]["position"],
+                       pdiffs[s]["position"] + 1, "pdiffs",
+                       info["pdiffs"]["color"], info["pdiffs"]["offset"],
                        info["pdiffs"]["width"], s]
         for sbr in primers:
             ext_primers = primers[sbr]["extension"]["primer_information"]
@@ -1527,8 +1515,7 @@ class Paralog(Locus):
                 if primer_ori == "forward":
                     outlist = [ext_primers[p]["CHR"],
                                ext_primers[p]["GENOMIC_START"],
-                               ext_primers[p]["GENOMIC_END"],
-                               p,
+                               ext_primers[p]["GENOMIC_END"], p,
                                info["primers"]["color"]["forward_extension"],
                                info["primers"]["offset"]["forward_extension"],
                                info["primers"]["width"]["forward_extension"]]
@@ -1536,8 +1523,7 @@ class Paralog(Locus):
                 else:
                     outlist = [ext_primers[p]["CHR"],
                                ext_primers[p]["GENOMIC_END"],
-                               ext_primers[p]["GENOMIC_START"],
-                               p,
+                               ext_primers[p]["GENOMIC_START"], p,
                                info["primers"]["color"]["reverse_extension"],
                                info["primers"]["offset"]["reverse_extension"],
                                info["primers"]["width"]["reverse_extension"]]
@@ -1547,8 +1533,7 @@ class Paralog(Locus):
                 if primer_ori == "forward":
                     outlist = [lig_primers[p]["CHR"],
                                lig_primers[p]["GENOMIC_START"],
-                               lig_primers[p]["GENOMIC_END"],
-                               p,
+                               lig_primers[p]["GENOMIC_END"], p,
                                info["primers"]["color"]["reverse_ligation"],
                                info["primers"]["offset"]["reverse_ligation"],
                                info["primers"]["width"]["reverse_ligation"]]
@@ -1556,55 +1541,65 @@ class Paralog(Locus):
                 else:
                     outlist = [lig_primers[p]["CHR"],
                                lig_primers[p]["GENOMIC_END"],
-                               lig_primers[p]["GENOMIC_START"],
-                               p,
+                               lig_primers[p]["GENOMIC_START"], p,
                                info["primers"]["color"]["forward_ligation"],
                                info["primers"]["offset"]["forward_ligation"],
                                info["primers"]["width"]["forward_ligation"]]
                     outfile_list.append("\t".join(map(str, outlist)))
         self.showfile = self.cwd + self.paralog_name + ".show"
         self.extrafile = self.cwd + self.paralog_name + ".extra"
-        with open(self.showfile, "w") as show, open(self.extrafile, "w") as extra:
+        with open(self.showfile, "w") as show, open(
+                self.extrafile, "w") as extra:
             show.write("header\n")
             show.write("\t".join(map(str, [chrom,  max(end_coordinates),
-                        min(begin_coordinates), max(end_coordinates)])))
+                                           min(begin_coordinates),
+                                           max(end_coordinates)])))
             extra.write("\n".join(outfile_list))
         return
-    def sort_mips(self):
-        purple = "#a0462009f0e4" # purple in parasight
+
+    def sort_mips(self, filter_type="keep"):
+        purple = "#a0462009f0e4"  # purple in parasight
         blue = "#00830000ffff"
-        colors = [blue,purple, "blue", "purple"]
+        colors = [blue, purple, "blue", "purple"]
         self.selectedfile = self.cwd + self.paralog_name + "_selected.pse"
         parasight_file = self.selectedfile
         try:
-            #self.selectedfile = self.cwd + self.paralog_name + "_selected.pse"
             with open(parasight_file) as infile:
                 para_list = infile.readlines()
         except IOError:
-            self.selected_mips = self.mips
-            self.selectedfile = self.extrafile
-            self.selected_mipfile = self.mipfile
             return
-        select = []
-        selected_full = []
-        selected_extra_list = []
+        if filter_type not in ["keep", "remove"]:
+            print(("Filter type must be either 'keep' or 'remove'."
+                   " No filtering will be applied for type {}")).format(
+                       filter_type)
+        if filter_type == "keep":
+            select = set()
+        else:
+            select = set([self.mips[m].fullname for m in self.mips])
+        outlist = []
         for i in para_list:
             fields = i.strip().split("\t")
-            if fields[3] in colors:
-                select.append("_".join(fields[8].split("_")[:-1]))
-                selected_full.append(fields[8])
+            label_name = fields[7]
+            # check if line describes a mip
+            if label_name in ["extension", "ligation", "capture"]:
+                mip_name = "_".join(fields[8].split("_")[:-1])
+                if filter_type == "keep":
+                    if fields[3] in colors:
+                        select.add(mip_name)
+                        outlist.append(i)
+                elif filter_type == "remove":
+                    if fields[3] in colors:
+                        select.remove(mip_name)
+                    else:
+                        outlist.append(i)
+                else:
+                    outlist.append(i)
+            else:
+                outlist.append(i)
         self.selected_mips = {}
         for m in self.mips:
             if self.mips[m].fullname in select:
                 self.selected_mips[m] = self.mips[m]
-        outlist = []
-        for i in para_list:
-            fields = i.strip().split("\t")
-            try:
-                if (not ((fields[8].startswith(self.paralog_name)) and                         (fields[8] not in selected_full)))                        or fields[7] == "subregion":
-                    outlist.append(i)
-            except IndexError:
-                outlist.append(i)
         self.selectedfile = self.cwd + self.paralog_name + "_filtered.pse"
         outfile = open(self.selectedfile, "w")
         outfile.write("".join(outlist))
@@ -1612,7 +1607,9 @@ class Paralog(Locus):
         outfile.close()
         outfile_list = []
         must_cap = copy.deepcopy(self.must)
-        mip_names_ordered = sorted(self.selected_mips, key=lambda mip_key: self.selected_mips[mip_key].                                                        mip["C0"]["mip_start"])
+        mip_names_ordered = sorted(self.selected_mips,
+                                   key=lambda mip_key: self.selected_mips[
+                                       mip_key].mip["C0"]["mip_start"])
         for mip_name in mip_names_ordered:
             m = self.selected_mips[mip_name]
             m.mip_start = m.mip["C0"]["mip_start"]
@@ -1628,11 +1625,11 @@ class Paralog(Locus):
                 for t in self.must[c]:
                     try:
                         if t in caps:
-                            line = "Target " + self.must[c][t]["name"] + " is captured."
-                            #print line
+                            line = ("Target " + self.must[c][t]["name"]
+                                    + " is captured.")
                             print(("Target %s of %s is captured."
-                                  %(self.must[c][t]["name"],
-                                   self.paralog_name)))
+                                   % (self.must[c][t]["name"],
+                                      self.paralog_name)))
                             outfile_list.append("#" + line)
                             # add the name of captured target to list
                             ms.append(self.must[c][t]["name"])
@@ -1640,12 +1637,13 @@ class Paralog(Locus):
                             must_cap[c].pop(t)
                     except KeyError:
                         continue
-            # if none of the must-targets captured by this mip, add none to ms list
+            # if none of the must-targets captured by this mip,
+            # add none to ms list
             if len(ms) == 0:
                 ms = ["none"]
             # create extensions for mips to account for alternative mips for
-            # different copies. A mip that captures reference copy will have _ref
-            # extension, alternatives will have _alt#
+            # different copies. A mip that captures reference copy will have
+            # _ref extension, alternatives will have _alt#
             for key in m.mip_dic["mip_information"]:
                 if key == "ref":
                     fullname_extension = "_ref"
@@ -1653,15 +1651,17 @@ class Paralog(Locus):
                     fullname_extension = "_" + key
                 else:
                     continue
-                # ["#pair_name", "mip_name", "chrom", "mip_start", "capture_start",
-                # "capture_end", "mip_end", "orientation", "tech_score", "func_score","mip_sequence",
+                # ["#pair_name", "mip_name", "chrom", "mip_start",
+                # "capture_start", "capture_end", "mip_end", "orientation",
+                # "tech_score", "func_score","mip_sequence",
                 # "unique_captures", "must_captured", "captured_copies"]
-                outlist = [m.name, m.fullname + fullname_extension, m.chromosome, m.mip_start,
-                           m.capture_start, m.capture_end, m.mip_end, m.orientation,
-                            m.tech_score, m.func_score,
-                            m.mip_dic["mip_information"][key]["SEQUENCE"],
-                           ",".join(unique_caps), ",".join(ms), ",".join(m.captured_copies)]
-                #print key, m.mip_dic["mip_information"][key]["captures"]
+                outlist = [m.name, m.fullname + fullname_extension,
+                           m.chromosome, m.mip_start, m.capture_start,
+                           m.capture_end, m.mip_end, m.orientation,
+                           m.tech_score, m.func_score,
+                           m.mip_dic["mip_information"][key]["SEQUENCE"],
+                           ",".join(unique_caps), ",".join(ms),
+                           ",".join(m.captured_copies)]
                 outline = "\t".join(map(str, outlist))
                 outfile_list.append(outline)
         # look for must-targets that have not been captured, print if any
@@ -1670,30 +1670,31 @@ class Paralog(Locus):
             if len(must_cap[c]) > 0:
                 target_remaining = True
                 for t in must_cap[c]:
-                    line = "Target" + " " + self.must[c][t]["name"] + " is NOT captured."
+                    line = ("Target" + " " + self.must[c][t]["name"]
+                            + " is NOT captured.")
                     outfile_list.append("#" + line)
-                    #print line
                     print(("Target %s of %s is NOT captured."
-                          %(self.must[c][t]["name"],
-                           self.paralog_name)))
+                           % (self.must[c][t]["name"], self.paralog_name)))
         if not target_remaining:
             line = "All targets have been captured."
-            self.must_selected = True
             outfile_list.append("#" + line + "\n")
-            #print line
-            print("All targets have been captured for %s" %self.paralog_name)
+            print("All targets have been captured for %s" % self.paralog_name)
         else:
-            self.must_selected = False
-
+            print("Some targets have NOT been captured for %s"
+                  % self.paralog_name)
         self.selected_mipfile = self.cwd + self.paralog_name + "_order"
         outfile = open(self.selected_mipfile, "w")
         outfile.write("\n".join(outfile_list))
         outfile.close()
         subprocess.call(["mv", self.cwd + self.paralog_name,
-                                 self.cwd + self.paralog_name + ".last"])
-
+                         self.cwd + self.paralog_name + ".last"])
         with open(self.cwd + self.paralog_name, "wb") as savefile:
                 pickle.dump(self, savefile)
+
+    def order_mips():
+        mip_info = {}
+        call_info = {}
+        return
 
 
 class Subregion(Locus):

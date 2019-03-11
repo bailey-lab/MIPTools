@@ -2131,8 +2131,6 @@ def parse_aligned_haplotypes(settings):
                             except KeyError:
                                 continue
                         # update diff dictionary
-                        d["clinical"] = False
-                        d["clinical_id"] = "none"
                         d["base_match"] = False
                         d["psv"] = pdiff
 
@@ -3576,281 +3574,9 @@ def plot_clusters(settings, cluster_method="dbscan"):
         fig4.savefig(image_dir + gene_name + "_meanshift", dpi = 96)
         plt.close("all")
     return
-def type_clinical(settings):
-    wdir = settings["workingDir"]
-    call_info_file = settings["callInfoDictionary"]
-    unique_haplotype_file = wdir + settings["haplotypeDictionary"]
-    with open(call_info_file) as infile:
-        call_info = json.load(infile)
-    sample_results_file = wdir + settings["perSampleResults"]
-    with open(sample_results_file) as infile:
-        samples = json.load(infile)
-    with open(unique_haplotype_file) as infile:
-        unique_haplotypes = json.load(infile)
-    snp_results = {}
-    problem_snp_mips = []
-    temp = []
-    for g in call_info:
-        snp_results[g] = {}
-        for m in call_info[g]:
-            msnps = call_info[g][m]["snps"]
-            cop_dic = call_info[g][m]["copies"]
-            for s in msnps:
-                if msnps[s]["clinical"]:
-                    try:
-                        snp_results[g][s][m] = {}
-                    except KeyError:
-                        snp_results[g][s] = {m: {}}
-                    for cop in cop_dic:
-                        cname = cop_dic[cop]["copyname"] + "_" + cop
-                        snp_results[g][s][m][cname] = {}
-                    for sam in samples:
-                        try:
-                            bc_dic = samples[sam][g][m]
-                        except KeyError:
-                            problem_snp_mips.append([sam, m])
-                            continue
-                        for c in snp_results[g][s][m]:
-                            split_copies = c.split("_")
-                            if len(split_copies) == 2:
-                                copy_id = split_copies[-1]
-                                if copy_id in msnps[s]["copies"]:
-                                    try:
-                                        haps = bc_dic[c]["filtered_data"]
-                                    except KeyError:
-                                        continue
-                                    for h in haps:
-                                        hap_id = h['haplotype_ID']
-                                        rbc = h["barcode_count"]
-                                        nbc = h["sample_normalized_barcode_count"]
-                                        #rbc = round(nbc / samples[sam]["barcode_normalizer"])
-                                        # find SNPs in haplotype if any
-                                        try:
-                                            diffs = unique_haplotypes[m][hap_id]["mapped_copies"]                                                 [copy_id]["differences"]
-                                        except KeyError:
-                                            continue
-                                        snp_found = False
-                                        for d in diffs:
-                                            if d["clinical_id"] == s:
-                                                snp_found = True
-                                                if d["base_match"]:
-                                                    base_correct = 1
-                                                else:
-                                                    base_correct = 0
-                                                try:
-                                                    snp_results[g][s][m][c][sam].append(
-                                                        [nbc, rbc, d["ref_base"], d["hap_base"],
-                                                         base_correct])
-                                                except KeyError:
-                                                    snp_results[g][s][m][c][sam] =                                                        [[nbc, rbc, d["ref_base"],
-                                                         d["hap_base"], base_correct]]
-                                        if not snp_found:
-                                            try:
-                                                snp_results[g][s][m][c][sam].append(
-                                                    [nbc, rbc, msnps[s]["copies"][copy_id]["ref"],
-                                                    msnps[s]["copies"][copy_id]["ref"], 0])
-                                            except KeyError:
-                                                try:
-                                                    snp_results[g][s][m][c][sam] =                                                         [[nbc, rbc, msnps[s]["copies"][copy_id]["ref"],
-                                                        msnps[s]["copies"][copy_id]["ref"], 0]]
-                                                except KeyError:
-                                                    try:
-                                                        snp_results[g][s][m][c][sam] =                                                         [[nbc, rbc, msnps[s]["copies"][copy_id]["copy_base"],
-                                                        msnps[s]["copies"][copy_id]["copy_base"], 0]]
-                                                    except KeyError as e:
-                                                        temp.append([g,s,m,c,sam, copy_id, e])
-
-    for g in snp_results:
-        for s in snp_results[g]:
-            for m in snp_results[g][s]:
-                for c in snp_results[g][s][m]:
-                    sams = snp_results[g][s][m][c]
-                    for sam in sams:
-                        l = copy.deepcopy(sams[sam])
-                        sams[sam] = {"haplotypes": l}
-                        if len(l) == 1:
-                            if l[0][-1]:
-                                hom = 2
-                            else:
-                                hom = 0
-                            genotype = l[0][-2] + "/" + l[0][-2]
-                            bc_count = [l[0][1]]
-                        elif len(l) == 2:
-                            if l[0][-1] == l[1][-1] == 1:
-                                hom = 2
-                                genotype = l[0][-2] + "/"  + l[1][-2]
-                                bc_count = [l[0][1], l[1][1]]
-                            elif l[0][-1] == l[1][-1] == 0:
-                                hom = 0
-                                genotype = l[0][-2] + "/"  + l[1][-2]
-                                bc_count = [l[0][1], l[1][1]]
-                            else:
-                                hom = 1
-                                if l[0][-1] == 0:
-                                    genotype = l[0][-2] + "/"  + l[1][-2]
-                                    bc_count = [l[0][1], l[1][1]]
-                                else:
-                                    genotype = l[1][-2] + "/"  + l[0][-2]
-                                    bc_count = [l[1][1], l[0][1]]
 
 
-                        else:
-                            i = list(map(list, list(zip(*l))))
-                            genotype = "/".join(i[3])
-                            bc_count = i[1]
-                            hom_set = sorted(list(set(i[-1])))
-                            if hom_set == [0]:
-                                hom = 0
-                            elif hom_set == [1]:
-                                hom = 2
-                            elif hom_set == [0,1]:
-                                hom = 1
-                            else:
-                                hom = 3
-
-
-                        sams[sam]["homozygosity"] = hom
-                        sams[sam]["genotype"] = genotype
-                        sams[sam]["barcode_depth"] = bc_count
-    snp_counts = {}
-    for g in snp_results:
-        for s in snp_results[g]:
-            snp_counts[s] = {}
-            for m in snp_results[g][s]:
-                comp = ""
-                wt = ""
-                het = ""
-                mut = ""
-                snp_counts[s][m] = {"homozygosity": []}
-                snp_counts[s][m]["sample_names"] = []
-
-                for c in snp_results[g][s][m]:
-                    sams = snp_results[g][s][m][c]
-                    for sam in sams:
-                        snp_counts[s][m]["sample_names"].append(sam)
-                        snp_counts[s][m]["homozygosity"].append(sams[sam]["homozygosity"])
-                        if sams[sam]["homozygosity"] == 0:
-                            wt = sams[sam]["genotype"]
-                        elif sams[sam]["homozygosity"] == 2:
-                            mut = sams[sam]["genotype"]
-                        elif sams[sam]["homozygosity"] == 1:
-                            het = sams[sam]["genotype"]
-                        else:
-                            comp = sams[sam]["genotype"]
-                snp_counts[s][m]["genotypes"] = [wt, het, mut, comp]
-                homs = snp_counts[s][m]["homozygosity"]
-                try:
-                    snp_counts[s][m]["freq"] = [float(homs.count(i))/len(homs) for i in range(4)]
-                except ZeroDivisionError:
-                    temp.append([s,m])
-
-
-    snp_sum = {}
-    for g in snp_results:
-        snp_sum[g] = {}
-        for s in snp_results[g]:
-            snp_sum[g][s] = snp_counts[s]
-    snp_file = wdir + settings["snpResultsFile"]
-    result = {"snp_results": snp_results,
-              "snp_summary": snp_sum,
-              "snp_counts": snp_counts,
-              "problem_snps": problem_snp_mips,
-              "errors": temp}
-    with open(snp_file, "w") as outfile:
-        json.dump(result, outfile, indent=1)
-    return result
-def plot_clinical(settings):
-    wdir = settings["workingDir"]
-    snp_file = wdir + settings["snpResultsFile"]
-    with open(snp_file) as infile:
-        snps = json.load(infile)
-    snp_dir = wdir + "clinical_snp_images/"
-    if not os.path.exists(snp_dir):
-        os.makedirs(snp_dir)
-    sample_dir = wdir + "sample_snp_images/"
-    if not os.path.exists(sample_dir):
-        os.makedirs(sample_dir)
-    snp_sum = snps["snp_summary"]
-    for g in snp_sum:
-        sorted_snps = sorted(snp_sum[g])
-        if len(sorted_snps) > 0:
-            plt.figure()
-            snp_names = []
-            wt_freqs = []
-            het_freqs = []
-            hom_freqs = []
-            comp_freqs = []
-            wt_genotypes = []
-            het_genotypes = []
-            hom_genotypes = []
-            wt_samples = []
-            het_samples = []
-            hom_samples = []
-            for s in sorted_snps:
-                for m in snp_sum[g][s]:
-                    if len(snp_sum[g][s][m]["homozygosity"]) > 0:
-                        snp_names.append(s)
-                        wt_freqs.append(snp_sum[g][s][m]["freq"][0])
-                        het_freqs.append(snp_sum[g][s][m]["freq"][1])
-                        hom_freqs.append(snp_sum[g][s][m]["freq"][2])
-                        comp_freqs.append(snp_sum[g][s][m]["freq"][3])
-                        wt_genotypes.append(snp_sum[g][s][m]["genotypes"][0])
-                        het_genotypes.append(snp_sum[g][s][m]["genotypes"][1])
-                        hom_genotypes.append(snp_sum[g][s][m]["genotypes"][2])
-                        wt_samples.append(snp_sum[g][s][m]["homozygosity"].count(0))
-                        het_samples.append(snp_sum[g][s][m]["homozygosity"].count(1))
-                        hom_samples.append(snp_sum[g][s][m]["homozygosity"].count(2))
-            ind = np.arange(len(snp_names))
-            wt_freqs = np.asarray(wt_freqs)
-            het_freqs = np.asarray(het_freqs)
-            hom_freqs = np.asarray(hom_freqs)
-            comp_freqs = np.asarray(comp_freqs)
-            width = 0.75
-            p1 = plt.bar(ind, wt_freqs, width, color = "g")
-            p2 = plt.bar(ind, het_freqs, width, color = "y", bottom = wt_freqs)
-            p3 = plt.bar(ind, hom_freqs, width, color = "r", bottom = het_freqs +wt_freqs)
-            p4 = plt.bar(ind, comp_freqs, width, color = "b", bottom = het_freqs + wt_freqs + hom_freqs)
-            plt.ylabel("Allele frequency", fontsize = "20" )
-            plt.title("Clinically Relevant SNPs in " + g, fontsize = "20")
-            freq_list = [wt_freqs, het_freqs, hom_freqs]
-            gen_list = [wt_genotypes, het_genotypes, hom_genotypes]
-            count_list = [wt_samples, het_samples,hom_samples]
-            for j in range(3):
-                if j == 0:
-                    vertical_pos = freq_list[0]/2
-                else:
-                    vertical_pos = freq_list[j]/2 + np.sum(freq_list[:j], axis = 0)
-                gen = gen_list[j]
-                sam_counts = count_list[j]
-                for i in range(len(snp_names)):
-                    xpos = i + width/2
-                    vp = vertical_pos[i]
-                    geno = gen[i]
-                    gen_ct = sam_counts[i]
-                    plt.text(xpos, vp, geno, horizontalalignment = "center")
-                    plt.text(xpos, vp - 0.03, gen_ct, horizontalalignment = "center")
-
-            plt.xticks(ind + width/2 , snp_names, fontsize = "15", rotation= "45")
-
-            plt.legend((p1[0], p2[0], p3[0], p4[0]), ("WT", "Het", "Hom", "MultiAllelic"),
-                       loc = "lower right")
-            plt.savefig(snp_dir + g + "_clinical", dpi = 96)
-            plt.close("all")
-    return
-def clean_alignment(alignment_file, output_file, directory):
-    """ Alignment output in .differences format has sequence information
-    that is unnecessary. This function removes that information for easier handling."""
-    with open (directory + alignment_file, "r") as infile, open(directory + output_file, "w") as outfile:
-        counter = 0
-        for line in infile:
-            newline = line.strip().split('\t')[:-2]
-            outline = "\t".join(newline) + '\n'
-            outfile.write(outline)
-    return
-
-
-
-def check_overlap (r1, r2, padding = 0):
+def check_overlap(r1, r2, padding=0):
     """ Check if two regions overlap. Regions are given as lists of chrom (str),
     begin (int), end (int)."""
     # check chromosome equivalency
@@ -3861,20 +3587,23 @@ def check_overlap (r1, r2, padding = 0):
     return o1 & o2
 
 
-
-def make_region (chromosome, begin, end):
+def make_region(chromosome, begin, end):
     """ Create region string from coordinates.
     takes 2 (1 for human 1-9) digit chromosome,
     begin and end positions (1 indexed)"""
-    region="chr" + str(chromosome) + ":" + str(begin) + "-" + str(end)
+    region = "chr" + str(chromosome) + ":" + str(begin) + "-" + str(end)
     return region
-def create_region (chromosome, begin, end):
+
+
+def create_region(chromosome, begin, end):
     """ Create region string from coordinates.
     chromosome string,
     begin and end positions (1 indexed)"""
-    region=chromosome + ":" + str(begin) + "-" + str(end)
+    region = chromosome + ":" + str(begin) + "-" + str(end)
     return region
-def create_dirs (dir_name):
+
+
+def create_dirs(dir_name):
     """ create subdirectory names for a given dir,
     to be used by os.makedirs, Return a list of
     subdirectory names."""
@@ -3884,18 +3613,19 @@ def create_dirs (dir_name):
     bowtie2_output_DIR = dir_name + "/bowtie2_output/"
     mfold_input_DIR = dir_name + "/mfold_input/"
     mfold_output_DIR = dir_name + "/mfold_output/"
-    return [primer3_input_DIR, primer3_output_DIR, bowtie2_input_DIR,            bowtie2_output_DIR, mfold_input_DIR, mfold_output_DIR]
+    return [primer3_input_DIR, primer3_output_DIR, bowtie2_input_DIR,
+            bowtie2_output_DIR, mfold_input_DIR, mfold_output_DIR]
 
 
-def get_coordinates (region):
+def get_coordinates(region):
     """ Define coordinates chr, start pos and end positions
     from region string chrX:start-end. Return coordinate list.
     """
     chromosome = region.split(":")[0]
     coord = region.split(":")[1]
     coord_list = coord.split("-")
-    begin = int(coord_list [0])
-    end = int(coord_list [1])
+    begin = int(coord_list[0])
+    end = int(coord_list[1])
     return [chromosome, begin, end]
 
 
@@ -3947,21 +3677,22 @@ def create_fasta_file(region, species, output_file):
         outfile.write(get_fasta(region, species))
 
 
-def get_snps (region, snp_file):
+def get_snps(region, snp_file):
     """ Take a region string and a  tabix'ed snp file,
     return a list of snps which are lists of
     tab delimited information from the snp file. """
     # extract snps using tabix, in tab separated lines
     snp_temp = subprocess.check_output(["tabix", snp_file, region])
     # split the lines (each SNP)
-    snps_split= snp_temp.split("\n")
+    snps_split = snp_temp.split("\n")
     # add each snp in the region to a list
     # as lists of
     snps = []
     for line in snps_split:
         snp = line.split('\t')
         snps.append(snp)
-    del snps[-1] #remove last item which is coming from the new line at the end
+    # remove last item which is coming from the new line at the end
+    del snps[-1]
     return snps
 
 
@@ -3970,12 +3701,10 @@ def get_vcf_snps(region, snp_file):
     return a list of snps which are lists of
     tab delimited information from the snp file. """
     # extract snps using tabix, in tab separated lines
-    snp_temp = subprocess.check_output(["bcftools",
-                                        "view",
-                                        "-H", "-G", "-r",
+    snp_temp = subprocess.check_output(["bcftools", "view", "-H", "-G", "-r",
                                         region, snp_file])
     # split the lines (each SNP)
-    snps_split= snp_temp.split("\n")[:-1]
+    snps_split = snp_temp.split("\n")[:-1]
     # add each snp in the region to a list
     # as lists of
     snps = []
@@ -3983,108 +3712,9 @@ def get_vcf_snps(region, snp_file):
         snp = line.split('\t')[:8]
         snps.append(snp)
     return snps
-def snp_filter_pf (snp_list, col=23, min_allele_freq=0.001, min_total_allele=50):
-    """ filter a SNP list using given criteria, print summary,
-    return filtered SNP list. col should be a column in the
-    original snp file with number of alleles observed as m,n,
-    the column ends with a comma as in UCSC schema. It is 23 in
-    snp138.
-    """
-    filtered_snps = []
-    for snp in snp_list:
-        # number of alleles for each genotype in the form (m,n,..)
-        if snp[col] != "":
-            acs = [a for a in snp[col].split(",") if a != ""]
-            allele_count = list(map(int, list(map(float, acs))))
-            # allele with max count
-            max_all = max(allele_count)
-            # total alleles
-            tot_all = sum(allele_count)
-            # minor allele freq
-            maf = (tot_all - max_all)/float(tot_all)
-            if (maf >= min_allele_freq) and (tot_all >= min_total_allele):
-                # snp satisfying the given criteria is filtered
-                filtered_snps.append(snp)
-    print((" ".join(["Found", str(len(filtered_snps)), "SNPs with >=", str(min_allele_freq),
-                    "frequency and >=", str(min_total_allele), "reported alleles!"])))
-    return filtered_snps
-def snp_filter_hs (snp_list, col=23, min_allele_freq=0.001, min_total_allele=50):
-    """ filter a SNP list using given criteria, print summary,
-    return filtered SNP list. col should be a column in the
-    original snp file with number of alleles observed as m,n,
-    the column ends with a comma as in UCSC schema. It is 23 in
-    snp138.
-    """
-    filtered_snps = []
-    for snp in snp_list:
-        # number of alleles for each genotype in the form (m,n,..)
-        if snp[col] != "":
-            allele_count_list = snp[col].split(",")
-            if allele_count_list[-1] == "":
-                allele_count_list.pop(-1)
-            allele_count = list(map(int, list(map(float, allele_count_list))))
-            # allele with max count
-            max_all = max(allele_count)
-            # total alleles
-            tot_all = sum(allele_count)
-            # minor allele freq
-            maf = (tot_all - max_all)/float(tot_all)
-            if (maf >= min_allele_freq) and (tot_all >= min_total_allele):
-                # snp satisfying the given criteria is filtered
-                filtered_snps.append(snp)
-    print((" ".join(["Found", str(len(filtered_snps)), "SNPs with >=", str(min_allele_freq),
-                    "frequency and >=", str(min_total_allele), "reported alleles!"])))
-    return filtered_snps
-def snp_filter_hla (snp_list, col=23, min_allele_freq=0.001, min_total_allele=50, submitter='SI_MHC_SNP'):
-    """ filter a SNP list using given criteria, print summary,
-    return filtered SNP list. col should be a column in the
-    original snp file with number of alleles observed as m,n,
-    the column ends with a comma as in UCSC schema. It is 23 in
-    snp138.
-    """
-    filtered_snps = []
-    for snp in snp_list:
-        submitter_list = snp[20].strip().split(',')[:-1]
-        # number of alleles for each genotype in the form (m,n,..)
-        if snp[col] != "":
-            allele_count = list(map(int, list(map(float, snp[col].split(",")[:-1]))))
-            # allele with max count
-            max_all = max(allele_count)
-            # total alleles
-            tot_all = sum(allele_count)
-            # minor allele freq
-            maf = (tot_all - max_all)/float(tot_all)
-            if (maf >= min_allele_freq) and (tot_all >= min_total_allele):
-                # snp satisfying the given criteria is filtered
-                filtered_snps.append(snp)
-            elif submitter in submitter_list:
-                filtered_snps.append(snp)
-        elif submitter in submitter_list:
-            filtered_snps.append(snp)
 
-    print((" ".join(["Found", str(len(filtered_snps)), "SNPs with >=", str(min_allele_freq),
-                    "frequency and >=", str(min_total_allele), "reported alleles!"])))
-    return filtered_snps
-def snp_function_filter_hs (snp_list, func_list=["nonsense", "missense","stop-loss", "frameshift",                            "cds-indel", "splice-3","splice-5"], col=15):
-    """ Take a snp list and filter for functional consequence of that snp.
-    Functionality of a snp is located in col (index) 15 of UCSC table and 14 of include file.
-    It can be any type from the list ['unknown', 'coding-synon', 'intron', 'near-gene-3',
-   'near-gene-5', 'ncRNA', 'nonsense', 'missense', 'stop-loss', 'frameshift', 'cds-indel',
-    'untranslated-3', 'untranslated-5', 'splice-3', 'splice-5'].
-    """
-    # define available functional changes
-    snp_func_list = ['unknown', 'coding-synon', 'intron', 'near-gene-3', 'near-gene-5',                  'ncRNA', 'nonsense', 'missense', 'stop-loss', 'frameshift', 'cds-indel',                 'untranslated-3', 'untranslated-5', 'splice-3', 'splice-5']
-    # check if the filter criteria is in the available changes
-    for f in func_list:
-        if f not in snp_func_list:
-            return "Filter criteria", f, " is not available in snp list."
-    filtered_snps = []
-    for snp in snp_list:
-        if snp[col] in func_list:
-            filtered_snps.append(snp)
-    print(("Found ", len(filtered_snps), " SNPs with functional significance"))
-    return filtered_snps
-def targets (must_file, diff_list):
+
+def targets(must_file, diff_list):
     """ Take a file with snps or regions that must be captured by mips and a list
     of other variations of interest (created in ucsc table format) and return a target
     dictionary"""
@@ -4122,6 +3752,8 @@ def targets (must_file, diff_list):
             targets[key] = {"chrom":snp_chr, "begin":snp_begin, "end":snp_end,                             "name": snp_name, "diff": "na", "source": src}
     # return targets dictionary
     return targets
+
+
 def merge_overlap (intervals, spacer=0):
     """ Merge overlapping intervals. Take a list of lists of 2 elements, [start, stop],
     check if any [start, stop] pairs overlap and merge if any. Return the merged [start, stop]
@@ -4165,6 +3797,8 @@ def merge_overlap (intervals, spacer=0):
                 break
     exons.sort()
     return exons
+
+
 def overlap(reg1, reg2, spacer = 0):
     """
     Return overlap between two regions.
@@ -4179,6 +3813,8 @@ def overlap(reg1, reg2, spacer = 0):
             return []
     except IndexError:
         return []
+
+
 def remove_overlap(reg1, reg2, spacer = 0):
     """
     Remove overlap between two regions.
@@ -4194,6 +3830,8 @@ def remove_overlap(reg1, reg2, spacer = 0):
             return regions
     except IndexError:
         return []
+
+
 def subtract_overlap (uncovered_regions, covered_regions, spacer = 0):
     """
     Given two sets of regions in the form
@@ -4227,6 +3865,8 @@ def subtract_overlap (uncovered_regions, covered_regions, spacer = 0):
         return [[unc[i], unc[i+1]]for i in range(0, len(unc), 2)               if unc[i+1] - unc[i] > spacer]
     else:
         return []
+
+
 def trim_overlap (region_list, low = 0.1, high = 0.9, spacer = 0):
     """
     Given a set of regions in the form [[start, end], [start, end]],
@@ -4278,6 +3918,8 @@ def trim_overlap (region_list, low = 0.1, high = 0.9, spacer = 0):
                                     print((overlap_ratio, "is outside trim range for ",                                    reg_i, reg_j))
 
     return region_list
+
+
 def get_exons (gene_list):
     """Take a list of transcript information in refgene format and return a list of exons
     in the region as [[e1_start, e1_end], [e2_start], [e2_end], ..]. The transcripts must
@@ -4353,6 +3995,8 @@ def get_exons (gene_list):
     out["ids"] = gene_ids
     out["orientation"] = ori
     return out
+
+
 def get_gene_name(region, species):
     """ Return the gene(s) in a region. """
     gene_names = []
@@ -4363,6 +4007,8 @@ def get_gene_name(region, species):
     except KeyError:
         pass
     return gene_names
+
+
 def get_gene (gene_name, refgene_file, chrom=None, alternative_chr=1):
     """ Return genomic coordinates of a gene extracted from the refseq genes file.
     Refgene fields are as follows:
@@ -4396,6 +4042,8 @@ def get_gene (gene_name, refgene_file, chrom=None, alternative_chr=1):
         for c in coord:
             alter.append(c)
     return alter
+
+
 def create_gene_fasta (gene_name_list, wdir, species = "hs", flank=150, multi_file=False):
     """ Get a list of genes, extract exonic sequence + flanking sequence.
     Create fasta files in corresponding directory for each gene if multi_file is True,
@@ -4482,291 +4130,8 @@ def get_cds(gene_name, species):
     cds["coordinates"] = coord
     cds
     return cds
-def make_targets_dic(targets_file):
-    with open (targets_file) as infile:
-        # create a targets dictionary from targets file
-        targets = {}
-        for line in infile:
-            if not line.startswith("#"):
-                newline = line.strip().split("\t")
-                name = newline[0]
-                if name not in targets:
-                    targets[name] = {"must":[]}
-                if newline[1] != "target":
-                    targets[name][newline[1]] = newline[2]
-                else:
-                    must_info = newline[2].split(",")
-                    must_dic = {
-                                "name": must_info[0],
-                                "snp_id": must_info[1],
-                                "chrom": must_info[2],
-                                "begin": must_info[3],
-                                "end": must_info[4],
-                                "aa_begin":must_info[5],
-                                "aa_end":must_info[6],
-                                "weight": "none",
-                                "segment": "S0:C0"
-                                }
-                    targets[name]["must"].append(must_dic)
-    for t in targets:
-        species = targets[t]["species"]
-        try:
-            gname = targets[t]["gene_name"]
-        except KeyError:
-            gname = targets[t]["gene_name"] = t
-        if species == "pf" and gname == "none":
-            try:
-                alias_handle= open(get_file_locations()[species]["alias"])
-                alias_dic = json.load(alias_handle)
-                gname = alias_dic[t]
-                alias_handle.close()
-            except KeyError:
-                gname = t
-        flank = int(targets[t]["flank"])
-        exons = get_exons(get_gene(gname, get_file_locations()[species]["refgene"], alternative_chr=1))
-        cds = get_cds(gname, species)
-        try:
-            cds_coord = cds["coordinates"]
-            targets[t]["cds"] = cds["sequence"]
-        except KeyError:
-            cds_coord = "none"
-            targets[t]["cds"] = "none"
-        try:
-            targets[t]["orientation"] = exons["orientation"]
-        except KeyError:
-            targets[t]["orientation"] = "+"
-        if (targets[t]["chrom"] == "none") or (targets[t]["begin"] == "none") or              (targets[t]["end"] == "none"):
-            try:
-                if targets[t]["chrom"] == "none":
-                    targets[t]["chrom"] = exons["chrom"]
-                targets[t]["begin"] = exons["begin"] - flank + 1
-                targets[t]["end"] = exons["end"] + flank
-            except KeyError:
-                print(("cannot find coordinates for ", t))
-                targets[t]["chrom"] = "none"
-                targets[t]["begin"] = "none"
-                targets[t]["end"] = "none"
-        else:
-            targets[t]["begin"] = int(targets[t]["begin"])
-            targets[t]["end"] = int(targets[t]["end"])
-        if species != "hs":
-            for m in targets[t]["must"]:
-                if m["snp_id"] == "none" and m["begin"] == "none" and m["aa_begin"] != "none":
-                    aa_begin = int(m["aa_begin"]) - 1
-                    aa_end = int(m["aa_end"])
-                    nt_begin = 3 * aa_begin
-                    nt_end = 3 * aa_end - 1
-
-                    if targets[t]["orientation"] == "+":
-                        m["begin"] = cds_coord[nt_begin] + 1
-                        m["end"] = cds_coord[nt_end] + 1
-                    elif targets[t]["orientation"] == "-":
-                        m["end"] = cds_coord[nt_begin] + 1
-                        m["begin"] = cds_coord[nt_end] + 1
-                    m["chrom"] = targets[t]["chrom"]
 
 
-    return targets
-def mask_snps (region, snp_file, count_col, min_maf=0.03, min_count=10):
-    """lower case mask SNPs in plasmodium genome, return fasta record"""
-    # get sequence of the region
-    region_fasta = get_fasta(region)
-    # extract fasta header
-    fasta_list=region_fasta.split("\n")
-    fasta_head = fasta_list[0]
-    # join separate fasta lines into single string
-    seq_template_temp = "".join(fasta_list[1:])
-    # convert the sequence into list of nucleotides
-    seq_template_list = list(seq_template_temp)
-    # find snps in the region using get_snps
-    region_snps = snp_filter_pf(get_snps(region, snp_file),                  count_col, min_maf, min_count)
-    # extract region begin coordinate
-    coordinates = get_coordinates(region)
-    for snp in region_snps:
-        # find snp location in the sequence
-        # by subtracting sequence start coordinate from
-        # snp coordinate
-        snp_index = int(snp[1]) - int(coordinates[1])
-        # change the SNP nucleotide to lower case
-        seq_template_list[snp_index] = seq_template_list[snp_index].lower()
-    # create sequence string from nucleotide list
-    fasta_seq = "".join(seq_template_list)
-    # add fasta header and create a fasta record of
-    # masked sequence
-    fasta_rec = fasta_head + "\n" + fasta_seq
-    return fasta_rec
-
-def exclude_snps (region, snp_file, maf_col=6, count_col=9, min_maf=0.03, min_count=10):
-    """Prepare an exclude list to be used in boulder record.
-    Gets SNPs from plasmodium snp file and assumes SNP length
-    of 1."""
-    # get the region sequence
-    region_fasta = get_fasta(region)
-    # extract fasta header
-    fasta_list=region_fasta.split("\n")
-    fasta_head = fasta_list[0]
-    # join fasta lines in a single string
-    seq_template_temp = "".join(fasta_list[1:])
-    # convert sequence to list of nucleotides
-    seq_template_list = list(seq_template_temp)
-    # find region snps filtered for maf
-    region_snps = snp_filter_pf(get_snps(region, snp_file),             maf_col, count_col, min_maf, min_count)
-    # find sequence start coordinate
-    coordinates = get_coordinates (region)
-    exclude = []
-    for snp in region_snps:
-        # find snp location in sequence by
-        # subtracting sequence start from snp coordinate
-        snp_index = int(snp[1])-int(coordinates[1])
-        # create an exclude list for snp index with length 1
-        exclude.append([snp_index,1])
-    return exclude
-def exclude_snps_hla (region, col=23, min_frequency=0.001, min_total_alleles=50):
-    """Prepare an exclude list to be used in boulder record.
-    Gets SNPs from human snp file and assumes SNP length
-    of 1."""
-    # get fasta sequence of region using the function get_fasta
-    region_fasta = get_fasta(region, species="hs")
-    # convert fasta record to one line string without the fasta identifier
-    fasta_list=region_fasta.split("\n")
-    fasta_head = fasta_list[0]
-    seq_template_temp = "".join(fasta_list[1:])
-    # convert fasta string to list of characters
-    seq_template_list = list(seq_template_temp)
-    # convert region string to coordinates using get_coordinates function
-    coordinates = get_coordinates (region)
-    # create a SNP list that is filtered for frequency and allele number
-    snp_list = snp_filter_hla(get_snps(region, snp_data_hs), col, min_frequency, min_total_alleles)
-    # create a list of excluded snp coordinates
-    exclude = []
-    # find locations of snps in the sequence
-    for snp in snp_list:
-        # get snp coordinates relative to the sequence at hand
-        snp_index_start = int(snp[2]) + 1 - int(coordinates[1])
-        snp_index_end = int(snp[3]) - int(coordinates[1])
-        exclude.append([snp_index_start, snp_index_end - snp_index_start + 1])
-    # sort excluded snps by their location
-    exclude.sort(key=itemgetter(0))
-    # merge snps that are close together to reduce excluded region number
-
-    for i in range(len(exclude)-1):
-        l_current = exclude[i]
-        l_next = exclude[i+1]
-        if (l_next[0] - sum(l_current)) < 18:
-            l_new = [l_current[0], l_next[0] - l_current[0] + l_next[1]]
-            exclude[i+1] = l_new
-            exclude[i] = "delete"
-    excluded = [x for x in exclude if x != "delete"]
-    return excluded
-def exclude_snps_hs (region, col=23, min_frequency=0.001, min_total_alleles=50):
-    """Prepare an exclude list to be used in boulder record.
-    Gets SNPs from human snp file and assumes SNP length
-    of 1."""
-    snp_data_hs = get_file_locations()["hs"]["snps"]
-    # get fasta sequence of region using the function get_fasta
-    region_fasta = get_fasta(region, species="hs")
-    # convert fasta record to one line string without the fasta identifier
-    fasta_list=region_fasta.split("\n")
-    fasta_head = fasta_list[0]
-    seq_template_temp = "".join(fasta_list[1:])
-    # convert fasta string to list of characters
-    seq_template_list = list(seq_template_temp)
-    # convert region string to coordinates using get_coordinates function
-    coordinates = get_coordinates (region)
-    # create a SNP list that is filtered for frequency and allele number
-    snp_list = snp_filter_hs(get_snps(region, snp_data_hs), col, min_frequency, min_total_alleles)
-    # create a list of excluded snp coordinates
-    exclude = []
-    # find locations of snps in the sequence
-    for snp in snp_list:
-        # get snp coordinates relative to the sequence at hand
-        snp_index_start = int(snp[2]) + 1 - int(coordinates[1])
-        snp_index_end = int(snp[3]) - int(coordinates[1])
-        exclude.append([snp_index_start, snp_index_end - snp_index_start + 1])
-    # sort excluded snps by their location
-    exclude.sort(key=itemgetter(0))
-    # merge snps that are close together to reduce excluded region number
-
-    for i in range(len(exclude)-1):
-        l_current = exclude[i]
-        l_next = exclude[i+1]
-        if (l_next[0] - sum(l_current)) < 18:
-            l_new = [l_current[0], l_next[0] - l_current[0] + l_next[1]]
-            exclude[i+1] = l_new
-            exclude[i] = "delete"
-    excluded = [x for x in exclude if x != "delete"]
-    return excluded
-def mask_snps_hla (region, col=23, min_frequency=0.001, min_total_alleles=50):
-    """lowercase mask SNPs in a human genomic region
-    return fasta record."""
-    snp_data_hs = get_file_locations()["hs"]["snps"]
-    # get fasta sequence of region using the function get_fasta
-    region_fasta = get_fasta(region, species="hs")
-    # convert fasta record to one line string without the fasta identifier
-    fasta_list=region_fasta.split("\n")
-    fasta_head = fasta_list[0]
-    seq_template_temp = "".join(fasta_list[1:])
-    # convert fasta string to list of characters
-    seq_template_list = list(seq_template_temp)
-    # convert region string to coordinates using get_coordinates function
-    coordinates = get_coordinates (region)
-    # create a SNP list that is filtered for frequency and allele number
-    snp_list = snp_filter_hla(get_snps(region, snp_data_hs), col, min_frequency, min_total_alleles)
-    # convert sequence at SNP locations to lower case
-    for snp in snp_list:
-        snp_index_start = int(snp[2]) + 1 - int(coordinates[1])
-        snp_index_end = int(snp[3]) - int(coordinates[1])
-        """
-        for i in range(snp_index_start, snp_index_end + 1):
-            try:
-                seq_template_list[i] = seq_template_list[i].lower()
-            except IndexError:
-                print i, snp_index_start, snp_index_end, seq_template_temp, snp
-         """
-
-        if snp_index_start < 0:
-            snp_index_start = 0
-        if snp_index_end > len(seq_template_list) - 1:
-            snp_index_end = len(seq_template_list) - 1
-
-        """
-        if (snp_index_start >= 0) and (snp_index_end <= len(seq_template_list) -1):
-
-            for i in range(snp_index_start, snp_index_end + 1):
-                seq_template_list[i] = seq_template_list[i].lower()
-        """
-        for i in range(snp_index_start, snp_index_end + 1):
-            seq_template_list[i] = seq_template_list[i].lower()
-    # rebuild the fasta record from modified list
-    fasta_seq = "".join(seq_template_list)
-    fasta_rec = fasta_head + "\n" + fasta_seq
-    return fasta_rec
-def mask_snps_hs (region, col=23, min_frequency=0.001, min_total_alleles=50):
-    """lowercase mask SNPs in a human genomic region
-    return fasta record."""
-    snp_data_hs = get_file_locations()["hs"]["snps"]
-    # get fasta sequence of region using the function get_fasta
-    region_fasta = get_fasta(region, species="hs")
-    # convert fasta record to one line string without the fasta identifier
-    fasta_list=region_fasta.split("\n")
-    fasta_head = fasta_list[0]
-    seq_template_temp = "".join(fasta_list[1:])
-    # convert fasta string to list of characters
-    seq_template_list = list(seq_template_temp)
-    # convert region string to coordinates using get_coordinates function
-    coordinates = get_coordinates (region)
-    # create a SNP list that is filtered for frequency and allele number
-    snp_list = snp_filter_hs(get_snps(region, snp_data_hs), col, min_frequency, min_total_alleles)
-    # convert sequence at SNP locations to lower case
-    for snp in snp_list:
-        snp_index_start = int(snp[2]) + 1 - int(coordinates[1])
-        snp_index_end = int(snp[3]) - int(coordinates[1])
-        for i in range(snp_index_start, snp_index_end + 1):
-            seq_template_list[i] = seq_template_list[i].lower()
-    # rebuild the fasta record from modified list
-    fasta_seq = "".join(seq_template_list)
-    fasta_rec = fasta_head + "\n" + fasta_seq
-    return fasta_rec
 def make_boulder (fasta,
                   primer3_input_DIR,
                   exclude_list=[],
@@ -8544,490 +7909,13 @@ def rename_mipster_haplotypes(settings):
                 except KeyError:
                     problem_sequences.append(hapseq)
     return problem_sequences
-def get_summary_table(settings):
-    wdir = settings["workingDir"]
-    call_info_file = settings["callInfoDictionary"]
-    with open(call_info_file) as infile:
-        call_info = json.load(infile)
-    probe_sets_file = settings["mipSetsDictionary"]
-    probe_set_keys = settings["mipSetKey"]
-    used_probes = []
-    for psk in probe_set_keys:
-        with open(probe_sets_file) as infile:
-            used_probes.extend(json.load(infile)[psk][1:])
-    unique_haplotype_file = wdir + settings["haplotypeDictionary"]
-    with open(unique_haplotype_file) as infile:
-        haplotypes = json.load(infile)
-    # prepare a list of all mips used in the experiment
-    all_mips = []
-    for g in call_info:
-        for m in call_info[g]:
-            if m in used_probes:
-                c = "C0"
-                temp = [g, m, call_info[g][m]["copies"][c]["chrom"],
-                        call_info[g][m]["copies"][c]["capture_start"],
-                        call_info[g][m]["copies"][c]["capture_end"]]
-                all_mips.append(temp)
-    all_mips_srt = sorted(all_mips, key=itemgetter(2,3,4))
-    all_mips_keys = {}
-    for i in range(len(all_mips_srt)):
-        m = all_mips_srt[i]
-        k = m[0] + ":" + m[1]
-        all_mips_keys[k] = i
-    with open(wdir + settings["perSampleResults"]) as infile:
-        sample_res = json.load(infile)
-    sample_names = sorted(sample_res)
-    sample_mip_counts = {}
-    for s in sample_names:
-        barcode_counts = list(map(int, np.zeros(len(all_mips_srt))))
-        for g in sample_res[s]:
-            for m in sample_res[s][g]:
-                res = sample_res[s][g][m]
-                k = ":".join([g, m])
-                location = all_mips_keys[k]
-                for c in res:
-                    filtered_data = res[c]["filtered_data"]
-                    for f in filtered_data:
-                        hid = f["haplotype_ID"]
-                        bc = f["barcode_count"]
-                        hap = haplotypes[m][hid]
-                        copies = hap["mapped_copies"]
-                        for cop in copies:
-                            barcode_counts[location] += bc
-        sample_mip_counts[s] = barcode_counts
-    all_probes = []
-    for g in call_info:
-        for m in call_info[g]:
-            if m in used_probes:
-                for c in call_info[g][m]["copies"]:
-                    temp = [g, m, c, call_info[g][m]["copies"][c]["chrom"],
-                            call_info[g][m]["copies"][c]["capture_start"],
-                            call_info[g][m]["copies"][c]["capture_end"]]
-                    all_probes.append(temp)
-    all_probes_srt = sorted(all_probes, key = itemgetter(3,4,5))
-    all_probes_keys = {}
-    for i in range(len(all_probes_srt)):
-        p = all_probes_srt[i]
-        g = p[0]
-        m = p[1]
-        c = p[2]
-        k = ":".join([g, m, c])
-        all_probes_keys[k] = i
-
-    bc_header = ["MIP"] + [a[1] for a in all_mips_srt]
-    gene_names = ["target_gene_group"] + [a[0] for a in all_mips_srt]
-    bc_info = [[s] + sample_mip_counts[s] for s in sorted(sample_names)]
-    bc_out = np.transpose([bc_header] + [gene_names] + bc_info)
-
-    """
-    with open(wdir + settings["mipCountFile"], "w") as outfile:
-        outfile.write("\n".join(["\t".join(b) for b in bc_out]))
-    """
-    write_list(bc_out, wdir + settings["mipCountFile"])
 
 
-
-
-    min_count = int(settings["minSnpBarcodeCount"])
-    min_snp_qual = int(settings["minSnpQuality"])
-    min_snp_frac = float(settings["minSnpBarcodeFraction"])
-    sample_barcode_counts_uniq = {}
-    sample_barcode_counts_multi = {}
-    for s in sample_names:
-        uniq_barcode_counts = list(map(int, np.zeros(len(all_probes_srt))))
-        multi_barcode_counts = []
-        for g in sample_res[s]:
-            for m in sample_res[s][g]:
-                res = sample_res[s][g][m]
-                for c in res:
-                    filtered_data = res[c]["filtered_data"]
-                    copy_barcode_total = 0
-                    for f in filtered_data:
-                        copy_barcode_total += f["barcode_count"]
-                    copy_barcode_total = float(copy_barcode_total)
-                    for f in filtered_data:
-                        hid = f["haplotype_ID"]
-                        bc = f["barcode_count"]
-                        if bc >= min_count and bc/copy_barcode_total >= min_snp_frac:
-                            hap = haplotypes[m][hid]
-                            copies = hap["mapped_copies"]
-                            if len(copies) == 1:
-                                cop = list(copies.keys())[0]
-                                k = ":".join([g, m, cop])
-                                location = all_probes_keys[k]
-                                uniq_barcode_counts[location] += bc
-                            else:
-                                location = []
-                                for cop in copies:
-                                    k = ":".join([g, m, cop])
-                                    location.append(all_probes_keys[k])
-                                multi_barcode_counts.append([location, bc, hid])
-        sample_barcode_counts_uniq[s] = uniq_barcode_counts
-        sample_barcode_counts_multi[s] = multi_barcode_counts
-    temporary_barcode_counts = np.array([sample_barcode_counts_uniq[s]                                         for s in sorted(sample_names)])
-    sample_medians = np.median(temporary_barcode_counts, axis = 1)[:, np.newaxis]
-    temporary_sample_norm = temporary_barcode_counts/sample_medians
-    probe_medians = np.nanmedian(np.where(temporary_sample_norm != 0,
-                                          temporary_sample_norm,
-                                          np.nan), axis = 0)[np.newaxis, :]
-    temporary_copy_counts = temporary_sample_norm/probe_medians
-    nan_mask = np.isnan(temporary_copy_counts)
-    inf_mask = np.isinf(temporary_copy_counts)
-    temporary_copy_counts[nan_mask] = 0
-    temporary_copy_counts[inf_mask] = 0
-    sample_barcode_counts = copy.deepcopy(sample_barcode_counts_uniq)
-    multi_mapper_ratios = {}
-    all_probes_srt_array = np.array(all_probes_srt)
-    for sample_index in range(len(sample_names)):
-        s = sorted(sample_names)[sample_index]
-        multi_barcodes = sample_barcode_counts_multi[s]
-        uniq_barcodes = sample_barcode_counts[s]
-        multi_mapper_ratios[s] = {}
-        for mb in multi_barcodes:
-            locs = mb[0]
-            bc = mb[1]
-            multi_mapper_ratios[s][mb[2]] = {}
-            copy_medians_for_loc = []
-            for l in locs:
-                gene_at_l = all_probes_srt[l][0]
-                copy_at_l = all_probes_srt[l][2]
-                gene_mask = all_probes_srt_array[:, 0] == gene_at_l
-                copy_mask = all_probes_srt_array[:, 2] == copy_at_l
-                gene_copy_mask = np.logical_and(gene_mask, copy_mask)
-                unique_counts = temporary_copy_counts[sample_index, gene_copy_mask]
-                uniq_meds = np.median(unique_counts)
-                copy_medians_for_loc.append(uniq_meds)
-            copy_ratios = copy_medians_for_loc
-            #copy_ratios = np.array(copy_ratios)
-            #nan_mask = np.isnan(copy_ratios)
-            #copy_ratios[nan_mask] = 0
-            copy_totals = float(np.sum(copy_ratios))
-            if copy_totals == 0:
-                norm_copy_ratios = [1./len(copy_ratios) for cpr in copy_ratios]
-            else:
-                norm_copy_ratios = [cpr/copy_totals for cpr in copy_ratios]
-            for location_index in range(len(locs)):
-                l = locs[location_index]
-                l_ratio = norm_copy_ratios[location_index]
-                uniq_barcodes[l] += bc * l_ratio
-                multi_mapper_ratios[s][mb[2]][l] = l_ratio
-
-
-
-
-    mip_header = ["MIP"] + [a[1] for a in all_probes_srt]
-    copy_header = ["copy"] + [a[2] + "_" + a[2] for a in all_probes_srt]
-    uniq_mip_header = ["MIP_copy"] + [a[1] + "_" + a[2] for a in all_probes_srt]
-    gene_names = ["target_gene_group"] + [a[0] for a in all_probes_srt]
-    chromosomes = ["chr"] + [a[3] for a in all_probes_srt]
-    begins = ["begin"] + [str(a[4]) for a in all_probes_srt]
-    ends = ["end"] + [str(a[5]) for a in all_probes_srt]
-    bc_info = [[s] + sample_barcode_counts[s] for s in sorted(sample_names)]
-    bc_out = np.transpose([uniq_mip_header] + [mip_header] + [copy_header] +                           [gene_names] + [chromosomes] + [begins] +                           [ends] + bc_info)
-    write_list(bc_out, wdir + settings["barcodeCountFile"])
-
-    multi_bc_info = [[s] + sample_barcode_counts_multi[s] for s in sorted(sample_names)]
-    bc_out = np.transpose([uniq_mip_header] + [mip_header] + [copy_header] +                           [gene_names] + [chromosomes] + [begins] +                           [ends] + multi_bc_info)
-    write_list(bc_out, wdir + settings["barcodeCountFile"] + "_multi")
-
-    uniq_bc_info = [[s] + sample_barcode_counts_uniq[s] for s in sorted(sample_names)]
-    bc_out = np.transpose([uniq_mip_header] + [mip_header] + [copy_header] +                           [gene_names] + [chromosomes] + [begins] +                           [ends] + uniq_bc_info)
-    write_list(bc_out, wdir + settings["barcodeCountFile"] + "_uniq")
-
-    with open(wdir + "temporary_counts", "wb") as outfile:
-        pickle.dump(temporary_copy_counts, outfile)
-    """
-    with open(wdir + settings["perSampleResults"]) as infile:
-        sample_res = json.load(infile)
-    sample_names = sorted(sample_res.keys())
-    """
-    ann_keys = settings["annotationKeys"].split(";")
-    annotation_id_key = settings["annotationIdKey"]
-    sample_diffs = {}
-    all_diff_locations = {}
-    all_diffs = {}
-    for s in sample_names:
-        sample_diffs[s] = {}
-        for g in sample_res[s]:
-            for m in sample_res[s][g]:
-                res = sample_res[s][g][m]
-                for c in res:
-                    filtered_data = res[c]["filtered_data"]
-                    copy_barcode_total = 0
-                    for f in filtered_data:
-                        copy_barcode_total += f["barcode_count"]
-                    copy_barcode_total = float(copy_barcode_total)
-                    for f in filtered_data:
-                        hid = f["haplotype_ID"]
-                        bc = f["barcode_count"]
-                        if bc < min_count or bc/copy_barcode_total < min_snp_frac:
-                            continue
-                        try:
-                            qual = f["sequence_quality"]
-                        except KeyError:
-                            qual = f["seqence_quality"]
-                        hap = haplotypes[m][hid]
-                        if not haplotypes[m][hid]["mapped"]:
-                            continue
-                        copies = hap["mapped_copies"]
-                        if len(copies) > 1:
-                            multi_mapping = True
-                        else:
-                            multi_mapping = False
-                        for c in copies:
-                            k = ":".join([g, m, c])
-                            location = all_probes_keys[k]
-                            if multi_mapping:
-                                bc_ratio = multi_mapper_ratios[s][hid][location]
-                                bc = bc * bc_ratio
-                            total_depth = sample_barcode_counts[s][location]
-                            copy_call = call_info[g][m]["copies"][c]
-                            copy_chrom = copy_call["chrom"]
-                            copy_start = copy_call["capture_start"]
-                            copy_end = copy_call["capture_end"]
-                            copy_ori = copy_call["orientation"]
-                            ref_seq = copy_call["capture_sequence"]
-                            copy_differences = hap["mapped_copies"][c]["differences"]
-                            for d in copy_differences:
-                                normalized_key = d["vcf_normalized"]
-                                var = normalized_key.split(":")
-                                try:
-                                    annotation_id = d["annotation"][annotation_id_key]
-                                except KeyError:
-                                    annotation_id = "."
-                                hap_index = d["hap_index"]
-                                start_index = min(hap_index)
-                                end_index = max(hap_index) + 1
-                                hap_qual_list = []
-                                for hi in range(start_index, end_index):
-                                    try:
-                                        hap_qual_list.append(ord(qual[hi]) - 33)
-                                    except IndexError:
-                                        hap_qual_list = [-1]
-                                        break
-                                hap_qual = np.mean(hap_qual_list)
-                                if hap_qual < min_snp_qual:
-                                    continue
-                                sam_diff = [normalized_key,
-                                            var[0],
-                                            int(var[1]),
-                                            annotation_id,
-                                            var[3],
-                                            var[4],
-                                            d["clinical"],
-                                            d["clinical_id"],
-                                            d["psv"],
-                                            g,
-                                            m,
-                                            c,
-                                            bc,
-                                            total_depth,
-                                            [hap_qual],
-                                            [bc],
-                                            [total_depth],
-                                            [multi_mapping],
-                                            [hid],
-                                            [m],
-                                            d["annotation"]]
-                                try:
-                                    all_diff_locations[normalized_key].append(location)
-                                except KeyError:
-                                    all_diff_locations[normalized_key]  = [location]
-                                all_diffs[normalized_key] = sam_diff[:12] +                                                                          [sam_diff[-1]]
-                                if not normalized_key in sample_diffs[s]:
-                                    sample_diffs[s][normalized_key] = sam_diff
-                                else:
-                                    sample_diffs[s][normalized_key][12] += sam_diff[12]
-                                    if sam_diff[19][0] not in sample_diffs[s][normalized_key][19]:
-                                        sample_diffs[s][normalized_key][13] += sam_diff[13]
-                                    for i in range(14,20):
-                                        sample_diffs[s][normalized_key][i].extend(sam_diff[i])
-
-    try:
-        with open(wdir + settings["caseFile"]) as infile:
-            case = {line.split("\t")[0] : line.strip().split("\t")[1] for line in infile}
-    except IOError:
-        case = {}
-
-    for a in all_diff_locations:
-        all_diff_locations[a] = sorted(list(set(all_diff_locations[a])))
-    sorted_diffs = sorted(all_diff_locations,
-                          key = lambda a: all_diff_locations[a][0])
-    var_header = ["VKEY", "CHROM", "POS", "ID", "REF", "ALT",
-                 "TARGET", "TID", "PSV", "PAR", "MIP", "CP"]
-    var_header.extend(ann_keys)
-    if settings["caseControlStats"] == "True":
-        do_stats = True
-    else:
-        do_stats = False
-    if do_stats:
-        var_header.extend(["NS", "DP", "AD", "AF", "HO", "HE",
-                           "HOCa", "HOCo", "HECa", "HECo",
-                           "WTCa", "WTCo", "HOFishOR", "HOFishPval",
-                           "HOChiPval", "HEFishOR", "HEFishPval",
-                           "HEChiPval", "MTFishOR", "MTFishPval",
-                           "MTChiPval", "FORMAT"])
-    else:
-        var_header.extend(["NS", "DP", "AD", "AF", "HO", "HE", "FORMAT"])
-    var_header.extend(sample_names)
-    outfile_list = [var_header]
-    for d in sorted_diffs:
-        diff_locs = all_diff_locations[d]
-        diff_list = all_diffs[d][:-1]
-        ann = all_diffs[d][-1]
-        for k in ann_keys:
-            diff_list.append(ann[k])
-        wt_count = 0
-        wt_case = 0
-        wt_control = 0
-        het_count = 0
-        het_control = 0
-        het_case = 0
-        hom_count = 0
-        hom_case = 0
-        hom_control = 0
-        diff_depth = 0
-        allele_depth = 0
-        sdiffs = []
-        for s in sample_names:
-            try:
-                diff = sample_diffs[s][d][12:19]
-                try:
-                    diff[2] = np.mean(diff[2])
-                except ValueError:
-                    diff[2] = "."
-                for i in range(3,7):
-                    diff[i] = ",".join(map(str, diff[i]))
-                if diff[0] == diff[1]:
-                    GT = "1/1"
-                    hom_count += 1
-                    try:
-                        if case[s] == "case":
-                            hom_case += 1
-                        elif case[s] == "control":
-                            hom_control += 1
-                    except KeyError:
-                        pass
-                else:
-                    GT = "0/1"
-                    het_count += 1
-                    try:
-                        if case[s] == "case":
-                            het_case += 1
-                        elif case[s] == "control":
-                            het_control += 1
-                    except KeyError:
-                        pass
-                diff = [GT] + diff
-                try:
-                    diff.append(case[s])
-                except KeyError:
-                    diff.append(".")
-                sam_diff = ":".join(map(str, diff))
-                diff_depth += diff[2]
-                allele_depth += diff[1]
-            except KeyError:
-                total_depth = 0
-                for l in diff_locs:
-                    total_depth += sample_barcode_counts[s][l]
-                diff = [0, total_depth, ".", 0, total_depth, ".", "."]
-                diff_depth += total_depth
-                if total_depth > 0:
-                    GT = "0/0"
-                    wt_count += 1
-                    try:
-                        if case[s] == "case":
-                            wt_case += 1
-                        elif case[s] == "control":
-                            wt_control += 1
-                    except KeyError:
-                        pass
-                else:
-                    GT = "./."
-                diff = [GT] + diff
-                try:
-                    diff.append(case[s])
-                except KeyError:
-                    diff.append(".")
-                sam_diff = ":".join(map(str, diff))
-            sdiffs.append(sam_diff)
-        sam_count = sum([hom_count,
-                         het_count,
-                         wt_count])
-        allele_count = hom_count + het_count
-        if sam_count > 0:
-            allele_freq = round(float(allele_count)/sam_count, 4)
-        if do_stats:
-            diff_info = [sam_count, diff_depth, allele_depth,
-                         allele_freq, hom_count, het_count,
-                        hom_case, hom_control,
-                       het_case, het_control,
-                      wt_case, wt_control]
-            diff_info.extend(snp_stats(hom_case, hom_control,
-                       het_case, het_control,
-                      wt_case, wt_control))
-        else:
-            diff_info = [sam_count, diff_depth, allele_depth,
-                         allele_freq, hom_count, het_count]
-        diff_list.extend(diff_info)
-        gt_format = ["GT", "AD", "DP", "BQ", "ADS", "DPS", "MM", "HID", "CS"]
-        diff_list.append(":".join(gt_format))
-        diff_list.extend(sdiffs)
-        #outfile_list.append(u"\t".join(map(unicode, diff_list)))
-        outfile_list.append(diff_list)
-    '''
-    sample_diffs_list = {}
-    for s in sample_diffs:
-        sample_diffs_list[s] = []
-        for d in sample_diffs[s]:
-            diff = copy.deepcopy(sample_diffs[s][d])
-            for i in xrange(14,18):
-                diff[i] = ",".join(map(str, diff[i]))
-            for k in ann_keys:
-                ann = diff.pop(-1)
-                diff.append(ann[k])
-                diff.append(ann)
-            sample_diffs_list[s].append(diff)
-        sample_diffs_list[s] = sorted(sample_diffs_list[s], key = itemgetter(1,2,0))
-    outfile_list = ["\t".join(["sample",
-                               "vcf_key",
-                               "chromosome",
-                                "position",
-                                "rsid",
-                                "reference",
-                                "alt",
-                                "target ID",
-                                "PSV",
-                                "paralog",
-                                "mip",
-                                "copy",
-                               "allele depth",
-                                "total depth",
-                                "allele depths",
-                                "total depths",
-                                "multi map",
-                                "haplotype IDs",
-                                "targeted SNP"] + ann_keys)]
-    for s in sorted(sample_diffs_list):
-        var_list = sample_diffs_list[s]
-        for diff in var_list:
-            outfile_list.append("\t".join([s] + map(str, diff[:-1])))
-    '''
-    """
-    with open(wdir + settings[u"variationTableFile"], u"w") as outfile:
-        outfile.write("\n".join(map(map_str, outfile_list)))
-    """
-    write_list(outfile_list, wdir + settings["variationTableFile"])
-    with open(wdir + settings["variationTableFile"] + ".json", "w") as outfile:
-        json.dump(outfile_list, outfile)
-    with open(wdir + settings["sampleVariationFile"], "w") as outfile:
-        json.dump(sample_diffs, outfile)
-    return
 def filter_variation(variation_json,
                      min_barcode_count,
                      min_barcode_fraction,
-                    samples_to_exclude = None,
-                    samples_to_include = None):
+                     samples_to_exclude=None,
+                     samples_to_include=None):
     """
     Filter SNP variation for total minimum total depth and minimum
     barcode fraction for case control sample sets.
@@ -9409,7 +8297,8 @@ def parasight(resource_dir,
         else:
             pdf_convert_list.append(t + ".pdf")
         gs_list.append(gs_command)
-        pdf_list.append("cp " + basename + ".pdf " + pdf_dir + t + ".pdf")
+        pdf_list.append("cp " + basename + ".pdf "
+                        + os.path.join(pdf_dir, t + ".pdf"))
         outlist = ["parasight76.pl",
                    "-showseq", basename + ".show",
                    "-extra", basename + extra_extension,
@@ -12501,8 +11390,6 @@ def merge_snps(settings):
                                            'base_match': False,
                                             'begin': g_start,
                                             'chrom': d["chrom"],
-                                            'clinical': False,
-                                            'clinical_id': 'none',
                                             'end': g_end,
                                             'hap_base': hap_codon,
                                             'hap_index': [h_start_index, h_end_index - 1],
