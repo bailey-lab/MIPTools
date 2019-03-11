@@ -480,7 +480,6 @@ class Locus:
         except KeyError:
             return {}
         for c in segment_dic:
-            copy_coordinates = pcoordinates[c]
             snps[c] = {}
             copy_chrom = segment_dic[c]["chrom"]
             begin = segment_dic[c]["begin"]
@@ -490,7 +489,6 @@ class Locus:
             for s in snp_list:
                 schr = s[0]
                 spos = int(s[1])
-                sID = s[2]
                 sref = s[3]
                 salts = s[4].split(",")
                 sinfo = s[7].split(";")
@@ -503,16 +501,16 @@ class Locus:
                         sdict[inf] = True
                 d = {"copy_chrom": schr,
                      "copy_begin": spos,
-                     "snp_id": sID,
                      "copy_base": sref,
                      "alleles": salts,
-                    "info": sdict}
-                if c!= "C0":
+                     "info": sdict}
+                if c != "C0":
                     try:
                         begin = pcoordinates[c][d["copy_begin"]]
                     except KeyError:
                         # if the snp is in a region of the copy
-                        # that is not aligned to the ref, we will not add the SNP
+                        # that is not aligned to the ref, we will not add
+                        # the SNP
                         continue
                 else:
                     begin = d["copy_begin"]
@@ -537,14 +535,12 @@ class Locus:
                 sz_diff = int(must_dic[m]["size_difference"])
             except KeyError:
                 sz_diff = 0
+            except ValueError:
+                sz_diff = 0
             d = {"name": m,
                  "copy_begin": int(must_dic[m]["begin"]),
                  "copy_end": int(must_dic[m]["end"]),
                  "copy_chrom": must_dic[m]["chrom"],
-                 "copy_base": must_dic[m]["ref_base"],
-                 "snp_id": must_dic[m]["snp_id"],
-                 "alleles": ([must_dic[m]["ref_base"]]
-                             + must_dic[m]["snp_bases"].split(",")),
                  "size_difference": sz_diff}
             if d["size_difference"] == 0:
                 d["type"] = "SNV"
@@ -565,17 +561,14 @@ class Locus:
             else:
                 d["begin"] = begin
                 d["end"] = end
-            copy_must[d["copy_chrom"]
-                      + ":" + str(d["copy_begin"])
-                      + must_dic[m]["ref_base"] + ":"
-                      + must_dic[m]["snp_bases"]] = d
+            copy_must[d["name"]] = d
         return must
 
     def get_variants(self):
         columns = ["chrom", "begin", "end", "base",
                    "copy_chrom", "copy_begin", "copy_end", "copy_base",
                    "size_difference", "orientation",
-                   "AN", "AC", "snp_id", "type", "variant_type", "copy_id"]
+                   "AN", "AC", "type", "variant_type", "copy_id"]
         coordinate_converter = self.pcoordinates
         chrom = coordinate_converter["C0"]["chromosomes"]["C0"]
         variant_dicts = {"pdiffs": self.pdiffs,
@@ -715,6 +708,9 @@ class Locus:
             "AN"]
         snp_df = self.all_variants.loc[self.all_variants["variant_type"]
                                        == "snps"]
+        # we need per position variants for masking purposes.
+        # i.e. deletions represented as AAA->--- should be A->- in 3 positions.
+        # a small function to divide SNPs is provided by split_snps
 
         def split_snps(r):
             r_chrom = r["chrom"]
@@ -747,6 +743,10 @@ class Locus:
         maf_filter = float(self.rinfo["CAPTURE"]["S0"]["maf_for_arm_design"])
         split = split.loc[split["AF"] >= maf_filter]
         self.split_snps = split
+
+        # A similar split is needed on non-snp variants (pdiffs, etc.)
+        # we don't have allele counts for these, so it'll be only
+        # chromosomes and positions in the split diffs.
         diff_df = self.all_variants.loc[self.all_variants["variant_type"]
                                         != "snps"]
         split_diff_list = [
