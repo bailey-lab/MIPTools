@@ -1896,16 +1896,20 @@ def parse_aligned_haplotypes(settings):
                     hap_al = left_pad_hap + hap_al + right_pad_hap
                     ref_al = left_pad_ref + ref_al + right_pad_ref
                     # we have padded the alignment so now all the ref and
-                    # hap sequence is accounted for and not just the aligned part
-                    # ref_name, ref_copy, ref_seq, ref_al
-                    # hap_name, hap_seq, hap_al, diff, score have information we'll use
+                    # hap sequence is accounted for and not just the aligned
+                    # part. ref_name, ref_copy, ref_seq, ref_al
+                    # hap_name, hap_seq, hap_al, diff, score have information
+                    # we'll use
                     c_name = ref_copy
                     h_name = hap_name
-                    exact_match = (ref_seq == hap_seq)
                     try:
                         snp_dict = call_info[gene_name][m]["snps"]
                     except KeyError:
-                        snp_dict = {}
+                        try:
+                            snp_dict = call_info[gene_name][m]["copies"][
+                                c_name]["snps"]
+                        except KeyError:
+                            snp_dict = {}
                     copy_dict = call_info[gene_name][m]["copies"][c_name]
                     copy_ori = copy_dict["orientation"]
                     copy_chrom = copy_dict["chrom"]
@@ -2101,50 +2105,27 @@ def parse_aligned_haplotypes(settings):
                             vcf_hap = hap_base
                         vcf_key = d_chrom + ":" + str(d_pos) + ":.:" + vcf_ref + ":" + vcf_hap
                         d["vcf_raw"] = vcf_key
-                    # all differences in between the ref and hap has been documented
-                    # loop through differences and assign psv/clinical values
+                    # all differences in between the ref and hap has been found
+                    # loop through differences and assign values for
+                    # ref_base, hap_base and hap_index.
                     for d in differences:
-                        diff_begin = d["begin"]
-                        diff_end = d["end"]
                         if copy_ori == "reverse":
                             # revert bases to their original strand (-)
                             d["ref_base"] = reverse_complement(d["ref_base"])
                             d["hap_base"] = reverse_complement(d["hap_base"])
                             d["hap_index"] = [-1 * d["hap_index"][0] - 1,
                                               -1 * d["hap_index"][1] - 1]
-                        diff_ref_base = d["ref_base"]
-                        diff_hap_base = d["hap_base"]
-                        diff_is_indel = False
-                        if d["type"] in ["del", "ins"]:
-                            diff_is_indel = True
-                        pdiff = False
-                        # compare the diff to each snp for that this mip covers
-                        for s in snp_dict:
-                            # first check for paralogus differences
-                            pdiff = False
-                            try:
-                                if snp_dict[s]["psv"]:
-                                    snp_copy = snp_dict[s]["copies"][ref_copy]
-                                    if snp_copy["begin"] == diff_begin or                                          snp_copy["end"] == diff_end:
-                                        pdiff = True
-                                        break
-                            except KeyError:
-                                continue
-                        # update diff dictionary
-                        d["base_match"] = False
-                        d["psv"] = pdiff
 
-                    # create a dictionary that holds all the alignment information
-                    # for the mip and haplotype
+                    # create a dictionary that holds all the alignment
+                    # information for the mip and haplotype
                     al_dict = {"gene_name": gene_name,
-                                   "mip_name": m,
-                                   "haplotype_ID": hap_name,
-                                   "score": score,
-                                   "exact_match": exact_match,
-                                   "differences": differences,
-                                   "aligned_hap": hap_al,
-                                   "aligned_ref": ref_al,
-                                   "diff": diff}
+                               "mip_name": m,
+                               "haplotype_ID": hap_name,
+                               "score": score,
+                               "differences": differences,
+                               "aligned_hap": hap_al,
+                               "aligned_ref": ref_al,
+                               "diff": diff}
                     # also report alignments that had any problems
                     if problem_al:
                         problem_alignments.append(al_dict)
@@ -2224,18 +2205,12 @@ def parse_aligned_haplotypes(settings):
     return
 
 
-def update_aligned_haplotypes (settings):
+def update_aligned_haplotypes(settings):
     """
     Update haplotypes with information from the alignment results.
-    Find which paralog copy the haplotype best maps to by scoring each alignment
-    according to given psv_priority parameter. If 0, psv's will not be taken into account
-    and best alignment score will be considered the correct copy. If 1, alignment score
-    will be increased by number of psv's supporting the copy multiplied by the psv_multiplier
-    parameter. If 2, number of supporting psv's will be considered for best mapping copy and
-    the alignment score will only be used as tie breaker.
+    Find which paralog copy the haplotype best maps to using the alignment
+    scores from lastZ.
     """
-    psv_priority = int(settings["psvPriority"])
-    psv_multiplier = int(settings["psvMultiplier"])
     wdir = settings["workingDir"]
     temp_haplotype_file = wdir + settings["tempHaplotypesFile"]
     with open(temp_haplotype_file) as infile:
@@ -2247,17 +2222,9 @@ def update_aligned_haplotypes (settings):
         parsed_alignments = json.load(infile)
     # all alignments from the parsed alignments dict
     alignments = parsed_alignments["alignments"]
-    # alignments with problems
-    inverted_alignments = parsed_alignments["inverted_alignments"]
-    problem_alignments = parsed_alignments["problem_alignments"]
     # update each haplotype with alignment information
     for m in haplotypes:
         gene_name = m.split("_")[0]
-        # find how many paralog specific variant the mip covers
-        try:
-            mip_psv_count = call_info[gene_name][m]["psv_count"]
-        except KeyError:
-            mip_psv_count = 0
         for h in haplotypes[m]:
             # create a copy dict for each haplotype for each possible
             # paralog gene copy that haplotype may belong to
@@ -2270,91 +2237,50 @@ def update_aligned_haplotypes (settings):
                 continue
             # update copies dict with alignment information
             for c in align:
-                # count how many psv's were observed for this copy
-                copy_psv_count = 0
-                # alignment score shows how well the haplotype was aligned to
-                # reference sequence of this copy
-                score = align[c]["score"]
-                # all differences between the reference and hap is kept in "differences"
-                differences = align[c]["differences"]
-                for d in differences:
-                    if d["psv"]:
-                        copy_psv_count += 1
-                # update alignment with the psv count
-                align[c]["psv_count"] = copy_psv_count
                 # update haplotype with alignment information
-                haplotypes[m][h]["copies"][c] = {"score": align[c]["score"],
-                                              "copy_psv_count": align[c]["psv_count"],
-                                              "mip_psv_count": mip_psv_count}
-            # Now we know how well this haplotype maps to each copy
-            # there are two sources of information used for mapping a haptolype
-            # to a copy. Alignment score gives us how well both sequences align
-            # It is around 18000 for perfectly aligning human haplotypes (~250 bp)
-            # deletions are more costly than substitutions. A 20 bp deletion will
-            # cost several thousands of alignment score. The second source is the
-            # psv counts. Copy psv count shows hom many psvs were NOT as expected,
-            # i.e., points to a different copy than the copy at hand. mip psv count
-            # is the total number of psvs covered by mip. The difference between them
-            # shows how many psvs support the haplotype mapping to the copy at hand.
-            # perfect mapping would show "0" copy psvs and many mip psvs.
-            ##########################################################################
-            # sort copies considering alignment scores and psv scores
-            copy_sort = []
-            for c in copies:
-                mip_psv_count = copies[c]["mip_psv_count"]
-                copy_psv_count = copies[c]["copy_psv_count"]
-                supporting_psv_count = mip_psv_count - copy_psv_count
-                copy_alignment_score = copies[c]["score"]
-                copy_psv_score = psv_multiplier * supporting_psv_count
-                copy_sort.append([c,
-                                  mip_psv_count,
-                                  copy_psv_count,
-                                  supporting_psv_count,
-                                  copy_alignment_score,
-                                  copy_psv_score + copy_alignment_score])
-            # sort copies
-            # priority indexes (f)irst and (s)econd will determine which score should be
-            # considered for sorting the copies for mapping purposes. Indexes are as follows:
-            # 0: copyname, 1: mip_pst_count, 2: copy_psv_count, 3: supporting_psv_count
-            # 4: alignment_score, 5: copy_psv_score + copy_alignment_score
-            # psv priority 0: only consider alignment scores
-            # 1: supplement alignment scores with psv scores
-            # 2: use psv score, break ties with alignment scores
-            try:
-                f,s  = [[4,1], [5,1], [3,4]][psv_priority]
-            except IndexError:
-                continue
-            # sort copies for the first and second priority keys
-            copy_keys_sorted = sorted(copy_sort, key = itemgetter(f, s))
+                copies[c] = {"score": align[c]["score"]}
+            # sort copies considering alignment scores
+            copy_keys_sorted = sorted(copies,
+                                      key=lambda a: copies[a]["score"])
+            # below code prevents alt contigs to be the best mapping copy
+            # unless it is the only mapping copy. Uncomment if needed.
+            """
             copy_keys_sorted_temp = copy.deepcopy(copy_keys_sorted)
             # remove alt contigs
             for cop_ind in range(len(copy_keys_sorted)):
                 cop = copy_keys_sorted[cop_ind]
                 if "alt" in call_info[gene_name][m]["copies"][cop[0]]["chrom"]:
                     copy_keys_sorted[cop_ind] = "remove"
-            copy_keys_sorted = [cop_key for cop_key in copy_keys_sorted                                if cop_key != "remove"]
+            copy_keys_sorted = [cop_key for cop_key in copy_keys_sorted
+                                if cop_key != "remove"]
             if len(copy_keys_sorted) == 0:
                 copy_keys_sorted = copy_keys_sorted_temp
+            """
             # pick best scoring copies
             # last item in copy_keys_sorted is the best
             best_copy = copy_keys_sorted[-1]
             # create a list of copies that has the best score
-            best_copies = [cop for cop in copy_keys_sorted                                if (cop [f] == best_copy[f]) and (cop[s] == best_copy[s])]
+            best_copies = [cop for cop in copy_keys_sorted
+                           if (copies[cop]["score"]
+                               == copies[best_copy]["score"])]
             # create a map dict to be added to haplotype information
             # extract copy keys of best copies
-            temp_keys = [i[0] for i in best_copies]
             temp_dic = {}
-            for c in temp_keys:
-                temp_dic[c] = {"copy_name": call_info[gene_name][m]["copies"][c]["copyname"],
+            for c in best_copies:
+                temp_dic[c] = {"copy_name": call_info[gene_name][m]["copies"][
+                               c]["copyname"],
                                "differences": alignments[h][c]["differences"],
-                               "chrom": call_info[gene_name][m]["copies"][c]["chrom"]}
+                               "chrom": call_info[gene_name][m]["copies"][c][
+                               "chrom"]}
             haplotypes[m][h]["mapped_copies"] = temp_dic
             # create a single copy name for the haplotype such as HBA1_C0
-            # if there are multiple copies that the haplotype matchedequally well
-            # name will be the compound name of all best mapping copies, e.g. HBA1_C0_HBA2_C1
+            # if there are multiple copies that the haplotype matched equally
+            # well name will be the compound name of all best mapping copies,
+            # e.g. HBA1_C0_HBA2_C1
             mapped_copy_names = []
             for k in sorted(temp_dic.keys()):
-                mapped_copy_names.append("_".join([temp_dic[k]["copy_name"], k]))
+                mapped_copy_names.append("_".join([temp_dic[k]["copy_name"],
+                                                   k]))
             haplotypes[m][h]["copy_name"] = "_".join(mapped_copy_names)
     temp_mapped_haps_file = wdir + settings["tempMappedHaplotypesFile"]
     with open(temp_mapped_haps_file, "w") as outfile:
@@ -2362,7 +2288,7 @@ def update_aligned_haplotypes (settings):
     return
 
 
-def update_unique_haplotypes (settings):
+def update_unique_haplotypes(settings):
     """
     Add new on and off target haplotypes to the unique haplotypes.
     Update sequence_to_haplotype dict with the new haplotypes.
@@ -9205,7 +9131,6 @@ def process_results(wdir,
                                  annotation_id,
                                  var[3],
                                  var[4],
-                                 d["psv"],
                                  g, m, c, hid,
                                  raw_key,
                                  original_pos,
@@ -9222,7 +9147,6 @@ def process_results(wdir,
                     variation_list.append(temp_list)
     # create pandas dataframes for variants
     colnames = ["VKEY", "CHROM", "POS", "ID", "REF", "ALT",
-                "PSV", "Gene", "MIP", "Copy", "Haplotype ID",
                 "RAW_VKEY", "Original Position", "Start Index",
                 "End Index", "Multi Mapping"]
     colnames = colnames + annotation_keys
@@ -11387,13 +11311,11 @@ def merge_snps(settings):
                                 'Ref': Ref,
                                 'Start': g_start
                             },
-                                           'base_match': False,
-                                            'begin': g_start,
+                                           'begin': g_start,
                                             'chrom': d["chrom"],
                                             'end': g_end,
                                             'hap_base': hap_codon,
                                             'hap_index': [h_start_index, h_end_index - 1],
-                                            'psv': False,
                                             'ref_base': Ref,
                                             'type': 'snp',
                                             'vcf_normalized': ":".join(
