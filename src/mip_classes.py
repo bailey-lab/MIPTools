@@ -223,7 +223,6 @@ class Locus:
                          "end": end + 1,
                          "type": "insertion",
                          "base": ref_base,
-                         "alleles": [ref_base],
                          "orientation": diff_ori,
                          "copy_chrom": copy_chrom,
                          "copy_begin": copy_begin + 1,
@@ -236,7 +235,6 @@ class Locus:
                          "end": end,
                          "type": "SNV",
                          "base": ref_base,
-                         "alleles": [ref_base],
                          "orientation": diff_ori,
                          "copy_chrom": copy_chrom,
                          "copy_begin": copy_begin + 1,
@@ -253,7 +251,6 @@ class Locus:
                                  "end": begin + i + 1,
                                  "type": "SNV",
                                  "base": ref_base[i],
-                                 "alleles": [ref_base[i]],
                                  "orientation": diff_ori,
                                  "copy_chrom": copy_chrom,
                                  "copy_begin": copy_begin + i + 1,
@@ -266,7 +263,6 @@ class Locus:
                                  "end": begin + i + 1,
                                  "type": "SNV",
                                  "base": ref_base[i],
-                                 "alleles": [ref_base[i]],
                                  "orientation": diff_ori,
                                  "copy_chrom": copy_chrom,
                                  "copy_begin": copy_end - i,
@@ -280,7 +276,6 @@ class Locus:
                              "end": end,
                              "type": "deletion",
                              "base": ref_base,
-                             "alleles": [ref_base],
                              "orientation": diff_ori,
                              "copy_chrom": copy_chrom,
                              "copy_begin": copy_begin,
@@ -293,7 +288,6 @@ class Locus:
                              "end": end,
                              "type": "deletion",
                              "base": ref_base,
-                             "alleles": [ref_base],
                              "orientation": diff_ori,
                              "copy_chrom": copy_chrom,
                              "copy_begin": copy_end,
@@ -334,7 +328,6 @@ class Locus:
                          "end": end,
                          "type": "insertion",
                          "base": ref_base,
-                         "alleles": [ref_base],
                          "orientation": diff_ori,
                          "copy_base": copy_base,
                          "size_difference": len(copy_base)}
@@ -344,7 +337,6 @@ class Locus:
                          "end": end,
                          "type": "SNV",
                          "base": ref_base,
-                         "alleles": [ref_base],
                          "orientation": diff_ori,
                          "copy_base": copy_base,
                          "size_difference": 0}
@@ -356,7 +348,6 @@ class Locus:
                                  "end": begin + i + 1,
                                  "type": "SNV",
                                  "base": ref_base[i],
-                                 "alleles": [ref_base[i]],
                                  "orientation": diff_ori,
                                  "copy_base": copy_base[i],
                                  "size_difference": 0}
@@ -366,7 +357,6 @@ class Locus:
                                  "end": begin + i + 1,
                                  "type": "SNV",
                                  "base": ref_base[i],
-                                 "alleles": [ref_base[i]],
                                  "orientation": diff_ori,
                                  "copy_base": copy_base[-i-1],
                                  "size_difference": 0}
@@ -377,7 +367,6 @@ class Locus:
                              "end": end,
                              "type": "deletion",
                              "base": ref_base,
-                             "alleles": [ref_base],
                              "orientation": diff_ori,
                              "copy_base": copy_base,
                              "size_difference": begin - end}
@@ -387,7 +376,6 @@ class Locus:
                              "end": end,
                              "type": "deletion",
                              "base": ref_base,
-                             "alleles": [ref_base],
                              "orientation": diff_ori,
                              "copy_base": copy_base,
                              "size_difference": begin - end}
@@ -1691,10 +1679,135 @@ class Paralog(Locus):
         with open(self.cwd + self.paralog_name, "wb") as savefile:
                 pickle.dump(self, savefile)
 
-    def order_mips():
-        mip_info = {}
+    def order_mips(self, filter_type="keep"):
+        mip_info = {"mips": {}, "paralog_info": {},
+                    "mip_names": {"mip_to_pair": {}, "pair_to_mip": {}}}
+        # use sort_mips function to remove any filtered MIPs, sort MIPs
+        # according to their genomic position and rename according to that
+        # position.
+        self.sort_mips(filter_type)
+        desired_attr = ['target_genes', 'exons', 'pcoordinates', 'extra_snps',
+                        'segment_dic', 'extras_dic', 'copies', 'regions',
+                        'failed', 'begin', 'copies_captured', 'snps',
+                        'target_dict', 'chained_mips', 'zcoordinates',
+                        'designed', 'end', 'chrom', 'must', 'pdiffs',
+                        'rinfo', 'paralog_name', 'alignments', "species"]
+        for d in desired_attr:
+            mip_info["paralog_info"][d] = self.__dict__[d]
+        for pair_name in self.selected_mips:
+            m = self.selected_mips[pair_name]
+            mip_name = m.fullname
+            mip_info["mip_names"]["mip_to_pair"][mip_name] = pair_name
+            mip_info["mip_names"]["pair_to_mip"][pair_name] = mip_name
+            mip_info["mips"][mip_name] = {"mip_info": m.mip,
+                                          "capture_info": m.capture_info,
+                                          "mip_dic": m.mip_dic}
+            ligation = mip_info["mips"][mip_name]["mip_dic"][
+                "ligation_primer_information"]['PARALOG_COORDINATES']
+            extension = mip_info["mips"][mip_name]["mip_dic"][
+                "extension_primer_information"]['PARALOG_COORDINATES']
+            mipdic = mip_info["mips"][mip_name]["mip_info"]
+            for c in ligation:
+                if c not in mipdic:
+                    try:
+                        ext_start = extension[c]['ALT_START']
+                        ext_end = extension[c]['ALT_END']
+                    except KeyError:
+                        try:
+                            ext_start = extension[c]['BOWTIE_START']
+                            ext_end = extension[c]['BOWTIE_END']
+                        except KeyError:
+                            try:
+                                ext_start = extension[c]['GENOMIC_START']
+                                ext_end = extension[c]['GENOMIC_END']
+                            except KeyError:
+                                continue
+                    try:
+                        lig_start = ligation[c]['ALT_START']
+                        lig_end = ligation[c]['ALT_END']
+                    except KeyError:
+                        try:
+                            lig_start = ligation[c]['BOWTIE_START']
+                            lig_end = ligation[c]['BOWTIE_END']
+                        except KeyError:
+                            try:
+                                lig_start = ligation[c]['GENOMIC_START']
+                                lig_end = ligation[c]['GENOMIC_END']
+                            except KeyError:
+                                continue
+                    chrom = ligation[c]["CHR"]
+                    orientation = extension[c]["ORI"]
+                    mip_start = sorted([ext_start, ext_end,
+                                        lig_start, lig_end])[0]
+                    mip_end = sorted([ext_start, ext_end,
+                                      lig_start, lig_end])[3]
+                    capture_start = sorted([ext_start, ext_end,
+                                            lig_start, lig_end])[1] + 1
+                    capture_end = sorted([ext_start, ext_end,
+                                          lig_start, lig_end])[2] - 1
+                    capture_size = capture_end - capture_start + 1
+                    capture_key = chrom + ":" + str(capture_start) + "-" + str(
+                        capture_end)
+                    mipdic[c] = {"chrom": chrom,
+                                 "capture_start": capture_start,
+                                 "capture_end": capture_end,
+                                 "mip_start": mip_start,
+                                 "mip_end": mip_end,
+                                 "capture_size": capture_size,
+                                 "capture_key": capture_key,
+                                 "captured": False,
+                                 "orientation": orientation,
+                                 "ligation_start": lig_start,
+                                 "ligation_end": lig_end,
+                                 "extension_start": ext_start,
+                                 "extension_end": ext_end}
+                else:
+                    mipdic[c]["captured"] = True
         call_info = {}
-        return
+        for mip_name in mip_info["mips"]:
+            minfo = mip_info["mips"][mip_name]["mip_info"]
+            call_info[mip_name] = {"copies": {}}
+            copies = call_info[mip_name]["copies"]
+            for c in minfo:
+                chrom = minfo[c]["chrom"]
+                capture_start = minfo[c]["capture_start"]
+                capture_end = minfo[c]["capture_end"]
+                ori = minfo[c]["orientation"]
+                captured = minfo[c]["captured"]
+                try:
+                    genes = mip_info["paralog_info"]["segment_dic"][
+                        "S0"][c]["genes"]["names"]
+                except KeyError:
+                    genes = []
+                try:
+                    cap_seq = minfo[c]["capture_sequence"]
+                except KeyError:
+                    cap_seq = mip.get_sequence(minfo[c]["capture_key"],
+                                               self.species)
+                    if ori == "reverse":
+                        cap_seq = mip.reverse_complement(cap_seq)
+                    minfo[c]["capture_sequence"] = cap_seq
+                copies[c] = {"capture_sequence": cap_seq,
+                             "chrom": chrom,
+                             "capture_start": capture_start,
+                             "capture_end": capture_end,
+                             "orientation": ori,
+                             "captured": captured,
+                             "copyname": self.paralog_name + "-" + c,
+                             "genes": genes}
+        for m in call_info:
+            copies = call_info[m]["copies"]
+            md = mip_info["mips"][m]
+            caps = md["capture_info"]["captured_targets"]
+            for target_type in caps:
+                for copy_id in caps[target_type]:
+                    try:
+                        copies[copy_id]["variants"][target_type] = caps[
+                            target_type][copy_id]
+                    except KeyError:
+                        copies[copy_id]["variants"] = {target_type: caps[
+                            target_type][copy_id]}
+        return {"call_info": call_info, "mip_info": mip_info}
 
 
 class Subregion(Locus):

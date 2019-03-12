@@ -1687,6 +1687,66 @@ def alignment_mapper(family_name, res_dir):
     return alignment_dic
 
 
+def order_mips(mip_info, design_name, res_dir):
+    mip_sequences = []
+    for g in sorted(mip_info):
+        for m in sorted(mip_info[g]["mips"]):
+            minfo = mip_info[g]["mips"][m]["mip_dic"]["mip_information"]
+            for c in minfo:
+                s = minfo[c]["SEQUENCE"]
+                n = m + "_" + c
+                num = int(m.split("_")[-1][3:])
+                mip_sequences.append([n, s, g, num, m, c])
+        if len(mip_info[g]["mips"]) == 0:
+            mip_info.pop(g)
+    mip_sequences = sorted(mip_sequences, key=itemgetter(2, 3))
+    print("%d probes will be ordered." % len(mip_sequences))
+    # Check for probes that have the same sequence
+    sequence_only = [i[1].upper() for i in mip_sequences]
+    for s in sequence_only:
+        if sequence_only.count(s) > 1:
+            print("At least two probes share the sequence %s" % s)
+    rows = ["A", "B", "C", "D", "E", "F", "G", "H"]
+    columns = list(range(1, 13))
+    for i in range(len(mip_sequences)):
+        m = mip_sequences[i]
+        plate = i/96
+        pl_pos = i % 96
+        col = columns[pl_pos % 12]
+        row = rows[pl_pos/12]
+        m.extend([row, col, plate])
+    for i in range(len(mip_sequences)):
+        m = mip_sequences[i]
+        s = list(m[1])
+        N_found = False
+        for j in s:
+            if s[j] == "N":
+                if N_found:
+                    s[j] == "(N)"
+                else:
+                    N_found = True
+                    s[j] == "(N:25252525)"
+        m.append("".join(s))
+    order_dict = {}
+    for i in range(len(mip_sequences)):
+        m = mip_sequences[i]
+        pl = m[-2]
+        pl_name = design_name + "_" + str(pl)
+        try:
+            order_dict[pl_name].append(m)
+        except KeyError:
+            order_dict[pl_name] = [m]
+    for o in order_dict:
+        with open(res_dir + o, "w") as outfile:
+            outfile_list = ["\t".join(["WellPosition", "Name", "Sequence"])]
+            plate_mips = order_dict[o]
+            for m in plate_mips:
+                wp = m[-4] + str(m[-3])
+                outfile_list.append("\t".join([wp, m[0], m[-1]]))
+            outfile.write("\n".join(outfile_list))
+    return
+
+
 def align_haplotypes(
         settings, target_actions=["unmask", "multiple"],
         query_actions=["unmask"],
@@ -1709,8 +1769,8 @@ def align_haplotypes(
     if not os.path.exists(alignment_dir):
         os.makedirs(alignment_dir)
     for m in haplotypes:
-        # create a fasta file for each mip that contains all haplotype sequences
-        # for that mip
+        # create a fasta file for each mip that contains all haplotype
+        # sequences for that mip
         haplotype_fasta = alignment_dir + m + ".haps"
         with open(haplotype_fasta, "w") as outfile:
             outfile_list = []
@@ -1719,15 +1779,16 @@ def align_haplotypes(
                 outfile_list.append("".join(outlist))
             outfile.write("\n".join(outfile_list))
         haplotype_fasta = m + ".haps"
-        # create a reference file for each mip that contains reference sequences
-        # for each paralog copy for that mip
+        # create a reference file for each mip that contains reference
+        # sequences for each paralog copy for that mip
         reference_fasta = alignment_dir + m + ".refs"
         with open(reference_fasta, "w") as outfile:
             outfile_list = []
             gene_name = m.split("_")[0]
             for c in call_info[gene_name][m]["copies"]:
                 c_ori = call_info[gene_name][m]["copies"][c]["orientation"]
-                c_seq = call_info[gene_name][m]["copies"][c]["capture_sequence"]
+                c_seq = call_info[gene_name][m]["copies"][c][
+                    "capture_sequence"]
                 if c_ori == "reverse":
                     c_seq = reverse_complement(c_seq)
                 outlist = [">", m + "_" + c, "\n", c_seq]
@@ -1736,9 +1797,9 @@ def align_haplotypes(
         # name of the alignment output file for the mip
         output_file = m + ".aligned"
         # create the list to be passed to the alignment worker
-        command = [haplotype_fasta, alignment_dir, output_file, reference_fasta,
-                   target_actions, query_actions, identity, coverage, output_format,
-                   alignment_options, species]
+        command = [haplotype_fasta, alignment_dir, output_file,
+                   reference_fasta, target_actions, query_actions, identity,
+                   coverage, output_format, alignment_options, species]
         # add the command to the list that will be passed to the multi-aligner
         command_list.append(command)
     # run the alignment
@@ -1770,25 +1831,29 @@ def parse_aligned_haplotypes(settings):
                 problem_al = False
                 if not line.startswith("#"):
                     # each line of the alignment file includes an alignment
-                    # between a reference copy sequence of a mip
+                    # between the reference copy sequences of a mip
+                    # and a haplotype sequence
                     newline = line.strip().split("\t")
                     gene_name = newline[0].split("_")[0]
                     m_name = "_".join(newline[0].split("_")[:-1])
                     ref_copy = newline[0].split("_")[-1]
-                    rf_ori = call_info[gene_name][m_name]["copies"][ref_copy]["orientation"]
+                    rf_ori = call_info[gene_name][m_name]["copies"][ref_copy][
+                        "orientation"]
                     # aligned part of the reference sequence with gaps
                     ref_al = newline[1].upper()
                     if rf_ori == "reverse":
                         ref_al = reverse_complement(ref_al)
                     # aligned part of the reference without gaps
-                    ref_used = ref_al.translate(str.maketrans({"-": None})).upper()
+                    ref_used = ref_al.translate(str.maketrans({"-": None}))
+                    ref_used = ref_used.upper()
                     hap_name = newline[2]
                     # aligned part of the haplotype with gaps
                     hap_al = newline[3].upper()
                     if rf_ori == "reverse":
                         hap_al = reverse_complement(hap_al)
                     # aligned part of the haplotype without gaps
-                    hap_used = hap_al.translate(str.maketrans({"-": None})).upper()
+                    hap_used = hap_al.translate(str.maketrans({"-": None}))
+                    hap_used = hap_used.upper()
                     # alignment (.for match, : and X mismatch, - gap)
                     diff = newline[4]
                     if rf_ori == "reverse":
@@ -1902,14 +1967,6 @@ def parse_aligned_haplotypes(settings):
                     # we'll use
                     c_name = ref_copy
                     h_name = hap_name
-                    try:
-                        snp_dict = call_info[gene_name][m]["snps"]
-                    except KeyError:
-                        try:
-                            snp_dict = call_info[gene_name][m]["copies"][
-                                c_name]["snps"]
-                        except KeyError:
-                            snp_dict = {}
                     copy_dict = call_info[gene_name][m]["copies"][c_name]
                     copy_ori = copy_dict["orientation"]
                     copy_chrom = copy_dict["chrom"]
