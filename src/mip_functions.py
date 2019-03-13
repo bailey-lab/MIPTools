@@ -1687,6 +1687,11 @@ def alignment_mapper(family_name, res_dir):
     return alignment_dic
 
 
+###############################################################
+# Data analysis related functions
+###############################################################
+
+
 def align_haplotypes(
         settings, target_actions=["unmask", "multiple"],
         query_actions=["unmask"],
@@ -1696,7 +1701,7 @@ def align_haplotypes(
     """ Get a haplotypes dict and a call_info dict, align each haplotype to
     reference sequences from the call_info dict."""
     wdir = settings["workingDir"]
-    haplotypes_file = wdir + settings["tempHaplotypesFile"]
+    haplotypes_file = os.path.join(wdir, settings["tempHaplotypesFile"])
     with open(haplotypes_file) as infile:
         haplotypes = json.load(infile)
     species = settings["species"]
@@ -1736,7 +1741,7 @@ def align_haplotypes(
             outfile.write("\n".join(outfile_list))
         # name of the alignment output file for the mip
         output_file = m + ".aligned"
-        # create the list to be passed to the alignment worker
+        # create the list to be passed to the alignment worker function
         command = [haplotype_fasta, alignment_dir, output_file,
                    reference_fasta, target_actions, query_actions, identity,
                    coverage, output_format, alignment_options, species]
@@ -1753,10 +1758,10 @@ def align_haplotypes(
 def parse_aligned_haplotypes(settings):
     wdir = settings["workingDir"]
     species = settings["species"]
-    alignment_dir = wdir + settings["alignmentDir"]
+    alignment_dir = os.path.join(wdir, settings["alignmentDir"])
     with open(settings["callInfoDictionary"]) as infile:
         call_info = json.load(infile)
-    temp_haplotypes_file = wdir + settings["tempHaplotypesFile"]
+    temp_haplotypes_file = os.path.join(wdir, settings["tempHaplotypesFile"])
     with open(temp_haplotypes_file) as infile:
         haplotypes = json.load(infile)
     alignments = {}
@@ -1765,8 +1770,8 @@ def parse_aligned_haplotypes(settings):
     problem_snps = []
     for m in haplotypes:
         # each mip has all its haplotypes and reference sequences aligned
-        # in a separate file
-        with open(alignment_dir + m + ".aligned") as al_file:
+        # in mipname.aligned file.
+        with open(os.path.join(alignment_dir, m + ".aligned")) as al_file:
             for line in al_file:
                 problem_al = False
                 if not line.startswith("#"):
@@ -1793,7 +1798,7 @@ def parse_aligned_haplotypes(settings):
                     # aligned part of the haplotype without gaps
                     hap_used = hap_al.translate(str.maketrans({"-": None}))
                     hap_used = hap_used.upper()
-                    # alignment (.for match, : and X mismatch, - gap)
+                    # alignment diff (.for match, : and X mismatch, - gap)
                     diff = newline[4]
                     if rf_ori == "reverse":
                         diff = diff[::-1]
@@ -1809,27 +1814,31 @@ def parse_aligned_haplotypes(settings):
                     ref_align_end = ref_align_begin + len(ref_used)
                     # index of where in full haplotype sequence the alignment begins
                     hap_align_begin = hap_seq.find(hap_used)
-                    # if the alignment is inverted, i.e. there is a reverse complement
-                    # alignment with a significant score, the find method will not find
-                    # the haplotype sequence in query or the target sequence in reference
-                    # and return -1. These alignments have been happening when one copy
-                    # differs so much from another, an inverted alignment scores better.
-                    # These should be ignored as the real copy the haplotype comes from
-                    # will have a better score. However, there can theoretically an inversion
-                    # within a capture region that produces a legitimate inverted alignment
-                    # therefore these alignments should be inspected afterwards.
+                    # if the alignment is inverted, i.e. there is a reverse
+                    # complement alignment with a significant score, the find
+                    # method will not find the haplotype sequence in query or
+                    # the target sequence in reference # and return -1. These
+                    # alignments have been happening when one copy differs so
+                    # much from another, an inverted alignment scores better.
+                    # These should be ignored because the real copy the
+                    # haplotype comes from will have a better score. However,
+                    # there can theoretically be an inversion within a capture
+                    # region that produces a legitimate inverted alignment.
+                    # Therefore these alignments may be inspected if desired.
+                    # We will keep such alignments in a dictionary and save.
                     if min([hap_align_begin, ref_align_begin]) < 0:
                         al_dict = {"gene_name": gene_name,
-                               "mip_name": m,
-                               "copy": ref_copy,
-                               "score": score,
-                               "aligned_hap": hap_al,
-                               "aligned_ref": ref_al,
-                               "diff": diff,
-                               "haplotype_ID": hap_name}
+                                   "mip_name": m,
+                                   "copy": ref_copy,
+                                   "score": score,
+                                   "aligned_hap": hap_al,
+                                   "aligned_ref": ref_al,
+                                   "diff": diff,
+                                   "haplotype_ID": hap_name}
                         inverted_alignments.append(al_dict)
                         continue
-                    # index of where in full haplotype sequence the alignment ends
+                    # index of where in full haplotype sequence the alignment
+                    # ends
                     hap_align_end = hap_align_begin + len(hap_used)
                     # deal with any existing flanking deletions/insertions
                     # is there any unaligned sequence on the left of alignment
@@ -1839,26 +1848,32 @@ def parse_aligned_haplotypes(settings):
                     left_pad_hap = ""
                     left_pad_ref_count = 0
                     left_pad_hap_count = 0
-                    # where there are insertions on left, fill the other pad with gaps
+                    # where there are insertions on left, fill the other pad
+                    # with gaps
                     for i in range(hap_align_begin - ref_align_begin):
-                        # only when ref_align_begin is smaller, we need to pad left_pad_ref
+                        # only when ref_align_begin is smaller, we need to pad
+                        # left_pad_ref
                         left_pad_ref = "-" + left_pad_ref
                         left_pad_hap = hap_seq[i] + left_pad_hap
-                        # counting how many bases from hap_seq is used for padding
+                        # counting how many bases from hap_seq is used for
+                        # padding
                         left_pad_hap_count += 1
                     # do the same for haplotype sequence
                     for i in range(ref_align_begin - hap_align_begin):
-                        # only when ref_align_begin is smaller, we need to pad left_pad_ref
+                        # only when ref_align_begin is smaller, we need to pad
+                        # left_pad_ref
                         left_pad_hap += "-"
                         left_pad_ref += ref_seq[i]
-                        # counting how many bases from ref_seq is used for padding
+                        # counting how many bases from ref_seq is used for
+                        # padding
                         left_pad_ref_count += 1
-                    # add to left_pads the sequences which are there but did not align
+                    # add to left_pads the sequences which are there but did
+                    # not align
                     for i in range(left_pad_len - left_pad_diff):
                         left_pad_ref += ref_seq[i + left_pad_ref_count]
                         left_pad_hap += hap_seq[i + left_pad_hap_count]
                     # add the left padding info to the alignment
-                    for i in range(0,len(left_pad_hap))[::-1]:
+                    for i in range(0, len(left_pad_hap))[::-1]:
                         if left_pad_ref[i] == "-" or left_pad_hap[i] == "-":
                             diff = "-" + diff
                         elif left_pad_ref[i] != left_pad_hap[i]:
@@ -1878,17 +1893,21 @@ def parse_aligned_haplotypes(settings):
                     for i in range(right_pad_hap_len - right_pad_ref_len):
                         right_pad_ref = "-" + right_pad_ref
                         right_pad_hap = hap_seq[-i - 1] + right_pad_hap
-                        # counting how many bases from hap_seq is used for padding
+                        # counting how many bases from hap_seq is used for
+                        # padding
                         right_pad_hap_count += 1
                     # do the same for haplotype sequence
                     for i in range(right_pad_ref_len - right_pad_hap_len):
                         right_pad_hap = "-" + right_pad_hap
                         right_pad_ref = ref_seq[-i - 1] + right_pad_ref
                         right_pad_ref_count += 1
-                    # add to right the sequences which are there but did not align
+                    # add to right the sequences which are there but did not
+                    # align
                     for i in range(right_pad_len - right_pad_diff):
-                        right_pad_ref = ref_seq[-i - right_pad_ref_count -1] + right_pad_ref
-                        right_pad_hap = hap_seq[-i - right_pad_hap_count -1] + right_pad_hap
+                        right_pad_ref = (ref_seq[-i - right_pad_ref_count -1]
+                                         + right_pad_ref)
+                        right_pad_hap = (hap_seq[-i - right_pad_hap_count -1]
+                                         + right_pad_hap)
                     # add the right padding info to the alignment
                     for i in range(len(right_pad_hap)):
                         if right_pad_ref[i] == "-" or right_pad_hap[i] == "-":
@@ -1901,9 +1920,10 @@ def parse_aligned_haplotypes(settings):
                     hap_al = left_pad_hap + hap_al + right_pad_hap
                     ref_al = left_pad_ref + ref_al + right_pad_ref
                     # we have padded the alignment so now all the ref and
-                    # hap sequence is accounted for and not just the aligned part
-                    # ref_name, ref_copy, ref_seq, ref_al
-                    # hap_name, hap_seq, hap_al, diff, score have information we'll use
+                    # hap sequence is accounted for and not just the aligned
+                    # part ref_name, ref_copy, ref_seq, ref_al
+                    # hap_name, hap_seq, hap_al, diff, score have information
+                    # we'll use
                     c_name = ref_copy
                     h_name = hap_name
                     exact_match = (ref_seq == hap_seq)
