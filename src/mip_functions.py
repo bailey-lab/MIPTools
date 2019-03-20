@@ -7844,16 +7844,6 @@ def get_haplotypes(settings):
     for m in list(haplotypes.keys()):
         for h in list(haplotypes[m].keys()):
             if not haplotypes[m][h]["mapped"]:
-                """
-                anoter solution to this should be found
-                if m.startswith("AMELX"):
-                    # AMELX also maps to Y chromosome, which is not off target
-                    # this is a quick fix for now but ideally Y chromosome
-                    # should be included in the design as a paralogous copy
-
-                    haplotypes[m][h]["mapped"] = True
-                else:
-                """
                 off_target_haplotypes[h] = haplotypes[m].pop(h)
         if len(haplotypes[m]) == 0:
             haplotypes.pop(m)
@@ -10243,19 +10233,13 @@ def combine_info_files(wdir,
         run_meta.append(current_run_meta)
     run_meta = pd.concat(run_meta, ignore_index=True)
     if sample_sets is not None:
-        for s in sample_sets:
-            s.append("Temp")
         sps = pd.DataFrame(sample_sets, columns=["sample_set",
-                                                 "probe_set",
-                                                 "Temp"])
+                                                 "probe_set"])
     else:
         sps = run_meta.groupby(
             ["sample_set", "probe_set"]
         ).first().reset_index()[["sample_set", "probe_set"]]
-        sps["Temp"] = "Temp"
-    run_meta = run_meta.merge(sps, how="inner").drop(
-        "Temp", axis=1
-    )
+    run_meta = run_meta.merge(sps, how="inner")
     run_meta_collapsed = run_meta.groupby(
         ["sample_name", "capital_set", "replicate", "Library Prep"]
     ).first().reset_index()[["sample_name", "capital_set",
@@ -10340,6 +10324,9 @@ def combine_info_files(wdir,
     hap_ids = pd.concat(h_list, ignore_index=True)
     info = info.merge(hap_ids)
     info.to_csv(wdir + combined_file, index=False, sep="\t")
+    info.groupby(["gene_name", "mip_name", "haplotype_ID"])[
+        "haplotype_sequence"].first().reset_index().to_csv(
+            wdir + "unique_haplotypes.csv", index=False)
     run_meta = run_meta.groupby("Sample ID").first().reset_index()
     run_meta = run_meta.drop(["Sample ID",
                               "sample_set",
