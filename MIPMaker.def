@@ -41,7 +41,8 @@ From: amd64/ubuntu:18.04
     software-properties-common \
     libxext6 \
     libxrender1 \
-    ghostscript
+    ghostscript \
+    openjdk-8-jdk
     # install conda
     cd /tmp && \
         wget --quiet https://repo.continuum.io/miniconda/Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh && \
