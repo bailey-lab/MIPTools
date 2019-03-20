@@ -42,7 +42,7 @@ From: amd64/ubuntu:18.04
     libxext6 \
     libxrender1 \
     ghostscript \
-    openjdk-8-jdk
+    openjdk-11-jdk
     # install conda
     cd /tmp && \
         wget --quiet https://repo.continuum.io/miniconda/Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh && \
@@ -109,6 +109,12 @@ From: amd64/ubuntu:18.04
     cd /opt/programs
     dpkg -i bcl2fastq2_0v2.20.0.422-2_amd64.deb
 
+    # install msv2vcf
+    cd /opt/programs
+    git clone https://github.com/lindenb/jvarkit.git
+    cd jvarkit
+    ./gradlew msa2vcf
+    
     # create symlinks to executables in /usr/bin so everything will be in
     # $PATH for users.
     ln -sf /opt/programs/parasight_v7.6/parasight.pl /usr/bin/parasight76.pl
