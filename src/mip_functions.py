@@ -3755,7 +3755,7 @@ def targets(must_file, diff_list):
     return targets
 
 
-def merge_overlap (intervals, spacer=0):
+def merge_overlap(intervals, spacer=0):
     """ Merge overlapping intervals. Take a list of lists of 2 elements, [start, stop],
     check if any [start, stop] pairs overlap and merge if any. Return the merged [start, stop]
     list."""
@@ -7617,12 +7617,9 @@ def get_haplotypes(settings):
         Mapping haplotypes to specific targets/copies is not accomplished here
         """
     wdir = settings["workingDir"]
-    mipster_file = wdir + settings["mipsterFile"]
     haplotypes_fq_file = wdir + settings["haplotypesFastqFile"]
     haplotypes_sam_file = wdir + settings["haplotypesSamFile"]
     bwa_options = settings["bwaOptions"]
-    sequence_to_haplotype_file = (wdir
-                                  + settings["sequenceToHaplotypeDictionary"])
     call_info_file = settings["callInfoDictionary"]
     species = settings["species"]
     try:
@@ -7630,228 +7627,130 @@ def get_haplotypes(settings):
     except KeyError:
         tol = 50
     # DATA EXTRACTION ###
-    # if there is no previous haplotype information, an empty dict will be used
-    # for instead of the known haplotypes dict
+    # try loading unique haplotypes values. This file is generated
+    # in the recent versions of the pipeline but will be missing in older
+    # data. If missing, we'll generate it.
     try:
-        with open(sequence_to_haplotype_file) as infile:
-            sequence_to_haplotype = json.load(infile)
+        hap_df = pd.read_csv(wdir + "unique_haplotypes.csv")
     except IOError:
-        sequence_to_haplotype = {}
-    with open(call_info_file) as infile:
-        call_info = json.load(infile)
-    # extract haplotype name and sequence from new data file
-    haps = {}
-    # extract data column names from the mipster file
-    with open(mipster_file) as infile:
-        line_number = 0
-        for line in infile:
-            newline = line.strip().split("\t")
-            line_number += 1
-            if line_number == 1:
-                for i in range(len(newline)):
-                    if newline[i] in ["haplotype_ID",
-                                      "h_popUID"]:
-                        hap_index = i
-                    elif newline[i] in ["haplotype_sequence",
-                                        'h_seq']:
-                        seq_index = i
-            else:
-                hapname = newline[hap_index]
-                hapseq = newline[seq_index]
-                hapqual = "H" * len(hapseq)
-                # add the haplotype to the dict
-                # if it has not been mapped before
-                if hapseq not in sequence_to_haplotype:
-                    haps[hapname] = {"sequence": hapseq,
-                                     "quality": hapqual}
-
+        raw_results = pd.read_table(wdir + settings["mipsterFile"])
+        hap_df = raw_results.groupby(
+            ["gene_name", "mip_name", "haplotype_ID"])[
+            "haplotype_sequence"].first().reset_index()
+    # fill in fake sequence quality scores for each haplotype. These scores
+    # will be used for mapping only and the real scores for each haplotype
+    # for each sample will be added later.
+    hap_df["quality"] = hap_df["haplotype_sequence"].apply(
+        lambda a: "H" * len(a))
+    haps = hap_df.set_index("haplotype_ID").to_dict(orient="index")
     # BWA alignment ####
     # create a fastq file for bwa input
     with open(haplotypes_fq_file, "w") as outfile:
         for h in haps:
             outfile.write("@" + h + "\n")
-            outfile.write(haps[h]["sequence"] + "\n" + "+" + "\n")
+            outfile.write(haps[h]["haplotype_sequence"] + "\n" + "+" + "\n")
             outfile.write(haps[h]["quality"] + "\n")
-    # re-structure haplotypes dictionary and initialize a hits dictionary for
-    # all haplotypes that will hold the bowtie hits for each of the haplotypes
-    # keys for this dict will be mipnames
-    haplotypes = {}
-    for h in haps:
-        mip_name = h.split(".")[0]
-        try:
-            haplotypes[mip_name][h] = {"sequence": haps[h]["sequence"]}
-        except KeyError:
-            haplotypes[mip_name] = {h: {"sequence": haps[h]["sequence"]}}
     # run bwa
     bwa(haplotypes_fq_file, haplotypes_sam_file, "sam", "", "", bwa_options,
         species)
-    # get best hits from alignment results
-    hap_hits = {}
-    for h in haps:
-        # initialize each haplotype with an empty list and a -5000 score
-        hap_hits[h] = [[], [-5000]]
-    # find the best bwa hit(s) for each genotype
+    # process alignment output sam file
+    header = ["haplotype_ID", "FLAG", "CHROM", "POS", "MAPQ", "CIGAR", "RNEXT",
+              "PNEXT", "TLEN", "SEQ", "QUAL"]
+    sam_list = []
     with open(haplotypes_sam_file) as infile:
         for line in infile:
             if not line.startswith("@"):
-                newline = line.strip().split("\t")
-                try:
-                    if newline[13].startswith("AS"):
-                        score = int(newline[13].split(":")[-1])
-                    else:
-                        score = -5000
-                except IndexError:
-                    if newline[11].startswith("AS"):
-                        score = int(newline[11].split(":")[-1])
-                    else:
-                        score = -5000
-                hapname = newline[0]
-                if max(hap_hits[hapname][1]) < score:
-                    hap_hits[hapname][0] = [newline]
-                    hap_hits[hapname][1] = [score]
-                elif max(hap_hits[hapname][1]) == score:
-                    hap_hits[hapname][0].append(newline)
-                    hap_hits[hapname][1].append(score)
-    # update haplotypes dict with bowtie best hit information
-    for m in haplotypes:
-        for h in haplotypes[m]:
-            haplotypes[m][h]["best_hits"] = hap_hits[h]
-    # create a dataframe from the call info dictionary
-    # to determine minimum and maximum coordinates for each gene
-    # this will be used for haplotypes that do not map to their intended
-    # targets but still are not offtarget haplotypes because they map
-    # to one of the regions of interest. A situation like this could be caused
-    # by two regions of sufficient similarity to be captured by a single mip
-    # even though regions were not determined to be paralogus. Or in any
-    # situation where the reads were assigned to the wrong MIP for any reason.
-    call_copy = copy.deepcopy(call_info)
-    call_df_list = []
-    for g in call_copy:
-        for m in call_copy[g]:
-            mip_number = int(m.split("_")[-1][3:])
-            sub_number = int(m.split("_")[-2][3:])
-            for c in call_copy[g][m]["copies"]:
-                call_dict = call_copy[g][m]["copies"][c]
-                try:
-                    call_dict.pop("genes")
-                except KeyError:
-                    pass
-                call_dict["gene"] = g
-                call_dict["copy"] = c
-                call_dict["mip_number"] = mip_number
-                call_dict["sub_number"] = sub_number
-                call_df_list.append(pd.DataFrame(call_dict, index=[0]))
-    call_df = pd.concat(call_df_list)
-    gene_df = call_df.groupby(["gene", "copy"]).agg(
-        {"chrom": "first",
-         "capture_start": np.min,
-         "capture_end": np.max,
-         "copyname": "first",
-         "mip_number": np.max,
-         "sub_number": np.max}
-    )
-    gene_dict = gene_df.to_dict(orient="index")
-    gene_df = gene_df.reset_index()
-    # crosscheck the best bwa hit(s) for each haplotype with mip targets
-    # mark off target haplotypes
-    for m in haplotypes:
-        gene_name = m.split("_")[0]
-        try:
-            call_dict = call_info[gene_name][m]["copies"]
-            for h in list(haplotypes[m].keys()):
-                haplotypes[m][h]["mapped"] = False
-                best_hits = haplotypes[m][h]["best_hits"][0]
-                for hit in best_hits:
-                    if haplotypes[m][h]["mapped"]:
+                newline = line.strip().split()
+                samline = newline[:11]
+                for item in newline[11:]:
+                    value = item.split(":")
+                    if value[0] == "AS":
+                        samline.append(int(value[-1]))
                         break
-                    hit_chrom = hit[2]
-                    hit_pos = int(hit[3])
-                    for copy_name in call_dict:
-                        copy_chrom = call_dict[copy_name]["chrom"]
-                        copy_begin = call_dict[copy_name]["capture_start"]
-                        copy_end = call_dict[copy_name]["capture_end"]
-                        if ((copy_chrom == hit_chrom) and
-                                (copy_begin - tol < hit_pos < copy_end + tol)):
-                            haplotypes[m][h]["mapped"] = True
-                            break
-        except KeyError:
-            for h in list(haplotypes[m].keys()):
-                haplotypes[m][h]["mapped"] = False
-    # remove haplotypes that mapped best to an untargeted location on genome
-    off_target_haplotypes = {}
-    secondary_haplotypes = []
-    secondary_haylotype_dict = {}
-    for m in list(haplotypes.keys()):
-        for h in list(haplotypes[m].keys()):
-            if not haplotypes[m][h]["mapped"]:
-                # check other genes/MIPs for off targets that are
-                # on other possible targets due to sequence similarity
-                best_hits = haplotypes[m][h]["best_hits"][0]
-                for record in best_hits:
-                    flag = record[1]
-                    # a flag value of 4 means there was no hit,
-                    # so pass those records
-                    if flag == "4":
-                        continue
-                    hit_chrom = record[2]
-                    hit_pos = int(record[3])
-                    # get cigar string of alignment
-                    cigar = record[5]
-                    # extract which strand is the bowtie hit on
-                    # true if forward
-                    strand = ((int(record[1]) % 256) == 0)
-                    # bowtie gives us the start position of the hit
-                    # end position is calculated using the cigar string
-                    # of the hit
-                    hit_end = hit_pos + get_cigar_length(cigar) - 1
-                    # create region keys required for sequence retrieval
-                    hit_region_key = (hit_chrom + ":" + str(hit_pos)
-                                      + "-" + str(hit_end))
-                    if strand:
-                        orient = "forward"
-                    else:
-                        orient = "reverse"
-                    for k in gene_dict:
-                        copy_chrom = gene_dict[k]["chrom"]
-                        copy_begin = gene_dict[k]["capture_start"]
-                        copy_end = gene_dict[k]["capture_end"]
-                        if (((copy_chrom == hit_chrom) and
-                                (copy_begin - tol
-                                 < hit_pos < copy_end + tol))
-                                or ((copy_chrom == hit_chrom) and
-                                    (copy_begin - tol
-                                     < hit_end < copy_end + tol))):
-                            secondary_haplotypes.append(
-                                [k[0], k[1], h, hit_chrom, hit_pos, hit_end,
-                                 orient, hit_region_key]
-                            )
-                            haplotypes[m][h]["mapped"] = True
-                            secondary_haylotype_dict[h] = (
-                                haplotypes[m].pop(h)
-                            )
-                            break
-    if len(secondary_haplotypes) > 0:
-        secondary_haplotypes = pd.DataFrame(
-            secondary_haplotypes,
-            columns=["gene", "copy", "original_hap_ID", "chrom",
-                     "capture_start", "capture_end", "orientation",
-                     "region_key"]
-        )
-        secondary_haplotypes = secondary_haplotypes.merge(
-            gene_df[["gene", "copy", "copyname", "mip_number", "sub_number"]]
-        )
+                else:
+                    samline.append(-5000)
+                sam_list.append(samline)
+    sam = pd.DataFrame(sam_list, columns=header + ["alignment_score"])
+    # find alignment with the highest alignment score. We will consider these
+    # the primary alignments and the source of the sequence.
+    sam["best_alignment"] = (sam["alignment_score"] == sam.groupby(
+        "haplotype_ID")["alignment_score"].transform("max"))
+    # add MIP column to alignment results
+    sam["MIP"] = sam["haplotype_ID"].apply(lambda a: a.split(".")[0])
+    # create call_info data frame for all used probes in the experiment
+    probe_sets_file = settings["mipSetsDictionary"]
+    probe_set_keys = settings["mipSetKey"]
+    used_probes = set()
+    for psk in probe_set_keys:
+        with open(probe_sets_file) as infile:
+            used_probes.update(json.load(infile)[psk])
+    with open(call_info_file) as infile:
+        call_info = json.load(infile)
+    call_df_list = []
+    for g in call_info:
+        for m in call_info[g]:
+            if m in used_probes:
+                mip_number = int(m.split("_")[-1][3:])
+                sub_number = int(m.split("_")[-2][3:])
+                for c in call_info[g][m]["copies"]:
+                    call_dict = call_info[g][m]["copies"][c]
+                    try:
+                        call_dict.pop("genes")
+                    except KeyError:
+                        pass
+                    call_dict["gene"] = g
+                    call_dict["MIP"] = m
+                    call_dict["copy"] = c
+                    call_dict["mip_number"] = mip_number
+                    call_dict["sub_number"] = sub_number
+                    call_df_list.append(pd.DataFrame(call_dict, index=[0]))
+    call_df = pd.concat(call_df_list)
+    # combine alignment information with design information (call_info)
+    haplotype_maps = call_df.merge(
+        sam[["MIP", "haplotype_ID", "CHROM", "POS", "best_alignment",
+             "alignment_score"]])
+    haplotype_maps["POS"] = haplotype_maps["POS"].astype(int)
+    # determine which haplotype/mapping combinations are for intended targets
+    # first, compare mapping coordinate to the MIP coordinate to see  if
+    # a MIP copy matches with the alignment.
+    haplotype_maps["aligned_copy"] = (
+        (haplotype_maps["CHROM"] == haplotype_maps["chrom"])
+        & (abs(haplotype_maps["POS"] - haplotype_maps["capture_start"]) <= tol)
+    )
+    # aligned_copy means the alignment is on the intended MIP target
+    # this is not necessarily the best target, though. For a haplotype sequence
+    # to be matched to a MIP target, it also needs to be the best alignment.
+    haplotype_maps["mapped_copy"] = (haplotype_maps["aligned_copy"]
+                                     & haplotype_maps["best_alignment"])
+    # rename some fields to be compatible with previous code
+    haplotype_maps.rename(columns={"gene": "Gene","copy": "Copy",
+                                   "chrom": "Chrom"}, inplace=True)
+    # any haplotype that does was not best mapped to at least one target
+    # will be considered an off target haplotype.
+    haplotype_maps["off_target"] = ~haplotype_maps.groupby(
+        "haplotype_ID")["mapped_copy"].transform("any")
+    off_target_haplotypes = haplotype_maps.loc[haplotype_maps["off_target"]]
+    # filter off targets and targets that do not align to haplotypes
+    haplotypes = haplotype_maps.loc[(~haplotype_maps["off_target"])
+                                    & haplotype_maps["aligned_copy"]]
+    # each MIP copy/haplotype_ID combination must have a single alignment
+    # if there are multiple, the best one will be chosen
 
-    for m in list(haplotypes.keys()):
-        for h in list(haplotypes[m].keys()):
-            if not haplotypes[m][h]["mapped"]:
-                off_target_haplotypes[h] = haplotypes[m].pop(h)
-        if len(haplotypes[m]) == 0:
-            haplotypes.pop(m)
-    hap_file = wdir + settings["tempHaplotypesFile"]
-    off_file = wdir + settings["tempOffTargetsFile"]
-    with open(hap_file, "w") as out1, open(off_file, "w") as out2:
-        json.dump(haplotypes, out1, indent=1)
-        json.dump(off_target_haplotypes, out2, indent=1)
+    def get_best_alignment(group):
+        return group.sort_values("alignment_score", ascending=False).iloc[0]
+
+    haplotypes = haplotypes.groupby(["MIP", "Copy", "haplotype_ID"],
+                                    as_index=False).apply(get_best_alignment)
+    haplotypes.index = (range(len(haplotypes)))
+    # filter to best mapping copy/haplotype pairs
+    mapped_haplotypes = haplotypes.loc[haplotype_maps["mapped_copy"]]
+    mapped_haplotypes["mapped_copy_number"] = mapped_haplotypes.groupby(
+        ["haplotype_ID"])["haplotype_ID"].transform(len)
+
+    mapped_haplotypes.to_csv(wdir + "mapped_haplotypes.csv", index=False)
+    off_target_haplotypes.to_csv(wdir + "offtarget_haplotypes.csv",
+                                 index=False)
+    haplotypes.to_csv(wdir + "aligned_haplotypes.csv", index=False)
     return
 
 
