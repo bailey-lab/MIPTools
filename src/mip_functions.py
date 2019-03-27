@@ -1750,66 +1750,803 @@ def order_mips(mip_info, design_name, res_dir):
 ###############################################################
 
 
-def align_haplotypes(
-        settings, target_actions=["unmask", "multiple"],
-        query_actions=["unmask"],
-        output_format="general:name1,text1,name2,text2,diff,score",
-        alignment_options=["--noytrim"], identity=75, coverage=75
-        ):
+def get_analysis_settings(settings_file):
+    """ Convert analysis settings file to dictionary"""
+    settings = {}
+    with open(settings_file) as infile:
+        for line in infile:
+            if not line.startswith("#"):
+                newline = line.strip().split("\t")
+                value = newline[1].split(",")
+                if len(value) == 1:
+                    settings[newline[0]] = value[0]
+                else:
+                    settings[newline[0]] = [v for v in value if v != ""]
+    return settings
+
+
+def write_analysis_settings(settings, settings_file):
+    """ Create a settings file from a settings dictionary."""
+    outfile_list = [["# Setting Name", "Setting Value"]]
+    for k, v in settings.items():
+        if isinstance(v, list):
+            val = ",".join(map(str, v))
+        else:
+            val = str(v)
+        outfile_list.append([k, val])
+    with open(settings_file, "w") as outfile:
+        outfile.write("\n".join(["\t".join(o) for o in outfile_list]) + "\n")
+    return
+
+
+def get_haplotypes(settings):
+    """ 1) Extract all haplotypes from new data.
+        2) Remove known haplotypes using previous data (if any).
+        3) Map haplotypes to species genome to get the best hit(s)
+        4) Crosscheck best bowtie hit with the targeted region
+        5) Output haplotypes dictionary and off_targets dictionary
+
+        Once this function is called, we will get the new haplotypes present
+        in this data set that are on target and where they map on the genome.
+        Mapping haplotypes to specific targets/copies is not accomplished here
+        """
+    wdir = settings["workingDir"]
+    haplotypes_fq_file = wdir + settings["haplotypesFastqFile"]
+    haplotypes_sam_file = wdir + settings["haplotypesSamFile"]
+    bwa_options = settings["bwaOptions"]
+    call_info_file = settings["callInfoDictionary"]
+    species = settings["species"]
+    try:
+        tol = int(settings["alignmentTolerance"])
+    except KeyError:
+        tol = 200
+    # DATA EXTRACTION ###
+    # try loading unique haplotypes values. This file is generated
+    # in the recent versions of the pipeline but will be missing in older
+    # data. If missing, we'll generate it.
+    try:
+        hap_df = pd.read_csv(wdir + "unique_haplotypes.csv")
+    except IOError:
+        raw_results = pd.read_table(wdir + settings["mipsterFile"])
+        hap_df = raw_results.groupby(
+            ["gene_name", "mip_name", "haplotype_ID"])[
+            "haplotype_sequence"].first().reset_index()
+    # fill in fake sequence quality scores for each haplotype. These scores
+    # will be used for mapping only and the real scores for each haplotype
+    # for each sample will be added later.
+    hap_df["quality"] = hap_df["haplotype_sequence"].apply(
+        lambda a: "H" * len(a))
+    haps = hap_df.set_index("haplotype_ID").to_dict(orient="index")
+    # BWA alignment ####
+    # create a fastq file for bwa input
+    with open(haplotypes_fq_file, "w") as outfile:
+        for h in haps:
+            outfile.write("@" + h + "\n")
+            outfile.write(haps[h]["haplotype_sequence"] + "\n" + "+" + "\n")
+            outfile.write(haps[h]["quality"] + "\n")
+    # run bwa
+    bwa(haplotypes_fq_file, haplotypes_sam_file, "sam", "", "", bwa_options,
+        species)
+    # process alignment output sam file
+    header = ["haplotype_ID", "FLAG", "CHROM", "POS", "MAPQ", "CIGAR", "RNEXT",
+              "PNEXT", "TLEN", "SEQ", "QUAL"]
+    sam_list = []
+    with open(haplotypes_sam_file) as infile:
+        for line in infile:
+            if not line.startswith("@"):
+                newline = line.strip().split()
+                samline = newline[:11]
+                for item in newline[11:]:
+                    value = item.split(":")
+                    if value[0] == "AS":
+                        samline.append(int(value[-1]))
+                        break
+                else:
+                    samline.append(-5000)
+                sam_list.append(samline)
+    sam = pd.DataFrame(sam_list, columns=header + ["alignment_score"])
+    # find alignment with the highest alignment score. We will consider these
+    # the primary alignments and the source of the sequence.
+    sam["best_alignment"] = (sam["alignment_score"] == sam.groupby(
+        "haplotype_ID")["alignment_score"].transform("max"))
+    # add MIP column to alignment results
+    sam["MIP"] = sam["haplotype_ID"].apply(lambda a: a.split(".")[0])
+    # create call_info data frame for all used probes in the experiment
+    probe_sets_file = settings["mipSetsDictionary"]
+    probe_set_keys = settings["mipSetKey"]
+    used_probes = set()
+    for psk in probe_set_keys:
+        with open(probe_sets_file) as infile:
+            used_probes.update(json.load(infile)[psk])
+    with open(call_info_file) as infile:
+        call_info = json.load(infile)
+    call_df_list = []
+    for g in call_info:
+        for m in call_info[g]:
+            if m in used_probes:
+                mip_number = int(m.split("_")[-1][3:])
+                sub_number = int(m.split("_")[-2][3:])
+                for c in call_info[g][m]["copies"]:
+                    call_dict = call_info[g][m]["copies"][c]
+                    try:
+                        call_dict.pop("genes")
+                    except KeyError:
+                        pass
+                    call_dict["gene"] = g
+                    call_dict["MIP"] = m
+                    call_dict["copy"] = c
+                    call_dict["mip_number"] = mip_number
+                    call_dict["sub_number"] = sub_number
+                    call_df_list.append(pd.DataFrame(call_dict, index=[0]))
+    call_df = pd.concat(call_df_list)
+    # combine alignment information with design information (call_info)
+    haplotype_maps = call_df.merge(
+        sam[["MIP", "haplotype_ID", "CHROM", "POS", "best_alignment",
+             "alignment_score"]])
+    haplotype_maps["POS"] = haplotype_maps["POS"].astype(int)
+    haplotype_maps = haplotype_maps.merge(
+        hap_df[["haplotype_ID", "haplotype_sequence"]])
+    # determine which haplotype/mapping combinations are for intended targets
+    # first, compare mapping coordinate to the MIP coordinate to see  if
+    # a MIP copy matches with the alignment.
+    haplotype_maps["aligned_copy"] = (
+        (haplotype_maps["CHROM"] == haplotype_maps["chrom"])
+        & (abs(haplotype_maps["POS"] - haplotype_maps["capture_start"]) <= tol)
+    )
+    # aligned_copy means the alignment is on the intended MIP target
+    # this is not necessarily the best target, though. For a haplotype sequence
+    # to be matched to a MIP target, it also needs to be the best alignment.
+    haplotype_maps["mapped_copy"] = (haplotype_maps["aligned_copy"]
+                                     & haplotype_maps["best_alignment"])
+    # rename some fields to be compatible with previous code
+    haplotype_maps.rename(columns={"gene": "Gene", "copy": "Copy",
+                                   "chrom": "Chrom"}, inplace=True)
+    # any haplotype that does was not best mapped to at least one target
+    # will be considered an off target haplotype.
+    haplotype_maps["off_target"] = ~haplotype_maps.groupby(
+        "haplotype_ID")["mapped_copy"].transform("any")
+    off_target_haplotypes = haplotype_maps.loc[haplotype_maps["off_target"]]
+    # filter off targets and targets that do not align to haplotypes
+    haplotypes = haplotype_maps.loc[(~haplotype_maps["off_target"])
+                                    & haplotype_maps["aligned_copy"]]
+    # each MIP copy/haplotype_ID combination must have a single alignment
+    # if there are multiple, the best one will be chosen
+
+    def get_best_alignment(group):
+        return group.sort_values("alignment_score", ascending=False).iloc[0]
+
+    haplotypes = haplotypes.groupby(["MIP", "Copy", "haplotype_ID"],
+                                    as_index=False).apply(get_best_alignment)
+    haplotypes.index = (range(len(haplotypes)))
+    # filter to best mapping copy/haplotype pairs
+    mapped_haplotypes = haplotypes.loc[haplotypes["mapped_copy"]]
+    mapped_haplotypes["mapped_copy_number"] = mapped_haplotypes.groupby(
+        ["haplotype_ID"])["haplotype_ID"].transform(len)
+
+    mapped_haplotypes.to_csv(wdir + "mapped_haplotypes.csv", index=False)
+    off_target_haplotypes.to_csv(wdir + "offtarget_haplotypes.csv",
+                                 index=False)
+    haplotypes.to_csv(wdir + "aligned_haplotypes.csv", index=False)
+    haplotype_maps.to_csv(wdir + "all_haplotypes.csv", index=False)
+    num_hap = len(set(haplotype_maps["haplotype_ID"]))
+    num_off = len(set(off_target_haplotypes["haplotype_ID"]))
+    print(("{} of {} haplotypes were off-target, either not mapping to "
+           "the reference genome, or best mapping to a region which was "
+           "not targeted.").format(num_off, num_hap))
+    return
+
+
+def get_haplotype_counts(settings):
+    wdir = settings["workingDir"]
+    ##########################################################
+    ##########################################################
+    # Process 1: use sample sheet to determine which data points from the
+    # mipster file should be used, print relevant statistics.
+    ##########################################################
+    ##########################################################
+    # process sample sheets
+    run_meta = pd.read_table(os.path.join(wdir, "samples.tsv"))
+    # create a unique sample ID for each sample using sample name,
+    # sample set and replicate fields from the sample list file.
+    run_meta["sample_name"] = (
+            run_meta["sample_name"].astype(str)
+        )
+    run_meta["Sample Name"] = run_meta["sample_name"]
+    run_meta["Sample ID"] = run_meta[
+        ["sample_name", "sample_set", "replicate"]
+    ].apply(lambda a: "-".join(map(str, a)), axis=1)
+    # Sample Set key is reserved for meta data
+    # but sometimes erroneously included in the
+    # sample sheet. It should be removed.
+    try:
+        run_meta.drop("Sample Set", inplace=True, axis=1)
+    except (ValueError, KeyError):
+        pass
+    # drop duplicate values originating from
+    # multiple sequencing runs of the same libraries
+    run_meta = run_meta.drop_duplicates()
+    run_meta = run_meta.groupby(
+        ["Sample ID", "Library Prep"]
+    ).first().reset_index()
+    run_meta.to_csv(wdir + "run_meta.csv")
+    # get used sample ids
+    sample_ids = run_meta["Sample ID"].unique().tolist()
+    ##########################################################
+    ##########################################################
+    # Process 2: extract all observed variants from observed
+    # haplotypes and create a variation data frame that will
+    # be able to map haplotype IDs to variation.
+    ##########################################################
+    ##########################################################
+    # get the haplotype dataframe for all mapped haplotypes
+    mapped_haplotype_df = pd.read_csv(
+        os.path.join(wdir, "mapped_haplotypes.csv"))
+    ##########################################################
+    ##########################################################
+    # Process 3: load the MIPWrangler output which has
+    # per sample per haplotype information, such as
+    # haplotype sequence quality, barcode counts etc.
+    # Create a suitable dataframe that can be merged
+    # with variant data to get the same information for each
+    # variant (variant barcode count, variant quality, etc.)
+    ##########################################################
+    ##########################################################
+    # get the MIPWrangler Output
+    raw_results = pd.read_table(wdir + settings["mipsterFile"])
+    # limit the results to the samples intended for this analysis
+    raw_results = raw_results.loc[
+        raw_results["sample_name"].isin(sample_ids)
+    ]
+    # rename some columns for better visualization in tables
+    raw_results.rename(
+        columns={"sample_name": "Sample ID",
+                 "mip_name": "MIP",
+                 "gene_name": "Gene",
+                 "barcode_count": "Barcode Count",
+                 "read_count": "Read Count"},
+        inplace=True
+    )
+    # use only the data corresponding to mapped haplotypes
+    # filtering the off target haplotypes.
+    mapped_results = raw_results.merge(mapped_haplotype_df, how="inner")
+    # Try to estimate the distribution of data that is mapping
+    # to multiple places in the genome.
+    # This is done in 4 steps.
+    # 1) Get uniquely mapping haplotypes and barcode counts
+    unique_df = mapped_results.loc[mapped_results["mapped_copy_number"] == 1]
+    unique_table = pd.pivot_table(unique_df,
+                                  index="Sample ID",
+                                  columns=["Gene", "MIP", "Copy", "Chrom"],
+                                  values=["Barcode Count"],
+                                  aggfunc=np.sum)
+    # 2) Estimate the copy number of each paralog gene
+    # for each sample from the uniquely mapping data
+    # Two values from the settings are used to determine the copy number
+    # in a given gene. Average copy count is the ploidy of the organism
+    # and the normalization percentile is what percentile is used for
+    # normalizing data. For example, for human genes ACC is 2 and
+    # if the percentiles are given as 0.4, 0.6: we would calculate the
+    # take the 40th and 60th percentile of them barcode counts for each probe
+    # across the samples and assume that the average of 40th and 60 pctl values
+    # to represent the average copy count of 2. Then caluculate this value
+    # for each probe and each sample.
+    try:
+        average_copy_count = float(settings["averageCopyCount"])
+        norm_percentiles = list(map(float,
+                                settings["normalizationPercentiles"]))
+    except KeyError:
+        average_copy_count = 2
+        norm_percentiles = [0.4, 0.6]
+    unique_df.loc[:, "Copy Average"] = average_copy_count
+    # Adjusted barcode count will represent the estimated barcode count
+    # for multimapping haplotypes. For example, if hap1 is mapping to 2
+    # places in the genome and its barcode count for a sample containing this
+    # haplotype is 100. If we determined the copy numbers of the two mapping
+    # regions to be 1 and 1, the adjusted barcode count for each region
+    # would be 50. We'll set this value for uniquely mapping haplotypes
+    # to the Barcode Count, as they are not multi mapping.
+    unique_df.loc[:, "Adjusted Barcode Count"] = unique_df["Barcode Count"]
+    unique_df.loc[:, "Adjusted Read Count"] = unique_df["Read Count"]
+    unique_table.fillna(0, inplace=True)
+    # calculate the copy counts using the get_copy_counts function.
+    # this function normalizes data for each probe across samples
+    # and estimates copy counts using the percentile values as mentioned.
+    copy_counts = get_copy_counts(unique_table,
+                                  average_copy_count,
+                                  norm_percentiles)
+    # 3) Estimate the copy number of each "Gene"
+    # from the average copy count of uniquely mapping
+    # data for all MIPs within the gene.
+    cc = copy_counts.groupby(level=["Gene", "Copy"], axis=1).sum()
+    gc = copy_counts.groupby(level=["Gene"], axis=1).sum()
+    ac = cc/gc
+    # 4) Distribute multi mapping data proportional to
+    # Paralog's copy number determined from the
+    # uniquely mapping data
+    multi_df = mapped_results.loc[mapped_results["mapped_copy_number"] > 1]
+    if not multi_df.empty:
+        # get the average copy count for the gene the haplotype belongs to
+        mca = multi_df.apply(lambda r: get_copy_average(r, ac), axis=1)
+        multi_df.loc[mca.index, "Copy Average"] = mca
+        multi_df["copy_sum"] = multi_df.groupby(
+            ["Sample ID", "haplotype_ID"])["Copy Average"].transform("sum")
+        multi_df["copy_len"] = multi_df.groupby(
+            ["Sample ID", "haplotype_ID"])["Copy Average"].transform("size")
+        null_index = multi_df["copy_sum"] == 0
+        multi_df.loc[null_index, "Copy Average"] = (
+            average_copy_count / multi_df.loc[null_index, "copy_len"])
+        multi_df.loc[null_index, "copy_sum"] = average_copy_count
+        multi_df["Copy Average"].fillna(0, inplace=True)
+        multi_df["Adjusted Barcode Count"] = (multi_df["Barcode Count"]
+                                              * multi_df["Copy Average"]
+                                              / multi_df["copy_sum"])
+        multi_df["Adjusted Read Count"] = (multi_df["Read Count"]
+                                           * multi_df["Copy Average"]
+                                           / multi_df["copy_sum"])
+
+    # Combine unique and multimapping data
+    combined_df = pd.concat([unique_df, multi_df], ignore_index=True)
+    combined_df.rename(
+        columns={
+            "Barcode Count": "Raw Barcode Count",
+            "Adjusted Barcode Count": "Barcode Count",
+            "Read Count": "Raw Read Count",
+            "Adjusted Read Count": "Read Count"
+        },
+        inplace=True
+    )
+    # print total read and barcode counts
+    print(
+        (
+         "Total number of reads and barcodes were {0[0]} and {0[1]}."
+         " On target number of reads and barcodes were {1[0]} and {1[1]}."
+        ).format(
+            raw_results[["Read Count", "Barcode Count"]].sum(),
+            combined_df[["Read Count", "Barcode Count"]].sum().astype(int)
+        )
+    )
+    combined_df.to_csv(os.path.join(wdir, "haplotype_counts.csv"), index=False)
+    # Create pivot table of combined barcode counts
+    # This is a per MIP per sample barcode count table
+    # of the samples with sequencing data
+    barcode_counts = pd.pivot_table(combined_df,
+                                    index="Sample ID",
+                                    columns=["MIP",
+                                             "Copy"],
+                                    values=["Barcode Count"],
+                                    aggfunc=np.sum)
+    print("There are {} samples with sequence data".format(
+        barcode_counts.shape[0]
+    ))
+    # After pivot table is created, the column names have an extra
+    # row with the name "Barcode Count". Remove that from column names.
+    bc_cols = barcode_counts.columns
+    bc_cols = [bc[1:] for bc in bc_cols]
+    # barcode count data is only available for samples with data
+    # so if a sample has not produced any data, it will be missing
+    # these samples should be added with 0 values for each probe
+    all_barcode_counts = pd.merge(
+        run_meta[["Sample ID", "replicate"]].set_index("Sample ID"),
+        barcode_counts, left_index=True, right_index=True, how="left")
+    all_barcode_counts.drop("replicate", axis=1, inplace=True)
+    # fix column names
+    all_barcode_counts.columns = pd.MultiIndex.from_tuples(
+        bc_cols, names=["MIP", "Copy"]
+    )
+    all_barcode_counts.fillna(0, inplace=True)
+    print("There are {} total samples.".format(all_barcode_counts.shape[0]))
+    all_barcode_counts.to_csv(os.path.join(wdir, "all_barcode_counts.csv"))
+    # Continue working with the barcode counts that does not include the
+    # samples which did not have any data.
+    barcode_counts.columns = pd.MultiIndex.from_tuples(bc_cols,
+                                                       names=["MIP", "Copy"])
+    barcode_counts.fillna(0, inplace=True)
+    barcode_counts.to_csv(os.path.join(wdir, "barcode_counts.csv"))
+    # Create an overview statistics file for samples including
+    # total read count, barcode count, and how well they cover each MIP.
+    sample_counts = combined_df.groupby("Sample ID")[["Read Count",
+                                                      "Barcode Count"]].sum()
+    target_cov = pd.concat(
+        [(barcode_counts >= 1).sum(axis=1),
+         (barcode_counts >= 5).sum(axis=1),
+         (barcode_counts >= 10).sum(axis=1)],
+        axis=1,
+    ).rename(
+        columns={
+            0: "targets_with_1_barcodes",
+            1: "targets_with_5_barcodes",
+            2: "targets_with_10_barcodes"
+        }
+    )
+    sample_counts = sample_counts.merge(target_cov,
+                                        how="outer",
+                                        left_index=True,
+                                        right_index=True).fillna(0)
+    target_cov_file = os.path.join(wdir, "sample_summary.csv")
+    sample_counts.to_csv(target_cov_file)
+
+    # Create a file with meta data for samples without any data
+    no_data = run_meta.loc[
+        ~run_meta["Sample ID"].isin(sample_counts.index)
+    ]
+    print(("{} out of {} samples had no data and they were excluded from the"
+           " variant calls.").format(no_data.shape[0], run_meta.shape[0]))
+    no_data_file = os.path.join(wdir, "samples_without_data.csv")
+    no_data.to_csv(no_data_file)
+    return
+
+
+def split_contigs(settings):
     """ Get a haplotypes dict and a call_info dict, align each haplotype to
     reference sequences from the call_info dict."""
     wdir = settings["workingDir"]
-    haplotypes_file = os.path.join(wdir, settings["tempHaplotypesFile"])
-    with open(haplotypes_file) as infile:
-        haplotypes = json.load(infile)
+    # load mapped haplotypes dataframe
+    mapped_haplotypes = pd.read_csv(os.path.join(wdir,
+                                                 "mapped_haplotypes.csv"))
+    # split haplotypes to contigs where any overlapping haplotype will be
+    # added to the contig. There is also going to be a buffer of 35 bp, that
+    # is, any haplotypes that are closer than 35 bp to a contig will also
+    # end up in the contig even if there is no overlap.
+
+    def get_contig(g):
+        intervals = zip(g["capture_start"], g["capture_end"])
+        return pd.DataFrame(merge_overlap(
+            [list(i) for i in intervals], spacer=35))
+    contigs = mapped_haplotypes.groupby("Chrom").apply(get_contig)
+    contigs = contigs.reset_index()
+    contigs.rename(columns={"level_1": "contig", 0: "contig_capture_start",
+                            1: "contig_capture_end"}, inplace=True)
+    contigs["contig_start"] = contigs["contig_capture_start"] - 20
+    contigs["contig_end"] = contigs["contig_capture_end"] + 20
+    # create a contig dictionary in this format:
+    # {chromX: {contig#: {contig_start: .., contig_end: ..}}}
+    c_dict = contigs.set_index(["Chrom", "contig"]).to_dict(orient="index")
+    contig_dict = {}
+    for key, value in c_dict.items():
+        try:
+            contig_dict[key[0]][key[1]] = value
+        except KeyError:
+            contig_dict[key[0]] = {key[1]: value}
+    # assign each haplotype to its contig
+
+    merge_contigs = mapped_haplotypes.merge(contigs)
+    mapped_haplotypes = merge_contigs.loc[
+        (merge_contigs["contig_capture_start"]
+         <= merge_contigs["capture_start"])
+        & (merge_contigs["contig_capture_end"]
+           >= merge_contigs["capture_end"])]
     species = settings["species"]
-    alignment_dir = wdir + settings["alignmentDir"]
-    num_processor = int(settings["processorNumber"])
-    command_list = []
-    with open(settings["callInfoDictionary"]) as infile:
-        call_info = json.load(infile)
-    # create alignment dir if it does not exist
-    if not os.path.exists(alignment_dir):
-        os.makedirs(alignment_dir)
-    for m in haplotypes:
-        # create a fasta file for each mip that contains all haplotype
-        # sequences for that mip
-        haplotype_fasta = alignment_dir + m + ".haps"
-        with open(haplotype_fasta, "w") as outfile:
-            outfile_list = []
-            for h in haplotypes[m]:
-                outlist = [">", h, "\n", haplotypes[m][h]["sequence"]]
-                outfile_list.append("".join(outlist))
-            outfile.write("\n".join(outfile_list))
-        haplotype_fasta = m + ".haps"
-        # create a reference file for each mip that contains reference
-        # sequences for each paralog copy for that mip
-        reference_fasta = alignment_dir + m + ".refs"
-        with open(reference_fasta, "w") as outfile:
-            outfile_list = []
-            gene_name = m.split("_")[0]
-            for c in call_info[gene_name][m]["copies"]:
-                c_ori = call_info[gene_name][m]["copies"][c]["orientation"]
-                c_seq = call_info[gene_name][m]["copies"][c][
-                    "capture_sequence"]
-                if c_ori == "reverse":
-                    c_seq = reverse_complement(c_seq)
-                outlist = [">", m + "_" + c, "\n", c_seq]
-                outfile_list.append("".join(outlist))
-            outfile.write("\n".join(outfile_list))
-        # name of the alignment output file for the mip
-        output_file = m + ".aligned"
-        # create the list to be passed to the alignment worker function
-        command = [haplotype_fasta, alignment_dir, output_file,
-                   reference_fasta, target_actions, query_actions, identity,
-                   coverage, output_format, alignment_options, species]
-        # add the command to the list that will be passed to the multi-aligner
-        command_list.append(command)
-    # run the alignment
-    alignment = align_region_multi(command_list, num_processor)
-    alignment_out_file = wdir + settings["tempAlignmentStdOut"]
-    with open(alignment_out_file, "w") as outfile:
-        json.dump(alignment, outfile)
+
+    haplotype_counts = pd.read_csv(os.path.join(wdir, "haplotype_counts.csv"))
+    contig_list = []
+    contigs_dir = os.path.join(wdir, "contigs")
+    if not os.path.exists(contigs_dir):
+        os.makedirs(contigs_dir)
+    gb = mapped_haplotypes.groupby(["Chrom", "contig"])
+    contig_info_dict = {}
+    for k in gb.groups.keys():
+        contig_info = {}
+        contig_haplotypes = gb.get_group(k)
+        contig_info["chrom"] = k[0]
+        contig_info["contig"] = k[1]
+        contig_name = contig_info["chrom"] + "_" + str(contig_info["contig"])
+        contig_info["contig_name"] = contig_name
+        contig_info["contig_start"] = int(
+            contig_haplotypes.iloc[0]["contig_start"])
+        contig_info["contig_end"] = int(
+            contig_haplotypes.iloc[0]["contig_end"])
+        contig_info["contigs_dir"] = contigs_dir
+        contig_counts = haplotype_counts.merge(
+            contig_haplotypes[["haplotype_ID", "Copy"]])
+        contig_counts_file = os.path.join(contigs_dir,
+                                          contig_name + "_counts.csv")
+        contig_info["contig_counts_file"] = contig_counts_file
+        contig_counts.to_csv(contig_counts_file, index=False)
+        contig_info["species"] = species
+        contig_haplotypes_file = os.path.join(contigs_dir,
+                                              contig_name + "_haps.csv")
+        contig_info["contig_haplotypes_file"] = contig_haplotypes_file
+        contig_haplotypes.to_csv(contig_haplotypes_file, index=False)
+        contig_info["min_coverage"] = int(settings["minVariantCoverage"])
+        contig_info["min_count"] = int(settings["minVariantCount"])
+        contig_list.append(contig_info)
+        try:
+            contig_info_dict[k[0]][k[1]] = contig_info
+        except KeyError:
+            contig_info_dict[k[0]] = {k[1]: contig_info}
+
+    with open(os.path.join(wdir, "contig_info.json"), "w") as outfile:
+        json.dump(contig_info_dict, outfile, indent=1)
+
+    pro = int(settings["processorNumber"])
+    p = NoDaemonProcessPool(pro)
+    p.map_async(process_contig, contig_list)
+    p.close()
+    p.join()
+    return
+
+
+def process_contig(contig_dict):
+    chrom = contig_dict["chrom"]
+    contig_start = contig_dict["contig_start"]
+    contig_end = contig_dict["contig_end"]
+    species = contig_dict["species"]
+    contig_ref_seq = get_sequence(create_region(
+        chrom, contig_start, contig_end), species)
+    contig_haplotypes_file = contig_dict["contig_haplotypes_file"]
+    contig_haps = pd.read_csv(contig_haplotypes_file)
+    # Create a contig sequence for each haplotype.
+    # This will be done by gettig the forward strand sequence for each
+    # haplotype and padding it on both flanks with the reference sequence
+    # up to the contig start/end.
+    #
+    # get forward strand sequence for all haplotypes
+    contig_haps["forward_sequence"] = contig_haps["haplotype_sequence"]
+    reverse_index = contig_haps["orientation"] == "reverse"
+    contig_haps.loc[reverse_index, "forward_sequence"] = (
+        contig_haps.loc[reverse_index, "forward_sequence"].apply(
+            reverse_complement))
+
+    def get_padded_sequence(row):
+        chrom = row["Chrom"]
+        contig_start = int(row["contig_start"])
+        contig_end = int(row["contig_end"])
+        capture_start = int(row["capture_start"])
+        capture_end = int(row["capture_end"])
+        left_key = create_region(chrom, contig_start, capture_start - 1)
+        right_key = create_region(chrom, capture_end + 1, contig_end)
+        left_pad = get_sequence(left_key, species)
+        right_pad = get_sequence(right_key, species)
+        return left_pad + str(row["forward_sequence"]) + right_pad
+
+    contig_haps["padded_sequence"] = contig_haps.apply(
+        get_padded_sequence, axis=1)
+    g_dict = contig_haps.set_index(["MIP", "Copy", "haplotype_ID"]).to_dict(
+        orient="index")
+    sequences = {"ref": contig_ref_seq}
+    for k in g_dict.keys():
+        sequences[":".join(k)] = g_dict[k]["padded_sequence"]
+    wdir = contig_dict["contigs_dir"]
+    contig_name = contig_dict["contig_name"]
+    fasta_file = os.path.join(wdir, contig_name + ".fa")
+    alignment_file = os.path.join(wdir, contig_name + ".aln")
+    save_fasta_dict(sequences, fasta_file)
+    subprocess.call(["muscle", "-in", fasta_file, "-out", alignment_file])
+    alignments = fasta_parser(alignment_file)
+    ref_seq = alignments["ref"]
+    alignment_to_genomic = {0: contig_start - 1}
+    insertion_count = 0
+    for i in range(len(ref_seq)):
+        if ref_seq[i] != "-":
+            alignment_to_genomic[i+1] = i + contig_start - insertion_count
+        else:
+            insertion_count += 1
+    genomic_to_alignment = {}
+    for alignment_position in alignment_to_genomic:
+        genomic_to_alignment[alignment_to_genomic[
+            alignment_position]] = alignment_position
+
+    def get_hap_start_index(row):
+        hid = row["haplotype_ID"]
+        cop = row["Copy"]
+        hap_start = row["capture_start"] - 1
+        hap_start_index = genomic_to_alignment[hap_start]
+        hap_mip = row["MIP"]
+        alignment_header = ":".join([hap_mip, cop, hid])
+        hap_al = alignments[alignment_header][:hap_start_index]
+        ref_al = alignments["ref"][:hap_start_index]
+        diff = ref_al.count("-") - hap_al.count("-")
+        return hap_start_index - diff
+
+    contig_haps["haplotype_start_index"] = contig_haps.apply(
+        get_hap_start_index, axis=1)
+
+    vcf_file = contig_name + ".raw.vcf"
+    subprocess.call(["java", "-jar", "/opt/programs/jvarkit/dist/msa2vcf.jar",
+                     "-m", "-c", "ref", "-o", vcf_file, alignment_file])
+    contig_dict["vcf_file"] = vcf_file
+    vcf = pd.read_table(vcf_file, skiprows=5)
+    vcf = vcf.drop(["ID", "QUAL", "FILTER", "INFO", "FORMAT"],
+                   axis=1).set_index(["#CHROM", "POS", "REF", "ALT"])
+    vcf = vcf.applymap(lambda a: int(a.split(":")[0]))
+    vcf = vcf.reset_index()
+    vcf["alignment_position"] = vcf["POS"]
+    vcf["POS"] = vcf["alignment_position"].map(alignment_to_genomic)
+    vcf["CHROM"] = chrom
+    vcf.drop("#CHROM",  inplace=True, axis=1)
+    vcf = vcf.set_index(["CHROM", "POS", "REF", "ALT", "alignment_position"])
+    vcf.drop("ref", axis=1, inplace=True)
+    vcf_stack = pd.DataFrame(vcf.stack()).reset_index()
+    vcf_stack.rename(columns={"level_5": "alignment_header", 0: "genotype"},
+                     inplace=True)
+    vcf_stack[["MIP", "Copy", "haplotype_ID"]] = vcf_stack[
+        "alignment_header"].apply(lambda a: pd.Series(a.split(":")))
+    vcf_merge = vcf_stack.merge(contig_haps[["MIP", "Copy", "haplotype_ID",
+                                             "capture_start", "capture_end",
+                                             "haplotype_start_index"]])
+    vcf_merge["END"] = vcf_merge["REF"].apply(len) + vcf_merge["POS"] - 1
+    vcf_merge["covered"] = ((vcf_merge["capture_start"] <= vcf_merge["END"])
+                            & (vcf_merge["capture_end"] >= vcf_merge["POS"]))
+    vcf_merge.loc[~vcf_merge["covered"], "genotype"] = np.nan
+    vcf_clean = vcf_merge.loc[~vcf_merge["genotype"].isnull()]
+    contig_seq = pd.DataFrame(contig_haps.groupby("haplotype_ID")[
+        "forward_sequence"].first()).to_dict(orient="index")
+
+    def get_variant_index(row):
+        pos_index = row["alignment_position"]
+        hap_start_index = row["haplotype_start_index"]
+        hap_copy = row["Copy"]
+        hid = row["haplotype_ID"]
+        hap_mip = row["MIP"]
+        alignment_header = ":".join([hap_mip, hap_copy, hid])
+        hap_al = alignments[alignment_header]
+        hap_al = hap_al[hap_start_index:pos_index]
+        variant_index = len(hap_al) - hap_al.count("-") - 1
+        alts = [row["REF"]]
+        alts.extend(row["ALT"].split(","))
+        gen = int(row["genotype"])
+        alt = alts[gen]
+        variant_end_index = variant_index + len(alt)
+        if variant_index < 0:
+            variant_index = 0
+        if variant_end_index < 1:
+            variant_end_index = 1
+        seq = contig_seq[hid]["forward_sequence"]
+        var_seq = seq[variant_index:variant_end_index]
+        return pd.Series([variant_index, variant_end_index, alt, var_seq])
+
+    vcf_clean[["variant_index", "variant_end_index", "allele", "variant"]] = (
+        vcf_clean.apply(get_variant_index, axis=1))
+
+    contig_counts_file = contig_dict["contig_counts_file"]
+    contig_counts = pd.read_csv(contig_counts_file)
+    contig_counts["forward_sequence_quality"] = contig_counts[
+        "sequence_quality"]
+    reverse_index = contig_counts["orientation"] == "reverse"
+    contig_counts.loc[reverse_index, "forward_sequence_quality"] = (
+        contig_counts.loc[reverse_index, "forward_sequence_quality"].apply(
+            lambda a: a[::-1]))
+    combined_vcf = vcf_clean[["CHROM", "POS", "REF", "ALT", "genotype",
+                              "MIP", "Copy", "haplotype_ID", "variant_index",
+                              "variant_end_index"]].merge(
+        contig_counts[["Sample ID", "haplotype_ID", "MIP", "Copy",
+                       "Barcode Count", "forward_sequence_quality"]])
+
+    def get_variant_quality(row):
+        start_index = row["variant_index"]
+        end_index = row["variant_end_index"]
+        qual = row["forward_sequence_quality"]
+        qual_scores = [ord(qual[i]) - 33 for i in
+                       range(start_index, end_index)]
+        return np.mean(qual_scores)
+
+    combined_vcf["variant_quality"] = combined_vcf.apply(get_variant_quality,
+                                                         axis=1)
+
+    min_count = contig_dict["min_count"]
+    min_depth = contig_dict["min_coverage"]
+
+    def collapse_vcf(group):
+        key = group.iloc[0][["CHROM", "POS", "REF", "ALT"]].values
+        alts = key[3].split(",")
+        allele_count = len(alts) + 1
+        allele_depths = []
+        for i in range(allele_count):
+            allele_depths.append(group.loc[group["genotype"] == i,
+                                           "Barcode Count"].sum().round(0))
+        total_depth = int(round(np.sum(allele_depths), 0))
+        if total_depth < min_depth:
+            return "."
+        genotypes = []
+        for i in range(allele_count):
+            if allele_depths[i] >= min_count:
+                genotypes.append(i)
+        if len(genotypes) == 0:
+            return "."
+        else:
+            gt = "/".join(map(str, sorted(genotypes)))
+        allele_depths = [str(int(a)) for a in allele_depths]
+        variant_quals = []
+        for i in range(allele_count):
+            variant_quals.append(group.loc[group["genotype"] == i,
+                                           "variant_quality"].max())
+        variant_quals = ["." if np.isnan(v) else str(int(round(v, 0)))
+                         for v in variant_quals]
+        mip_count = []
+        for i in range(allele_count):
+            mip_count.append(len(set(group.loc[group["genotype"] == i,
+                                               "MIP"])))
+        hap_count = []
+        for i in range(allele_count):
+            hap_count.append(len(set(group.loc[group["genotype"] == i,
+                                               "haplotype_ID"])))
+        return ":".join([gt, ",".join(allele_depths),
+                         str(total_depth),
+                         ",".join(variant_quals),
+                         ",".join(map(str, mip_count)),
+                         ",".join(map(str, hap_count))])
+
+    collapsed_vcf = pd.DataFrame(combined_vcf.groupby(
+        ["CHROM", "POS", "REF", "ALT", "Sample ID"]).apply(collapse_vcf)
+    ).reset_index()
+    vcf_table = collapsed_vcf.pivot_table(index=["CHROM", "POS", "REF", "ALT"],
+                                          columns="Sample ID", aggfunc="first")
+    vcf_table.fillna(".", inplace=True)
+
+    def get_var_summary(row):
+        val = row.values
+        ad = []
+        quals = []
+        for v in val:
+            if v != ".":
+                ad.append(list(map(int, v.split(":")[1].split(","))))
+                quals.append(v.split(":")[3].split(","))
+        if len(ad) == 0:
+            return "."
+        quality = []
+        for q in quals:
+            nq = []
+            for q_val in q:
+                if q_val == ".":
+                    nq.append(np.nan)
+                else:
+                    nq.append(int(q_val))
+            quality.append(nq)
+        quals = np.nanmean(quality, axis=0)
+        quality = []
+        for q in quals:
+            if np.isnan(q):
+                quality.append(".")
+            else:
+                quality.append(str(round(q, 1)))
+        return ";".join(["DP=" + str(np.sum(ad)),
+                         "AD=" + ",".join(map(str, np.sum(ad, axis=0))),
+                         "QS=" + ",".join(quality)])
+
+    var_summary = pd.DataFrame(vcf_table.apply(
+        get_var_summary, axis=1)).rename(columns={0: "INFO"})
+    var_summary["FORMAT"] = "GT:AD:DP:QS:MC:HC"
+    var_summary["ID"] = "."
+    var_summary["QUAL"] = "."
+    var_summary["FILTER"] = "."
+    samples = vcf_table.columns.droplevel(0).tolist()
+    vcf_table.columns = samples
+    vcf_table = vcf_table.merge(var_summary, left_index=True, right_index=True)
+    vcf_table = vcf_table.reset_index()[
+        ["CHROM", "REF", "ALT", "QUAL", "FILTER", "INFO", "FORMAT"] + samples]
+
+    vcf_header = [
+        "##fileformat=VCFv4.2",
+        "##INFO=<ID=DP,Number=1,Type=Integer,Description="
+        "'Total coverage for locus, across samples.'>",
+        "##INFO=<ID=AD,Number=R,Type=Integer,Description="
+        "'Total coverage per allele, across samples.'>",
+        "##INFO=<ID=QS,Number=R,Type=Float,Description="
+        "'Average sequence quality per allele.'>",
+        '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">',
+        '##FORMAT=<ID=AD,Number=R,Type=Integer,Description='
+        '"Allelic depths for the ref and alt alleles in that order">',
+        '##FORMAT=<ID=DP,Number=1,Type=Integer,Description='
+        '"Total read depth (coverage) at this position.>',
+        '##FORMAT=<ID=QS,Number=R,Type=Integer,Description='
+        '"Sequence quality per allele.">',
+        '##FORMAT=<ID=MC,Number=R,Type=Integer,Description='
+        '"Number of MIPs supporting the allele.">',
+        '##FORMAT=<ID=HC,Number=R,Type=Integer,Description='
+        '"Number of haplotypes supporting the allele.">']
+    # save vcf file
+    contig_vcf_file = os.path.join(wdir, contig_name + ".vcf")
+    with open(contig_vcf_file, "w") as outfile:
+        outfile.write("\n".join(vcf_header) + "\n")
+        vcf_table.to_csv(outfile, index=False, sep="\t")
+    contig_variants_file = os.path.join(wdir, contig_name + "_variants.csv")
+    combined_vcf.to_csv(contig_variants_file)
+    collapsed_variants_file = os.path.join(wdir, contig_name
+                                           + "_collapsed_variants.csv")
+    collapsed_vcf.to_csv(collapsed_variants_file)
+    contig_haps.to_csv(contig_haplotypes_file)
+    contig_counts.to_csv(contig_counts_file)
+
     return
 
 
@@ -7529,470 +8266,6 @@ def best_mip_set (compatible_mip_sets, compatible_mip_dic, num_para, diff_score_
         return
 
 
-def get_analysis_settings(settings_file):
-    """ Convert analysis settings file to dictionary"""
-    settings = {}
-    with open(settings_file) as infile:
-        for line in infile:
-            if not line.startswith("#"):
-                newline = line.strip().split("\t")
-                value = newline[1].split(",")
-                if len(value) == 1:
-                    settings[newline[0]] = value[0]
-                else:
-                    settings[newline[0]] = [v for v in value if v != ""]
-    return settings
-
-
-def write_analysis_settings(settings, settings_file):
-    """ Create a settings file from a settings dictionary."""
-    outfile_list = [["# Setting Name", "Setting Value"]]
-    for k, v in settings.items():
-        if isinstance(v, list):
-            val = ",".join(map(str, v))
-        else:
-            val = str(v)
-        outfile_list.append([k, val])
-    with open(settings_file, "w") as outfile:
-        outfile.write("\n".join(["\t".join(o) for o in outfile_list]) + "\n")
-    return
-
-
-def filter_mipster (settings):
-    """
-    Import data from Mipster pipeline, filter and save to filtered_file
-    We use a tab separated file coming from Mipster pipeline for data analysis
-    This file has a lot of information that will not be used initially
-    We will select the columns that will be used.
-    Selected colnames are should be specified in settings file
-    """
-    wdir = settings["workingDir"]
-    mipster_file = wdir + settings["mipsterFile"]
-    filtered_file = wdir + settings["filteredMipsterFile"]
-    # extract data column names from the mipster file
-    with open(mipster_file) as infile:
-        all_colnames = infile.readline().strip().split("\t")
-    # select the relevant columns
-    colnames = settings["colNames"]
-    # colnames are names from the mipster pipeline and
-    # given names are names to be used in this pipeline
-    given_names = settings["givenNames"]
-    # check if column names are in equal number and match
-    col_map = {}
-    if len(colnames) == len(given_names):
-        for i in range(len(colnames)):
-            col_map [colnames[i]] = {"given_name": given_names[i]}
-    else:
-        print("number of column names and number of given names do not match! Colnames will be used")
-        for i in range(len(colnames)):
-            col_map [colnames[i]] = {"given_name": colnames[i]}
-    # get index of colnames in data file
-    for i in range(len(all_colnames)):
-        if all_colnames[i] in colnames:
-            col_map[all_colnames[i]]["index"] = i
-    # extract data of selected columns
-    with open(filtered_file, "w") as outfile, open(mipster_file) as all_data:
-        outfile.write("#" + "\t".join(given_names) + "\n")
-        counter = 0
-        for line in all_data:
-            if counter > 0 and not line.startswith("s_Sample"):
-                newline = line.strip().split("\t")
-                outlist = []
-                for c in colnames:
-                    outlist.append(newline[col_map[c]["index"]])
-                outfile.write("\t".join(outlist) + "\n")
-            counter += 1
-    return
-
-
-def get_haplotypes(settings):
-    """ 1) Extract all haplotypes from new data.
-        2) Remove known haplotypes using previous data (if any).
-        3) Map haplotypes to species genome to get the best hit(s)
-        4) Crosscheck best bowtie hit with the targeted region
-        5) Output haplotypes dictionary and off_targets dictionary
-
-        Once this function is called, we will get the new haplotypes present
-        in this data set that are on target and where they map on the genome.
-        Mapping haplotypes to specific targets/copies is not accomplished here
-        """
-    wdir = settings["workingDir"]
-    haplotypes_fq_file = wdir + settings["haplotypesFastqFile"]
-    haplotypes_sam_file = wdir + settings["haplotypesSamFile"]
-    bwa_options = settings["bwaOptions"]
-    call_info_file = settings["callInfoDictionary"]
-    species = settings["species"]
-    try:
-        tol = int(settings["alignmentTolerance"])
-    except KeyError:
-        tol = 50
-    # DATA EXTRACTION ###
-    # try loading unique haplotypes values. This file is generated
-    # in the recent versions of the pipeline but will be missing in older
-    # data. If missing, we'll generate it.
-    try:
-        hap_df = pd.read_csv(wdir + "unique_haplotypes.csv")
-    except IOError:
-        raw_results = pd.read_table(wdir + settings["mipsterFile"])
-        hap_df = raw_results.groupby(
-            ["gene_name", "mip_name", "haplotype_ID"])[
-            "haplotype_sequence"].first().reset_index()
-    # fill in fake sequence quality scores for each haplotype. These scores
-    # will be used for mapping only and the real scores for each haplotype
-    # for each sample will be added later.
-    hap_df["quality"] = hap_df["haplotype_sequence"].apply(
-        lambda a: "H" * len(a))
-    haps = hap_df.set_index("haplotype_ID").to_dict(orient="index")
-    # BWA alignment ####
-    # create a fastq file for bwa input
-    with open(haplotypes_fq_file, "w") as outfile:
-        for h in haps:
-            outfile.write("@" + h + "\n")
-            outfile.write(haps[h]["haplotype_sequence"] + "\n" + "+" + "\n")
-            outfile.write(haps[h]["quality"] + "\n")
-    # run bwa
-    bwa(haplotypes_fq_file, haplotypes_sam_file, "sam", "", "", bwa_options,
-        species)
-    # process alignment output sam file
-    header = ["haplotype_ID", "FLAG", "CHROM", "POS", "MAPQ", "CIGAR", "RNEXT",
-              "PNEXT", "TLEN", "SEQ", "QUAL"]
-    sam_list = []
-    with open(haplotypes_sam_file) as infile:
-        for line in infile:
-            if not line.startswith("@"):
-                newline = line.strip().split()
-                samline = newline[:11]
-                for item in newline[11:]:
-                    value = item.split(":")
-                    if value[0] == "AS":
-                        samline.append(int(value[-1]))
-                        break
-                else:
-                    samline.append(-5000)
-                sam_list.append(samline)
-    sam = pd.DataFrame(sam_list, columns=header + ["alignment_score"])
-    # find alignment with the highest alignment score. We will consider these
-    # the primary alignments and the source of the sequence.
-    sam["best_alignment"] = (sam["alignment_score"] == sam.groupby(
-        "haplotype_ID")["alignment_score"].transform("max"))
-    # add MIP column to alignment results
-    sam["MIP"] = sam["haplotype_ID"].apply(lambda a: a.split(".")[0])
-    # create call_info data frame for all used probes in the experiment
-    probe_sets_file = settings["mipSetsDictionary"]
-    probe_set_keys = settings["mipSetKey"]
-    used_probes = set()
-    for psk in probe_set_keys:
-        with open(probe_sets_file) as infile:
-            used_probes.update(json.load(infile)[psk])
-    with open(call_info_file) as infile:
-        call_info = json.load(infile)
-    call_df_list = []
-    for g in call_info:
-        for m in call_info[g]:
-            if m in used_probes:
-                mip_number = int(m.split("_")[-1][3:])
-                sub_number = int(m.split("_")[-2][3:])
-                for c in call_info[g][m]["copies"]:
-                    call_dict = call_info[g][m]["copies"][c]
-                    try:
-                        call_dict.pop("genes")
-                    except KeyError:
-                        pass
-                    call_dict["gene"] = g
-                    call_dict["MIP"] = m
-                    call_dict["copy"] = c
-                    call_dict["mip_number"] = mip_number
-                    call_dict["sub_number"] = sub_number
-                    call_df_list.append(pd.DataFrame(call_dict, index=[0]))
-    call_df = pd.concat(call_df_list)
-    # combine alignment information with design information (call_info)
-    haplotype_maps = call_df.merge(
-        sam[["MIP", "haplotype_ID", "CHROM", "POS", "best_alignment",
-             "alignment_score"]])
-    haplotype_maps["POS"] = haplotype_maps["POS"].astype(int)
-    # determine which haplotype/mapping combinations are for intended targets
-    # first, compare mapping coordinate to the MIP coordinate to see  if
-    # a MIP copy matches with the alignment.
-    haplotype_maps["aligned_copy"] = (
-        (haplotype_maps["CHROM"] == haplotype_maps["chrom"])
-        & (abs(haplotype_maps["POS"] - haplotype_maps["capture_start"]) <= tol)
-    )
-    # aligned_copy means the alignment is on the intended MIP target
-    # this is not necessarily the best target, though. For a haplotype sequence
-    # to be matched to a MIP target, it also needs to be the best alignment.
-    haplotype_maps["mapped_copy"] = (haplotype_maps["aligned_copy"]
-                                     & haplotype_maps["best_alignment"])
-    # rename some fields to be compatible with previous code
-    haplotype_maps.rename(columns={"gene": "Gene","copy": "Copy",
-                                   "chrom": "Chrom"}, inplace=True)
-    # any haplotype that does was not best mapped to at least one target
-    # will be considered an off target haplotype.
-    haplotype_maps["off_target"] = ~haplotype_maps.groupby(
-        "haplotype_ID")["mapped_copy"].transform("any")
-    off_target_haplotypes = haplotype_maps.loc[haplotype_maps["off_target"]]
-    # filter off targets and targets that do not align to haplotypes
-    haplotypes = haplotype_maps.loc[(~haplotype_maps["off_target"])
-                                    & haplotype_maps["aligned_copy"]]
-    # each MIP copy/haplotype_ID combination must have a single alignment
-    # if there are multiple, the best one will be chosen
-
-    def get_best_alignment(group):
-        return group.sort_values("alignment_score", ascending=False).iloc[0]
-
-    haplotypes = haplotypes.groupby(["MIP", "Copy", "haplotype_ID"],
-                                    as_index=False).apply(get_best_alignment)
-    haplotypes.index = (range(len(haplotypes)))
-    # filter to best mapping copy/haplotype pairs
-    mapped_haplotypes = haplotypes.loc[haplotype_maps["mapped_copy"]]
-    mapped_haplotypes["mapped_copy_number"] = mapped_haplotypes.groupby(
-        ["haplotype_ID"])["haplotype_ID"].transform(len)
-
-    mapped_haplotypes.to_csv(wdir + "mapped_haplotypes.csv", index=False)
-    off_target_haplotypes.to_csv(wdir + "offtarget_haplotypes.csv",
-                                 index=False)
-    haplotypes.to_csv(wdir + "aligned_haplotypes.csv", index=False)
-    return
-
-
-def rename_mipster_haplotypes(settings):
-    """ 1) Extract all haplotypes from new data.
-        2) Remove known haplotypes using previous data (if any).
-        3) Map haplotypes to species genome to get the best hit(s)
-        4) Crosscheck best bowtie hit with the targeted region
-        5) Output haplotypes dictionary and off_targets dictionary
-
-        Once this function is called, we will get the new haplotypes present
-        in this data set that are on target and where they map on the genome.
-        Mapping haplotypes to specific targets/copies is not accomplished here
-        """
-    wdir = settings["workingDir"]
-    filtered_data = wdir + settings["filteredMipsterFile"]
-    renamed_file = filtered_data + "_renamed"
-    sequence_to_haplotype_file = wdir +     settings["sequenceToHaplotypeDictionary"]
-    # if there is no previous haplotype information, an empty dict will be used
-    # for instead of the known haplotypes dict
-    with open(sequence_to_haplotype_file) as infile:
-            sequence_to_haplotype = json.load(infile)
-    # extract haplotype name and sequence from new data file
-    problem_sequences = []
-    with open(filtered_data) as infile, open(renamed_file, "w") as outfile:
-        for line in infile:
-            if line.startswith("#"):
-                filtered_colnames = line.strip().split("\t")
-                filtered_colnames[0] = filtered_colnames[0][1:]
-                # find column indexes of relevant fields
-                for i in range(len(filtered_colnames)):
-                    if filtered_colnames[i] == "haplotype_ID":
-                        hap_index = i
-                    elif filtered_colnames[i] == "haplotype_sequence":
-                        seq_index = i
-                    elif filtered_colnames[i] == "haplotype_quality_scores":
-                        qual_index = i
-                outfile.write(line)
-            else:
-                newline = line.split("\t")
-                hapseq = newline[seq_index]
-                try:
-                    hapname = sequence_to_haplotype[hapseq]
-                    newline[hap_index] = hapname
-                    outfile.write("\t".join(newline))
-                except KeyError:
-                    problem_sequences.append(hapseq)
-    return problem_sequences
-
-
-def filter_variation(variation_json,
-                     min_barcode_count,
-                     min_barcode_fraction,
-                     samples_to_exclude=None,
-                     samples_to_include=None):
-    """
-    Filter SNP variation for total minimum total depth and minimum
-    barcode fraction for case control sample sets.
-    """
-    with open(variation_json) as infile:
-        var_table = json.load(infile)
-    # each item in the table list is a unique variation
-    # except the first item which is the header
-    header = copy.deepcopy(var_table[0])
-    for h_ind in [0, 6, 7, 8, 9, 10, 11, 12]:
-        header[h_ind] = "remove"
-    exclude_indexes = []
-    # sample IDs are index 40 and above,
-    # remove those in the exclude list
-    if samples_to_include is not None:
-        for i in range(40, len(header)):
-            if header[i] not in samples_to_include:
-                exclude_indexes.append(i)
-                header[i] = "remove"
-    if samples_to_exclude is not None:
-        for i in range(40, len(header)):
-            if header[i] in samples_to_exclude:
-                header[i] = "remove"
-                exclude_indexes.append(i)
-    header = [h for h in header if h != "remove"]
-    header = header[:22] + ["HOR", "HPval"] + header[22:]
-
-    filtered_var_table = [header]
-    for var in var_table[1:]:
-        wt = 0
-        wt_case = 0
-        wt_control = 0
-        het = 0
-        het_case = 0
-        het_control = 0
-        hom = 0
-        hom_case = 0
-        hom_control = 0
-        AD = 0
-        DP = 0
-        NS = 0
-        sample_infos = []
-        # first 40 items in each variation list describes
-        # general information for the variation such as chromosome
-        # and base change, as well as population information such as
-        # allele frequency in the sample set. Item at index 40 has
-        # the first sample genotype
-        for gen_index in range(40, len(var)):
-            if gen_index in exclude_indexes:
-                continue
-            sam = var[gen_index]
-            info = sam.split(":")
-            # allele depth (mutant)
-            ad = int(float(info[1]))
-            # total depth at position
-            dp= int(float(info[2]))
-            # filter for minimum depth
-            if dp< min_barcode_count:
-                # change genotype to unknown (na)
-                info[0] = "./."
-            else:
-                #AD += ad
-                DP += dp
-                NS += 1
-                af = float(ad)/dp
-                if af < min_barcode_fraction:
-                    wt += 1
-                    info[0] = "0/0"
-                    if info[-1] == "case":
-                        wt_case += 1
-                    elif info[-1] == "control":
-                        wt_control += 1
-                elif af > 1 - min_barcode_fraction:
-                    hom += 1
-                    AD += ad
-                    info[0] = "1/1"
-                    if info[-1] == "case":
-                        hom_case += 1
-                    elif info[-1] == "control":
-                        hom_control += 1
-                else:
-                    het += 1
-                    AD += ad
-                    info[0] = "0/1"
-                    if info[-1] == "case":
-                        het_case += 1
-                    elif info[-1] == "control":
-                        het_control += 1
-            sample_infos.append(":".join(info))
-        stats = snp_stats(hom_case, hom_control,
-                           het_case, het_control,
-                          wt_case, wt_control)
-        try:
-            fish = list(fisher_exact([[hom_case, hom_control],
-                                 [het_case + wt_case,
-                                  het_control + wt_control]]))
-        except:
-            fish = ["na", "na"]
-        stats = fish + stats
-        updated_var = copy.deepcopy(var[:18])
-        for p_ind in [0, 6, 7, 8, 9, 10, 11, 12]:
-            updated_var[p_ind] = "remove"
-        updated_var = [uv for uv in updated_var if uv != "remove"]
-        try:
-            AF = (het + hom)/float(NS)
-        except ZeroDivisionError:
-            AF = 0
-        updated_var.extend([NS, DP, AD, AF, hom, het,
-                           hom_case, hom_control,
-                           het_case, het_control,
-                           wt_case, wt_control])
-        updated_var.extend(stats)
-        updated_var.append(var[39])
-        updated_var.extend(sample_infos)
-        if AF > 0:
-            filtered_var_table.append(updated_var)
-    write_list(filtered_var_table, variation_json + ".filtered")
-    return
-def variation_filter(variation_json, min_barcode_count, min_barcode_fraction):
-    """
-    Filter SNP variation for total minimum total depth and minimum
-    barcode fraction for sample sets with no case control comparison.
-    """
-    with open(variation_json) as infile:
-        var_table = json.load(infile)
-    # each item in the table list is a unique variation
-    # except the first item which is the header
-    header = copy.deepcopy(var_table[0])
-    for h_ind in [0, 6, 7, 8, 9, 10, 11, 12]:
-        header[h_ind] = "remove"
-    header = [h for h in header if h != "remove"]
-    #header = header[:24] + ["HOR", "HPval"] + header[24:]
-    filtered_var_table = [header]
-    for var in var_table[1:]:
-        wt = 0
-        het = 0
-        hom = 0
-        hom_control = 0
-        AD = 0
-        DP = 0
-        NS = 0
-        sample_infos = []
-        # first 40 items in each variation list describes
-        # general information for the variation such as chromosome
-        # and base change, as well as population information such as
-        # allele frequency in the sample set. Item at index 40 has
-        # the first sample genotype
-        for sam in var[25:]:
-            info = sam.split(":")
-            # allele depth (mutant)
-            ad = int(float(info[1]))
-            # total depth at position
-            dp= int(float(info[2]))
-            # filter for minimum depth
-            if dp< min_barcode_count:
-                # change genotype to unknown (na)
-                info[0] = "./."
-            else:
-                AD += ad
-                DP += dp
-                NS += 1
-                af = float(ad)/dp
-                if af < min_barcode_fraction:
-                    wt += 1
-                    info[0] = "0/0"
-                elif af > 1 - min_barcode_fraction:
-                    hom += 1
-                    info[0] = "1/1"
-                else:
-                    het += 1
-                    info[0] = "0/1"
-            sample_infos.append(":".join(info))
-        updated_var = copy.deepcopy(var[:18])
-        for p_ind in [0, 6, 7, 8, 9, 10, 11, 12]:
-            updated_var[p_ind] = "remove"
-        updated_var = [uv for uv in updated_var if uv != "remove"]
-        try:
-            AF = (het + hom)/float(NS)
-        except ZeroDivisionError:
-            AF = 0
-        updated_var.extend([NS, DP, AD, AF, hom, het])
-        updated_var.append(var[24])
-        updated_var.extend(sample_infos)
-        if AF > 0:
-            filtered_var_table.append(updated_var)
-    write_list(filtered_var_table, variation_json + ".filtered.tsv")
-    return
 def write_list(alist, outfile_name):
     """ Convert values of a list to strings and save to file."""
     with open(outfile_name, "w") as outfile:
@@ -9019,122 +9292,9 @@ def process_results(wdir,
     ##########################################################
     ##########################################################
     # get all haplotypes and variants observed in the data
-    # from the haplotype dictionary
-    hap_file = settings["haplotypeDictionary"]
-    with open(wdir + hap_file) as infile:
-        haplotypes = json.load(infile)
-    # keep all variant in all haplotypes in a list
-    variation_list = []
-    # keep haplotypes that are the same as reference genome
-    # in the reference list
-    reference_list = []
-    # annotation ID Key specifies if there is and ID field in the vcf
-    # which has a database ID of the variation at hand. For example,
-    # rsid for variation already defined in dbSNP.
-    annotation_id_key = settings["annotationIdKey"]
-    unmapped = 0
-    for m in haplotypes:
-        g = m.split("_")[0]
-        for hid in haplotypes[m]:
-            hap = haplotypes[m][hid]
-            # skip off target haplotypes
-            if not hap["mapped"]:
-                unmapped += 1
-                continue
-            copies = hap["mapped_copies"]
-            # check if the haplotype is mapping to
-            # multiple locations in genome
-            if len(copies) > 1:
-                multi_mapping = True
-            else:
-                multi_mapping = False
-            for c in copies:
-                copy_differences = hap["mapped_copies"][c]["differences"]
-                copy_chrom = hap["mapped_copies"][c]["chrom"]
-                # go through all differences from reference genome
-                # get a subset of information included in the
-                # haplotype dictionary
-                if len(copy_differences) == 0:
-                    reference_list.append([hid, c, multi_mapping, copy_chrom])
-                for d in copy_differences:
-                    # all variation is left normalized to reference genome
-                    # this is done to align all indels to the same start
-                    # to avoid having different locations for the same
-                    # indel in a tandem repeat region.
-                    # each variation is given a unique key, which is
-                    # formed by the first 4 fields of vcf (chr:pos:id:ref:alt)
-                    normalized_key = d["vcf_normalized"]
-                    var = normalized_key.split(":")
-                    raw_key = d["vcf_raw"]
-                    raw_var = raw_key.split(":")
-                    # get the position of variation prior to
-                    # left normalization
-                    original_pos = int(raw_var[1])
-                    # indels are represented with the preceeding base
-                    # like A:AG for an insertion and AG:A for deletion
-                    # in both cases, the position is the preceding base
-                    # in some cases where the indel is right after probe
-                    # arm, we may not actually have coverage in the position
-                    # indicated here, so change the position to the next base
-                    # where the real change is
-                    if len(raw_var[4]) != len(raw_var[3]):
-                        original_pos += 1
-                    # get the annotation id if any, such as rsID
-                    try:
-                        annotation_id = d["annotation"][annotation_id_key]
-                    except KeyError:
-                        annotation_id = "."
-                    # get the location of variation relative
-                    # to haplotype sequence
-                    hap_index = d["hap_index"]
-                    start_index = min(hap_index)
-                    end_index = max(hap_index) + 1
-                    temp_list = [normalized_key,
-                                 var[0],
-                                 int(var[1]),
-                                 annotation_id,
-                                 var[3],
-                                 var[4],
-                                 g, m, c, hid,
-                                 raw_key,
-                                 original_pos,
-                                 start_index,
-                                 end_index,
-                                 multi_mapping]
-                    try:
-                        for ak in annotation_keys:
-                            temp_list.append(d["annotation"][ak])
-                    except NameError:
-                        annotation_keys = list(d["annotation"].keys())
-                        for ak in annotation_keys:
-                            temp_list.append(d["annotation"][ak])
-                    variation_list.append(temp_list)
-    # create pandas dataframes for variants
-    colnames = ["VKEY", "CHROM", "POS", "ID", "REF", "ALT",
-                "RAW_VKEY", "Original Position", "Start Index",
-                "End Index", "Multi Mapping"]
-    colnames = colnames + annotation_keys
-    variation_df = pd.DataFrame(variation_list,
-                                columns=colnames)
-    # create pandas dataframe for reference haplotypes
-    reference_df = pd.DataFrame(reference_list,
-                                columns=["Haplotype ID",
-                                         "Copy",
-                                         "Multi Mapping",
-                                         "Chrom"])
-
-    # create a dataframe for all mapped haplotypes
-    mapped_haplotype_df = pd.concat(
-        [variation_df.groupby(
-            ["Haplotype ID", "Copy", "Multi Mapping", "CHROM"]
-        ).first().reset_index().rename(columns={"CHROM": "Chrom"})[
-            ["Haplotype ID", "Copy", "Multi Mapping", "Chrom"]
-        ], reference_df], ignore_index=True
-    )
-    print(
-        ("There are {mh.shape[0]} mapped and {um} unmapped (off target)"
-         " haplotypes.").format(mh=mapped_haplotype_df, um=unmapped)
-    )
+    # from the haplotype dataframe for all mapped haplotypes
+    mapped_haplotype_df = pd.read_csv(os.path.join(wdir,
+                                                   "mapped_haplotypes.csv"))
     ##########################################################
     ##########################################################
     # Process 3: load the MIPWrangler output which has
@@ -9147,11 +9307,19 @@ def process_results(wdir,
     ##########################################################
     # get the MIPWrangler Output
     raw_results = pd.read_table(wdir + settings["mipsterFile"])
-    raw_results["Haplotype ID"] = raw_results["haplotype_ID"] + "-0"
     # limit the results to the samples intended for this analysis
     raw_results = raw_results.loc[
         raw_results["sample_name"].isin(sample_ids)
     ]
+    # rename some columns for better visualization in tables
+    raw_results.rename(
+        columns={"sample_name": "Sample ID",
+                 "mip_name": "MIP",
+                 "gene_name": "Gene",
+                 "barcode_count": "Barcode Count",
+                 "read_count": "Read Count"},
+        inplace=True
+    )
     # use only the data corresponding to mapped haplotypes
     # filtering the off target haplotypes.
     mapped_results = raw_results.merge(mapped_haplotype_df, how="inner")
@@ -9160,20 +9328,12 @@ def process_results(wdir,
         rr=raw_results,
         mr=mapped_results
     ))
-    # rename some columns for better visualization in tables
-    mapped_results.rename(
-        columns={"sample_name": "Sample ID",
-                 "mip_name": "MIP",
-                 "gene_name": "Gene",
-                 "barcode_count": "Barcode Count",
-                 "read_count": "Read Count"},
-        inplace=True
-    )
+
     # Try to estimate the distribution of data that is mapping
     # to multiple places in the genome.
     # This is done in 4 steps.
     # 1) Get uniquely mapping haplotypes and barcode counts
-    unique_df = mapped_results.loc[~mapped_results["Multi Mapping"]]
+    unique_df = mapped_results.loc[mapped_results["mapped_copy_number"] == 1]
     unique_table = pd.pivot_table(unique_df,
                                   index="Sample ID",
                                   columns=["Gene", "MIP", "Copy", "Chrom"],
@@ -9197,7 +9357,6 @@ def process_results(wdir,
     except KeyError:
         average_copy_count = 2
         norm_percentiles = [0.4, 0.6]
-    unique_df.loc[:, "CA"] = average_copy_count
     unique_df.loc[:, "Copy Average"] = average_copy_count
     # Adjusted barcode count will represent the estimated barcode count
     # for multimapping haplotypes. For example, if hap1 is mapping to 2
@@ -9224,23 +9383,28 @@ def process_results(wdir,
     # 4) Distribute multi mapping data proportional to
     # Paralog's copy number determined from the
     # uniquely mapping data
-    multi_df = mapped_results.loc[mapped_results["Multi Mapping"]]
+    multi_df = mapped_results.loc[mapped_results["mapped_copy_number"] > 1]
     if not multi_df.empty:
         # get the average copy count for the gene the haplotype belongs to
         mca = multi_df.apply(lambda r: get_copy_average(r, ac), axis=1)
         multi_df.loc[mca.index, "Copy Average"] = mca
-        mca = multi_df.groupby(
-            ["Sample ID", "Gene"]
-        )["Copy Average"].transform(normalize_copies)
-        multi_df.loc[mca.index, "CA"] = mca
-        multi_df.loc[:, "Adjusted Barcode Count"] = (
-            multi_df.loc[:, "Barcode Count"]
-            * multi_df.loc[:, "CA"]
-        )
-        multi_df.loc[:, "Adjusted Read Count"] = (
-            multi_df.loc[:, "Read Count"]
-            * multi_df.loc[:, "CA"]
-        )
+        multi_df["copy_sum"] = multi_df.groupby(
+            ["Sample ID", "haplotype_ID"])["Copy Average"].transform("sum")
+        multi_df["copy_len"] = multi_df.groupby(
+            ["Sample ID", "haplotype_ID"])["Copy Average"].transform("size")
+        null_index = multi_df["copy_sum"] == 0
+        multi_df.loc[null_index, "Copy Average"] = (
+            average_copy_count / multi_df.loc[null_index, "copy_len"])
+        multi_df.loc[null_index, "copy_sum"] = average_copy_count
+        multi_df["Copy Average"].fillna(0, inplace=True)
+        multi_df["Adjusted Barcode Count"] = (multi_df["Barcode Count"]
+                                              * multi_df["Copy Average"]
+                                              / multi_df["copy_sum"])
+        multi_df["Adjusted Read Count"] = (multi_df["Read Count"]
+                                           * multi_df["Copy Average"]
+                                           / multi_df["copy_sum"])
+
+
     # Combine unique and multimapping data
     combined_df = pd.concat([unique_df, multi_df], ignore_index=True)
     combined_df.rename(
@@ -9258,7 +9422,7 @@ def process_results(wdir,
          "Total number of reads and barcodes were {0[0]} and {0[1]}."
          " On target number of reads and barcodes were {1[0]} and {1[1]}."
         ).format(
-            raw_results[["read_count", "barcode_count"]].sum(),
+            raw_results[["Read Count", "Barcode Count"]].sum(),
             combined_df[["Read Count", "Barcode Count"]].sum().astype(int)
         )
     )
@@ -10129,7 +10293,7 @@ def combine_info_files(wdir,
         current_run_meta["Original SID"] = current_run_meta[
             ["sample_name", "sample_set", "replicate"]
         ].apply(lambda a: "-".join(a), axis=1)
-        run_meta.append(current_run_meta)
+        unique_tablerun_meta.append(current_run_meta)
     run_meta = pd.concat(run_meta, ignore_index=True)
     if sample_sets is not None:
         sps = pd.DataFrame(sample_sets, columns=["sample_set",
