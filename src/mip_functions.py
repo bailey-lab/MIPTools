@@ -7787,7 +7787,10 @@ def get_haplotypes(settings):
                 # check other genes/MIPs for off targets that are
                 # on other possible targets due to sequence similarity
                 best_hits = haplotypes[m][h]["best_hits"][0]
+                secondary_haplotype_found = False
                 for record in best_hits:
+                    if secondary_haplotype_found:
+                        break
                     flag = record[1]
                     # a flag value of 4 means there was no hit,
                     # so pass those records
@@ -7829,6 +7832,7 @@ def get_haplotypes(settings):
                             secondary_haylotype_dict[h] = (
                                 haplotypes[m].pop(h)
                             )
+                            secondary_haplotype_found = True
                             break
     if len(secondary_haplotypes) > 0:
         secondary_haplotypes = pd.DataFrame(
@@ -7862,6 +7866,7 @@ def get_haplotypes(settings):
     with open(hap_file, "w") as out1, open(off_file, "w") as out2:
         json.dump(haplotypes, out1, indent=1)
         json.dump(off_target_haplotypes, out2, indent=1)
+    secondary_haplotypes.to_csv(wdir + "secondary_haplotypes.csv")
     return
 
 
@@ -9051,6 +9056,99 @@ def make_snp_vcf(variant_file, haplotype_file, call_info_file,
         )
 
 
+def make_chrom_vcf(wdir, header_count, min_cov=1, min_count=1, min_freq=0):
+    variant_counts = pd.read_csv(
+        wdir + "variant_table.csv",
+        header=list(range(header_count)), index_col=0
+    )
+    gb = variant_counts.groupby(level="CHROM", axis=1)
+    for chrom in gb.groups.keys():
+        gb.get_group(chrom).to_csv(os.path.join(wdir, chrom + ".var.csv"))
+    variant_coverage = pd.read_csv(
+        wdir + "variant_coverage_table.csv",
+        header=list(range(header_count)), index_col=0
+    )
+    gb = variant_coverage.groupby(level="CHROM", axis=1)
+    for chrom in gb.groups.keys():
+        gb.get_group(chrom).to_csv(os.path.join(wdir, chrom + ".cov.csv"))
+
+    with open(wdir + "unique_haplotype.dic") as infile:
+        haplotypes = json.load(infile)
+
+    with open("/opt/project_resources/mip_ids/call_info.json") as infile:
+        call_info = json.load(infile)
+    hap_counts = pd.read_csv(wdir + "haplotype_counts.csv")
+
+    chrom_haplotypes = {}
+    for m in haplotypes:
+        g = m.split("_")[0]
+        for h in haplotypes[m]:
+            try:
+                mc = haplotypes[m][h]["mapped_copies"]
+            except KeyError:
+                continue
+            else:
+                for c in mc:
+                    chrom = call_info[g][m]["copies"][c]["chrom"]
+                    mc[c]["copy_chrom"] = chrom
+                    try:
+                        chrom_haplotypes[chrom][m][h] = haplotypes[m][h]
+                    except KeyError:
+                        try:
+                            chrom_haplotypes[chrom][m] = {h: haplotypes[m][h]}
+                        except KeyError:
+                            chrom_haplotypes[chrom] = {
+                                m: {h: haplotypes[m][h]}}
+    for chrom in chrom_haplotypes:
+        with open(os.path.join(wdir, chrom + ".haps.json"), "w") as outfile:
+            json.dump(chrom_haplotypes[chrom], outfile)
+    hap_copies = []
+    for m in haplotypes:
+        g = m.split("_")[0]
+        for h in haplotypes[m]:
+            try:
+                mc = haplotypes[m][h]["mapped_copies"]
+                for c in mc:
+                    hap_copies.append(
+                        [h, c, call_info[g][m]["copies"][c]["chrom"]])
+            except KeyError:
+                continue
+    hap_copies = pd.DataFrame(hap_copies,
+                              columns=["Haplotype ID", "Copy", "CHROM"])
+    haplotype_counts = hap_counts.merge(hap_copies)
+    gb = haplotype_counts.groupby("CHROM")
+    for chrom in gb.groups.keys():
+        gb.get_group(chrom).to_csv(os.path.join(wdir,
+                                                chrom + ".hap_counts.txt"))
+
+    call_info_file = "/opt/project_resources/mip_ids/call_info.json"
+    chromosomes = set(haplotype_counts["CHROM"])
+    for chrom in sorted(chromosomes):
+        haplotype_file = wdir + "/" + chrom + ".haps.json"
+        variant_file = wdir + "/" + chrom + ".var.csv"
+        haplotype_counts_file = wdir + "/" + chrom + ".hap_counts.txt"
+        haplotype_file = wdir + "/" + chrom + ".haps.json"
+        vcf_chrom = chrom
+        barcode_count_file = wdir + "barcode_counts.csv"
+        vcf_file = wdir + chrom + ".vcf"
+        settings_file = wdir + "settings.txt"
+        try:
+            make_snp_vcf(vcf_file=vcf_file,
+                         haplotype_file=haplotype_file,
+                         variant_file=variant_file,
+                         haplotype_counts_file=haplotype_counts_file,
+                         vcf_chrom=vcf_chrom,
+                         barcode_count_file=barcode_count_file,
+                         call_info_file=call_info_file,
+                         min_cov=min_cov,
+                         min_count=min_count,
+                         min_freq=min_freq,
+                         settings_file=settings_file,
+                         header_count=header_count)
+        except FileNotFoundError:
+            continue
+
+
 def process_results(wdir,
                     settings_file,
                     sample_sheets=None,
@@ -9222,6 +9320,7 @@ def process_results(wdir,
                     variation_list.append(temp_list)
     # create pandas dataframes for variants
     colnames = ["VKEY", "CHROM", "POS", "ID", "REF", "ALT",
+                "Gene", "MIP", "Copy", "Haplotype ID",
                 "RAW_VKEY", "Original Position", "Start Index",
                 "End Index", "Multi Mapping"]
     colnames = colnames + annotation_keys
@@ -10189,7 +10288,9 @@ def process_results(wdir,
            " variant calls.").format(no_data.shape[0], merged_meta.shape[0]))
     no_data_file = os.path.join(wdir, "samples_without_data.csv")
     no_data.to_csv(no_data_file)
-
+    make_chrom_vcf(wdir, len(variant_table.columns[0]),
+                   min_cov=min_coverage, min_count=min_mutation_count,
+                   min_freq=min_mutation_fraction)
     return
 
 

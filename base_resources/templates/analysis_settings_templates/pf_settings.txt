@@ -94,7 +94,7 @@ psvPriority	1
 psvMultiplier	50
 ##############################################################################
 # options for bwa program when aligning the haplotypes to genome
-bwaOptions	mem,-t 30
+bwaOptions	mem,-t 30,-a,-L 500
 ##############################################################################
 ##############################################################################
 ##############  SETTINGS THAT ARE UNLIKELY TO CHANGE #########################
