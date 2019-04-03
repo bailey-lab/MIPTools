@@ -22,6 +22,7 @@ import mip_classes as mod
 import pandas as pd
 import gzip
 from primer3 import calcHeterodimerTm
+import traceback
 print("functions reloading")
 # backbone dictionary
 mip_backbones = {
@@ -2183,6 +2184,10 @@ def split_contigs(settings):
     # load mapped haplotypes dataframe
     mapped_haplotypes = pd.read_csv(os.path.join(wdir,
                                                  "mapped_haplotypes.csv"))
+
+    # get all sample IDs to use in variant files.
+    sample_ids = pd.read_csv(os.path.join(wdir, "run_meta.csv"))[
+        "Sample ID"].tolist()
     # split haplotypes to contigs where any overlapping haplotype will be
     # added to the contig. There is also going to be a buffer of 35 bp, that
     # is, any haplotypes that are closer than 35 bp to a contig will also
@@ -2198,6 +2203,21 @@ def split_contigs(settings):
                             1: "contig_capture_end"}, inplace=True)
     contigs["contig_start"] = contigs["contig_capture_start"] - 20
     contigs["contig_end"] = contigs["contig_capture_end"] + 20
+
+    # get target SNPs if targets are to be included in the variants results
+    # even if they are not observed. This is specified by targetJoin parameter
+    # in settings
+    if int(settings["targetJoin"]):
+        targets = pd.read_table("/opt/project_resources/targets.tsv")
+        targets["target_length"] = targets["Ref"].apply(len)
+        targets["End"] = targets["Pos"] + targets["target_length"] - 1
+        targets = targets.merge(contigs)
+        targets = targets.loc[(targets["contig_start"] <= targets["Pos"])
+                              & (targets["contig_end"] >= targets["End"])]
+        targets["capture_start"] = targets["Pos"]
+        targets["capture_end"] = targets["End"]
+        targets["orientation"] = "forward"
+        targets["forward_sequence"] = targets["Alt"]
     # create a contig dictionary in this format:
     # {chromX: {contig#: {contig_start: .., contig_end: ..}}}
     c_dict = contigs.set_index(["Chrom", "contig"]).to_dict(orient="index")
@@ -2208,7 +2228,6 @@ def split_contigs(settings):
         except KeyError:
             contig_dict[key[0]] = {key[1]: value}
     # assign each haplotype to its contig
-
     merge_contigs = mapped_haplotypes.merge(contigs)
     mapped_haplotypes = merge_contigs.loc[
         (merge_contigs["contig_capture_start"]
@@ -2249,305 +2268,378 @@ def split_contigs(settings):
         contig_haplotypes.to_csv(contig_haplotypes_file, index=False)
         contig_info["min_coverage"] = int(settings["minVariantCoverage"])
         contig_info["min_count"] = int(settings["minVariantCount"])
+        contig_info["sample_ids"] = sample_ids
+        try:
+            contig_info["contig_targets"] = targets.loc[
+                (targets["Chrom"] == contig_info["chrom"])
+                & (targets["contig"] == contig_info["contig"])]
+            if contig_info["contig_targets"].empty:
+                contig_info["contig_targets"] = None
+        except NameError:
+            contig_info["contig_targets"] = None
         contig_list.append(contig_info)
         try:
             contig_info_dict[k[0]][k[1]] = contig_info
         except KeyError:
             contig_info_dict[k[0]] = {k[1]: contig_info}
 
-    with open(os.path.join(wdir, "contig_info.json"), "w") as outfile:
-        json.dump(contig_info_dict, outfile, indent=1)
-
+    with open(os.path.join(wdir, "contig_info.pkl"), "wb") as outfile:
+        pickle.dump(contig_info_dict, outfile)
     pro = int(settings["processorNumber"])
     p = NoDaemonProcessPool(pro)
     p.map_async(process_contig, contig_list)
     p.close()
     p.join()
+
+    # merge contig vcfs for each chromosome
+    genome_fasta = get_file_locations()[species]["fasta_genome"]
+    for chrom in contig_info_dict:
+        chrom_vcf_list = os.path.join(wdir, chrom + "_vcf_files.txt")
+        chrom_vcf_file = os.path.join(wdir, chrom + ".vcf")
+        with open(chrom_vcf_list, "w") as outf:
+            for contig in contig_info_dict[chrom]:
+                contig_name = contig_info_dict[chrom][contig]["contig_name"]
+                contig_vcf_file = os.path.join(contigs_dir,
+                                               contig_name + ".vcf")
+                subprocess.call(["bgzip", "-f", contig_vcf_file],
+                                cwd=contigs_dir)
+                subprocess.call(["bcftools", "index", "-f",
+                                 contig_vcf_file + ".gz"],
+                                cwd=contigs_dir)
+                outf.write(contig_vcf_file + ".gz" + "\n")
+        subprocess.call(["bcftools", "concat", "-f", chrom_vcf_list,
+                         "-o", chrom_vcf_file])
+        norm_vcf_file = os.path.join(wdir, chrom + ".norm.vcf")
+        subprocess.call(["bcftools", "norm", "-m-both", "-f", genome_fasta,
+                         chrom_vcf_file, "-o", norm_vcf_file])
+        ann = subprocess.Popen(["java", "-Xmx10g", "-jar",
+                                "/opt/programs/snpEff/snpEff.jar", species,
+                                norm_vcf_file], stdout=subprocess.PIPE)
+        annotated_vcf_file = os.path.join(wdir, chrom + ".norm.ann.vcf")
+        with open(annotated_vcf_file, "wb") as outfile:
+            outfile.write(ann.communicate()[0])
     return
 
 
 def process_contig(contig_dict):
-    chrom = contig_dict["chrom"]
-    contig_start = contig_dict["contig_start"]
-    contig_end = contig_dict["contig_end"]
-    species = contig_dict["species"]
-    contig_ref_seq = get_sequence(create_region(
-        chrom, contig_start, contig_end), species)
-    contig_haplotypes_file = contig_dict["contig_haplotypes_file"]
-    contig_haps = pd.read_csv(contig_haplotypes_file)
-    # Create a contig sequence for each haplotype.
-    # This will be done by gettig the forward strand sequence for each
-    # haplotype and padding it on both flanks with the reference sequence
-    # up to the contig start/end.
-    #
-    # get forward strand sequence for all haplotypes
-    contig_haps["forward_sequence"] = contig_haps["haplotype_sequence"]
-    reverse_index = contig_haps["orientation"] == "reverse"
-    contig_haps.loc[reverse_index, "forward_sequence"] = (
-        contig_haps.loc[reverse_index, "forward_sequence"].apply(
-            reverse_complement))
+    try:
+        chrom = contig_dict["chrom"]
+        contig_start = contig_dict["contig_start"]
+        contig_end = contig_dict["contig_end"]
+        species = contig_dict["species"]
+        contig_ref_seq = get_sequence(create_region(
+            chrom, contig_start, contig_end), species)
+        contig_haplotypes_file = contig_dict["contig_haplotypes_file"]
+        contig_haps = pd.read_csv(contig_haplotypes_file)
+        # Create a contig sequence for each haplotype.
+        # This will be done by gettig the forward strand sequence for each
+        # haplotype and padding it on both flanks with the reference sequence
+        # up to the contig start/end.
+        #
+        # get forward strand sequence for all haplotypes
+        contig_haps["forward_sequence"] = contig_haps["haplotype_sequence"]
+        reverse_index = contig_haps["orientation"] == "reverse"
+        contig_haps.loc[reverse_index, "forward_sequence"] = (
+            contig_haps.loc[reverse_index, "forward_sequence"].apply(
+                reverse_complement))
 
-    def get_padded_sequence(row):
-        chrom = row["Chrom"]
-        contig_start = int(row["contig_start"])
-        contig_end = int(row["contig_end"])
-        capture_start = int(row["capture_start"])
-        capture_end = int(row["capture_end"])
-        left_key = create_region(chrom, contig_start, capture_start - 1)
-        right_key = create_region(chrom, capture_end + 1, contig_end)
-        left_pad = get_sequence(left_key, species)
-        right_pad = get_sequence(right_key, species)
-        return left_pad + str(row["forward_sequence"]) + right_pad
+        def get_padded_sequence(row):
+            chrom = row["Chrom"]
+            contig_start = int(row["contig_start"])
+            contig_end = int(row["contig_end"])
+            capture_start = int(row["capture_start"])
+            capture_end = int(row["capture_end"])
+            left_key = create_region(chrom, contig_start, capture_start - 1)
+            right_key = create_region(chrom, capture_end + 1, contig_end)
+            left_pad = get_sequence(left_key, species)
+            right_pad = get_sequence(right_key, species)
+            return left_pad + str(row["forward_sequence"]) + right_pad
 
-    contig_haps["padded_sequence"] = contig_haps.apply(
-        get_padded_sequence, axis=1)
-    g_dict = contig_haps.set_index(["MIP", "Copy", "haplotype_ID"]).to_dict(
-        orient="index")
-    sequences = {"ref": contig_ref_seq}
-    for k in g_dict.keys():
-        sequences[":".join(k)] = g_dict[k]["padded_sequence"]
-    wdir = contig_dict["contigs_dir"]
-    contig_name = contig_dict["contig_name"]
-    fasta_file = os.path.join(wdir, contig_name + ".fa")
-    alignment_file = os.path.join(wdir, contig_name + ".aln")
-    save_fasta_dict(sequences, fasta_file)
-    subprocess.call(["muscle", "-in", fasta_file, "-out", alignment_file])
-    alignments = fasta_parser(alignment_file)
-    ref_seq = alignments["ref"]
-    alignment_to_genomic = {0: contig_start - 1}
-    insertion_count = 0
-    for i in range(len(ref_seq)):
-        if ref_seq[i] != "-":
-            alignment_to_genomic[i+1] = i + contig_start - insertion_count
+        contig_haps["padded_sequence"] = contig_haps.apply(
+            get_padded_sequence, axis=1)
+        g_dict = contig_haps.set_index(
+            ["MIP", "Copy", "haplotype_ID"]).to_dict(orient="index")
+        sequences = {"ref": contig_ref_seq}
+        contig_targets = contig_dict["contig_targets"]
+        if contig_targets is not None:
+            contig_targets["padded_sequence"] = contig_targets.apply(
+                get_padded_sequence, axis=1)
+            targets_dict = contig_targets.to_dict(orient="index")
+            for t in targets_dict:
+                sequences[t] = targets_dict[t]["padded_sequence"]
         else:
-            insertion_count += 1
-    genomic_to_alignment = {}
-    for alignment_position in alignment_to_genomic:
-        genomic_to_alignment[alignment_to_genomic[
-            alignment_position]] = alignment_position
-
-    def get_hap_start_index(row):
-        hid = row["haplotype_ID"]
-        cop = row["Copy"]
-        hap_start = row["capture_start"] - 1
-        hap_start_index = genomic_to_alignment[hap_start]
-        hap_mip = row["MIP"]
-        alignment_header = ":".join([hap_mip, cop, hid])
-        hap_al = alignments[alignment_header][:hap_start_index]
-        ref_al = alignments["ref"][:hap_start_index]
-        diff = ref_al.count("-") - hap_al.count("-")
-        return hap_start_index - diff
-
-    contig_haps["haplotype_start_index"] = contig_haps.apply(
-        get_hap_start_index, axis=1)
-
-    vcf_file = contig_name + ".raw.vcf"
-    subprocess.call(["java", "-jar", "/opt/programs/jvarkit/dist/msa2vcf.jar",
-                     "-m", "-c", "ref", "-o", vcf_file, alignment_file])
-    contig_dict["vcf_file"] = vcf_file
-    vcf = pd.read_table(vcf_file, skiprows=5)
-    vcf = vcf.drop(["ID", "QUAL", "FILTER", "INFO", "FORMAT"],
-                   axis=1).set_index(["#CHROM", "POS", "REF", "ALT"])
-    vcf = vcf.applymap(lambda a: int(a.split(":")[0]))
-    vcf = vcf.reset_index()
-    vcf["alignment_position"] = vcf["POS"]
-    vcf["POS"] = vcf["alignment_position"].map(alignment_to_genomic)
-    vcf["CHROM"] = chrom
-    vcf.drop("#CHROM",  inplace=True, axis=1)
-    vcf = vcf.set_index(["CHROM", "POS", "REF", "ALT", "alignment_position"])
-    vcf.drop("ref", axis=1, inplace=True)
-    vcf_stack = pd.DataFrame(vcf.stack()).reset_index()
-    vcf_stack.rename(columns={"level_5": "alignment_header", 0: "genotype"},
-                     inplace=True)
-    vcf_stack[["MIP", "Copy", "haplotype_ID"]] = vcf_stack[
-        "alignment_header"].apply(lambda a: pd.Series(a.split(":")))
-    vcf_merge = vcf_stack.merge(contig_haps[["MIP", "Copy", "haplotype_ID",
-                                             "capture_start", "capture_end",
-                                             "haplotype_start_index"]])
-    vcf_merge["END"] = vcf_merge["REF"].apply(len) + vcf_merge["POS"] - 1
-    vcf_merge["covered"] = ((vcf_merge["capture_start"] <= vcf_merge["END"])
-                            & (vcf_merge["capture_end"] >= vcf_merge["POS"]))
-    vcf_merge.loc[~vcf_merge["covered"], "genotype"] = np.nan
-    vcf_clean = vcf_merge.loc[~vcf_merge["genotype"].isnull()]
-    contig_seq = pd.DataFrame(contig_haps.groupby("haplotype_ID")[
-        "forward_sequence"].first()).to_dict(orient="index")
-
-    def get_variant_index(row):
-        pos_index = row["alignment_position"]
-        hap_start_index = row["haplotype_start_index"]
-        hap_copy = row["Copy"]
-        hid = row["haplotype_ID"]
-        hap_mip = row["MIP"]
-        alignment_header = ":".join([hap_mip, hap_copy, hid])
-        hap_al = alignments[alignment_header]
-        hap_al = hap_al[hap_start_index:pos_index]
-        variant_index = len(hap_al) - hap_al.count("-") - 1
-        alts = [row["REF"]]
-        alts.extend(row["ALT"].split(","))
-        gen = int(row["genotype"])
-        alt = alts[gen]
-        variant_end_index = variant_index + len(alt)
-        if variant_index < 0:
-            variant_index = 0
-        if variant_end_index < 1:
-            variant_end_index = 1
-        seq = contig_seq[hid]["forward_sequence"]
-        var_seq = seq[variant_index:variant_end_index]
-        return pd.Series([variant_index, variant_end_index, alt, var_seq])
-
-    vcf_clean[["variant_index", "variant_end_index", "allele", "variant"]] = (
-        vcf_clean.apply(get_variant_index, axis=1))
-
-    contig_counts_file = contig_dict["contig_counts_file"]
-    contig_counts = pd.read_csv(contig_counts_file)
-    contig_counts["forward_sequence_quality"] = contig_counts[
-        "sequence_quality"]
-    reverse_index = contig_counts["orientation"] == "reverse"
-    contig_counts.loc[reverse_index, "forward_sequence_quality"] = (
-        contig_counts.loc[reverse_index, "forward_sequence_quality"].apply(
-            lambda a: a[::-1]))
-    combined_vcf = vcf_clean[["CHROM", "POS", "REF", "ALT", "genotype",
-                              "MIP", "Copy", "haplotype_ID", "variant_index",
-                              "variant_end_index"]].merge(
-        contig_counts[["Sample ID", "haplotype_ID", "MIP", "Copy",
-                       "Barcode Count", "forward_sequence_quality"]])
-
-    def get_variant_quality(row):
-        start_index = row["variant_index"]
-        end_index = row["variant_end_index"]
-        qual = row["forward_sequence_quality"]
-        qual_scores = [ord(qual[i]) - 33 for i in
-                       range(start_index, end_index)]
-        return np.mean(qual_scores)
-
-    combined_vcf["variant_quality"] = combined_vcf.apply(get_variant_quality,
-                                                         axis=1)
-
-    min_count = contig_dict["min_count"]
-    min_depth = contig_dict["min_coverage"]
-
-    def collapse_vcf(group):
-        key = group.iloc[0][["CHROM", "POS", "REF", "ALT"]].values
-        alts = key[3].split(",")
-        allele_count = len(alts) + 1
-        allele_depths = []
-        for i in range(allele_count):
-            allele_depths.append(group.loc[group["genotype"] == i,
-                                           "Barcode Count"].sum().round(0))
-        total_depth = int(round(np.sum(allele_depths), 0))
-        if total_depth < min_depth:
-            return "."
-        genotypes = []
-        for i in range(allele_count):
-            if allele_depths[i] >= min_count:
-                genotypes.append(i)
-        if len(genotypes) == 0:
-            return "."
-        else:
-            gt = "/".join(map(str, sorted(genotypes)))
-        allele_depths = [str(int(a)) for a in allele_depths]
-        variant_quals = []
-        for i in range(allele_count):
-            variant_quals.append(group.loc[group["genotype"] == i,
-                                           "variant_quality"].max())
-        variant_quals = ["." if np.isnan(v) else str(int(round(v, 0)))
-                         for v in variant_quals]
-        mip_count = []
-        for i in range(allele_count):
-            mip_count.append(len(set(group.loc[group["genotype"] == i,
-                                               "MIP"])))
-        hap_count = []
-        for i in range(allele_count):
-            hap_count.append(len(set(group.loc[group["genotype"] == i,
-                                               "haplotype_ID"])))
-        return ":".join([gt, ",".join(allele_depths),
-                         str(total_depth),
-                         ",".join(variant_quals),
-                         ",".join(map(str, mip_count)),
-                         ",".join(map(str, hap_count))])
-
-    collapsed_vcf = pd.DataFrame(combined_vcf.groupby(
-        ["CHROM", "POS", "REF", "ALT", "Sample ID"]).apply(collapse_vcf)
-    ).reset_index()
-    vcf_table = collapsed_vcf.pivot_table(index=["CHROM", "POS", "REF", "ALT"],
-                                          columns="Sample ID", aggfunc="first")
-    vcf_table.fillna(".", inplace=True)
-
-    def get_var_summary(row):
-        val = row.values
-        ad = []
-        quals = []
-        for v in val:
-            if v != ".":
-                ad.append(list(map(int, v.split(":")[1].split(","))))
-                quals.append(v.split(":")[3].split(","))
-        if len(ad) == 0:
-            return "."
-        quality = []
-        for q in quals:
-            nq = []
-            for q_val in q:
-                if q_val == ".":
-                    nq.append(np.nan)
-                else:
-                    nq.append(int(q_val))
-            quality.append(nq)
-        quals = np.nanmean(quality, axis=0)
-        quality = []
-        for q in quals:
-            if np.isnan(q):
-                quality.append(".")
+            targets_dict = {}
+        for k in g_dict.keys():
+            sequences[":".join(k)] = g_dict[k]["padded_sequence"]
+        wdir = contig_dict["contigs_dir"]
+        contig_name = contig_dict["contig_name"]
+        fasta_file = os.path.join(wdir, contig_name + ".fa")
+        alignment_file = os.path.join(wdir, contig_name + ".aln")
+        save_fasta_dict(sequences, fasta_file)
+        subprocess.call(["muscle", "-in", fasta_file, "-out", alignment_file])
+        alignments = fasta_parser(alignment_file)
+        ref_seq = alignments["ref"]
+        alignment_to_genomic = {0: contig_start - 1}
+        insertion_count = 0
+        for i in range(len(ref_seq)):
+            if ref_seq[i] != "-":
+                alignment_to_genomic[i+1] = i + contig_start - insertion_count
             else:
-                quality.append(str(round(q, 1)))
-        return ";".join(["DP=" + str(np.sum(ad)),
-                         "AD=" + ",".join(map(str, np.sum(ad, axis=0))),
-                         "QS=" + ",".join(quality)])
+                insertion_count += 1
+        genomic_to_alignment = {}
+        for alignment_position in alignment_to_genomic:
+            genomic_to_alignment[alignment_to_genomic[
+                alignment_position]] = alignment_position
 
-    var_summary = pd.DataFrame(vcf_table.apply(
-        get_var_summary, axis=1)).rename(columns={0: "INFO"})
-    var_summary["FORMAT"] = "GT:AD:DP:QS:MC:HC"
-    var_summary["ID"] = "."
-    var_summary["QUAL"] = "."
-    var_summary["FILTER"] = "."
-    samples = vcf_table.columns.droplevel(0).tolist()
-    vcf_table.columns = samples
-    vcf_table = vcf_table.merge(var_summary, left_index=True, right_index=True)
-    vcf_table = vcf_table.reset_index()[
-        ["CHROM", "REF", "ALT", "QUAL", "FILTER", "INFO", "FORMAT"] + samples]
+        def get_hap_start_index(row):
+            hid = row["haplotype_ID"]
+            cop = row["Copy"]
+            hap_start = row["capture_start"] - 1
+            hap_start_index = genomic_to_alignment[hap_start]
+            hap_mip = row["MIP"]
+            alignment_header = ":".join([hap_mip, cop, hid])
+            hap_al = alignments[alignment_header][:hap_start_index]
+            ref_al = alignments["ref"][:hap_start_index]
+            diff = ref_al.count("-") - hap_al.count("-")
+            return hap_start_index - diff
 
-    vcf_header = [
-        "##fileformat=VCFv4.2",
-        "##INFO=<ID=DP,Number=1,Type=Integer,Description="
-        "'Total coverage for locus, across samples.'>",
-        "##INFO=<ID=AD,Number=R,Type=Integer,Description="
-        "'Total coverage per allele, across samples.'>",
-        "##INFO=<ID=QS,Number=R,Type=Float,Description="
-        "'Average sequence quality per allele.'>",
-        '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">',
-        '##FORMAT=<ID=AD,Number=R,Type=Integer,Description='
-        '"Allelic depths for the ref and alt alleles in that order">',
-        '##FORMAT=<ID=DP,Number=1,Type=Integer,Description='
-        '"Total read depth (coverage) at this position.>',
-        '##FORMAT=<ID=QS,Number=R,Type=Integer,Description='
-        '"Sequence quality per allele.">',
-        '##FORMAT=<ID=MC,Number=R,Type=Integer,Description='
-        '"Number of MIPs supporting the allele.">',
-        '##FORMAT=<ID=HC,Number=R,Type=Integer,Description='
-        '"Number of haplotypes supporting the allele.">']
-    # save vcf file
-    contig_vcf_file = os.path.join(wdir, contig_name + ".vcf")
-    with open(contig_vcf_file, "w") as outfile:
-        outfile.write("\n".join(vcf_header) + "\n")
-        vcf_table.to_csv(outfile, index=False, sep="\t")
-    contig_variants_file = os.path.join(wdir, contig_name + "_variants.csv")
-    combined_vcf.to_csv(contig_variants_file)
-    collapsed_variants_file = os.path.join(wdir, contig_name
-                                           + "_collapsed_variants.csv")
-    collapsed_vcf.to_csv(collapsed_variants_file)
-    contig_haps.to_csv(contig_haplotypes_file)
-    contig_counts.to_csv(contig_counts_file)
+        contig_haps["haplotype_start_index"] = contig_haps.apply(
+            get_hap_start_index, axis=1)
 
-    return
+        raw_vcf_file = os.path.join(wdir, contig_name + ".raw.vcf")
+        subprocess.call(
+            ["java", "-jar", "/opt/programs/jvarkit/dist/msa2vcf.jar",
+             "-m", "-c", "ref", "-o", raw_vcf_file, alignment_file])
+        contig_dict["raw_vcf_file"] = raw_vcf_file
+        vcf = pd.read_table(raw_vcf_file, skiprows=5)
+        vcf = vcf.drop(["ID", "QUAL", "FILTER", "INFO", "FORMAT"],
+                       axis=1).set_index(["#CHROM", "POS", "REF", "ALT"])
+        vcf = vcf.applymap(lambda a: int(a.split(":")[0]))
+        vcf = vcf.reset_index()
+        vcf["alignment_position"] = vcf["POS"]
+        vcf["POS"] = vcf["alignment_position"].map(alignment_to_genomic)
+        vcf["CHROM"] = chrom
+        vcf.drop("#CHROM",  inplace=True, axis=1)
+        vcf = vcf.set_index(["CHROM", "POS", "REF", "ALT",
+                             "alignment_position"])
+        drop_seqs = ["ref"] + list(map(str, targets_dict.keys()))
+        vcf.drop(drop_seqs, axis=1, inplace=True)
+        vcf_stack = pd.DataFrame(vcf.stack()).reset_index()
+        vcf_stack.rename(
+            columns={"level_5": "alignment_header", 0: "genotype"},
+            inplace=True)
+        vcf_stack[["MIP", "Copy", "haplotype_ID"]] = vcf_stack[
+            "alignment_header"].apply(lambda a: pd.Series(a.split(":")))
+        vcf_merge = vcf_stack.merge(
+            contig_haps[["MIP", "Copy", "haplotype_ID",
+                         "capture_start", "capture_end",
+                         "haplotype_start_index"]])
+        vcf_merge["END"] = vcf_merge["REF"].apply(len) + vcf_merge["POS"] - 1
+        vcf_merge["covered"] = (
+            (vcf_merge["capture_start"] <= vcf_merge["END"])
+            & (vcf_merge["capture_end"] >= vcf_merge["POS"]))
+        vcf_merge.loc[~vcf_merge["covered"], "genotype"] = np.nan
+        vcf_clean = vcf_merge.loc[~vcf_merge["genotype"].isnull()]
+        contig_seq = pd.DataFrame(contig_haps.groupby("haplotype_ID")[
+            "forward_sequence"].first()).to_dict(orient="index")
+
+        def get_variant_index(row):
+            pos_index = row["alignment_position"]
+            hap_start_index = row["haplotype_start_index"]
+            hap_copy = row["Copy"]
+            hid = row["haplotype_ID"]
+            hap_mip = row["MIP"]
+            alignment_header = ":".join([hap_mip, hap_copy, hid])
+            hap_al = alignments[alignment_header]
+            hap_al = hap_al[hap_start_index:pos_index]
+            variant_index = len(hap_al) - hap_al.count("-") - 1
+            alts = [row["REF"]]
+            alts.extend(row["ALT"].split(","))
+            gen = int(row["genotype"])
+            alt = alts[gen]
+            variant_end_index = variant_index + len(alt)
+            if variant_index < 0:
+                variant_index = 0
+            if variant_end_index < 1:
+                variant_end_index = 1
+            seq = contig_seq[hid]["forward_sequence"]
+            var_seq = seq[variant_index:variant_end_index]
+            return pd.Series([variant_index, variant_end_index, alt, var_seq])
+
+        vcf_clean[
+            ["variant_index", "variant_end_index", "allele", "variant"]
+        ] = vcf_clean.apply(get_variant_index, axis=1)
+
+        contig_counts_file = contig_dict["contig_counts_file"]
+        contig_counts = pd.read_csv(contig_counts_file)
+        contig_counts["forward_sequence_quality"] = contig_counts[
+            "sequence_quality"]
+        reverse_index = contig_counts["orientation"] == "reverse"
+        contig_counts.loc[reverse_index, "forward_sequence_quality"] = (
+            contig_counts.loc[reverse_index, "forward_sequence_quality"].apply(
+                lambda a: a[::-1]))
+        combined_vcf = vcf_clean[
+            ["CHROM", "POS", "REF", "ALT", "genotype",
+             "MIP", "Copy", "haplotype_ID", "variant_index",
+             "variant_end_index"]].merge(contig_counts[
+                 ["Sample ID", "haplotype_ID", "MIP", "Copy",
+                  "Barcode Count", "forward_sequence_quality"]])
+        """
+        contig_variants_file = os.path.join(wdir,
+                                            contig_name + "_variants.csv")
+        combined_vcf.to_csv(contig_variants_file)
+        """
+
+        def get_variant_quality(row):
+            start_index = row["variant_index"]
+            end_index = row["variant_end_index"]
+            qual = row["forward_sequence_quality"]
+            if end_index > len(qual) - 1:
+                end_index = len(qual) - 1
+            qual_scores = [ord(qual[i]) - 33 for i in
+                           range(start_index, end_index)]
+            return np.mean(qual_scores)
+
+        combined_vcf["variant_quality"] = combined_vcf.apply(
+            get_variant_quality, axis=1)
+
+        min_count = contig_dict["min_count"]
+        min_depth = contig_dict["min_coverage"]
+
+        def collapse_vcf(group):
+            key = group.iloc[0][["CHROM", "POS", "REF", "ALT"]].values
+            alts = key[3].split(",")
+            allele_count = len(alts) + 1
+            allele_depths = []
+            for i in range(allele_count):
+                allele_depths.append(group.loc[group["genotype"] == i,
+                                               "Barcode Count"].sum().round(0))
+            total_depth = int(round(np.sum(allele_depths), 0))
+            if total_depth < min_depth:
+                return "."
+            genotypes = []
+            for i in range(allele_count):
+                if allele_depths[i] >= min_count:
+                    genotypes.append(i)
+            if len(genotypes) == 0:
+                return "."
+            else:
+                gt = "/".join(map(str, sorted(genotypes)))
+            allele_depths = [str(int(a)) for a in allele_depths]
+            variant_quals = []
+            for i in range(allele_count):
+                variant_quals.append(group.loc[group["genotype"] == i,
+                                               "variant_quality"].max())
+            variant_quals = ["." if np.isnan(v) else str(int(round(v, 0)))
+                             for v in variant_quals]
+            mip_count = []
+            for i in range(allele_count):
+                mip_count.append(len(set(group.loc[group["genotype"] == i,
+                                                   "MIP"])))
+            hap_count = []
+            for i in range(allele_count):
+                hap_count.append(len(set(group.loc[group["genotype"] == i,
+                                                   "haplotype_ID"])))
+            return ":".join([gt, ",".join(allele_depths),
+                             str(total_depth),
+                             ",".join(variant_quals),
+                             ",".join(map(str, mip_count)),
+                             ",".join(map(str, hap_count))])
+
+        collapsed_vcf = pd.DataFrame(combined_vcf.groupby(
+            ["CHROM", "POS", "REF", "ALT", "Sample ID"]).apply(collapse_vcf)
+        ).reset_index()
+        vcf_table = collapsed_vcf.pivot_table(
+            index=["CHROM", "POS", "REF", "ALT"],
+            columns="Sample ID", aggfunc="first")
+        vcf_table.fillna(".", inplace=True)
+
+        def get_var_summary(row):
+            val = row.values
+            ad = []
+            quals = []
+            for v in val:
+                if v != ".":
+                    ad.append(list(map(int, v.split(":")[1].split(","))))
+                    quals.append(v.split(":")[3].split(","))
+            if len(ad) == 0:
+                return "."
+            quality = []
+            for q in quals:
+                nq = []
+                for q_val in q:
+                    if q_val == ".":
+                        nq.append(np.nan)
+                    else:
+                        nq.append(int(q_val))
+                quality.append(nq)
+            quals = np.nanmean(quality, axis=0)
+            quality = []
+            for q in quals:
+                if np.isnan(q):
+                    quality.append(".")
+                else:
+                    quality.append(str(round(q, 1)))
+            return ";".join(["DP=" + str(np.sum(ad)),
+                             "AD=" + ",".join(map(str, np.sum(ad, axis=0))),
+                             "QS=" + ",".join(quality)])
+
+        var_summary = pd.DataFrame(vcf_table.apply(
+            get_var_summary, axis=1)).rename(columns={0: "INFO"})
+        var_summary["FORMAT"] = "GT:AD:DP:QS:MC:HC"
+        var_summary["ID"] = "."
+        var_summary["QUAL"] = "."
+        var_summary["FILTER"] = "."
+        samples = vcf_table.columns.droplevel(0).tolist()
+        vcf_table.columns = samples
+        samples = contig_dict["sample_ids"]
+        vcf_table = vcf_table.loc[:, samples].fillna(".")
+        vcf_table = vcf_table.merge(var_summary, left_index=True,
+                                    right_index=True)
+        vcf_table = vcf_table.reset_index()[
+            ["CHROM", "POS", "ID", "REF", "ALT", "QUAL", "FILTER", "INFO",
+             "FORMAT"] + samples]
+        vcf_table.rename(columns={"CHROM": "#CHROM"}, inplace=True)
+        vcf_table = vcf_table.sort_values("POS")
+        vcf_header = [
+            "##fileformat=VCFv4.2",
+            '##INFO=<ID=DP,Number=1,Type=Integer,Description='
+            '"Total coverage for locus, across samples.">',
+            "##INFO=<ID=AD,Number=R,Type=Integer,Description="
+            '"Total coverage per allele, across samples.">',
+            "##INFO=<ID=QS,Number=R,Type=Float,Description="
+            '"Average sequence quality per allele.">',
+            '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">',
+            '##FORMAT=<ID=AD,Number=R,Type=Integer,Description='
+            '"Allelic depths for the ref and alt alleles in that order.">',
+            '##FORMAT=<ID=DP,Number=1,Type=Integer,Description='
+            '"Total read depth (coverage) at this position">',
+            '##FORMAT=<ID=QS,Number=R,Type=Integer,Description='
+            '"Sequence quality per allele.">',
+            '##FORMAT=<ID=MC,Number=R,Type=Integer,Description='
+            '"Number of MIPs supporting the allele.">',
+            '##FORMAT=<ID=HC,Number=R,Type=Integer,Description='
+            '"Number of haplotypes supporting the allele.">']
+        # save vcf file
+        contig_vcf_file = os.path.join(wdir, contig_name + ".vcf")
+        with open(contig_vcf_file, "w") as outfile:
+            outfile.write("\n".join(vcf_header) + "\n")
+            vcf_table.to_csv(outfile, index=False, sep="\t")
+        contig_variants_file = os.path.join(wdir,
+                                            contig_name + "_variants.csv")
+        combined_vcf.to_csv(contig_variants_file)
+        collapsed_variants_file = os.path.join(wdir, contig_name
+                                               + "_collapsed_variants.csv")
+        collapsed_vcf.to_csv(collapsed_variants_file)
+        contig_haps.to_csv(contig_haplotypes_file)
+        contig_counts.to_csv(contig_counts_file)
+        return
+    except Exception as e:
+        print(("Caught exception in worker thread for contig {}.").format(
+            contig_name))
+        traceback.print_exc()
+        print()
+        raise e
 
 
 def parse_aligned_haplotypes(settings):
@@ -10293,7 +10385,7 @@ def combine_info_files(wdir,
         current_run_meta["Original SID"] = current_run_meta[
             ["sample_name", "sample_set", "replicate"]
         ].apply(lambda a: "-".join(a), axis=1)
-        unique_tablerun_meta.append(current_run_meta)
+        run_meta.append(current_run_meta)
     run_meta = pd.concat(run_meta, ignore_index=True)
     if sample_sets is not None:
         sps = pd.DataFrame(sample_sets, columns=["sample_set",
@@ -11668,6 +11760,8 @@ def collapse_vcf_df(filt_df):
             agg[col] = np.max
     collapsed = filt_df.groupby(["CHROM", "POS"]).agg(agg).reset_index()
     return collapsed
+
+
 def vcf_to_table(collapsed, output_file):
     """
     Take a "per position" vcf dataframe, convert to UCSC genome browser
@@ -11872,7 +11966,7 @@ def save_fasta_dict(fasta_dict, fasta_file, linewidth=60):
     """ Save a fasta dictionary to file. """
     with open(fasta_file, "w") as outfile:
         for header in fasta_dict:
-            outfile.write(">" + header + "\n")
+            outfile.write(">" + str(header) + "\n")
             fasta_seq = fasta_dict[header]
             for i in range(0, len(fasta_seq), linewidth):
                 outfile.write(fasta_seq[i: i + linewidth] + "\n")
@@ -11977,3 +12071,19 @@ def generate_sample_sheet(sample_list_file,
                        sample_info[sample_id]["i5"], "", ""]
             outfile_list.append(",".join(outlist))
         outfile.write("\n".join(outfile_list))
+
+
+def chromosome_converter(chrom, from_malariagen):
+    """ Convert plasmodium chromosome names from standard (chr1, etc) to
+    malariagen names (Pf3d7...) and vice versa.
+    """
+    standard_names = ["chr" + str(i) for i in range(1, 15)]
+    standard_names.extend(["chrM", "chrP"])
+    malariagen_names = ["Pf3D7_0" + str(i) + "_v3" for i in range(1, 10)]
+    malariagen_names = malariagen_names + [
+        "Pf3D7_" + str(i) + "_v3" for i in range(10, 15)]
+    malariagen_names.extend(["Pf_M76611", "Pf3D7_API_v3"])
+    if from_malariagen:
+        return dict(zip(malariagen_names, standard_names))[chrom]
+    else:
+        return dict(zip(standard_names, malariagen_names))[chrom]
