@@ -7844,6 +7844,7 @@ def get_haplotypes(settings):
         secondary_haplotypes = secondary_haplotypes.merge(
             gene_df[["gene", "copy", "copyname", "mip_number", "sub_number"]]
         )
+        secondary_haplotypes.to_csv(wdir + "secondary_haplotypes.csv")
 
     for m in list(haplotypes.keys()):
         for h in list(haplotypes[m].keys()):
@@ -7866,7 +7867,6 @@ def get_haplotypes(settings):
     with open(hap_file, "w") as out1, open(off_file, "w") as out2:
         json.dump(haplotypes, out1, indent=1)
         json.dump(off_target_haplotypes, out2, indent=1)
-    secondary_haplotypes.to_csv(wdir + "secondary_haplotypes.csv")
     return
 
 
