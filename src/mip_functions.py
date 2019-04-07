@@ -1786,7 +1786,7 @@ def write_analysis_settings(settings, settings_file):
     return
 
 
-def get_haplotypes(settings):
+def get_vcf_haplotypes(settings):
     """ 1) Extract all haplotypes from new data.
         2) Remove known haplotypes using previous data (if any).
         3) Map haplotypes to species genome to get the best hit(s)
@@ -2928,9 +2928,9 @@ def parse_aligned_haplotypes(settings):
                     # add to right the sequences which are there but did not
                     # align
                     for i in range(right_pad_len - right_pad_diff):
-                        right_pad_ref = (ref_seq[-i - right_pad_ref_count -1]
+                        right_pad_ref = (ref_seq[-i - right_pad_ref_count - 1]
                                          + right_pad_ref)
-                        right_pad_hap = (hap_seq[-i - right_pad_hap_count -1]
+                        right_pad_hap = (hap_seq[-i - right_pad_hap_count - 1]
                                          + right_pad_hap)
                     # add the right padding info to the alignment
                     for i in range(len(right_pad_hap)):
