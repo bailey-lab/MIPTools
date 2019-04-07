@@ -6,22 +6,21 @@
 ##############  SETTINGS THAT CHANGE PER PROJECT
 ##############################################################################
 ##############################################################################
-species	pf
+species	hg38
 callInfoDictionary	/opt/project_resources/mip_ids/call_info.json
 mipSetsDictionary	/opt/project_resources/mip_ids/probe_sets.json
 ##############################################################################
 ##############################################################################
-### Annotation settings below are species specific, so do dot change
-### unless working with something other than plasmodium falciparum
+### Annotation settings below are species specific
 ##############################################################################
-annotationScript	table_annovar_pf.pl
-annotationBuildVersion	3d7
-annotationProtocol	refGene
-annotationOperation	g
+annotationScript	table_annovar.pl
+annotationBuildVersion	hg38
+annotationProtocol	wgEncodeGencodeCompV24;avsnp147
+annotationOperation	g;f
 annotationNaString	.
 annotationOutput	myanno
-annotationKeys	AAChange.refGene;ExonicFunc.refGene;Gene.refGene
-annotationIdKey	na
+annotationKeys	avsnp147;AAChange.wgEncodeGencodeCompV24;ExonicFunc.wgEncodeGencodeCompV24;Gene.wgEncodeGencodeCompV24;1000g2015aug_all;1000g2015aug_afr
+annotationIdKey	avsnp147
 ##############################################################################
 ##############################################################################
 ##############  SETTINGS THAT CAN CHANGE PER RUN #############################
@@ -45,25 +44,14 @@ minHaplotypeSamples	1
 minHaplotypeSampleFraction	0
 ##############################################################################
 ##############################################################################
-# loci filters, across samples
-# minimum total depth (filters on INFO/AD)
+# filters for a variant to be considered valid, across all samples in
+# an analysis similar to haplotype filters
 minVariantBarcodes	1
-# minimum number of samples variant observed in (filters on INFO/AC)
 minVariantSamples	1
-# minimum fraction of samples variant observed in (filters on INFO/AF)
 minVariantSampleFraction	0
-# minimum number of samples with genotypes called (filters on INFO/AN)
-minVariantSampleTotal	1
-# average sequence quality for variant across samples (filters on INFO/QS)
-minVariantMeanQuality	20
-# average within sample allele frequency when observed  (filters on INFO/WSAF)
-minVariantMeanWsaf	0.001
-# average number of MIPs supporting the variant normalized to MAX (filters on INFO/MCF)
-# this is a good filter to remove artifacts when multiple MIPs cover a locus
-minMipCountFraction	0
 # Filters for individual variants. This is not used across samples,
 # but within each sample for each variant.
-# Phred quality filter
+#Phred quality filter
 minVariantQuality	20
 # minimum coverage at locus to call any genotype
 minVariantCoverage	1
@@ -80,8 +68,8 @@ minMutationFraction	0.005
 # minimum barcode count for a (aminoacid) variant to be considered valid
 minMutationCount	2
 minCoverage	5
-# Merge nucleotide changes happening on the same codon to convert to amino acid
-# change. Use only for Plasmodium falciparum.
+# Merge nucleotide changes happening on the same codon to convert to amino acid change
+# Use only for Plasmodium
 mergeSNPs	0
 ##############################################################################
 ##############################################################################
@@ -96,7 +84,7 @@ mergeSNPs	0
 # likely represent the diploid copy state (2) for human genes, if values of
 # normalizationPercentiles and averageCopyCount are set to 2 and 0.5,0.5, respectively.
 normalizationPercentiles	0.4,0.6
-averageCopyCount	1
+averageCopyCount	2
 ##############################################################################
 ##############################################################################
 # psvPriority is used to determine which paralog a given sequence belong to
@@ -121,7 +109,7 @@ colNames	p_targetName,p_geneName,s_Sample,h_popUID,h_seq,c_qual,c_readCnt,c_barc
 givenNames	mip_name,gene_name,sample_name,haplotype_ID,haplotype_sequence,sequence_quality,read_count,barcode_count
 colTypes	str,str,str,str,str,str,str,int,int
 alignmentDir	alignments/
-processorNumber	20
+processorNumber	50
 copyStableGenes	na
 ########################################################################
 ########################################################################

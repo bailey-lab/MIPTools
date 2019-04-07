@@ -1756,13 +1756,19 @@ def get_analysis_settings(settings_file):
     settings = {}
     with open(settings_file) as infile:
         for line in infile:
-            if not line.startswith("#"):
-                newline = line.strip().split("\t")
-                value = newline[1].split(",")
-                if len(value) == 1:
-                    settings[newline[0]] = value[0]
-                else:
-                    settings[newline[0]] = [v for v in value if v != ""]
+            try:
+                if not line.startswith("#"):
+                    newline = line.strip().split("\t")
+                    value = newline[1].split(",")
+                    if len(value) == 1:
+                        settings[newline[0]] = value[0]
+                    else:
+                        settings[newline[0]] = [v for v in value if v != ""]
+            except Exception as e:
+                print(("Formatting error in settings file, line {}"
+                       "causing error '{}''").format(line, e))
+                print(newline)
+                return
     return settings
 
 
@@ -2268,6 +2274,7 @@ def split_contigs(settings):
         contig_haplotypes.to_csv(contig_haplotypes_file, index=False)
         contig_info["min_coverage"] = int(settings["minVariantCoverage"])
         contig_info["min_count"] = int(settings["minVariantCount"])
+        contig_info["min_wsaf"] = int(settings["minVariantWsaf"])
         contig_info["sample_ids"] = sample_ids
         try:
             contig_info["contig_targets"] = targets.loc[
@@ -2285,13 +2292,24 @@ def split_contigs(settings):
 
     with open(os.path.join(wdir, "contig_info.pkl"), "wb") as outfile:
         pickle.dump(contig_info_dict, outfile)
+    results = []
     pro = int(settings["processorNumber"])
     p = NoDaemonProcessPool(pro)
-    p.map_async(process_contig, contig_list)
+    p.map_async(process_contig, contig_list, callback=results.extend)
     p.close()
     p.join()
 
+    with open(os.path.join(wdir, "contig_process_results.json"),
+              "w") as outfile:
+        json.dump(results, outfile)
+
+    return (contig_info_dict, results)
+
+
+def merge_contigs(settings, contig_info_dict, results):
     # merge contig vcfs for each chromosome
+    wdir = settings["workingDir"]
+    species = settings["species"]
     genome_fasta = get_file_locations()[species]["fasta_genome"]
     for chrom in contig_info_dict:
         chrom_vcf_list = os.path.join(wdir, chrom + "_vcf_files.txt")
@@ -2299,26 +2317,64 @@ def split_contigs(settings):
         with open(chrom_vcf_list, "w") as outf:
             for contig in contig_info_dict[chrom]:
                 contig_name = contig_info_dict[chrom][contig]["contig_name"]
-                contig_vcf_file = os.path.join(contigs_dir,
-                                               contig_name + ".vcf")
-                subprocess.call(["bgzip", "-f", contig_vcf_file],
-                                cwd=contigs_dir)
-                subprocess.call(["bcftools", "index", "-f",
-                                 contig_vcf_file + ".gz"],
-                                cwd=contigs_dir)
-                outf.write(contig_vcf_file + ".gz" + "\n")
+                if contig_name in results:
+                    contigs_dir = contig_info_dict[chrom][contig][
+                        "contigs_dir"]
+                    contig_vcf_file = os.path.join(contigs_dir,
+                                                   contig_name + ".vcf")
+                    subprocess.call(["bgzip", "-f", contig_vcf_file],
+                                    cwd=contigs_dir)
+                    subprocess.call(["bcftools", "index", "-f",
+                                     contig_vcf_file + ".gz"],
+                                    cwd=contigs_dir)
+                    outf.write(contig_vcf_file + ".gz" + "\n")
         subprocess.call(["bcftools", "concat", "-f", chrom_vcf_list,
                          "-o", chrom_vcf_file])
+
+        split_vcf_file = os.path.join(wdir, chrom + ".split.vcf")
+        subprocess.call(["bcftools", "norm", "-m-both", "-N",
+                         chrom_vcf_file, "-o", split_vcf_file])
+
+        filt_vcf_file = os.path.join(wdir, chrom + ".split.filt.vcf")
+
+        minVariantBarcodes = settings["minVariantBarcodes"]
+        minVariantSamples = settings["minVariantSamples"]
+        minVariantSampleFraction = settings["minVariantSampleFraction"]
+        minVariantSampleTotal = settings["minVariantSampleTotal"]
+        minVariantMeanQuality = settings["minVariantMeanQuality"]
+        minVariantMeanWsaf = settings["minVariantMeanWsaf"]
+        minMipCountFraction = settings["minMipCountFraction"]
+
+        filter_expressions = [
+            "((INFO/AD[1] >= " + minVariantBarcodes + ")",
+            "(INFO/AC[1] >= " + minVariantSamples + ")",
+            "(INFO/AF[1] >= " + minVariantSampleFraction + ")",
+            "(INFO/AN >= " + minVariantSampleTotal + ")",
+            "(INFO/QS[1] >= " + minVariantMeanQuality + ")",
+            "(INFO/WSAF[1] >= " + minVariantMeanWsaf + ")",
+            "(INFO/MCF[1] >= " + minMipCountFraction + ")"]
+
+        filter_expressions = " & ".join(filter_expressions)
+        filter_expressions = filter_expressions + ') | (OT !=".")'
+        filter_expressions = "'" + filter_expressions + "'"
+
+        subprocess.call(["bcftools", "view", "-i", filter_expressions,
+                         split_vcf_file, "-o", filt_vcf_file])
+
+        merged_vcf_file = os.path.join(wdir, chrom + ".merged.filt.vcf")
+        subprocess.call(["bcftools", "norm", "+m-any", "-N",
+                         filt_vcf_file, "-o", merged_vcf_file])
+
         norm_vcf_file = os.path.join(wdir, chrom + ".norm.vcf")
         subprocess.call(["bcftools", "norm", "-m-both", "-f", genome_fasta,
-                         chrom_vcf_file, "-o", norm_vcf_file])
+                         filt_vcf_file, "-o", norm_vcf_file])
+
         ann = subprocess.Popen(["java", "-Xmx10g", "-jar",
                                 "/opt/programs/snpEff/snpEff.jar", species,
                                 norm_vcf_file], stdout=subprocess.PIPE)
         annotated_vcf_file = os.path.join(wdir, chrom + ".norm.ann.vcf")
         with open(annotated_vcf_file, "wb") as outfile:
             outfile.write(ann.communicate()[0])
-    return
 
 
 def process_contig(contig_dict):
@@ -2364,11 +2420,14 @@ def process_contig(contig_dict):
         if contig_targets is not None:
             contig_targets["padded_sequence"] = contig_targets.apply(
                 get_padded_sequence, axis=1)
+            target_pos = contig_targets[
+                ["Pos", "End", "Mutation Name"]].to_dict(orient="records")
             targets_dict = contig_targets.to_dict(orient="index")
             for t in targets_dict:
                 sequences[t] = targets_dict[t]["padded_sequence"]
         else:
             targets_dict = {}
+            target_pos = []
         for k in g_dict.keys():
             sequences[":".join(k)] = g_dict[k]["padded_sequence"]
         wdir = contig_dict["contigs_dir"]
@@ -2412,9 +2471,11 @@ def process_contig(contig_dict):
              "-m", "-c", "ref", "-o", raw_vcf_file, alignment_file])
         contig_dict["raw_vcf_file"] = raw_vcf_file
         vcf = pd.read_table(raw_vcf_file, skiprows=5)
+        if vcf.empty:
+            return
         vcf = vcf.drop(["ID", "QUAL", "FILTER", "INFO", "FORMAT"],
                        axis=1).set_index(["#CHROM", "POS", "REF", "ALT"])
-        vcf = vcf.applymap(lambda a: int(a.split(":")[0]))
+        vcf = vcf.applymap(lambda a: 0 if a == "." else int(a.split(":")[0]))
         vcf = vcf.reset_index()
         vcf["alignment_position"] = vcf["POS"]
         vcf["POS"] = vcf["alignment_position"].map(alignment_to_genomic)
@@ -2484,11 +2545,6 @@ def process_contig(contig_dict):
              "variant_end_index"]].merge(contig_counts[
                  ["Sample ID", "haplotype_ID", "MIP", "Copy",
                   "Barcode Count", "forward_sequence_quality"]])
-        """
-        contig_variants_file = os.path.join(wdir,
-                                            contig_name + "_variants.csv")
-        combined_vcf.to_csv(contig_variants_file)
-        """
 
         def get_variant_quality(row):
             start_index = row["variant_index"]
@@ -2504,7 +2560,14 @@ def process_contig(contig_dict):
             get_variant_quality, axis=1)
 
         min_count = contig_dict["min_count"]
+        if min_count < 1:
+            min_count = 1
         min_depth = contig_dict["min_coverage"]
+        if min_depth < 1:
+            min_depth = 1
+        min_wsaf = contig_dict["min_wsaf"]
+        if min_wsaf == 0:
+            min_wsaf = 0.0001
 
         def collapse_vcf(group):
             key = group.iloc[0][["CHROM", "POS", "REF", "ALT"]].values
@@ -2515,11 +2578,12 @@ def process_contig(contig_dict):
                 allele_depths.append(group.loc[group["genotype"] == i,
                                                "Barcode Count"].sum().round(0))
             total_depth = int(round(np.sum(allele_depths), 0))
+            wsaf = np.array(allele_depths)/total_depth
             if total_depth < min_depth:
                 return "."
             genotypes = []
             for i in range(allele_count):
-                if allele_depths[i] >= min_count:
+                if (allele_depths[i] >= min_count) and (wsaf[i] >= min_wsaf):
                     genotypes.append(i)
             if len(genotypes) == 0:
                 return "."
@@ -2544,7 +2608,8 @@ def process_contig(contig_dict):
                              str(total_depth),
                              ",".join(variant_quals),
                              ",".join(map(str, mip_count)),
-                             ",".join(map(str, hap_count))])
+                             ",".join(map(str, hap_count)),
+                             ",".join(map(str, wsaf.round(3)))])
 
         collapsed_vcf = pd.DataFrame(combined_vcf.groupby(
             ["CHROM", "POS", "REF", "ALT", "Sample ID"]).apply(collapse_vcf)
@@ -2558,10 +2623,18 @@ def process_contig(contig_dict):
             val = row.values
             ad = []
             quals = []
+            wsafs = []
+            mip_counts = []
+            hap_counts = []
             for v in val:
                 if v != ".":
                     ad.append(list(map(int, v.split(":")[1].split(","))))
                     quals.append(v.split(":")[3].split(","))
+                    mip_counts.append(list(map(
+                        int, v.split(":")[4].split(","))))
+                    hap_counts.append(list(map(
+                        int, v.split(":")[5].split(","))))
+                    wsafs.append(list(map(float, v.split(":")[6].split(","))))
             if len(ad) == 0:
                 return "."
             quality = []
@@ -2580,13 +2653,56 @@ def process_contig(contig_dict):
                     quality.append(".")
                 else:
                     quality.append(str(round(q, 1)))
-            return ";".join(["DP=" + str(np.sum(ad)),
-                             "AD=" + ",".join(map(str, np.sum(ad, axis=0))),
-                             "QS=" + ",".join(quality)])
+
+            wsafs = pd.DataFrame(wsafs)
+            wsafs = wsafs.applymap(
+                lambda a: a if a >= min_wsaf else np.nan).mean().round(4)
+            wsafs = wsafs.fillna(0).astype(str)
+
+            mip_counts = pd.DataFrame(mip_counts)
+            mip_counts = mip_counts.applymap(
+                lambda a: a if a > 0 else np.nan).mean().round(2)
+            mip_frac = (mip_counts / (mip_counts.max())).round(2)
+            mip_frac = mip_frac.fillna(0).astype(str)
+            mip_counts = mip_counts.fillna(0).astype(str)
+
+            hap_counts = pd.DataFrame(hap_counts)
+            hap_counts = hap_counts.applymap(
+                lambda a: a if a > 0 else np.nan).mean().round(2)
+            hap_counts = hap_counts.fillna(0).astype(str)
+
+            info_cols = [
+                "DP=" + str(np.sum(ad)),
+                "AD=" + ",".join(map(str, np.sum(ad, axis=0))),
+                "AC=" + ",".join(map(str, (np.array(ad) >= min_count).sum(
+                    axis=0))),
+                "AF=" + ",".join(map(str, ((np.array(ad) >= min_count).sum(
+                    axis=0)/len(ad)).round(5))),
+                "AN=" + str(len(ad)),
+                "QS=" + ",".join(quality),
+                "WSAF=" + ",".join(wsafs),
+                "MC=" + ",".join(mip_counts),
+                "MCF=" + ",".join(mip_frac),
+                "HC=" + ",".join(hap_counts)]
+
+            variant_pos = row.name[1]
+            ref_len = len(row.name[2])
+            variant_end = variant_pos + ref_len - 1
+            overlapping_targets = set()
+            for p in target_pos:
+                ol = overlap([variant_pos, variant_end],
+                             [p["Pos"], p["End"]])
+                if len(ol) > 0:
+                    overlapping_targets.add(p["Mutation Name"])
+            if len(overlapping_targets) > 0:
+                ot_field = ",".join(sorted(overlapping_targets))
+                info_cols.append("OT=" + ot_field)
+
+            return ";".join(info_cols)
 
         var_summary = pd.DataFrame(vcf_table.apply(
             get_var_summary, axis=1)).rename(columns={0: "INFO"})
-        var_summary["FORMAT"] = "GT:AD:DP:QS:MC:HC"
+        var_summary["FORMAT"] = "GT:AD:DP:QS:MC:HC:WSAF"
         var_summary["ID"] = "."
         var_summary["QUAL"] = "."
         var_summary["FILTER"] = "."
@@ -2609,6 +2725,23 @@ def process_contig(contig_dict):
             '"Total coverage per allele, across samples.">',
             "##INFO=<ID=QS,Number=R,Type=Float,Description="
             '"Average sequence quality per allele.">',
+            "##INFO=<ID=AN,Number=1,Type=Integer,Description="
+            '"Number of samples with genotype calls.">',
+            "##INFO=<ID=AC,Number=R,Type=Integer,Description="
+            '"Number of samples carrying the allele.">',
+            "##INFO=<ID=AF,Number=R,Type=Float,Description="
+            '"Frequency of samples carrying the allele.">',
+            "##INFO=<ID=WSAF,Number=R,Type=Float,Description="
+            '"Average nonzero WithinSampleAlleleFrequency.">',
+            "##INFO=<ID=MC,Number=R,Type=Float,Description="
+            '"Average number of MIPs supporting the allele (when called).">',
+            "##INFO=<ID=HC,Number=R,Type=Float,Description="
+            '"Average number of haplotypes supporting the allele'
+            ' (when called).">',
+            "##INFO=<ID=MCF,Number=R,Type=Float,Description="
+            '"MC expressed as the fraction of MAX MC.">',
+            "##INFO=<ID=OT,Number=.,Type=String,Description="
+            '"Variant position overlaps with a target.">',
             '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">',
             '##FORMAT=<ID=AD,Number=R,Type=Integer,Description='
             '"Allelic depths for the ref and alt alleles in that order.">',
@@ -2619,7 +2752,9 @@ def process_contig(contig_dict):
             '##FORMAT=<ID=MC,Number=R,Type=Integer,Description='
             '"Number of MIPs supporting the allele.">',
             '##FORMAT=<ID=HC,Number=R,Type=Integer,Description='
-            '"Number of haplotypes supporting the allele.">']
+            '"Number of haplotypes supporting the allele.">',
+            '##FORMAT=<ID=WSAF,Number=R,Type=Float,Description='
+            '"Within sample allele frequency.">']
         # save vcf file
         contig_vcf_file = os.path.join(wdir, contig_name + ".vcf")
         with open(contig_vcf_file, "w") as outfile:
@@ -2633,7 +2768,7 @@ def process_contig(contig_dict):
         collapsed_vcf.to_csv(collapsed_variants_file)
         contig_haps.to_csv(contig_haplotypes_file)
         contig_counts.to_csv(contig_counts_file)
-        return
+        return contig_name
     except Exception as e:
         print(("Caught exception in worker thread for contig {}.").format(
             contig_name))
@@ -2700,7 +2835,8 @@ def parse_aligned_haplotypes(settings):
                     ref_align_begin = ref_seq.find(ref_used)
                     # index of where in full reference the alignment ends
                     ref_align_end = ref_align_begin + len(ref_used)
-                    # index of where in full haplotype sequence the alignment begins
+                    # index of where in full haplotype sequence the alignment
+                    # begins
                     hap_align_begin = hap_seq.find(hap_used)
                     # if the alignment is inverted, i.e. there is a reverse
                     # complement alignment with a significant score, the find
@@ -4604,7 +4740,7 @@ def merge_overlap(intervals, spacer=0):
             e = exons[i]
             for j in range(len(exons)):
                 x = exons[j]
-                if i == j :
+                if i == j:
                     continue
                 else:
                     if e[1] >= x[1]:
@@ -4629,7 +4765,7 @@ def merge_overlap(intervals, spacer=0):
     return exons
 
 
-def overlap(reg1, reg2, spacer = 0):
+def overlap(reg1, reg2, spacer=0):
     """
     Return overlap between two regions.
     e.g. [10, 30], [20, 40] returns [20, 30]
@@ -9495,7 +9631,6 @@ def process_results(wdir,
         multi_df["Adjusted Read Count"] = (multi_df["Read Count"]
                                            * multi_df["Copy Average"]
                                            / multi_df["copy_sum"])
-
 
     # Combine unique and multimapping data
     combined_df = pd.concat([unique_df, multi_df], ignore_index=True)
