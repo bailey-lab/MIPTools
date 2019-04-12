@@ -46,9 +46,9 @@ singularity run --app appName singularityOptions miptools.sif appOptions
 #### download
 This app should be used to download sequencing run data from basespace. An access token obtained from BaseSpace is required for downloading data from basespace. This accestoken should be placed in the acces_token.txt file within the base resource directory.
 
-`singularity run --app download \
-    -B [path to base resources]:/opt/resources \
-    -B [path to save sequence data to (bcl directory)]:/opt/analysis \
+`singularity run --app download \  
+    -B [path to base resources]:/opt/resources \  
+    -B [path to save sequence data to (bcl directory)]:/opt/analysis \  
     [path to miptools.sif] -r [run ID from BaseSpace]
 `
 The above command will save the sequencing data to a subfolder with the same name as the run ID within the specified bcl  directory. This directory containing the sequence data (bcl directory/run ID) is referred to as bcl directory below.
@@ -56,10 +56,10 @@ The above command will save the sequencing data to a subfolder with the same nam
 #### demux
 Sample demultiplexing. This app generates per-sample fastq files from the sequence data downloaded with the **download** app.
 
-`singularity run --app demux \
-    -B [path to base resources]:/opt/resources \
-    -B [path to bcl directory (from download app)]:/opt/data \
-    -B [path to fastq directory where fastq files should be saved to]:/opt/analysis |
+`singularity run --app demux \  
+    -B [path to base resources]:/opt/resources \  
+    -B [path to bcl directory (from download app)]:/opt/data \  
+    -B [path to fastq directory where fastq files should be saved to]:/opt/analysis |  
     [path to miptools.sif] -s sample_list -p sequencing platform`
 
 *  *sample_list*: A file listing the samples used in the study, primers used etc. An example can be found in the test data set. It is important that sample names contain only alphanumeric vaules and dashes. No underscores, spaces or other special characters are allowed. It is also important not to change the field names of the sample list provided. This file must be present in the data directory (bcl directory).
@@ -68,9 +68,9 @@ Sample demultiplexing. This app generates per-sample fastq files from the sequen
 #### demux_qc
 This app goes through the demultiplexing stats and prints the total number of sequencing reads and how many were of undetermined indices, meaning they contained indices that were not present in the sample file. In addition, it prints how many of the undetermined index reads belongs to possible primer pairs, i.e. they are likely due to errors in provided sample list and not just faulty reads from the sequencer.
 
-`singularity run --app demux_qc \
-    -B [path to base resources]:/opt/resources \
-    -B [path to fastq directory where fastq files were saved]:/opt/analysis \
+`singularity run --app demux_qc \  
+    -B [path to base resources]:/opt/resources \  
+    -B [path to fastq directory where fastq files were saved]:/opt/analysis \  
    [path to miptools.sif] -p sequencing platform`
 
 #### wrangler
@@ -78,11 +78,11 @@ This app goes through the demultiplexing stats and prints the total number of se
 This app runs MIPWrangler on the demultiplexed fastq files.
 
 ```bash
-singularity run --app wrangler \
-    -B [path to base resources]:/opt/resources \
-    -B [path to project resources]:/opt/project_resources \
-    -B [path to fastq directory]:/opt/data \
-    -B [path to MIPWrangler output directory(wrangler dir)]:/opt/analysis |
+singularity run --app wrangler \  
+    -B [path to base resources]:/opt/resources \  
+    -B [path to project resources]:/opt/project_resources \  
+    -B [path to fastq directory]:/opt/data \  
+    -B [path to MIPWrangler output directory(wrangler dir)]:/opt/analysis \  
     [path to miptools.sif] -p probe_sets_used -s sample_sets -e experiment_id -l sample_list
 ```
 
@@ -96,11 +96,11 @@ After the app finishes, it generates the MIPWrangler output and saves it to the 
 Runs post-wrangler mapping and variant calling pipeline. 
 ```bash
 singularity run --app jupyter \
-    -B [path to base resources]:/opt/resources \
-    -B [path to project resources]:/opt/project_resources \
-    -B [path to species resources]:/opt/species_resources \
-    -B [path to MIPWrangler output directory(wrangler dir)]:/opt/data \
-    -B [path to analysis directory]:/opt/analysis |
+    -B [path to base resources]:/opt/resources \  
+    -B [path to project resources]:/opt/project_resources \  
+    -B [path to species resources]:/opt/species_resources \  
+    -B [path to MIPWrangler output directory(wrangler dir)]:/opt/data \  
+    -B [path to analysis directory]:/opt/analysis \  
     [path to miptools.sif]
 ```
 If multiple sequence runs will be combined and analysed, they need to be present in the data dir. 
