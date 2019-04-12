@@ -43,6 +43,25 @@ From: amd64/ubuntu:18.04
     libxrender1 \
     ghostscript \
     openjdk-11-jdk
+
+    # set environment locale
+    echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
+    echo "LANG=en_US.UTF-8" > /etc/locale.conf
+    echo "LC_ALL=en_US.UTF-8" >> /etc/environment
+    echo "LANGUAGE=en_US.UTF-8" >> /etc/environment
+    locale-gen en_US.UTF-8
+    update-locale LANG=en_US.UTF-8
+
+    # install bcl2fastq
+    cd /opt/programs
+    dpkg -i bcl2fastq2_0v2.20.0.422-2_amd64.deb
+
+    # install msv2vcf
+    cd /opt/programs
+    git clone https://github.com/lindenb/jvarkit.git
+    cd jvarkit
+    ./gradlew msa2vcf
+
     # install conda
     cd /tmp && \
         wget --quiet https://repo.continuum.io/miniconda/Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh && \
@@ -74,15 +93,19 @@ From: amd64/ubuntu:18.04
     "seaborn=0.9" \
     "scikit-learn=0.20" \
     "scandir=1.9.0"
-    # install R and epitools R library
-    conda install -qy -c r r
-    conda install -qy -c nnsrl r-epitools
-    conda install -qy -c r rpy2
-    conda install openpyxl
-    conda clean -tipsy
 
+
+    # install R and epitools R library
+    # conda install -qy -c r r
+    # conda install -qy -c nnsrl r-epitools
+    # conda install -qy -c r rpy2
+    # conda install openpyxl
+    # conda clean -tipsy
+
+    # install primer3 python wrapper
     pip install primer3-py==0.5.7
     pip install simplegeneric
+
     # install lastZ
     cd /opt/programs/lastz/src
     make lastz_32 && install lastz_32 /usr/bin/
@@ -95,26 +118,17 @@ From: amd64/ubuntu:18.04
     ./upgradeDevelop.sh 20
 
     # install elucidator
-    cd /opt/programs
-    git clone https://github.com/nickjhathaway/elucidator
-    cd elucidator
-    git checkout develop
-    ./install.sh 20
+    # cd /opt/programs
+    # git clone https://github.com/nickjhathaway/elucidator
+    # cd elucidator
+    # git checkout develop
+    # ./install.sh 20
 
     # add executable flag to executables
     chmod -R +xr /usr/bin
     chmod -R +xr /opt/bin
 
-    # install bcl2fastq
-    cd /opt/programs
-    dpkg -i bcl2fastq2_0v2.20.0.422-2_amd64.deb
 
-    # install msv2vcf
-    cd /opt/programs
-    git clone https://github.com/lindenb/jvarkit.git
-    cd jvarkit
-    ./gradlew msa2vcf
-    
     # create symlinks to executables in /usr/bin so everything will be in
     # $PATH for users.
     ln -sf /opt/programs/parasight_v7.6/parasight.pl /usr/bin/parasight76.pl
@@ -132,12 +146,6 @@ From: amd64/ubuntu:18.04
         /opt/analysis \
         /opt/extras
 
-    # set environment locale
-    echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
-    echo "LANG=en_US.UTF-8" > /etc/locale.conf
-    echo "LC_ALL=en_US.UTF-8" >> /etc/environment
-    echo "LANGUAGE=en_US.UTF-8" >> /etc/environment
-    locale-gen en_US.UTF-8
 
 %files
     programs /opt
@@ -152,7 +160,7 @@ From: amd64/ubuntu:18.04
     export XDG_RUNTIME_DIR=""
     export DEBIAN_FRONTEND=noninteractive
     export LANG=en_US.UTF-8
-    export LANGUAGE="en_US.UTF-8"
+    export LANGUAduGE="en_US.UTF-8"
     export LC_ALL="en_US.UTF-8"
 
 %apprun jupyter

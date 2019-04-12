@@ -23,6 +23,7 @@ annotationOutput	myanno
 annotationKeys	AAChange.refGene;ExonicFunc.refGene;Gene.refGene
 annotationIdKey	na
 ##############################################################################
+snpEffDb	pf
 ##############################################################################
 ##############  SETTINGS THAT CAN CHANGE PER RUN #############################
 ##############################################################################

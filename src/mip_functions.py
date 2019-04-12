@@ -4970,7 +4970,7 @@ def merge_contigs(settings, contig_info_dict, results):
 
         filter_expressions = " & ".join(filter_expressions)
         filter_expressions = filter_expressions + ') | (OT !=".")'
-        filter_expressions = "'" + filter_expressions + "'"
+        #filter_expressions = "'" + filter_expressions + "'"
 
         subprocess.call(["bcftools", "view", "-i", filter_expressions,
                          split_vcf_file, "-o", filt_vcf_file])
@@ -4983,9 +4983,11 @@ def merge_contigs(settings, contig_info_dict, results):
         subprocess.call(["bcftools", "norm", "-m-both", "-f", genome_fasta,
                          filt_vcf_file, "-o", norm_vcf_file])
 
+        # annotate with snpEff
+        ann_db = settings["snpEffDb"]
         ann = subprocess.Popen(["java", "-Xmx10g", "-jar",
-                                "/opt/programs/snpEff/snpEff.jar", species,
-                                norm_vcf_file], stdout=subprocess.PIPE)
+                                "/opt/species_resources/snpEff/snpEff.jar",
+                                ann_db, norm_vcf_file], stdout=subprocess.PIPE)
         annotated_vcf_file = os.path.join(wdir, chrom + ".norm.ann.vcf")
         with open(annotated_vcf_file, "wb") as outfile:
             outfile.write(ann.communicate()[0])
