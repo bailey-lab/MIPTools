@@ -88,7 +88,7 @@ singularity run --app wrangler \
     -B [path to project resources]:/opt/project_resources \  
     -B [path to fastq directory]:/opt/data \  
     -B [path to MIPWrangler output directory(wrangler dir)]:/opt/analysis \  
-    [path to miptools.sif] -p probe_sets_used -s sample_sets -e experiment_id -l sample_list
+    [path to miptools.sif] -p probe_sets_used -s sample_sets -e experiment_id -l sample_list -c cpu_number
 ```
 
 *  *probe_sets_used*: A comma separated list of probe sets used. MIP probes are grouped into sets for ease of use. It is possible to use many probe sets in an experiment. All probe related information is located in project_resources/mip_ids directories. More information on this will be added. Probe sets must be specified in the sample list as well. However, the sets provided here may be a subset of those present in the sample list file. Only the probes in specified here will be analysed.
@@ -96,6 +96,7 @@ singularity run --app wrangler \
 *  *experiment_id*: A unique id given to the experiment. This is typically the date of the sequencing run (YYMMDD) but can be anything alphanumeric.
 *  *sample_list*: same as the sample list used in demultiplexing. This file must be present in the *analysis_dir*
 After the app finishes, it generates the MIPWrangler output and saves it to the wrangler directory. A number of files for quality control, such as proportion of reads failing each step of the pipeline, are also generated and saved in the wrangler directory specified.
+*  *cpu_number*: number of processors to use.
 
 #### mapper
 Runs post-wrangler mapping and variant calling pipeline. 
@@ -126,6 +127,23 @@ If the host is a remote server, e.g. HPC, forward the notebook port to your comp
 ```bash
 ssh -N -f -L localhost:8888:localhost:8888 username@serveraddress
 ```
+I cloned the MIPTools repository to ~/git location in my computer, so the base_resources location is ~/git/MIPTools/base_resources and the test data is located in ~/git/MIPTools/test_data/fastq.
+
+I built miptools.sif to my home directory so miptools.sif path is ~/miptools.sif
+The project resources path on my computer is ~/resources/project_resources/DR1
+The species resources path on my computer is ~/resources/species_resources/pf/Pf_3D7_v3-PDB9.3/
+I created an analysis directory for MIPWrangler output: ~/fast_data/analysis/test_analysis and copied the sample list located in the base_resources directory to the analylsis directory. So the sample list path is ~/fast_data/analysis/test_analysis/sample_list.tsv
+
+I created an analysis directory~/fast_data/analysis/test_mapper
+For the above setup, the MIPWrangler command is this:
+```
+bash
+singularity run --app wrangler -B ~/git/MIPTools/base_resources/:/opt/resources -B ~/resources/project_resources/DR1/:/opt/project_resources -B ~/resources/species_resources/pf/Pf_3D7_v3-PDB9.3/:/opt/species_resources -B ~/git/MIPTools/test_data/fastq/:/opt/data -B ~/fast_data/analysis/test_analysis/:/opt/analysis ~/miptools.sif -p DR1,VAR4 -s JJJ -l sample_list.tsv -e test_id -c 20
+```
+
+That creates the file ~/fast_data/analysis/test_analysis/test_id_JJJ_DR1_VAR4_20190412.txt.gz. Note that the file name contains the data and you will have a different file name.
+
+
 
 Finally, open a web browser, paste the address from your terminal (http://localhost:8888/?token=600be64ca79ef74ebe4fbd3698bc8a0d049e01d4e28b30ec in this example)  
 Navigate to **analysis/analysis.ipynb** and follow the instructions contained in the notebook.
