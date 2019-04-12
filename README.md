@@ -4,23 +4,26 @@ MIPTools is a suit of computational tools that are used for molecular inversion 
 ## Installation
 Clone the github repository:
 ```bash
-git clone git@github.com:bailey-lab/MIPMaker.git
+git clone git@github.com:bailey-lab/MIPTools.git
 ```
 ### Dependencies
-Requires a working copy of Singularity: https://www.sylabs.io/guides/3.0/user-guide/quick_start.html#quick-installation-steps  
-Singularity is best installed with **sudo**. While it is said to be possible to install with unprivilidged user with some features missing, MIPTools hasn't been tested on such an installation yet.
-### Build MIPMaker from the definition file 
+Requires a working copy of Singularity: https://www.sylabs.io/docs/  
+Singularity is best installed with **sudo**. While it is said to be possible to install with unprivilidged user with some features missing, MIPTools hasn't been tested on such an installation.
+
+Note: Snap package install is a rapid way to install the go language required by Singularity (e.g. on Ubuntu/Debian: `sudo snap install go --classic`)
+
+### Build MIPTools from the definition file 
 This can take about 10-30 minutes, depending on number of cpu cores available.  
 User must have **sudo** privilege to _build_ the image. You do not need sudo to _use_ the image. So if you want to run the container on an environment without sudo, build the container on your own machine and copy the image file to the host machine. Note that Singularity program itself must have been installed with sudo.
 ```bash
-cd MIPMaker
-sudo singularity build miptools.sif MIPMaker.def
+cd MIPTools
+sudo singularity build miptools.sif MIPTools.def
 ```
-mipmaker.sif is a single **portable** file which has all the programs needed for MIP data analysis and a lot more.  
-More information about its uses will be added over time.
+miptools.sif is a single **portable** file which has all the programs needed for MIP data analysis and a lot more.  
+More information about the extra programs and their uses will be added over time.
 ### Directory Structure
-Following directories are needed for MIP data analysis.
-*  **base_resources:** Included in the repository, contains common resources across projects.
+3 resource directories are required for most functions. These live outside the container and must be **bound** to the container at run time with `-B` option.
+*  **base_resources:** Included in the GitHub repository, contains common resources across projects. It should be bound to the container with `-B [path to base resources dir outside of the container]:/opt/resources`. This makes the base_resources directory available to the container and it would be reached at `/opt/resources` path within the container. `/opt/resources` part of this argument must not be altered.
 *  **species_resources:** Contains resources shared by projects using the same target species (Pf, human, etc.)
 *  **project_resources:** Contains project specific files (probe sequences, sample information, etc.)
 *  **data_dir:** Contains data to be analyzed (see below).
