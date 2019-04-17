@@ -4890,6 +4890,7 @@ def split_contigs(settings):
         contig_info["min_count"] = int(settings["minVariantCount"])
         contig_info["min_wsaf"] = int(settings["minVariantWsaf"])
         contig_info["sample_ids"] = sample_ids
+        contig_info["aligner"] = settings["multipleSequenceAligner"]
         try:
             contig_info["contig_targets"] = targets.loc[
                 (targets["Chrom"] == contig_info["chrom"])
@@ -4970,7 +4971,6 @@ def merge_contigs(settings, contig_info_dict, results):
 
         filter_expressions = " & ".join(filter_expressions)
         filter_expressions = filter_expressions + ') | (OT !=".")'
-        #filter_expressions = "'" + filter_expressions + "'"
 
         subprocess.call(["bcftools", "view", "-i", filter_expressions,
                          split_vcf_file, "-o", filt_vcf_file])
@@ -5051,7 +5051,12 @@ def process_contig(contig_dict):
         fasta_file = os.path.join(wdir, contig_name + ".fa")
         alignment_file = os.path.join(wdir, contig_name + ".aln")
         save_fasta_dict(sequences, fasta_file)
-        subprocess.call(["muscle", "-in", fasta_file, "-out", alignment_file])
+        if contig_dict["aligner"] == "muscle":
+            subprocess.call(["muscle", "-in", fasta_file, "-out",
+                             alignment_file])
+        elif contig_dict["aligner"] == "decipher":
+            subprocess.call(["Rscript", "/opt/src/align.R", fasta_file,
+                             alignment_file])
         alignments = fasta_parser(alignment_file)
         ref_seq = alignments["ref"]
         alignment_to_genomic = {0: contig_start - 1}

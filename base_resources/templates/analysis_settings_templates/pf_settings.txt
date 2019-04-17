@@ -9,6 +9,8 @@
 species	pf
 callInfoDictionary	/opt/project_resources/mip_ids/call_info.json
 mipSetsDictionary	/opt/project_resources/mip_ids/probe_sets.json
+### Multiple sequence aligner to be used for variant calling.
+multipleSequenceAligner	decipher
 ##############################################################################
 ##############################################################################
 ### Annotation settings below are species specific, so do dot change
