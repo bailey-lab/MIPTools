@@ -23,6 +23,8 @@ import pandas as pd
 import gzip
 from primer3 import calcHeterodimerTm
 import traceback
+from msa_to_vcf import msa_to_vcf as msa_to_vcf
+
 print("functions reloading")
 # backbone dictionary
 mip_backbones = {
@@ -2601,6 +2603,11 @@ def update_aligned_haplotypes(settings):
         parsed_alignments = json.load(infile)
     # all alignments from the parsed alignments dict
     alignments = parsed_alignments["alignments"]
+    # allow alt contig mapping if non_alt alignments are possible?
+    try:
+        allow_alts = int(settings["allowAltContigs"])
+    except KeyError:
+        allow_alts = 0
     # update each haplotype with alignment information
     for m in haplotypes:
         gene_name = m.split("_")[0]
@@ -2622,19 +2629,18 @@ def update_aligned_haplotypes(settings):
             copy_keys_sorted = sorted(copies,
                                       key=lambda a: copies[a]["score"])
             # below code prevents alt contigs to be the best mapping copy
-            # unless it is the only mapping copy. Uncomment if needed.
-            """
-            copy_keys_sorted_temp = copy.deepcopy(copy_keys_sorted)
-            # remove alt contigs
-            for cop_ind in range(len(copy_keys_sorted)):
-                cop = copy_keys_sorted[cop_ind]
-                if "alt" in call_info[gene_name][m]["copies"][cop[0]]["chrom"]:
-                    copy_keys_sorted[cop_ind] = "remove"
-            copy_keys_sorted = [cop_key for cop_key in copy_keys_sorted
-                                if cop_key != "remove"]
-            if len(copy_keys_sorted) == 0:
-                copy_keys_sorted = copy_keys_sorted_temp
-            """
+            if not allow_alts:
+                copy_keys_sorted_temp = copy.deepcopy(copy_keys_sorted)
+                # remove alt contigs
+                for cop_ind in range(len(copy_keys_sorted)):
+                    cop = copy_keys_sorted[cop_ind]
+                    if "alt" in call_info[gene_name][m]["copies"][cop[0]][
+                            "chrom"]:
+                        copy_keys_sorted[cop_ind] = "remove"
+                copy_keys_sorted = [cop_key for cop_key in copy_keys_sorted
+                                    if cop_key != "remove"]
+                if len(copy_keys_sorted) == 0:
+                    copy_keys_sorted = copy_keys_sorted_temp
             # pick best scoring copies
             # last item in copy_keys_sorted is the best
             best_copy = copy_keys_sorted[-1]
@@ -2993,9 +2999,9 @@ def make_snp_vcf(variant_file, haplotype_file, call_info_file,
         cops = call_info[g][m]["copies"]
         copy_keys = list(call_info[g][m]["copies"].keys())
         for c in copy_keys:
-            mp = mip_positions[(m, c)]
             capture_chrom = cops[c]["chrom"]
             if capture_chrom == vcf_chrom:
+                mp = mip_positions[(m, c)]
                 for h in haplotypes[m]:
                     hap = haplotypes[m][h]
                     refs = {p: 1 for p in mp}
@@ -4891,6 +4897,8 @@ def split_contigs(settings):
         contig_info["min_wsaf"] = int(settings["minVariantWsaf"])
         contig_info["sample_ids"] = sample_ids
         contig_info["aligner"] = settings["multipleSequenceAligner"]
+        contig_info["msa_to_vcf"] = settings["msaToVcf"]
+        contig_info["snp_only"] = int(settings["snpOnlyVcf"])
         try:
             contig_info["contig_targets"] = targets.loc[
                 (targets["Chrom"] == contig_info["chrom"])
@@ -5087,11 +5095,22 @@ def process_contig(contig_dict):
             get_hap_start_index, axis=1)
 
         raw_vcf_file = os.path.join(wdir, contig_name + ".raw.vcf")
+        if contig_dict["msa_to_vcf"] == "miptools":
+            msa_to_vcf(alignment_file, raw_vcf_file, ref="ref",
+                       snp_only=contig_dict["snp_only"])
         subprocess.call(
             ["java", "-jar", "/opt/programs/jvarkit/dist/msa2vcf.jar",
              "-m", "-c", "ref", "-o", raw_vcf_file, alignment_file])
         contig_dict["raw_vcf_file"] = raw_vcf_file
-        vcf = pd.read_table(raw_vcf_file, skiprows=5)
+        # find  comment line number
+        with open(raw_vcf_file) as infile:
+            line_count = 0
+            for line in infile:
+                if line.startswith("##"):
+                    line_count += 1
+                else:
+                    break
+        vcf = pd.read_table(raw_vcf_file, skiprows=line_count)
         if vcf.empty:
             return
         vcf = vcf.drop(["ID", "QUAL", "FILTER", "INFO", "FORMAT"],

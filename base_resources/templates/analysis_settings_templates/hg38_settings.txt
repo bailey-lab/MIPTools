@@ -21,7 +21,7 @@ annotationProtocol	wgEncodeGencodeCompV24;avsnp147
 annotationOperation	g;f
 annotationNaString	.
 annotationOutput	myanno
-annotationKeys	avsnp147;AAChange.wgEncodeGencodeCompV24;ExonicFunc.wgEncodeGencodeCompV24;Gene.wgEncodeGencodeCompV24;1000g2015aug_all;1000g2015aug_afr
+annotationKeys	avsnp147;AAChange.wgEncodeGencodeCompV24;ExonicFunc.wgEncodeGencodeCompV24;Gene.wgEncodeGencodeCompV24
 annotationIdKey	avsnp147
 ##############################################################################
 ##############################################################################
@@ -46,14 +46,25 @@ minHaplotypeSamples	1
 minHaplotypeSampleFraction	0
 ##############################################################################
 ##############################################################################
-# filters for a variant to be considered valid, across all samples in
-# an analysis similar to haplotype filters
+# loci filters, across samples
+# minimum total depth (filters on INFO/AD)
 minVariantBarcodes	1
+# minimum number of samples variant observed in (filters on INFO/AC)
 minVariantSamples	1
+# minimum fraction of samples variant observed in (filters on INFO/AF)
 minVariantSampleFraction	0
+# minimum number of samples with genotypes called (filters on INFO/AN)
+minVariantSampleTotal	1
+# average sequence quality for variant across samples (filters on INFO/QS)
+minVariantMeanQuality	20
+# average within sample allele frequency when observed  (filters on INFO/WSAF)
+minVariantMeanWsaf	0.001
+# average number of MIPs supporting the variant normalized to MAX (filters on INFO/MCF)
+# this is a good filter to remove artifacts when multiple MIPs cover a locus
+minMipCountFraction	0
 # Filters for individual variants. This is not used across samples,
 # but within each sample for each variant.
-#Phred quality filter
+# Phred quality filter
 minVariantQuality	20
 # minimum coverage at locus to call any genotype
 minVariantCoverage	1
@@ -70,8 +81,8 @@ minMutationFraction	0.005
 # minimum barcode count for a (aminoacid) variant to be considered valid
 minMutationCount	2
 minCoverage	5
-# Merge nucleotide changes happening on the same codon to convert to amino acid change
-# Use only for Plasmodium
+# Merge nucleotide changes happening on the same codon to convert to amino acid
+# change. Use only for Plasmodium falciparum.
 mergeSNPs	0
 ##############################################################################
 ##############################################################################
@@ -101,7 +112,8 @@ psvPriority	1
 psvMultiplier	50
 ##############################################################################
 # options for bwa program when aligning the haplotypes to genome
-bwaOptions	mem,-a,-L 500
+bwaOptions	mem,-a
+allowAltContigs	0
 ##############################################################################
 ##############################################################################
 ##############  SETTINGS THAT ARE UNLIKELY TO CHANGE #########################
