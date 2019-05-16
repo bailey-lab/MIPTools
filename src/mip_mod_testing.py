@@ -3046,5 +3046,5 @@ class Mip():
 
 
 class Gene(Paralog):
-    def __init__ (self):
+    def __init__(self):
         pass

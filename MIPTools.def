@@ -42,7 +42,11 @@ From: amd64/ubuntu:18.04
     libxext6 \
     libxrender1 \
     ghostscript \
-    openjdk-11-jdk
+    openjdk-11-jdk \
+    liblzma-dev \
+    libbz2-dev \
+    libssl-dev \
+    libcurl4-gnutls-dev
 
     # set environment locale
     echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
@@ -96,11 +100,11 @@ From: amd64/ubuntu:18.04
 
 
     # install R and epitools R library
-    # conda install -qy -c r r
-    # conda install -qy -c nnsrl r-epitools
-    # conda install -qy -c r rpy2
-    # conda install openpyxl
-    # conda clean -tipsy
+    conda install -qy -c r r rpy2
+    conda install -qy -c nnsrl r-epitools
+    #conda install -qy -c r rpy2
+    conda install -qy openpyxl bioconductor-decipher
+    conda clean -tipsy
 
     # install primer3 python wrapper
     pip install primer3-py==0.5.7
@@ -118,11 +122,11 @@ From: amd64/ubuntu:18.04
     ./upgradeDevelop.sh 20
 
     # install elucidator
-    # cd /opt/programs
-    # git clone https://github.com/nickjhathaway/elucidator
-    # cd elucidator
-    # git checkout develop
-    # ./install.sh 20
+    cd /opt/programs
+    git clone https://github.com/nickjhathaway/elucidator
+    cd elucidator
+    git checkout develop
+    ./install.sh 20
 
     # add executable flag to executables
     chmod -R +xr /usr/bin
@@ -198,8 +202,9 @@ From: amd64/ubuntu:18.04
     cluster_script="runMIPWranglerCurrent.sh"
     server_number=1
     cpu_count=1
+    stitch_options="none"
     keep_files=""
-    while getopts p:l:e:s:w:n:c:k OPT; do
+    while getopts p:l:e:s:w:n:c:x:k OPT; do
         case "$OPT" in
             e)
               experiment_id="$OPTARG";;
@@ -215,6 +220,8 @@ From: amd64/ubuntu:18.04
               server_number="$OPTARG";;
             c)
               cpu_count="$OPTARG";;
+            x)
+              stitch_options="$OPTARG";;
             k)
               keep_files="-k";;
 
@@ -222,13 +229,13 @@ From: amd64/ubuntu:18.04
               echo "Invalid option. Use 'wrangler \
               -e experiment_id -l sample_list.file -p  probe_sets\
               -s sample_sets -w cluster_script -n server_number \
-              -c  cpu_count'  [-k]"
+              -c  cpu_count -x additinal_stitch_options'  [-k]"
         esac
     done
     python /opt/src/generate_wrangler_scripts.py \
     -e $experiment_id -l /opt/analysis/$sample_list \
     -p $probe_sets -s $sample_sets -w $cluster_script -n $server_number \
-    -c $cpu_count $keep_files
+    -c $cpu_count -x $stitch_options $keep_files
     script_name=$sample_sets"_"$(echo $probe_sets|tr "," "_")".sh"
     . /opt/analysis/$script_name
 

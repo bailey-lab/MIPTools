@@ -2634,7 +2634,7 @@ def update_aligned_haplotypes(settings):
                 # remove alt contigs
                 for cop_ind in range(len(copy_keys_sorted)):
                     cop = copy_keys_sorted[cop_ind]
-                    if "alt" in call_info[gene_name][m]["copies"][cop[0]][
+                    if "alt" in call_info[gene_name][m]["copies"][cop][
                             "chrom"]:
                         copy_keys_sorted[cop_ind] = "remove"
                 copy_keys_sorted = [cop_key for cop_key in copy_keys_sorted
