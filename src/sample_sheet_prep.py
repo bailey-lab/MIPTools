@@ -6,9 +6,9 @@ import numpy as np
 
 def main(capture_384, sample_plates, sheets_96, output_file,
          wdir="/opt/analysis",
-         quadrants="/opt/base_resources/sample_prep/quadrants.csv",
-         forward_plates="/opt/base_resources/sample_prep/forward_plates.csv",
-         reverse_plates="/opt/base_resources/sample_prep/reverse_plates.csv"):
+         quadrants="/opt/resources/sample_prep/quadrants.csv",
+         forward_plates="/opt/resources/sample_prep/forward_plates.csv",
+         reverse_plates="/opt/resources/sample_prep/reverse_plates.csv"):
     quad = pd.read_csv(quadrants)
     forward_plates = pd.read_csv(forward_plates)
     reverse_plates = pd.read_csv(reverse_plates)
@@ -54,7 +54,8 @@ def main(capture_384, sample_plates, sheets_96, output_file,
                        "quadrant", "FW_plate", "REV_plate", "384 Column"]
 
     if (len(capture_384) > 0) and (len(sheets_96) > 0):
-        com = pd.concat([captures, sheets_96], axis=0, ignore_index=True)
+        com = pd.concat([captures, sheets_96], axis=0, ignore_index=True,
+                        sort=False)
         com = com.loc[:, capture_columns]
     elif len(capture_384) > 0:
         com = captures.loc[:, capture_columns]
@@ -63,6 +64,8 @@ def main(capture_384, sample_plates, sheets_96, output_file,
     else:
         print("At least one sample sheet needs to be provided.")
         return
+
+    com = com.drop_duplicates()
 
     def assign_replicate(replicates):
         replicates = list(replicates)
@@ -95,12 +98,19 @@ def main(capture_384, sample_plates, sheets_96, output_file,
         for group_key in gb.groups:
             g = gb.get_group(group_key)
             if g.shape[0] != (g.groupby(["fw", "rev"]).first().shape[0]):
+                size_file = os.path.join(wdir, group_key + "_repeating.csv")
                 print(("There are repeating forward/reverse primer pairs "
-                       "within probe set {}. Correct sample sheet before "
-                       "proceeding with demultiplexing.").format(group_key))
-            g.to_csv(os.path.join(wdir, group_key, "_", output_file))
+                       "within probe set {}. Inspect {} and correct the "
+                       "sample sheet before proceeding with demultiplexing."
+                       ).format(group_key, size_file))
+                g_size = g.groupby(["fw", "rev"]).size().sort_values(
+                    ascending=False)
+                g_size = g_size.loc[g_size > 1].reset_index()
+                g.merge(g_size).to_csv(size_file, index=False)
+            g.to_csv(os.path.join(wdir, group_key + "_" + output_file),
+                     index=False, sep="\t")
     else:
-        com.to_csv(os.path.join(wdir, output_file))
+        com.to_csv(os.path.join(wdir, output_file), index=False, sep="\t")
 
 
 if __name__ == "__main__":
@@ -121,20 +131,23 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--output-file",
                         help=("Output file name."),
                         required=True)
+    parser.add_argument("-w", "--working-directory",
+                        help=("Path to working directory."),
+                        default="/opt/analysis")
     parser.add_argument("-q", "--quadrants",
                         help=("A file defining quadrants of a 384 plate."),
-                        default=("/opt/base_resources/sample_prep/"
+                        default=("/opt/resources/sample_prep/"
                                  "quadrants.csv"))
     parser.add_argument("-f", "--forward-plates",
                         help=("Forward  primer plate file."),
-                        default=("/opt/base_resources/sample_prep/"
+                        default=("/opt/resources/sample_prep/"
                                  "forward_plates.csv"))
     parser.add_argument("-r", "--reverse-plates",
                         help=("Reverse primer plate file."),
-                        default=("/opt/base_resources/sample_prep/"
+                        default=("/opt/resources/sample_prep/"
                                  "reverse_plates.csv"))
     args = vars(parser.parse_args())
 
-    main(args["capture_plates"], args["sample_plates"], args["sheets_96"],
-         args["output_file"], args["quadrants"], args["forward_plates"],
-         args["reverse_plates"])
+    main(args["capture_plates"], args["sample_plates"], args["sample_sheets"],
+         args["output_file"], args["working_directory"], args["quadrants"],
+         args["forward_plates"], args["reverse_plates"])
