@@ -521,9 +521,7 @@ class Locus:
                 copy_must = must[c] = {}
             try:
                 sz_diff = int(must_dic[m]["size_difference"])
-            except KeyError:
-                sz_diff = 0
-            except ValueError:
+            except (KeyError, ValueError):
                 sz_diff = 0
             d = {"name": m,
                  "copy_begin": int(must_dic[m]["begin"]),
@@ -784,50 +782,58 @@ class Locus:
     def get_exons(self):
         copies = self.segment_dic["S0"]
         for c in copies:
-            copy_key = copies[c]["chrom"] + ":" + str(copies[c]["begin"]) +                         "-" + str(copies[c]["end"])
+            copy_key = (copies[c]["chrom"] + ":" + str(copies[c]["begin"])
+                        + "-" + str(copies[c]["end"]))
             copies[c]["genes"] = mip.get_region_exons(copy_key, self.species)
         return
 
     def get_projected_exons(self):
-        """create a dictionary of segment exons projected on reference copy
-        keys: copy_names: [list of exons of this copy projected on reference copy coordinates],
-        "merged": [list of all exons in segment projected on ref copy, overlapping exons merged]}
+        """ Create a dictionary of segment exons projected on reference copy
+        keys: copy_names: [list of exons of this copy projected on reference
+        copy coordinates], "merged": [list of all exons in segment projected on
+        ref copy, overlapping exons merged]}
         """
         copies = self.segment_dic["S0"]
         try:
             reference_exons = copies["C0"]["genes"]["exons"]
         except KeyError:
             reference_exons = []
-            #return {"merged": []}
         reference_ori = copies["C0"]["orientation"]
         projected_exons = {}
-        projected_exons["C0"] = [e for e in reference_exons if                     copies["C0"]["begin"] <= e[0] <= e[1] <= copies["C0"]["end"]]
+        projected_exons["C0"] = [e for e in reference_exons if copies["C0"][
+            "begin"] <= e[0] <= e[1] <= copies["C0"]["end"]]
         con = self.pcoordinates
         for c in copies:
-            if c!= "C0":
+            if c != "C0":
                 try:
                     copy_exons = copies[c]["genes"]["exons"]
-                    copy_exons = [e for e in copy_exons if                     copies[c]["begin"] <= e[0] <= e[1] <= copies[c]["end"]]
+                    copy_exons = [e for e in copy_exons if copies[c]["begin"]
+                                  <= e[0] <= e[1] <= copies[c]["end"]]
                 except KeyError:
                     continue
                 copy_ori = copies[c]["orientation"]
-                projected_copy_exons = pce = []
+                # create a list of projected exons for the given copy
+                pce = []
                 if reference_ori == copy_ori:
                     for ce in copy_exons:
                         # add copy exon if it was aligned with ref
                         # otherwise we'll get a key error from
                         # trying to convert the exon coordinate to ref
                         try:
-                            projected_exon_start = pes = con[c][ce[0]]
-                            projected_exon_end = pee = con[c][ce[1]]
+                            # projected_exon_start
+                            pes = con[c][ce[0]]
+                            # projected_exon_end
+                            pee = con[c][ce[1]]
                             pce.append([pes, pee])
                         except KeyError:
                             continue
                 else:
                     for ce in reversed(copy_exons):
                         try:
-                            projected_exon_start = pes = con[c][ce[1]]
-                            projected_exon_end = pee = con[c][ce[0]]
+                            # projected_exon_start
+                            pes = con[c][ce[1]]
+                            # projected_exon_end
+                            pee = con[c][ce[0]]
                             pce.append([pes, pee])
                         except KeyError:
                             continue
@@ -835,16 +841,20 @@ class Locus:
         all_exons = []
         for p in projected_exons:
             all_exons.extend(projected_exons[p])
-        projected_exons["merged"] = sorted(mip.merge_overlap(all_exons), key=itemgetter(0) )
+        projected_exons["merged"] = sorted(mip.merge_overlap(all_exons),
+                                           key=itemgetter(0))
         return projected_exons
 
-    def make_subregions (self):
-        """ Take a region with its genomic coordinates, a dictionary of possible targets in the region
-        which is the output of targets function. Return subregions depending on the capture type that
-        is planned. Capture type can be exons, in which case the sequence is split into
-        exons unless the intron between two exons are too small, then those exons will be merged.
-        Second option for capture type is targets only, which extra_snpsdeliminates sequence regions devoid of
-        targets. A third option is to capture the whole region without any selection."""
+    def make_subregions(self):
+        """ Create subregions of the target region based on the capture
+        purpose. Subregions are the main operational unit in the design
+        pipeline, i.e. MIPs are designed for each subregion, MIPs of each
+        subregion are "aware" of each other in terms of compatibility etc.
+        For example, if capture purpose is to sequence exons only
+        and this is specified in the capture type as "exons", then generate
+        a subregion for each exon provided that exons are separated by enough
+        distance; otherwise two exons may be included in a single subregion.
+        """
         capture_info = self.rinfo["CAPTURE"]["S0"]
         capture_type = capture_info["capture_type"]
         flank = int(capture_info["flank"])
@@ -871,12 +881,14 @@ class Locus:
                 for c in must:
                     for m in must[c]:
                         if (e[0] <= must[c][m]["begin"]
-                           <= must[c][m]["end"] <= e[1]):
+                                <= must[c][m]["end"] <= e[1]):
                             uncaptured[c].pop(m)
             for c in list(uncaptured.keys()):
                 if len(uncaptured[c]) == 0:
                     uncaptured.pop(c)
-            # print any uncaptured snp
+            # if there are targets falling outside of exons, these will be
+            # identified and the exons will be extended, or new intervals
+            # for those will be added to include all targets.
             uncaptured_coordinates = []
             for c in uncaptured:
                 for u in uncaptured[c]:
