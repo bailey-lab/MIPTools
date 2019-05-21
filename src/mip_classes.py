@@ -2468,7 +2468,8 @@ class Subregion(Locus):
             max_overlap_opposite = int(self.locus.rinfo["SELECTION"][
                 "compatibility"]["max_opposite_strand_overlap"])
         except KeyError:
-            max_overlap_same = max_overlap_opposite = 0
+            max_overlap_same = overlap_same
+            max_overlap_opposite = overlap_opposite
         intervals = self.intervals
         subregion_size = intervals[1] - intervals[0] + 1
         best_set_chained = False
@@ -2511,7 +2512,8 @@ class Subregion(Locus):
                         merged_caps.extend(uniq)
                         must_captured.extend(mip_obj.captures)
                         targets_captured.extend(mip_obj.captured_targets)
-                        if mip_obj.tech_score > 0 and mip_obj.func_score > 0:
+                        if ((mip_obj.tech_score > 0)
+                                and (mip_obj.func_score > 0)):
                             mip_scores.append(
                                 float(mip_obj.tech_score * mip_obj.func_score)
                                 / 1000
@@ -2718,7 +2720,8 @@ class Subregion(Locus):
                         mip_obj)
                 self.mips["best_mipset"]["dictionary"]["caps"] = best_caps
                 self.mips["best_mipset"]["dictionary"]["score"] = best_score
-                # if there are no compatible mipsets, then find the best mip
+            # if a single MIP should be selected instead of a set of MIPs
+            # select the best scoring MIP
             elif (self.single
                   and (len(list(mip_dic["pair_information"].keys())) > 0)):
                 for mip_key in list(mip_dic["pair_information"].keys()):
@@ -3058,4 +3061,3 @@ class Mip():
         self.func_score = func_score
         self.capture_gc = mean_gc_value
         return
-    
