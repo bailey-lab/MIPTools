@@ -1,12 +1,7 @@
-import sys
 import mip_functions as mip
-import mip_classes as mod
 import pickle
 import json
-import copy
 import os
-import subprocess
-import pandas as pd
 import argparse
 
 # Read input arguments
@@ -311,7 +306,8 @@ design_info = {"resource_dir": res_dir,
                "included_targets": included_targets,
                "alignments": alignments,
                "overlaps": overlaps,
-               "region_capture_types": region_capture_types}
+               "region_capture_types": region_capture_types,
+               "parallel_processes": parallel_processes}
 with open(output_file + ".pkld", "wb") as outfile:
     pickle.dump(design_info, outfile)
 

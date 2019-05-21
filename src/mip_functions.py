@@ -4341,9 +4341,14 @@ def design_mips_multi(design_dir, g_list, num_processor):
 def parasight(resource_dir,
               design_info_file,
               designed_gene_list=None,
-              extra_extension=".extra"):
-    with open(design_info_file, "rb") as infile:
-        design_info = pickle.load(infile)
+              extra_extension=".extra",
+              use_json=False):
+    if not use_json:
+        with open(design_info_file, "rb") as infile:
+            design_info = pickle.load(infile)
+    else:
+        with open(design_info_file) as infile:
+            design_info = json.load(infile)
     output_list = ["#!/usr/bin/env bash"]
     pdf_dir = os.path.join(resource_dir, "pdfs")
     backup_list = ["#!/usr/bin/env bash"]
@@ -4407,7 +4412,7 @@ def parasight(resource_dir,
     visualization_list.append("./copy_commands")
     visualization_list.append("chmod +x convert_commands")
     visualization_list.append("./convert_commands")
-    with open(resource_dir + "visualize", "w") as outfile:
+    with open(resource_dir + "visualize.sh", "w") as outfile:
         outfile.write("\n".join(visualization_list))
     return
 
@@ -4544,7 +4549,7 @@ def parasight_mod(resource_dir,  design_info_file, species,
     visualization_list.append("./copy_commands")
     visualization_list.append("chmod +x convert_commands")
     visualization_list.append("./convert_commands")
-    with open(resource_dir + "visualize_mod", "w") as outfile:
+    with open(resource_dir + "visualize_mod.sh", "w") as outfile:
         outfile.write("\n".join(visualization_list))
     return
 
@@ -4635,7 +4640,7 @@ def parasight_shift(resource_dir, design_info_file, species,
     visualization_list.append("./copy_commands")
     visualization_list.append("chmod +x convert_commands")
     visualization_list.append("./convert_commands")
-    with open(resource_dir + "visualize_mod", "w") as outfile:
+    with open(resource_dir + "visualize_mod.sh", "w") as outfile:
         outfile.write("\n".join(visualization_list))
     return
 
