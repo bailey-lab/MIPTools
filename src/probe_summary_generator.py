@@ -29,6 +29,12 @@ def get_probe_info(probe_set_keys=None, output_file=None,
                 minfo = mip_info[g]["mips"][m]["mip_info"]
                 for c in minfo:
                     copy_dict = minfo[c]
+                    try:
+                        # lists and dicts cause problems in dataframe
+                        # generation, so remove potential lists etc.
+                        copy_dict.pop("alternative_arms")
+                    except KeyError:
+                        pass
                     copy_dict["Gene"] = g
                     copy_dict["MIP"] = m
                     copy_dict["Copy"] = c

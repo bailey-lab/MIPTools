@@ -77,7 +77,6 @@ class NoDaemonProcessPool(multiprocessing.pool.Pool):
         super(NoDaemonProcessPool, self).__init__(*args, **kwargs)
 
 
-
 ###############################################################
 # Region prep related functions
 ###############################################################
@@ -97,7 +96,7 @@ def coordinate_to_target(coordinates, snp_locations, capture_size):
         chrom = rsl[r]["chrom"]
         try:
             snp_chroms[chrom].append([rsl[r]["begin"],
-                                  rsl[r]["end"]])
+                                      rsl[r]["end"]])
         except KeyError:
             snp_chroms[chrom] = [[rsl[r]["begin"],
                                   rsl[r]["end"]]]
@@ -112,7 +111,9 @@ def coordinate_to_target(coordinates, snp_locations, capture_size):
         for r in regions:
             snps_in_region = []
             for s in reference_snp_locations:
-                if (reference_snp_locations[s]["chrom"] == c) and                     (r[0] <= reference_snp_locations[s]["begin"] <=                     reference_snp_locations[s]["end"] <= r[1]):
+                if ((reference_snp_locations[s]["chrom"] == c)
+                    and (r[0] <= reference_snp_locations[s]["begin"]
+                         <= reference_snp_locations[s]["end"] <= r[1])):
                     snps_in_region.append(s)
             r.append(snps_in_region)
         for reg in regions:
@@ -124,7 +125,6 @@ def coordinate_to_target(coordinates, snp_locations, capture_size):
                 s_locations = []
                 locations = snp_locations[s]
                 ref_location = reference_snp_locations[s]
-                ref_chrom = ref_location["chrom"]
                 ref_begin = ref_location["begin"]
                 ref_end = ref_location["end"]
                 left_flank_buffer = ref_begin - reg_begin + capture_size
@@ -140,7 +140,6 @@ def coordinate_to_target(coordinates, snp_locations, capture_size):
             reg.append(reg_locations)
     # create target coordinate for each region
     target_coordinates = {}
-    target_names = {}
     for c in merged_snp_chroms:
         regions = merged_snp_chroms[c]
         for reg in regions:
@@ -157,14 +156,14 @@ def coordinate_to_target(coordinates, snp_locations, capture_size):
 
 def rsid_to_target(resource_dir, snp_file):
     """ Create MIP targets starting from a snp file that is produced offline,
-    usually from Annovar. This is a tab separated file with the following content:
-    chr1	2595307	2595307	A	G	rs3748816.
+    usually from Annovar. This is a tab separated file with the following
+    content: chr1	2595307	2595307	A	G	rs3748816.
     This can be generalized to any target with coordinates.
     """
     # one snp can have multiple locations on the reference genome,
     # this can happen with snps in regions where there are multiple different
-    # assemblies (HLA locus, for example). So first step is to get each of these
-    # locations in the genome.
+    # assemblies (HLA locus, for example). So first step is to get each of
+    # these locations in the genome.
     snp_locations = {}
     capture_types = {}
     with io.open(resource_dir + snp_file, encoding="utf-8") as infile:
@@ -181,21 +180,25 @@ def rsid_to_target(resource_dir, snp_file):
                 # check if this location is already in the dict
                 # append the new alternative base to the dict
                 for snp in snp_locations[rsid]:
-                    if (snp["begin"] == temp_dic["begin"]) and                         (snp["end"] == temp_dic["end"]) and                         (snp["chrom"] == temp_dic["chrom"]) and                         (snp["ref_base"] == temp_dic["ref_base"]):
+                    if ((snp["begin"] == temp_dic["begin"])
+                        and (snp["end"] == temp_dic["end"])
+                        and (snp["chrom"] == temp_dic["chrom"])
+                            and (snp["ref_base"] == temp_dic["ref_base"])):
                         snp["alt_bases"].append(temp_dic["alt_bases"][0])
                         break
                 else:
-                    # add the snp dict if the location is different than what is present
-                    # in the location dict.
+                    # add the snp dict if the location is different than what
+                    # is present in the location dict.
                     snp_locations[rsid].append(temp_dic)
             except KeyError:
-                # add the new rsid to location dict if it is not already present
+                # add the new rsid to location dict if it is not already there
                 snp_locations[rsid] = [temp_dic]
                 capture_types[rsid] = newline[6]
     # one reference location for each snp is required
     # alternative assambly chromosomes have an underscore in their names,
     # so that will be utilized to get the location in the orignal assembly,
-    # i.e. the chromosome that does not have the underscore (chr7 and not chr7_alt08)
+    # i.e. the chromosome that does not have the underscore
+    # (chr7 and not chr7_alt08)
     reference_snp_locations = {}
     problem_snps = []
     for s in snp_locations:
@@ -207,7 +210,8 @@ def rsid_to_target(resource_dir, snp_file):
                     reference_snp_locations[s] = snp_locations[s][i]
                     break
             else:
-                print("Short chromosome name not found! Please check the output list.")
+                print(("Short chromosome name not found! "
+                       "Please check the output list."))
                 problem_snps.append(s)
         reference_snp_locations[s]["capture_type"] = capture_types[s]
     return reference_snp_locations, snp_locations
@@ -220,7 +224,7 @@ def gene_to_target(gene_list, species):
                                get_file_locations()[species]["refgene"],
                                alternative_chr=1))
         try:
-            target_coordinates[gene] = {"chrom":e["chrom"],
+            target_coordinates[gene] = {"chrom": e["chrom"],
                                         "begin": e["begin"],
                                         "end": e["end"]}
         except KeyError:
@@ -245,7 +249,7 @@ def gene_to_target_exons(gene_list, species, exon_list):
             for j in range(len(exons)):
                 e = exons[j]
                 tar_name = "-".join([gene, "exon", str(j)])
-                target_coordinates[tar_name] = {"chrom":gene_exons["chrom"],
+                target_coordinates[tar_name] = {"chrom": gene_exons["chrom"],
                                                 "begin": e[0],
                                                 "end": e[1]}
         else:
@@ -253,9 +257,10 @@ def gene_to_target_exons(gene_list, species, exon_list):
                 try:
                     e = exons[j]
                     tar_name = "-".join(gene, "exon", str(j))
-                    target_coordinates[tar_name] = {"chrom":gene_exons["chrom"],
-                                                    "begin": e[0],
-                                                    "end": e[1]}
+                    target_coordinates[tar_name] = {
+                        "chrom": gene_exons["chrom"],
+                        "begin": e[0],
+                        "end": e[1]}
                 except IndexError:
                     print(("Exon ", j, " does not exist for gene ", gene))
     return target_coordinates
@@ -283,175 +288,6 @@ def parse_alignment(reg_file):
                                            "end": int(newline[5]),
                                            "ori": (newline[6] == "F")}
     return reg_dic
-
-
-def ntthal(s1, s2, Na=25, Mg=10, conc=0.4, print_command=False,
-           td_path="/opt/resources/primer3_settings/primer3_config/"):
-    """ Return the melting temperature of two oligos at given conditions,
-    using ntthal from primer3 software.
-
-    Parameters
-    -----------
-    s1 : str, sequence of first oligo.
-    s2 : str, sequence of second oligo
-    Na : int, Sodium (or other monovalent cation) concentration in mM
-    Mg : int, Magnesium (or other divalent cation) concentration in mM
-    conc : float, concentration of the more concentrated oligo in nM
-    td_path : str, path to thermodynamic alignment parameters.
-    """
-    cmnd = ["ntthal", "-path", td_path, "-mv", str(Na), "-dv", str(Mg),
-            "-d", str(conc), "-s1", s1, "-s2", s2, "-r"]
-    if print_command:
-        return(" ".join(cmnd))
-    else:
-        ntt_res = subprocess.check_output(cmnd)
-        return float(ntt_res.decode("UTF-8").strip())
-
-
-def oligoTM(s, Na=25, Mg=10, conc=0.4,
-            thermodynamic_parameters=1, salt_correction=2):
-    """ Return the melting temperature an oligo at given conditions,
-    using oligotm from primer3 software.
-
-    Parameters
-    -----------
-    s : str, sequence of the oligo.
-    Na : int, Sodium (or other monovalent cation) concentration in mM
-    Mg : int, Magnesium (or other divalent cation) concentration in mM
-    conc : float, concentration of the more concentrated oligo in nM
-    tp : [0|1], Specifies the table of thermodynamic parameters and
-                the method of melting temperature calculation:
-                 0  Breslauer et al., 1986 and Rychlik et al., 1990
-                    (used by primer3 up to and including release 1.1.0).
-                    This is the default, but _not_ the recommended value.
-                 1  Use nearest neighbor parameters from SantaLucia 1998
-                    *THIS IS THE RECOMMENDED VALUE*
-    sc : [0..2], Specifies salt correction formula for the melting
-                 temperature calculation
-                  0  Schildkraut and Lifson 1965, used by primer3 up to
-                     and including release 1.1.0.
-                     This is the default but _not_ the recommended value.
-                  1  SantaLucia 1998
-                     *THIS IS THE RECOMMENDED VAULE*
-                  2  Owczarzy et al., 2004
-
-    """
-    ntt_res = subprocess.check_output(
-        ["oligotm", "-mv", str(Na), "-dv", str(Mg),
-         "-d", str(conc), "-tp", str(thermodynamic_parameters),
-         "-sc", str(salt_correction), s])
-    return float(ntt_res.decode("UTF-8").strip())
-
-
-def tm_calculator(sequence, conc, Na, Mg, dNTP_conc=0):
-    from math import log
-    from math import sqrt
-    monovalent_conc = Na/1000
-    divalent_conc = Mg/1000
-    oligo_conc = conc * pow(10, -9)
-    parameters = {}
-    parameters['AA'] = (-7900, -22.2, -1.0)
-    parameters['AT'] = (-7200, -20.4, -0.88)
-    parameters['AC'] = (-8400, -22.4, -1.44)
-    parameters['AG'] = (-7800, -21.0, -1.28)
-
-    parameters['TA'] = (-7200, -21.3, -0.58)
-    parameters['TT'] = (-7900, -22.2, -1.0)
-    parameters['TC'] = (-8200, -22.2, -1.3)
-    parameters['TG'] = (-8500, -22.7, -1.45)
-
-    parameters['CA'] = (-8500, -22.7, -1.45)
-    parameters['CT'] = (-7800, -21.0, -1.28)
-    parameters['CC'] = (-8000, -19.9, -1.84)
-    parameters['CG'] = (-10600, -27.2, -2.17)
-
-    parameters['GA'] = (-8200, -22.2, -1.3)
-    parameters['GT'] = (-8400, -22.4, -1.44)
-    parameters['GC'] = (-9800, -24.4, -2.24)
-    parameters['GG'] = (-8000, -19.9, -1.84)
-    params = parameters
-    # Normalize divalent_conc (Mg) for dNTP_conc
-    K_a = 30000
-    D = ((K_a * dNTP_conc - K_a * divalent_conc + 1) ** 2
-         + 4 * K_a * divalent_conc)
-    divalent_conc = (- (K_a * dNTP_conc - K_a * divalent_conc + 1)
-                     + sqrt(D)) / (2 * K_a)
-
-    # Define a, d, g coefficients used in salt adjustment
-    a_con = 3.92 * (
-        0.843 - 0.352 * sqrt(monovalent_conc) * log(monovalent_conc)
-    )
-    d_con = 1.42 * (
-        1.279 - 4.03 * pow(10, -3) * log(monovalent_conc)
-        - 8.03 * pow(10, -3) * ((log(monovalent_conc))**2)
-    )
-    g_con = 8.31 * (
-        0.486 - 0.258 * log(monovalent_conc)
-        + 5.25 * pow(10, -3) * ((log(monovalent_conc))**3)
-    )
-    dHsum = 0
-    dSsum = 0
-    sequence = sequence.upper()
-    # define duplex initiation values for T and G terminal nucleotides
-    if sequence[-1] == 'G' or sequence[-1] == 'C':
-        dHiTer = 100
-        dSiTer = -2.8
-    elif sequence[-1] == 'A' or sequence[-1] == 'T':
-        dHiTer = 2300
-        dSiTer = 4.1
-    if sequence[0] == 'G' or sequence[0] == 'C':
-        dHiIn = 100
-        dSiIn = -2.8
-    elif sequence[0] == 'A' or sequence[0] == 'T':
-        dHiIn = 2300
-        dSiIn = 4.1
-    dHi = dHiTer + dHiIn
-    dSi = dSiTer + dSiIn
-
-    R = 1.987  # ideal gas constant
-    for i in range(len(sequence)-1):
-        dinuc = sequence[i:(i+2)]
-        dinuc_params = params[dinuc]
-        dH = dinuc_params[0]
-        dS = dinuc_params[1]
-        dHsum += dH
-        dSsum += dS
-    # Tm w/o salt adjustment
-    Tm = (dHsum + dHi)/float(dSsum + dSi + (R*log(oligo_conc)))
-
-    # Salt adjustment
-    GC_frac = calculate_gc(sequence)/100
-    seq_length = len(sequence)
-    if sqrt(divalent_conc)/monovalent_conc < 0.22:
-        Tm = (Tm /
-              (pow(10, -5) * Tm * ((4.29 * GC_frac - 3.95)
-                                   * log(monovalent_conc)
-                                   + 0.94 * (log(monovalent_conc)**2))
-               + 1)
-              )
-
-    elif sqrt(divalent_conc)/monovalent_conc <= 6:
-        Tm = (Tm /
-              (Tm * (a_con
-                     - 0.911 * log(divalent_conc)
-                     + GC_frac * (6.26 + d_con * log(divalent_conc))
-                     + (1 / float(2 * (seq_length - 1))) *
-                     (-48.2 + 52.5 * log(divalent_conc) + g_con *
-                      (log(divalent_conc)) ** 2))
-               * pow(10, -5) + 1))
-    elif sqrt(divalent_conc)/monovalent_conc > 6:
-        a_con = 3.92
-        d_con = 1.42
-        g_con = 8.31
-        Tm = (Tm /
-              (Tm * (a_con
-                     - 0.911 * log(divalent_conc)
-                     + GC_frac * (6.26 + d_con * log(divalent_conc))
-                     + (1 / (2 * float(seq_length - 1))) *
-                     (-48.2 + 52.5 * log(divalent_conc) + g_con *
-                      (log(divalent_conc)) ** 2))
-               * pow(10, -5) + 1))
-    return Tm - 273.15
 
 
 def get_target_coordinates(res_dir, species, capture_size,
@@ -3831,13 +3667,13 @@ def check_hairpin(pairs, output_file, settings, output_dir, outp=1):
     # tm since the backbones will be more in concentration, so it could
     # make sense to keep this threshold high. On the other hand, eliminating
     # even low likelyhood interactions could be useful.
-    backbone_tm = float(settings["ligation"]["hairpin_tm"])
+    backbone_tm = float(settings["mip"]["hairpin_tm"])
     backbone_name = settings["mip"]["backbone"]
     backbone = mip_backbones[backbone_name]
     # go through mips and calculate hairpins
     # we will calculate hairpins by looking at TMs between arm sequences
     # and backbone sequences since the whole MIP sequence is too long
-    # for nearest neighbor calculations (at least or primer3 implementation).
+    # for nearest neighbor calculations (at least for primer3 implementation).
     for p in pairs["pair_information"].keys():
         pair_dict = pairs["pair_information"][p]
         mip_dict = pair_dict["mip_information"]
@@ -3898,52 +3734,10 @@ def check_hairpin(pairs, output_file, settings, output_dir, outp=1):
     return pairs
 
 
-def make_chunks(l, n):
-    """ Yield successive n-sized chunks from list l.
+def filter_mips(mip_dic, bin_size, mip_limit):
     """
-    for i in range(0, len(l), n):
-        yield l[i:i+n]
-
-
-def split_file(input_file,
-               primer3_output_DIR,
-               mfold_input_DIR,
-               mfold_output_DIR,
-               hairpin_tm,
-               line_limit = 600):
-    # open the mip fasta file
-    # divide the file into smaller, 300 mip sized files
-    map_input = []
-    with open(mfold_input_DIR + input_file, 'r') as infile:
-        counter = 0
-        linenum = 0
-        outlist = []
-        for line in infile:
-            linenum += 1
-            outlist.append(line.strip())
-            if linenum == line_limit:
-                with open(mfold_input_DIR + input_file +
-                                       str(counter),  'w') as outfile:
-                    outfile.write("\n".join(outlist))
-                temp = [input_file + str(counter), input_file, hairpin_tm,
-                                 primer3_output_DIR, mfold_input_DIR, mfold_output_DIR]
-                map_input.append(temp)
-                counter += 1
-                linenum = 0
-                outlist = []
-        if linenum != 0:
-            with open(mfold_input_DIR + input_file +                       str(counter),  'w') as outfile:
-                    outfile.write("\n".join(outlist))
-            temp = [input_file + str(counter), input_file, hairpin_tm,             primer3_output_DIR, mfold_input_DIR, mfold_output_DIR]
-            map_input.append(temp)
-    return map_input
-
-
-def filter_mips (mip_dic, bin_size, mip_limit):
-    """
-    Filter mips in "mip_dic" so that only top scoring mip
-    ending within the "bin_size" nucleotides on the same
-    strand remain.
+    Filter mips in "mip_dic" so that only top scoring mip ending within the
+    "bin_size" nucleotides on the same strand remain.
     """
     # load extension and ligation primers from file
     shuffled = list(mip_dic.keys())
@@ -3952,14 +3746,11 @@ def filter_mips (mip_dic, bin_size, mip_limit):
         if len(mip_dic) <= mip_limit:
             return
         try:
-            found = 0
             m_start = mip_dic[m].mip["C0"]["capture_start"]
             m_end = mip_dic[m].mip["C0"]["capture_end"]
             m_func = mip_dic[m].func_score
             m_tech = mip_dic[m].tech_score
             m_ori = mip_dic[m].mip["C0"]["orientation"]
-            #shuffled_keys = list(mip_dic.keys())
-            #random.shuffle(shuffled_keys)
             for n in shuffled:
                 if len(mip_dic) <= mip_limit:
                     return
@@ -3970,7 +3761,9 @@ def filter_mips (mip_dic, bin_size, mip_limit):
                         n_func = mip_dic[n].func_score
                         n_tech = mip_dic[n].tech_score
                         n_ori = mip_dic[n].mip["C0"]["orientation"]
-                        if ((abs(n_start - m_start) <= bin_size) or                             (abs(n_end - m_end) <= bin_size)) and                             (m_ori == n_ori):
+                        if (((abs(n_start - m_start) <= bin_size)
+                             or (abs(n_end - m_end) <= bin_size))
+                                and (m_ori == n_ori)):
                             if (m_tech + m_func) >= (n_tech + n_func):
                                 mip_dic.pop(n)
                             else:
@@ -4033,218 +3826,6 @@ def remove_mips (mip_dic):
     return
 
 
-def score_mips (mip_file, primer3_output_DIR, output_file):
-    """ Score mips in a dictionary according to a scoring matrix
-    Scoring matrices are somewhat crude at this time.
-    Arm GC content weighs the most, then arms GC clamp and arm length
-    Next_base values are last."""
-    # open mip dictionary from file
-    with open (primer3_output_DIR + mip_file, 'r') as infile:
-        dic = json.load(infile)
-    # add "NEXT_BASES" tag:value pair to dictionary.
-    # next_bases are 2 bases immediately downstream of extension primer and ligation primer
-    # extract template sequence
-    seq_template = dic["sequence_information"]["SEQUENCE_TEMPLATE"]
-    # find the coordinates of next bases
-    for mip in dic["pair_information"]:
-        # get coordinates of primers in the form of "start_base, len"
-        extension_coord = dic["pair_information"][mip]["extension_primer_information"]["COORDINATES"]
-        ligation_coord = dic["pair_information"][mip]["ligation_primer_information"]["COORDINATES"]
-        # orientation of the mip is used to determine if extension arm or ligation arm is originating
-        # from PRIMER_LEFT or PRIMER_RIGTH. When an arm originates from LEFT_PRIMER, it is on the plus
-        # strand of DNA and its length is added to the start coordinate to get the end coordinate,
-        # while it is subtracted for RIGHT_PRIMERs
-        strand = dic["pair_information"][mip]["orientation"]
-        if strand == "forward": # then the extension arm is the LEFT primer and ligation arm is RIGHT
-            extension_end = int(extension_coord.split(",")[0]) + int(extension_coord.split(",")[1]) - 1
-            # 1 is added or subtracted due to sequence index being zero based.
-            ligation_end = int(ligation_coord.split(",")[0]) - int(ligation_coord.split(",")[1]) + 1
-            ext_next = seq_template [(extension_end+1):(extension_end+3)]
-            lig_next = reverse_complement(seq_template [(ligation_end - 2):ligation_end])
-        elif strand == "reverse": # then the extension arm is the RIGHT primer and ligation is LEFT
-            extension_end = int(extension_coord.split(",")[0]) - int(extension_coord.split(",")[1]) + 1
-            ligation_end = int(ligation_coord.split(",")[0]) + int(ligation_coord.split(",")[1]) - 1
-            ext_next = reverse_complement(seq_template [(extension_end - 2):extension_end])
-            lig_next = seq_template [(ligation_end+1):(ligation_end+3)]
-        # add "NEXT_BASES" key and its value to mip dictionary
-        dic["pair_information"][mip]["extension_primer_information"]["NEXT_BASES"] = ext_next
-        dic["pair_information"][mip]["ligation_primer_information"]["NEXT_BASES"] = lig_next
-    # arm gc content score matrix
-    # define best to worst values for gc content. Best is very important so it has a huge effect on score.
-    best = 1000
-    mid = 100
-    low = 10
-    worst = 0
-    # define matrix
-    arm_gc_con = {}
-    for i in range(100):
-        if i < 35:
-            arm_gc_con[i] = worst
-        elif i < 40:
-            arm_gc_con[i] = low
-        elif i < 45:
-            arm_gc_con[i] = mid
-        elif i < 60:
-                arm_gc_con[i] = best
-        elif i < 65:
-                arm_gc_con[i] = mid
-        elif i < 70:
-            arm_gc_con[i] = low
-        else :
-            arm_gc_con[i] = worst
-    # capture gc content score matrix
-    # define best to worst values for gc content. Best is very important so it has a huge effect on score.
-    best = 10000
-    mid = 3000
-    low = 100
-    worse = 0
-    worst = -5000
-    # define matrix
-    cap_gc_con = {}
-    for i in range(100):
-        if i< 20:
-            cap_gc_con[i] = worst
-        elif i < 35:
-            cap_gc_con[i] = worse
-        elif i < 40:
-            cap_gc_con[i] = low
-        elif i < 45:
-            cap_gc_con[i] = mid
-        elif i < 55:
-                cap_gc_con[i] = best
-        elif i < 60:
-                cap_gc_con[i] = mid
-        elif i < 65:
-            cap_gc_con[i] = low
-        elif i < 80:
-            cap_gc_con[i] = worse
-        else :
-            cap_gc_con[i] = worst
-    # next base score matrix
-    # define best to worst values for next bases. This parameter should be important only when comparing
-    # mips with equally good gc contents. Therefore the values are low and does not give a mip a big +.
-    best = 10
-    mid = 5
-    low = 2
-    worst = 0
-    # define matrix
-    next_bases = ({"GG":best, "CC":best, "GC":best, "CG":best,
-                  "GA":mid, "CA":mid, "GT":mid, "CT":mid,
-                  "AG":low, "TG":low, "AC":low, "TC":low,
-                  "AA":worst, "AT":worst, "TA":worst, "TT":worst})
-    # gc clamp matrix: a mid score for g or c clamp and best for extension gg or cc
-    best = 200
-    mid = 100
-    worst = 0
-    ext_gc_clamp = ({"GG":best, "CC":best, "GC":best, "CG":best,
-                  "GA":worst, "CA":worst, "GT":worst, "CT":worst,
-                  "AG":mid, "TG":mid, "AC":mid, "TC":mid,
-                  "AA":worst, "AT":worst, "TA":worst, "TT":worst})
-    lig_gc_clamp = {"G": mid, "C": mid, "A": worst, "T": worst}
-
-    # extension arm lengths score matrix
-    # this is added for plasmodium since length is more relaxed to get best possible mips with higher TMs
-    # which sometimes leads to very long arms.
-    best = 50
-    mid = 25
-    low = 5
-    worst = 0
-    extension_len_matrix = {}
-    for i in range(18,36):
-        if (i == 18) or (25 <= i <= 28):
-            extension_len_matrix [i] = mid
-        elif (19 <= i <= 24):
-            extension_len_matrix [i] = best
-        elif (30 > i > 28):
-            extension_len_matrix [i] = low
-        elif (i > 29):
-            extension_len_matrix [i] = worst
-    # ligation arm lengths score matrix
-    best = 50
-    mid = 25
-    low = 10
-    worst = 0
-    ligation_len_matrix = {}
-    for i in range(18,36):
-        if (i == 18) or (i == 19):
-            ligation_len_matrix [i] = mid
-        elif (20 <= i <= 26):
-            ligation_len_matrix [i] = best
-        elif (27 <= i <= 30):
-            ligation_len_matrix [i] = low
-        elif (i > 30):
-            ligation_len_matrix [i] = worst
-    # score all mips using above matrices
-    for mip in list(dic["pair_information"].keys()):
-        # get arm sequences
-        ligation_seq = dic["pair_information"][mip]["ligation_primer_information"]["SEQUENCE"]
-        extension_seq = dic["pair_information"][mip]["extension_primer_information"]["SEQUENCE"]
-        # count lower case masked nucleotides
-        ligation_mask_penalty = sum(-1000 for n in ligation_seq if n.islower())
-        ligation_mask_penalty += sum(-5000 for n in ligation_seq[-5:] if n.islower())
-        extension_mask_penalty = sum(-1000 for n in extension_seq if n.islower())
-        extension_mask_penalty += sum(-5000 for n in extension_seq[-5:] if n.islower())
-        # arm lengths
-        ligation_len = len(ligation_seq)
-        extension_len = len(extension_seq)
-        # find capture gc content
-        ligation_start = int(dic["pair_information"][mip]["ligation_primer_information"]["GENOMIC_START"])
-        ligation_end = int(dic["pair_information"][mip]["ligation_primer_information"]["GENOMIC_END"])
-        extension_start = int(dic["pair_information"][mip]["extension_primer_information"]["GENOMIC_START"])
-        extension_end = int(dic["pair_information"][mip]["extension_primer_information"]["GENOMIC_END"])
-        chrom = dic["pair_information"][mip]["extension_primer_information"]["CHR"]
-        mip_coord = sorted([ligation_start, ligation_end, extension_end, extension_start])
-        capture_key = chrom + ":" + str(mip_coord[1]) + "-" + str(mip_coord[2])
-        capture_seq = fasta_to_sequence(get_fasta(capture_key, species="hs"))
-        capture_gc = calculate_gc(capture_seq)
-        # gc clamp
-        gc_clamp = ext_gc_clamp[extension_seq[-2:].upper()] + lig_gc_clamp[ligation_seq[-1]]
-        # get gc percentages and convert to int.
-        extension_gc = int(float(dic["pair_information"][mip]["extension_primer_information"]["GC_PERCENT"]))
-        ligation_gc = int(float(dic["pair_information"][mip]["ligation_primer_information"]["GC_PERCENT"]))
-        # get next base values
-        extension_next = dic["pair_information"][mip]["extension_primer_information"]["NEXT_BASES"]
-        ligation_next = dic["pair_information"][mip]["ligation_primer_information"]["NEXT_BASES"]
-        # desired/undesired copies captured
-        copy_bonus = 0
-        if "AMP_PARA" in list(dic["pair_information"][mip]["extension_primer_information"].keys())            and "pairs" in list(dic["pair_information"][mip].keys()):
-            ext_copies = dic["pair_information"][mip]["extension_primer_information"]["AMP_PARA"]
-            pairs = dic["pair_information"][mip]["pairs"]
-        else:
-            ext_copies = []
-        if "AMP_PARA" in list(dic["pair_information"][mip]["ligation_primer_information"].keys())            and "pairs" in list(dic["pair_information"][mip].keys()):
-            lig_copies = dic["pair_information"][mip]["ligation_primer_information"]["AMP_PARA"]
-        else:
-            lig_copies = []
-        wanted = []
-        unwanted = []
-        for ec in ext_copies:
-            if ec in lig_copies:
-                if (ec in desired_copies) and (pairs[ec][-1]):
-                    copy_bonus += 1000
-                    wanted.append(ec)
-                else:
-                    copy_bonus -= 500
-                    unwanted.append(ec)
-
-        all_scores = {"extension_arm_len":[extension_len, extension_len_matrix[extension_len]],                      "ligation_arm_len":[ligation_len, ligation_len_matrix[ligation_len]],                      "extension_arm_gc":[extension_gc, arm_gc_con[extension_gc]],                      "ligation_arm_gc":[ligation_gc, arm_gc_con[ligation_gc]],                      "ligation_mask_penalty":ligation_mask_penalty,                      "extension_mask_penalty":extension_mask_penalty,                      "capture_gc_content":[capture_gc, cap_gc_con[capture_gc]],                      "copy_bonus": {"intended_copies": wanted, "unintended_copies": unwanted,                                     "desired_copies": desired_copies,"bonus": copy_bonus}, "gc_clamp": gc_clamp,                      "extension_next_bases":[extension_next, next_bases[extension_next.upper()]],                      "ligation_next_bases":[ligation_next, next_bases[ligation_next.upper()]],                         }
-        # calculate total score
-        score = (extension_len_matrix[extension_len] + ligation_len_matrix[ligation_len] +
-                 arm_gc_con[extension_gc] + arm_gc_con[ligation_gc] +
-                 next_bases[extension_next.upper()] + next_bases[ligation_next.upper()] +
-                 gc_clamp + ligation_mask_penalty + extension_mask_penalty + cap_gc_con[capture_gc] + \
-                 copy_bonus)
-        # add mip_score to dictionary
-        dic["pair_information"][mip]["mip_information"]["mip_score"] = score
-        dic["pair_information"][mip]["mip_information"]["all_scores"] = all_scores
-        dic["pair_information"][mip]["mip_information"]["capture_seq"] = capture_seq
-    # write dictionary to json file
-    outfile = open (primer3_output_DIR + output_file, "w")
-    json.dump(dic, outfile, indent=1)
-    outfile.close()
-    return dic
-
-
 def add_captures (mip_dic, target_dic):
     for mip in list(mip_dic["pair_information"].keys()):
         d = mip_dic["pair_information"][mip]
@@ -4299,551 +3880,32 @@ def add_paralog_info(mip_dic, num_para):
     return mip_dic
 
 
-def score_mip_objects (mip_object):
-    """ Score mips in a dictionary according to a scoring matrix
-    Scoring matrices are somewhat crude at this time.
-    Arm GC content weighs the most, then arms GC clamp and arm length
-    Next_base values are last."""
-    # open mip dictionary from file
-    infile = open (primer3_output_DIR + mip_file, 'r')
-    dic = json.load(infile)
-    infile.close()
-    # add "NEXT_BASES" tag:value pair to dictionary.
-    # next_bases are 2 bases immediately downstream of extension primer and ligation primer
-    # extract template sequence
-    seq_template = dic["sequence_information"]["SEQUENCE_TEMPLATE"]
-    # find the coordinates of next bases
-    for mip in dic["pair_information"]:
-        # get coordinates of primers in the form of "start_base, len"
-        extension_coord = dic["pair_information"][mip]["extension_primer_information"]["COORDINATES"]
-        ligation_coord = dic["pair_information"][mip]["ligation_primer_information"]["COORDINATES"]
-        # orientation of the mip is used to determine if extension arm or ligation arm is originating
-        # from PRIMER_LEFT or PRIMER_RIGTH. When an arm originates from LEFT_PRIMER, it is on the plus
-        # strand of DNA and its length is added to the start coordinate to get the end coordinate,
-        # while it is subtracted for RIGHT_PRIMERs
-        strand = dic["pair_information"][mip]["orientation"]
-        if strand == "forward": # then the extension arm is the LEFT primer and ligation arm is RIGHT
-            extension_end = int(extension_coord.split(",")[0]) + int(extension_coord.split(",")[1]) - 1
-            # 1 is added or subtracted due to sequence index being zero based.
-            ligation_end = int(ligation_coord.split(",")[0]) - int(ligation_coord.split(",")[1]) + 1
-            ext_next = seq_template [(extension_end+1):(extension_end+3)]
-            lig_next = reverse_complement(seq_template [(ligation_end - 2):ligation_end])
-        elif strand == "reverse": # then the extension arm is the RIGHT primer and ligation is LEFT
-            extension_end = int(extension_coord.split(",")[0]) - int(extension_coord.split(",")[1]) + 1
-            ligation_end = int(ligation_coord.split(",")[0]) + int(ligation_coord.split(",")[1]) - 1
-            ext_next = reverse_complement(seq_template [(extension_end - 2):extension_end])
-            lig_next = seq_template [(ligation_end+1):(ligation_end+3)]
-        # add "NEXT_BASES" key and its value to mip dictionary
-        dic["pair_information"][mip]["extension_primer_information"]["NEXT_BASES"] = ext_next
-        dic["pair_information"][mip]["ligation_primer_information"]["NEXT_BASES"] = lig_next
-    # arm gc content score matrix
-    # define best to worst values for gc content. Best is very important so it has a huge effect on score.
-    best = 1000
-    mid = 100
-    low = 10
-    worst = 0
-    # define matrix
-    arm_gc_con = {}
-    for i in range(100):
-        if i < 35:
-            arm_gc_con[i] = worst
-        elif i < 40:
-            arm_gc_con[i] = low
-        elif i < 45:
-            arm_gc_con[i] = mid
-        elif i < 60:
-                arm_gc_con[i] = best
-        elif i < 65:
-                arm_gc_con[i] = mid
-        elif i < 70:
-            arm_gc_con[i] = low
-        else :
-            arm_gc_con[i] = worst
-    # capture gc content score matrix
-    # define best to worst values for gc content. Best is very important so it has a huge effect on score.
-    best = 10000
-    mid = 3000
-    low = 100
-    worse = 0
-    worst = -5000
-    # define matrix
-    cap_gc_con = {}
-    for i in range(100):
-        if i<20:
-            cap_gc_con[i] = worst
-        elif i < 35:
-            cap_gc_con[i] = worse
-        elif i < 40:
-            cap_gc_con[i] = low
-        elif i < 45:
-            cap_gc_con[i] = mid
-        elif i < 55:
-                cap_gc_con[i] = best
-        elif i < 60:
-                cap_gc_con[i] = mid
-        elif i < 65:
-            cap_gc_con[i] = low
-        elif i < 80:
-            cap_gc_con[i] = worse
-        else :
-            cap_gc_con[i] = worst
-    # next base score matrix
-    # define best to worst values for next bases. This parameter should be important only when comparing
-    # mips with equally good gc contents. Therefore the values are low and does not give a mip a big +.
-    best = 10
-    mid = 5
-    low = 2
-    worst = 0
-    # define matrix
-    next_bases = ({"GG":best, "CC":best, "GC":best, "CG":best,
-                  "GA":mid, "CA":mid, "GT":mid, "CT":mid,
-                  "AG":low, "TG":low, "AC":low, "TC":low,
-                  "AA":worst, "AT":worst, "TA":worst, "TT":worst})
-    # gc clamp matrix: a mid score for g or c clamp and best for extension gg or cc
-    best = 200
-    mid = 100
-    worst = 0
-    ext_gc_clamp = ({"GG":best, "CC":best, "GC":best, "CG":best,
-                  "GA":worst, "CA":worst, "GT":worst, "CT":worst,
-                  "AG":mid, "TG":mid, "AC":mid, "TC":mid,
-                  "AA":worst, "AT":worst, "TA":worst, "TT":worst})
-    lig_gc_clamp = {"G": mid, "C": mid, "A": worst, "T": worst}
 
-    # extension arm lengths score matrix
-    # this is added for plasmodium since length is more relaxed to get best possible mips with higher TMs
-    # which sometimes leads to very long arms.
-    best = 50
-    mid = 25
-    low = 5
-    worst = 0
-    extension_len_matrix = {}
-    for i in range(18,36):
-        if (i == 18) or (25 <= i <= 28):
-            extension_len_matrix [i] = mid
-        elif (19 <= i <= 24):
-            extension_len_matrix [i] = best
-        elif (30 > i > 28):
-            extension_len_matrix [i] = low
-        elif (i > 29):
-            extension_len_matrix [i] = worst
-    # ligation arm lengths score matrix
-    best = 50
-    mid = 25
-    low = 10
-    worst = 0
-    ligation_len_matrix = {}
-    for i in range(18,36):
-        if (i == 18) or (i == 19):
-            ligation_len_matrix [i] = mid
-        elif (20 <= i <= 26):
-            ligation_len_matrix [i] = best
-        elif (27 <= i <= 30):
-            ligation_len_matrix [i] = low
-        elif (i > 30):
-            ligation_len_matrix [i] = worst
-    # score all mips using above matrices
-    for mip in list(dic["pair_information"].keys()):
-        # get arm sequences
-        ligation_seq = dic["pair_information"][mip]["ligation_primer_information"]["SEQUENCE"]
-        extension_seq = dic["pair_information"][mip]["extension_primer_information"]["SEQUENCE"]
-        # count lower case masked nucleotides
-        ligation_mask_penalty = sum(-1000 for n in ligation_seq if n.islower())
-        ligation_mask_penalty += sum(-5000 for n in ligation_seq[-5:] if n.islower())
-        extension_mask_penalty = sum(-1000 for n in extension_seq if n.islower())
-        extension_mask_penalty += sum(-5000 for n in extension_seq[-5:] if n.islower())
-        # arm lengths
-        ligation_len = len(ligation_seq)
-        extension_len = len(extension_seq)
-        # find capture gc content
-        ligation_start = int(dic["pair_information"][mip]["ligation_primer_information"]["GENOMIC_START"])
-        ligation_end = int(dic["pair_information"][mip]["ligation_primer_information"]["GENOMIC_END"])
-        extension_start = int(dic["pair_information"][mip]["extension_primer_information"]["GENOMIC_START"])
-        extension_end = int(dic["pair_information"][mip]["extension_primer_information"]["GENOMIC_END"])
-        chrom = dic["pair_information"][mip]["extension_primer_information"]["CHR"]
-        mip_coord = sorted([ligation_start, ligation_end, extension_end, extension_start])
-        capture_key = chrom + ":" + str(mip_coord[1]) + "-" + str(mip_coord[2])
-        capture_seq = fasta_to_sequence(get_fasta(capture_key, species="hs"))
-        capture_gc = calculate_gc(capture_seq)
-        # gc clamp
-        gc_clamp = ext_gc_clamp[extension_seq[-2:].upper()] + lig_gc_clamp[ligation_seq[-1]]
-        # get gc percentages and convert to int.
-        extension_gc = int(float(dic["pair_information"][mip]["extension_primer_information"]["GC_PERCENT"]))
-        ligation_gc = int(float(dic["pair_information"][mip]["ligation_primer_information"]["GC_PERCENT"]))
-        # get next base values
-        extension_next = dic["pair_information"][mip]["extension_primer_information"]["NEXT_BASES"]
-        ligation_next = dic["pair_information"][mip]["ligation_primer_information"]["NEXT_BASES"]
-        # desired/undesired copies captured
-        copy_bonus = 0
-        if "AMP_PARA" in list(dic["pair_information"][mip]["extension_primer_information"].keys())            and "pairs" in list(dic["pair_information"][mip].keys()):
-            ext_copies = dic["pair_information"][mip]["extension_primer_information"]["AMP_PARA"]
-            pairs = dic["pair_information"][mip]["pairs"]
-        else:
-            ext_copies = []
-        if "AMP_PARA" in list(dic["pair_information"][mip]["ligation_primer_information"].keys())            and "pairs" in list(dic["pair_information"][mip].keys()):
-            lig_copies = dic["pair_information"][mip]["ligation_primer_information"]["AMP_PARA"]
-        else:
-            lig_copies = []
-        wanted = []
-        unwanted = []
-        for ec in ext_copies:
-            if ec in lig_copies:
-                if (ec in desired_copies) and (pairs[ec][-1]):
-                    copy_bonus += 1000
-                    wanted.append(ec)
-                else:
-                    copy_bonus -= 500
-                    unwanted.append(ec)
-
-        all_scores = {"extension_arm_len":[extension_len, extension_len_matrix[extension_len]],                      "ligation_arm_len":[ligation_len, ligation_len_matrix[ligation_len]],                      "extension_arm_gc":[extension_gc, arm_gc_con[extension_gc]],                      "ligation_arm_gc":[ligation_gc, arm_gc_con[ligation_gc]],                      "ligation_mask_penalty":ligation_mask_penalty,                      "extension_mask_penalty":extension_mask_penalty,                      "capture_gc_content":[capture_gc, cap_gc_con[capture_gc]],                      "copy_bonus": {"intended_copies": wanted, "unintended_copies": unwanted,                                     "desired_copies": desired_copies,"bonus": copy_bonus}, "gc_clamp": gc_clamp,                      "extension_next_bases":[extension_next, next_bases[extension_next.upper()]],                      "ligation_next_bases":[ligation_next, next_bases[ligation_next.upper()]],                         }
-        # calculate total score
-        score = (extension_len_matrix[extension_len] + ligation_len_matrix[ligation_len] +
-                 arm_gc_con[extension_gc] + arm_gc_con[ligation_gc] +
-                 next_bases[extension_next.upper()] + next_bases[ligation_next.upper()] +
-                 gc_clamp + ligation_mask_penalty + extension_mask_penalty + cap_gc_con[capture_gc] + \
-                 copy_bonus)
-        # add mip_score to dictionary
-        dic["pair_information"][mip]["mip_information"]["mip_score"] = score
-        dic["pair_information"][mip]["mip_information"]["all_scores"] = all_scores
-        dic["pair_information"][mip]["mip_information"]["capture_seq"] = capture_seq
-    # write dictionary to json file
-    outfile = open (primer3_output_DIR + output_file, "w")
-    json.dump(dic, outfile, indent=1)
-    outfile.close()
-    return dic
-
-
-def score_mips_hla (mip_file, primer3_output_DIR, output_file, desired_copies=[]):
-    """ Score mips in a dictionary according to a scoring matrix
-    Scoring matrices are somewhat crude at this time.
-    Arm GC content weighs the most, then arms GC clamp and arm length
-    Next_base values are last."""
-    # open mip dictionary from file
-    infile = open (primer3_output_DIR + mip_file, 'r')
-    dic = json.load(infile)
-    infile.close()
-    # add "NEXT_BASES" tag:value pair to dictionary.
-    # next_bases are 2 bases immediately downstream of extension primer and ligation primer
-    # extract template sequence
-    seq_template = dic["sequence_information"]["SEQUENCE_TEMPLATE"]
-    # find the coordinates of next bases
-    for mip in dic["pair_information"]:
-        # get coordinates of primers in the form of "start_base, len"
-        extension_coord = dic["pair_information"][mip]["extension_primer_information"]["COORDINATES"]
-        ligation_coord = dic["pair_information"][mip]["ligation_primer_information"]["COORDINATES"]
-        # orientation of the mip is used to determine if extension arm or ligation arm is originating
-        # from PRIMER_LEFT or PRIMER_RIGTH. When an arm originates from LEFT_PRIMER, it is on the plus
-        # strand of DNA and its length is added to the start coordinate to get the end coordinate,
-        # while it is subtracted for RIGHT_PRIMERs
-        strand = dic["pair_information"][mip]["orientation"]
-        if strand == "forward": # then the extension arm is the LEFT primer and ligation arm is RIGHT
-            extension_end = int(extension_coord.split(",")[0]) + int(extension_coord.split(",")[1]) - 1
-            # 1 is added or subtracted due to sequence index being zero based.
-            ligation_end = int(ligation_coord.split(",")[0]) - int(ligation_coord.split(",")[1]) + 1
-            ext_next = seq_template [(extension_end+1):(extension_end+3)]
-            lig_next = reverse_complement(seq_template [(ligation_end - 2):ligation_end])
-        elif strand == "reverse": # then the extension arm is the RIGHT primer and ligation is LEFT
-            extension_end = int(extension_coord.split(",")[0]) - int(extension_coord.split(",")[1]) + 1
-            ligation_end = int(ligation_coord.split(",")[0]) + int(ligation_coord.split(",")[1]) - 1
-            ext_next = reverse_complement(seq_template [(extension_end - 2):extension_end])
-            lig_next = seq_template [(ligation_end+1):(ligation_end+3)]
-        # add "NEXT_BASES" key and its value to mip dictionary
-        dic["pair_information"][mip]["extension_primer_information"]["NEXT_BASES"] = ext_next
-        dic["pair_information"][mip]["ligation_primer_information"]["NEXT_BASES"] = lig_next
-    # arm gc content score matrix
-    # define best to worst values for gc content. Best is very important so it has a huge effect on score.
-    best = 1000
-    mid = 100
-    low = 10
-    worst = 0
-    # define matrix
-    arm_gc_con = {}
-    for i in range(100):
-        if i < 35:
-            arm_gc_con[i] = worst
-        elif i < 40:
-            arm_gc_con[i] = low
-        elif i < 45:
-            arm_gc_con[i] = mid
-        elif i < 60:
-                arm_gc_con[i] = best
-        elif i < 65:
-                arm_gc_con[i] = mid
-        elif i < 70:
-            arm_gc_con[i] = low
-        else :
-            arm_gc_con[i] = worst
-    # capture gc content score matrix
-    # define best to worst values for gc content. Best is very important so it has a huge effect on score.
-    best = 10000
-    mid = 3000
-    low = 100
-    worse = 0
-    worst = -5000
-    # define matrix
-    cap_gc_con = {}
-    for i in range(100):
-        if i<20:
-            cap_gc_con[i] = worst
-        elif i < 35:
-            cap_gc_con[i] = worse
-        elif i < 40:
-            cap_gc_con[i] = low
-        elif i < 45:
-            cap_gc_con[i] = mid
-        elif i < 55:
-                cap_gc_con[i] = best
-        elif i < 60:
-                cap_gc_con[i] = mid
-        elif i < 65:
-            cap_gc_con[i] = low
-        elif i < 80:
-            cap_gc_con[i] = worse
-        else :
-            cap_gc_con[i] = worst
-    # next base score matrix
-    # define best to worst values for next bases. This parameter should be important only when comparing
-    # mips with equally good gc contents. Therefore the values are low and does not give a mip a big +.
-    best = 10
-    mid = 5
-    low = 2
-    worst = 0
-    # define matrix
-    next_bases = ({"GG":best, "CC":best, "GC":best, "CG":best,
-                  "GA":mid, "CA":mid, "GT":mid, "CT":mid,
-                  "AG":low, "TG":low, "AC":low, "TC":low,
-                  "AA":worst, "AT":worst, "TA":worst, "TT":worst})
-    # gc clamp matrix: a mid score for g or c clamp and best for extension gg or cc
-    best = 200
-    mid = 100
-    worst = 0
-    ext_gc_clamp = ({"GG":best, "CC":best, "GC":best, "CG":best,
-                  "GA":worst, "CA":worst, "GT":worst, "CT":worst,
-                  "AG":mid, "TG":mid, "AC":mid, "TC":mid,
-                  "AA":worst, "AT":worst, "TA":worst, "TT":worst})
-    lig_gc_clamp = {"G": mid, "C": mid, "A": worst, "T": worst}
-
-    # extension arm lengths score matrix
-    # this is added for plasmodium since length is more relaxed to get best possible mips with higher TMs
-    # which sometimes leads to very long arms.
-    best = 50
-    mid = 25
-    low = 5
-    worst = 0
-    extension_len_matrix = {}
-    for i in range(18,36):
-        if (i == 18) or (25 <= i <= 28):
-            extension_len_matrix [i] = mid
-        elif (19 <= i <= 24):
-            extension_len_matrix [i] = best
-        elif (30 > i > 28):
-            extension_len_matrix [i] = low
-        elif (i > 29):
-            extension_len_matrix [i] = worst
-    # ligation arm lengths score matrix
-    best = 50
-    mid = 25
-    low = 10
-    worst = 0
-    ligation_len_matrix = {}
-    for i in range(18,36):
-        if (i == 18) or (i == 19):
-            ligation_len_matrix [i] = mid
-        elif (20 <= i <= 26):
-            ligation_len_matrix [i] = best
-        elif (27 <= i <= 30):
-            ligation_len_matrix [i] = low
-        elif (i > 30):
-            ligation_len_matrix [i] = worst
-    # score all mips using above matrices
-    for mip in list(dic["pair_information"].keys()):
-        # get arm sequences
-        ligation_seq = dic["pair_information"][mip]["ligation_primer_information"]["SEQUENCE"]
-        extension_seq = dic["pair_information"][mip]["extension_primer_information"]["SEQUENCE"]
-        # count lower case masked nucleotides
-        ligation_mask_penalty = sum(-1000 for n in ligation_seq if n.islower())
-        ligation_mask_penalty += sum(-5000 for n in ligation_seq[-5:] if n.islower())
-        extension_mask_penalty = sum(-1000 for n in extension_seq if n.islower())
-        extension_mask_penalty += sum(-5000 for n in extension_seq[-5:] if n.islower())
-        # arm lengths
-        ligation_len = len(ligation_seq)
-        extension_len = len(extension_seq)
-        # find capture gc content
-        ligation_start = int(dic["pair_information"][mip]["ligation_primer_information"]["GENOMIC_START"])
-        ligation_end = int(dic["pair_information"][mip]["ligation_primer_information"]["GENOMIC_END"])
-        extension_start = int(dic["pair_information"][mip]["extension_primer_information"]["GENOMIC_START"])
-        extension_end = int(dic["pair_information"][mip]["extension_primer_information"]["GENOMIC_END"])
-        chrom = dic["pair_information"][mip]["extension_primer_information"]["CHR"]
-        mip_coord = sorted([ligation_start, ligation_end, extension_end, extension_start])
-        capture_key = chrom + ":" + str(mip_coord[1]) + "-" + str(mip_coord[2])
-        capture_seq = fasta_to_sequence(get_fasta(capture_key, species="hs"))
-        capture_gc = calculate_gc(capture_seq)
-        # gc clamp
-        gc_clamp = ext_gc_clamp[extension_seq[-2:].upper()] + lig_gc_clamp[ligation_seq[-1]]
-        # get gc percentages and convert to int.
-        extension_gc = int(float(dic["pair_information"][mip]["extension_primer_information"]["GC_PERCENT"]))
-        ligation_gc = int(float(dic["pair_information"][mip]["ligation_primer_information"]["GC_PERCENT"]))
-        # get next base values
-        extension_next = dic["pair_information"][mip]["extension_primer_information"]["NEXT_BASES"]
-        ligation_next = dic["pair_information"][mip]["ligation_primer_information"]["NEXT_BASES"]
-        # desired/undesired copies captured
-        copy_bonus = 0
-        if "AMP_PARA" in list(dic["pair_information"][mip]["extension_primer_information"].keys())            and "pairs" in list(dic["pair_information"][mip].keys()):
-            ext_copies = dic["pair_information"][mip]["extension_primer_information"]["AMP_PARA"]
-            pairs = dic["pair_information"][mip]["pairs"]
-        else:
-            ext_copies = []
-        if "AMP_PARA" in list(dic["pair_information"][mip]["ligation_primer_information"].keys())            and "pairs" in list(dic["pair_information"][mip].keys()):
-            lig_copies = dic["pair_information"][mip]["ligation_primer_information"]["AMP_PARA"]
-        else:
-            lig_copies = []
-        wanted = []
-        unwanted = []
-        for ec in ext_copies:
-            if ec in lig_copies:
-                if (ec in desired_copies) and (pairs[ec][-1]):
-                    copy_bonus += 1000
-                    wanted.append(ec)
-                else:
-                    copy_bonus -= 500
-                    unwanted.append(ec)
-
-        all_scores = {"extension_arm_len":[extension_len, extension_len_matrix[extension_len]],                      "ligation_arm_len":[ligation_len, ligation_len_matrix[ligation_len]],                      "extension_arm_gc":[extension_gc, arm_gc_con[extension_gc]],                      "ligation_arm_gc":[ligation_gc, arm_gc_con[ligation_gc]],                      "ligation_mask_penalty":ligation_mask_penalty,                      "extension_mask_penalty":extension_mask_penalty,                      "capture_gc_content":[capture_gc, cap_gc_con[capture_gc]],                      "copy_bonus": {"intended_copies": wanted, "unintended_copies": unwanted,                                     "desired_copies": desired_copies,"bonus": copy_bonus}, "gc_clamp": gc_clamp,                      "extension_next_bases":[extension_next, next_bases[extension_next.upper()]],                      "ligation_next_bases":[ligation_next, next_bases[ligation_next.upper()]],                         }
-        # calculate total score
-        score = (extension_len_matrix[extension_len] + ligation_len_matrix[ligation_len] +
-                 arm_gc_con[extension_gc] + arm_gc_con[ligation_gc] +
-                 next_bases[extension_next.upper()] + next_bases[ligation_next.upper()] +
-                 gc_clamp + ligation_mask_penalty + extension_mask_penalty + cap_gc_con[capture_gc] + \
-                 copy_bonus)
-        # add mip_score to dictionary
-        dic["pair_information"][mip]["mip_information"]["mip_score"] = score
-        dic["pair_information"][mip]["mip_information"]["all_scores"] = all_scores
-        dic["pair_information"][mip]["mip_information"]["capture_seq"] = capture_seq
-    # write dictionary to json file
-    outfile = open (primer3_output_DIR + output_file, "w")
-    json.dump(dic, outfile, indent=1)
-    outfile.close()
-    return dic
-
-
-def score_hs_mips(mip_file, primer3_output_DIR, output_file):
-    """ Score mips in a dictionary according to scoring matrix
-    Scoring matrices are somewhat crude at this time.
-    Arm GC content weighs the most, then extension arm having
-    GC clamp of 2. next_base values are last."""
-    # open mip dictionary from file
-    infile = open (primer3_output_DIR + mip_file, 'r')
-    dic = json.load(infile)
-    infile.close()
-    # add "NEXT_BASES" tag:value pair to dictionary.
-    # next_bases are 2 bases immediately downstream of extension primer and ligation primer
-    # extract template sequence
-    seq_template = dic["sequence_information"]["SEQUENCE_TEMPLATE"]
-    # find the coordinates of next bases
-    for mip in dic["pair_information"]:
-        # get coordinates of primers in the form of "start_base, len"
-        extension_coord = dic["pair_information"][mip]["extension_primer_information"]["COORDINATES"]
-        ligation_coord = dic["pair_information"][mip]["ligation_primer_information"]["COORDINATES"]
-        # orientation of the mip is used to determine if extension arm or ligation arm is originating
-        # from PRIMER_LEFT or PRIMER_RIGTH. When an arm originates from LEFT_PRIMER, it is on the plus
-        # strand of DNA and its length is added to the start coordinate to get the end coordinate,
-        # while it is subtracted for RIGHT_PRIMERs
-        strand = dic["pair_information"][mip]["orientation"]
-        if strand == "forward": # then the extension arm is the LEFT primer and ligation arm is RIGHT
-            extension_end = int(extension_coord.split(",")[0]) + int(extension_coord.split(",")[1]) - 1
-            # 1 is added or subtracted due to sequence index being zero based.
-            ligation_end = int(ligation_coord.split(",")[0]) - int(ligation_coord.split(",")[1]) + 1
-            ext_next = seq_template [(extension_end+1):(extension_end+3)]
-            lig_next = reverse_complement(seq_template [(ligation_end - 2):ligation_end])
-        elif strand == "reverse": # then the extension arm is the RIGHT primer and ligation is LEFT
-            extension_end = int(extension_coord.split(",")[0]) - int(extension_coord.split(",")[1]) + 1
-            ligation_end = int(ligation_coord.split(",")[0]) + int(ligation_coord.split(",")[1]) - 1
-            ext_next = reverse_complement(seq_template [(extension_end - 2):extension_end])
-            lig_next = seq_template [(ligation_end+1):(ligation_end+3)]
-        # add "NEXT_BASES" key and its value to mip dictionary
-        dic["pair_information"][mip]["extension_primer_information"]["NEXT_BASES"] = ext_next
-        dic["pair_information"][mip]["ligation_primer_information"]["NEXT_BASES"] = lig_next
-    # arm gc content score matrix
-    # define best to worst values for gc content. Best is very important so it has a huge effect on score.
-    best = 1000
-    mid = 100
-    low = 10
-    worst = 0
-    # define matrix
-    arm_gc_con = {}
-    for i in range(20,81):
-        if i < 35:
-            arm_gc_con[i] = worst
-        elif i < 40:
-            arm_gc_con[i] = low
-        elif i < 45:
-            arm_gc_con[i] = mid
-        elif i < 60:
-                arm_gc_con[i] = best
-        elif i < 65:
-                arm_gc_con[i] = mid
-        elif i < 70:
-            arm_gc_con[i] = low
-        else :
-            arm_gc_con[i] = worst
-    # next base score matrix
-    # define best to worst values for next bases. This parameter should be important only when comparing
-    # mips with equally good gc contents. Therefore the values are low and does not give a mip a big +.
-    best = 10
-    mid = 5
-    low = 2
-    worst = 0
-    # define matrix
-    next_bases = ({"GG":best, "CC":best, "GC":best, "CG":best,
-                  "GA":mid, "CA":mid, "GT":mid, "CT":mid,
-                  "AG":low, "TG":low, "AC":low, "TC":low,
-                  "AA":worst, "AT":worst, "TA":worst, "TT":worst})
-    # score all mips using above matrices
-    for mip in list(dic["pair_information"].keys()):
-        # get arm sequences
-        ligation_seq = dic["pair_information"][mip]["ligation_primer_information"]["SEQUENCE"]
-        extension_seq = dic["pair_information"][mip]["extension_primer_information"]["SEQUENCE"]
-        # all arms have gc clamp 1. Check if extension arm has gc clamp of 2
-        extension_clamp = 0
-        if  (extension_seq[-2] == "G") or  (extension_seq[-2] == "C"):
-            extension_clamp = 100 # score changed to 100 if arm ends in GG, GC, CG or CC
-        # get gc percentages and convert to int.
-        extension_gc = int(float(dic["pair_information"][mip]["extension_primer_information"]["GC_PERCENT"]))
-        ligation_gc = int(float(dic["pair_information"][mip]["ligation_primer_information"]["GC_PERCENT"]))
-        # get next base values
-        extension_next = dic["pair_information"][mip]["extension_primer_information"]["NEXT_BASES"]
-        ligation_next = dic["pair_information"][mip]["ligation_primer_information"]["NEXT_BASES"]
-        # calculate total score
-        score = (arm_gc_con[extension_gc] + arm_gc_con[ligation_gc] +
-                 next_bases[extension_next.upper()] + next_bases[ligation_next.upper()] +
-                 extension_clamp)
-        # add mip_score to dictionary
-        dic["pair_information"][mip]["mip_information"]["mip_score"] = score
-    # write dictionary to json file
-    outfile = open (primer3_output_DIR + output_file, "w")
-    json.dump(dic, outfile, indent=1)
-    outfile.close()
-    return dic
 
 
 def compatible_mip_check(m1, m2, overlap_same, overlap_opposite):
     d = m1.mip_dic
-    es = ext_start = d["extension_primer_information"]["GENOMIC_START"]
-    ee = ext_end = d["extension_primer_information"]["GENOMIC_END"]
-    ls = lig_start = d["ligation_primer_information"]["GENOMIC_START"]
-    le = lig_end = d["ligation_primer_information"]["GENOMIC_END"]
+    ext_start = d["extension_primer_information"]["GENOMIC_START"]
+    ext_end = d["extension_primer_information"]["GENOMIC_END"]
+    lig_start = d["ligation_primer_information"]["GENOMIC_START"]
+    lig_end = d["ligation_primer_information"]["GENOMIC_END"]
     # get mip orientation
     ori = d["orientation"]
-    m1_set = set(list(range(min([es, ee]), max([es, ee]) + 1))
-              + list(range(min([ls, le]), max([ls, le]) + 1)))
+    m1_set = set(list(range(min([ext_start, ext_end]),
+                            max([ext_start, ext_end]) + 1))
+                 + list(range(min([lig_start, lig_end]),
+                              max([lig_start, lig_end]) + 1)))
     m = m2.mip_dic
-    nes = next_ext_start = m["extension_primer_information"]["GENOMIC_START"]
-    nee = next_ext_end = m["extension_primer_information"]["GENOMIC_END"]
-    nls = next_lig_start = m["ligation_primer_information"]["GENOMIC_START"]
-    nle = next_lig_end = m["ligation_primer_information"]["GENOMIC_END"]
+    next_ext_start = m["extension_primer_information"]["GENOMIC_START"]
+    next_ext_end = m["extension_primer_information"]["GENOMIC_END"]
+    next_lig_start = m["ligation_primer_information"]["GENOMIC_START"]
+    next_lig_end = m["ligation_primer_information"]["GENOMIC_END"]
     # get mip orientation
     next_ori = m["orientation"]
-    m2_set = set(list(range(min([nes, nee]), max([nes, nee]) + 1))
-              + list(range(min([nls, nle]), max([nls, nle]) + 1)))
+    m2_set = set(list(range(min([next_ext_start, next_ext_end]),
+                            max([next_ext_start, next_ext_end]) + 1))
+                 + list(range(min([next_lig_start, next_lig_end]),
+                              max([next_lig_start, next_lig_end]) + 1)))
     overlap = len(m1_set.intersection(m2_set))
     if ori == next_ori:
         return overlap <= overlap_same
@@ -5016,106 +4078,6 @@ def compatible_chains(primer_file, primer3_output_DIR, primer_out, output_file,
     return mip_sets
 
 
-def compatible_mips(primer_file, primer3_output_DIR, primer_out, output_file,
-               overlap_same = 0, overlap_opposite = 0):
-    try:
-        with open (primer3_output_DIR + primer_file, "r") as infile:
-            scored_mips = json.load(infile)
-    except IOError:
-        print("Primer file does not exist.")
-        return 1
-    else:
-        # create in/compatibility lists for each mip
-        for k in list(scored_mips["pair_information"].keys()):
-            # get coordinates of mip arms
-            d = scored_mips["pair_information"][k]
-            es = ext_start = d["extension_primer_information"]["GENOMIC_START"]
-            ee = ext_end = d["extension_primer_information"]["GENOMIC_END"]
-            ls = lig_start = d["ligation_primer_information"]["GENOMIC_START"]
-            le = lig_end = d["ligation_primer_information"]["GENOMIC_END"]
-            # get mip orientation
-            ori = d["orientation"]
-            #print k, es, ee, ls, le, ori
-            # create an incompatibility list
-            incompatible = []
-            compatible = []
-            for mip in list(scored_mips["pair_information"].keys()):
-                m = scored_mips["pair_information"][mip]
-                nes = next_ext_start = m["extension_primer_information"]                ["GENOMIC_START"]
-                nee = next_ext_end = m["extension_primer_information"]                ["GENOMIC_END"]
-                nls = next_lig_start = m["ligation_primer_information"]                ["GENOMIC_START"]
-                nle = next_lig_end = m["ligation_primer_information"]                ["GENOMIC_END"]
-                # get mip orientation
-                next_ori = m["orientation"]
-                compat = 0
-                # check if the two mips are compatible in terms of
-                # orientation and coordinates
-                if ori == next_ori == "forward":
-                    if ((ls < nls) and (ls < nes + overlap_same)) or                      ((ls > nls) and (es + overlap_same> nls)):
-                        compat = 1
-                elif ori == next_ori == "reverse":
-                    if ((ls < nls) and (es < nls + overlap_same)) or                       ((ls > nls) and (ls + overlap_same> nes)):
-                        compat = 1
-                elif (ori == "forward") and (next_ori == "reverse"):
-                    if (ls < nls + overlap_opposite) or                     (es  + overlap_opposite> nes):
-                        compat = 1
-                    elif (es < nls) and (ee < nls + overlap_opposite) and                         (le  + overlap_opposite> nle) and                         (ls < nee + overlap_opposite):
-                        compat = 1
-                    elif (es > nls) and (es  + overlap_opposite> nle) and                          (ee < nee + overlap_opposite) and                         (le + overlap_opposite > nes):
-                        compat = 1
-                elif (ori == "reverse") and (next_ori == "forward"):
-                    if (ls + overlap_opposite > nls) or                     (es < nes + overlap_opposite):
-                        compat = 1
-                    elif (ls > nes) and (ls + overlap_opposite > nee) and                         (le < nle + overlap_opposite) and                         (ee + overlap_opposite>nls):
-                        compat = 1
-                    elif (ls < nes) and (le < nes + overlap_opposite) and                          (ee + overlap_opposite > nee) and                         (es < nle + overlap_opposite):
-                        compat = 1
-                if not compat:
-                    incompatible.append(mip)
-                else:
-                    compatible.append(mip)
-            d["incompatible"] = incompatible
-            d["compatible"] = compatible
-        f = open(primer3_output_DIR + output_file, "w")
-        #f = []
-        def compatible_recurse (l):
-            """
-            Take a list, l,  of numbers that represent a mip set with
-            their corresponding "place" in the mip dictionary, and index
-            number, i. Find the subset of mips in the rest of the list
-            that are compatible with the mip at index i, using compatibility
-            dictionary d. For each mip in the subset, find compatible mips
-            in the rest of the list. Recurse until the subset does not have
-            any mips. Append each compatible subset to a final result list, f.
-            """
-            incomp = list(l)
-            for il in l:
-                incomp.extend(scored_mips["pair_information"][il]["incompatible"])
-            comp = set(scored_mips["pair_information"][l[-1]]["compatible"]).difference(incomp)
-            if len(comp) > 0:
-                for n in comp:
-                    compatible_recurse(l + [n])
-            else:
-                f.write(",".join(l) + "\n")
-                #f.append(l)
-        keys = list(scored_mips["pair_information"].keys())
-        for k in keys:
-            comp_list = scored_mips["pair_information"][k]["compatible"]
-            if len(comp_list) > 0:
-                # for each of the mips in the compatibility list,
-                for m in comp_list:
-                    # create an initial result list to be used by the
-                    # compatible_recurse function
-                    compatible_recurse([k, m])
-            else:
-                comp_list = [k]
-                f.write(k + "\n")
-
-        f.close()
-        #print len(output)
-        with open(primer3_output_DIR + primer_out, "w") as outfile:
-            json.dump(scored_mips, outfile, indent=1)
-    return
 
 
 def compatibility (scored_mips, primer3_output_DIR = "", primer_out = "",
@@ -10731,7 +9693,7 @@ def remove_overlap(reg1, reg2, spacer = 0):
         return []
 
 
-def subtract_overlap (uncovered_regions, covered_regions, spacer = 0):
+def subtract_overlap (uncovered_regions, covered_regions, spacer=0):
     """
     Given two sets of regions in the form
     [[start, end], [start, end]], return a set
@@ -10766,7 +9728,7 @@ def subtract_overlap (uncovered_regions, covered_regions, spacer = 0):
         return []
 
 
-def trim_overlap (region_list, low = 0.1, high = 0.9, spacer = 0):
+def trim_overlap (region_list, low=0.1, high=0.9, spacer=0):
     """
     Given a set of regions in the form [[start, end], [start, end]],
     return a set of regions with any overlapping parts trimmed
@@ -11224,6 +10186,8 @@ def get_ternary_genotype(gen):
     except ValueError:
         g = np.nan
     return g
+
+
 def variation_to_geno(settings, var_file, output_prefix):
     """
     Create PLINK files from variation table file.
@@ -11337,6 +10301,8 @@ def variation_to_geno(settings, var_file, output_prefix):
     write_list([["**", o] + genes[o] for o in ordered_genes],
                wdir + output_prefix + ".hlist")
     return
+
+
 def absence_presence(col, min_val = 1):
     """
     Given a numerical dataframe column, convert to binary values
@@ -11345,6 +10311,8 @@ def absence_presence(col, min_val = 1):
     """
     return pd.Series([0 if (c < min_val or np.isnan(c))
                       else 1 for c in col.tolist()])
+
+
 def plot_performance(barcode_counts,
                     tick_label_size = 8,
                     cbar_label_size = 5,
@@ -11399,35 +10367,35 @@ def plot_performance(barcode_counts,
     ax.set_ylabel("Samples")
     ax.set_xlabel("Probes")
     fig.suptitle("Performance",
-                verticalalignment="bottom")
+                 verticalalignment="bottom")
     fig.tight_layout()
-    cbar = fig.colorbar(heat, ticks = [0, 1],
-                            shrink = 0.2
-                       )
+    cbar = fig.colorbar(heat, ticks=[0, 1], shrink=0.2)
     cbar.ax.tick_params(labelsize=cbar_label_size)
     cbar.ax.set_yticklabels(["Absent", "Present"])
     fig.set_dpi(dpi)
     fig.tight_layout()
     if save:
         fig.savefig(wdir + "performance.png",
-                    dpi = dpi,
+                    dpi=dpi,
                    bbox_inches='tight')
         plt.close("all")
     else:
         return fig,ax
     return
+
+
 def plot_coverage(barcode_counts,
-                    tick_label_size = 8,
-                    cbar_label_size = 5,
-                    dpi = 300,
-                    log = None,
-                    save = False,
-                    wdir = None,
-                    ytick_freq = None,
-                    xtick_freq = None,
-                    xtick_rotation = 90,
-                    tick_genes = False,
-                    gene_name_index = None):
+                    tick_label_size=8,
+                    cbar_label_size=5,
+                    dpi=300,
+                    log=None,
+                    save=False,
+                    wdir=None,
+                    ytick_freq=None,
+                    xtick_freq=None,
+                    xtick_rotation=90,
+                    tick_genes=False,
+                    gene_name_index=None):
     """
     Plot presence/absence plot for a mip run.
     """
@@ -11498,6 +10466,8 @@ def plot_coverage(barcode_counts,
     else:
         return fig,ax
     return
+
+
 def split_aa(aa):
     try:
         return aa.split(";")[0].split(":")[4][2:]
@@ -11505,6 +10475,8 @@ def split_aa(aa):
         return "."
     except AttributeError:
         return np.nan
+
+
 def split_aa_pos(aa):
     try:
         return aa.split(";")[0].split(":")[4][2:-1]
@@ -11512,10 +10484,16 @@ def split_aa_pos(aa):
         return "."
     except AttributeError:
         return np.nan
+
+
 def get_mutation_counts(col):
     return col.apply(lambda gen: int(gen.split(":")[1]))
+
+
 def get_totals(col):
     return col.apply(lambda gen: int(gen.split(":")[2]))
+
+
 def get_coverage(row, sorted_counts):
     chrom = row["Chrom"]
     start = row["Start"]
@@ -11537,12 +10515,16 @@ def add_known(group, used_targets):
     group["POS"].fillna(group["Start"], inplace = True)
     group["Barcode Count"].fillna(0, inplace = True)
     return group
+
+
 def find_ref_total(group):
     nr = group.loc[~group["ExonicFunc"].isin(["synonymous SNV",
                                              "."]),
                                "Barcode Count"].sum()
     cov = group["POS Coverage"].max()
     return  cov - nr
+
+
 def get_genotype(row, cutoff):
     if row["Coverage"] > 0:
         if row["Filtered Barcode Fraction"] >= cutoff:
@@ -11554,6 +10536,8 @@ def get_genotype(row, cutoff):
             return "WT"
     else:
         return np.nan
+
+
 def get_aminotype(row, cutoff):
     if row["Coverage"] > 0:
         if row["Mutation Fraction"] >= cutoff:
@@ -11565,9 +10549,13 @@ def get_aminotype(row, cutoff):
             return "WT"
     else:
         return np.nan
+
+
 def rename_noncoding(row):
     return "-".join([row["Gene"],
                      row["VKEY"]])
+
+
 def call_microsats(settings, sim = None, freq_cutoff = 0.005,
                    min_bc_cutoff = 0,
                   use_filtered_mips = True,
@@ -11649,6 +10637,8 @@ def call_microsats(settings, sim = None, freq_cutoff = 0.005,
                                      how = "left")
     return {"ms_calls": merged_calls,
             "strain_freqs": strain_freqs}
+
+
 def get_copy_counts(count_table,
                    average_copy_count = 2,
                    norm_percentiles = [0.4, 0.6]):
@@ -11681,6 +10671,8 @@ def get_copy_counts(count_table,
     p_norm = s_norm.transform(
         lambda a: average_copy_count * a/(a.quantile(norm_percentiles).mean()))
     return p_norm
+
+
 def get_copy_average(r, ac):
     try:
         return ac.loc[r["Sample ID"],
@@ -11688,25 +10680,29 @@ def get_copy_average(r, ac):
                        r["Copy"])]
     except KeyError:
         return np.nan
+
+
 def normalize_copies(a):
     if a.isnull().all():
         a = a.fillna(1)
         return a/a.sum()
     else:
         return a.fillna(0)
+
+
 def repool(
     wdir,
     data_summary,
     high_barcode_threshold,
-    target_coverage_count = None,
-    target_coverage_fraction = 0.95,
-    target_coverage_key = "targets_with_10_barcodes",
-    barcode_coverage_threshold = 10,
-    barcode_count_threshold = 100,
-    low_coverage_action = "Repool",
-    assesment_key = "targets_with_1_barcodes",
-    good_coverage_quantile = 0.25,
-    output_file = "repool.csv"
+    target_coverage_count=None,
+    target_coverage_fraction=0.95,
+    target_coverage_key="targets_with_10_barcodes",
+    barcode_coverage_threshold=10,
+    barcode_count_threshold=100,
+    low_coverage_action="Repool",
+    assesment_key="targets_with_1_barcodes",
+    good_coverage_quantile=0.25,
+    output_file="repool.csv"
 ):
     """
     Analyze run statistics and determine repooling/recapturing
@@ -11867,6 +10863,8 @@ def repool(
         data_summary.loc[data_summary["Uneven Coverage"]
                           & (data_summary["Status"] == "Repool")].shape[0])))
     return
+
+
 def aa_to_coordinate(gene, species, aa_number, alias = False):
     """
     Given a gene name and its amino acid location,
@@ -12133,6 +11131,8 @@ def merge_snps(settings):
     # save the report
     write_list(outlist, wdir + "merge_snps_output.txt")
     return outlist
+
+
 def load_processed_data(settings):
     """
     Load the data after initial processing.
@@ -12161,6 +11161,8 @@ def load_processed_data(settings):
     return {"Barcode Counts": bc,
             "Data Summary": data_summary,
             "Meta Data": merged_meta}
+
+
 def vcf_to_df(vcf_file):
     """
     Convert a possibly compressed (.gz) vcf file to a Pandas DataFrame.
@@ -12314,6 +11316,8 @@ def vcf_to_df(vcf_file):
         print(("There are %d problematic alleles, see the output list for details"
                %len(problem_alts)))
     return var_df, problem_alts
+
+
 def collapse_vcf_df(filt_df):
     """
     Take a vcf which has been converted to a Pandas data frame,
@@ -12625,7 +11629,7 @@ def generate_sample_sheet(sample_list_file,
     # create sample sheet
     sample_sheet = os.path.join(output_dir, "SampleSheet.csv")
     with open(sample_sheet_template) as infile, \
-         open(sample_sheet, "w") as outfile:
+            open(sample_sheet, "w") as outfile:
         outfile_list = infile.readlines()
         outfile_list = [o.strip() for o in outfile_list]
         for sample_id in sample_names:
@@ -12665,6 +11669,340 @@ def write_list(alist, outfile_name):
         outfile.write("\n".join(["\t".join(map(str, l))
                                 for l in alist]) + "\n")
     return
+
+
+##########################################################
+# Core/shared functions
+##########################################################
+
+
+def strip_fasta (sequence):
+    seq_list = sequence.split('\n')[1:]
+    seq_join = "".join(seq_list)
+    return seq_join
+
+
+def calculate_gc(sequence, fasta=0):
+    if fasta:
+        seq_list = sequence.split('\n')[1:]
+        seq_join = "".join(seq_list)
+        seq = seq_join.lower()
+
+    else:
+        seq = sequence.lower()
+    gc_count = seq.count('g') + seq.count('c')
+    at_count = seq.count('a') + seq.count('t')
+    percent = int(gc_count * 100 / (gc_count + at_count))
+    return percent
+
+
+def translate(sequence, three_letter=False):
+    gencode = {
+        'ATA': 'I', 'ATC': 'I', 'ATT': 'I', 'ATG': 'M',
+        'ACA': 'T', 'ACC': 'T', 'ACG': 'T', 'ACT': 'T',
+        'AAC': 'N', 'AAT': 'N', 'AAA': 'K', 'AAG': 'K',
+        'AGC': 'S', 'AGT': 'S', 'AGA': 'R', 'AGG': 'R',
+        'CTA': 'L', 'CTC': 'L', 'CTG': 'L', 'CTT': 'L',
+        'CCA': 'P', 'CCC': 'P', 'CCG': 'P', 'CCT': 'P',
+        'CAC': 'H', 'CAT': 'H', 'CAA': 'Q', 'CAG': 'Q',
+        'CGA': 'R', 'CGC': 'R', 'CGG': 'R', 'CGT': 'R',
+        'GTA': 'V', 'GTC': 'V', 'GTG': 'V', 'GTT': 'V',
+        'GCA': 'A', 'GCC': 'A', 'GCG': 'A', 'GCT': 'A',
+        'GAC': 'D', 'GAT': 'D', 'GAA': 'E', 'GAG': 'E',
+        'GGA': 'G', 'GGC': 'G', 'GGG': 'G', 'GGT': 'G',
+        'TCA': 'S', 'TCC': 'S', 'TCG': 'S', 'TCT': 'S',
+        'TTC': 'F', 'TTT': 'F', 'TTA': 'L', 'TTG': 'L',
+        'TAC': 'Y', 'TAT': 'Y', 'TAA': '*', 'TAG': '*',
+        'TGC': 'C', 'TGT': 'C', 'TGA': '*', 'TGG': 'W'}
+    gencode3 = {'A': 'Ala', 'C': 'Cys', 'D': 'Asp', 'E': 'Glu', 'F': 'Phe',
+                'G': 'Gly', 'H': 'His', 'I': 'Ile', 'K': 'Lys', 'L': 'Leu',
+                'M': 'Met', 'N': 'Asn', 'P': 'Pro', 'Q': 'Gln', 'R': 'Arg',
+                'S': 'Ser', 'T': 'Thr', 'V': 'Val', 'W': 'Trp', 'Y': 'Tyr'}
+    seq = sequence.upper()
+    # Return the translated protein from 'sequence' assuming +1 reading frame
+    if not three_letter:
+        return ''.join([gencode.get(seq[3*i:3*i+3], 'X')
+                        for i in range(len(sequence)//3)])
+    else:
+        return ''.join([gencode3.get(gencode.get(seq[3*i:3*i+3], 'X'), "X")
+                        for i in range(len(sequence)//3)])
+
+
+def aa_converter(aa_name):
+    """
+    Output 3 letter and 1 letter amino acid codes for a given
+    list of 3 letter or 1 letter amino acid code list.
+    """
+    gencode3 = {'A': 'Ala', 'C': 'Cys', 'D': 'Asp', 'E': 'Glu', 'F': 'Phe',
+                'G': 'Gly', 'H': 'His', 'I': 'Ile', 'K': 'Lys', 'L': 'Leu',
+                'M': 'Met', 'N': 'Asn', 'P': 'Pro', 'Q': 'Gln', 'R': 'Arg',
+                'S': 'Ser', 'T': 'Thr', 'V': 'Val', 'W': 'Trp', 'Y': 'Tyr'}
+    for a in list(gencode3.keys()):
+        gencode3[gencode3[a]] = a
+    try:
+        return gencode3[aa_name.capitalize()]
+    except KeyError:
+        return "%s is not a valid amino acid name" % a
+
+
+def ntthal(s1, s2, Na=25, Mg=10, conc=0.4, print_command=False,
+           td_path="/opt/resources/primer3_settings/primer3_config/"):
+    """ Return the melting temperature of two oligos at given conditions,
+    using ntthal from primer3 software.
+
+    Parameters
+    -----------
+    s1 : str, sequence of first oligo.
+    s2 : str, sequence of second oligo
+    Na : int, Sodium (or other monovalent cation) concentration in mM
+    Mg : int, Magnesium (or other divalent cation) concentration in mM
+    conc : float, concentration of the more concentrated oligo in nM
+    td_path : str, path to thermodynamic alignment parameters.
+    """
+    cmnd = ["ntthal", "-path", td_path, "-mv", str(Na), "-dv", str(Mg),
+            "-d", str(conc), "-s1", s1, "-s2", s2, "-r"]
+    if print_command:
+        return(" ".join(cmnd))
+    else:
+        ntt_res = subprocess.check_output(cmnd)
+        return float(ntt_res.decode("UTF-8").strip())
+
+
+def oligoTM(s, Na=25, Mg=10, conc=0.4,
+            thermodynamic_parameters=1, salt_correction=2):
+    """ Return the melting temperature an oligo at given conditions,
+    using oligotm from primer3 software.
+
+    Parameters
+    -----------
+    s : str, sequence of the oligo.
+    Na : int, Sodium (or other monovalent cation) concentration in mM
+    Mg : int, Magnesium (or other divalent cation) concentration in mM
+    conc : float, concentration of the more concentrated oligo in nM
+    tp : [0|1], Specifies the table of thermodynamic parameters and
+                the method of melting temperature calculation:
+                 0  Breslauer et al., 1986 and Rychlik et al., 1990
+                    (used by primer3 up to and including release 1.1.0).
+                    This is the default, but _not_ the recommended value.
+                 1  Use nearest neighbor parameters from SantaLucia 1998
+                    *THIS IS THE RECOMMENDED VALUE*
+    sc : [0..2], Specifies salt correction formula for the melting
+                 temperature calculation
+                  0  Schildkraut and Lifson 1965, used by primer3 up to
+                     and including release 1.1.0.
+                     This is the default but _not_ the recommended value.
+                  1  SantaLucia 1998
+                     *THIS IS THE RECOMMENDED VAULE*
+                  2  Owczarzy et al., 2004
+
+    """
+    ntt_res = subprocess.check_output(
+        ["oligotm", "-mv", str(Na), "-dv", str(Mg),
+         "-d", str(conc), "-tp", str(thermodynamic_parameters),
+         "-sc", str(salt_correction), s])
+    return float(ntt_res.decode("UTF-8").strip())
+
+
+def tm_calculator(sequence, conc, Na, Mg, dNTP_conc=0):
+    from math import log
+    from math import sqrt
+    monovalent_conc = Na/1000
+    divalent_conc = Mg/1000
+    oligo_conc = conc * pow(10, -9)
+    parameters = {}
+    parameters['AA'] = (-7900, -22.2, -1.0)
+    parameters['AT'] = (-7200, -20.4, -0.88)
+    parameters['AC'] = (-8400, -22.4, -1.44)
+    parameters['AG'] = (-7800, -21.0, -1.28)
+
+    parameters['TA'] = (-7200, -21.3, -0.58)
+    parameters['TT'] = (-7900, -22.2, -1.0)
+    parameters['TC'] = (-8200, -22.2, -1.3)
+    parameters['TG'] = (-8500, -22.7, -1.45)
+
+    parameters['CA'] = (-8500, -22.7, -1.45)
+    parameters['CT'] = (-7800, -21.0, -1.28)
+    parameters['CC'] = (-8000, -19.9, -1.84)
+    parameters['CG'] = (-10600, -27.2, -2.17)
+
+    parameters['GA'] = (-8200, -22.2, -1.3)
+    parameters['GT'] = (-8400, -22.4, -1.44)
+    parameters['GC'] = (-9800, -24.4, -2.24)
+    parameters['GG'] = (-8000, -19.9, -1.84)
+    params = parameters
+    # Normalize divalent_conc (Mg) for dNTP_conc
+    K_a = 30000
+    D = ((K_a * dNTP_conc - K_a * divalent_conc + 1) ** 2
+         + 4 * K_a * divalent_conc)
+    divalent_conc = (- (K_a * dNTP_conc - K_a * divalent_conc + 1)
+                     + sqrt(D)) / (2 * K_a)
+
+    # Define a, d, g coefficients used in salt adjustment
+    a_con = 3.92 * (
+        0.843 - 0.352 * sqrt(monovalent_conc) * log(monovalent_conc)
+    )
+    d_con = 1.42 * (
+        1.279 - 4.03 * pow(10, -3) * log(monovalent_conc)
+        - 8.03 * pow(10, -3) * ((log(monovalent_conc))**2)
+    )
+    g_con = 8.31 * (
+        0.486 - 0.258 * log(monovalent_conc)
+        + 5.25 * pow(10, -3) * ((log(monovalent_conc))**3)
+    )
+    dHsum = 0
+    dSsum = 0
+    sequence = sequence.upper()
+    # define duplex initiation values for T and G terminal nucleotides
+    if sequence[-1] == 'G' or sequence[-1] == 'C':
+        dHiTer = 100
+        dSiTer = -2.8
+    elif sequence[-1] == 'A' or sequence[-1] == 'T':
+        dHiTer = 2300
+        dSiTer = 4.1
+    if sequence[0] == 'G' or sequence[0] == 'C':
+        dHiIn = 100
+        dSiIn = -2.8
+    elif sequence[0] == 'A' or sequence[0] == 'T':
+        dHiIn = 2300
+        dSiIn = 4.1
+    dHi = dHiTer + dHiIn
+    dSi = dSiTer + dSiIn
+
+    R = 1.987  # ideal gas constant
+    for i in range(len(sequence)-1):
+        dinuc = sequence[i:(i+2)]
+        dinuc_params = params[dinuc]
+        dH = dinuc_params[0]
+        dS = dinuc_params[1]
+        dHsum += dH
+        dSsum += dS
+    # Tm w/o salt adjustment
+    Tm = (dHsum + dHi)/float(dSsum + dSi + (R*log(oligo_conc)))
+
+    # Salt adjustment
+    GC_frac = calculate_gc(sequence)/100
+    seq_length = len(sequence)
+    if sqrt(divalent_conc)/monovalent_conc < 0.22:
+        Tm = (Tm /
+              (pow(10, -5) * Tm * ((4.29 * GC_frac - 3.95)
+                                   * log(monovalent_conc)
+                                   + 0.94 * (log(monovalent_conc)**2))
+               + 1)
+              )
+
+    elif sqrt(divalent_conc)/monovalent_conc <= 6:
+        Tm = (Tm /
+              (Tm * (a_con
+                     - 0.911 * log(divalent_conc)
+                     + GC_frac * (6.26 + d_con * log(divalent_conc))
+                     + (1 / float(2 * (seq_length - 1))) *
+                     (-48.2 + 52.5 * log(divalent_conc) + g_con *
+                      (log(divalent_conc)) ** 2))
+               * pow(10, -5) + 1))
+    elif sqrt(divalent_conc)/monovalent_conc > 6:
+        a_con = 3.92
+        d_con = 1.42
+        g_con = 8.31
+        Tm = (Tm /
+              (Tm * (a_con
+                     - 0.911 * log(divalent_conc)
+                     + GC_frac * (6.26 + d_con * log(divalent_conc))
+                     + (1 / (2 * float(seq_length - 1))) *
+                     (-48.2 + 52.5 * log(divalent_conc) + g_con *
+                      (log(divalent_conc)) ** 2))
+               * pow(10, -5) + 1))
+    return Tm - 273.15
+
+
+def reverse_complement(sequence):
+    """ Return reverse complement of a sequence. """
+    complement_bases = {
+        'g': 'c', 'c': 'g', 'a': 't', 't': 'a', 'n': 'n',
+        'G': 'C', 'C': 'G', 'A': 'T', 'T': 'A', 'N': 'N', "-": "-",
+        "R": "Y", "Y": "R", "S": "W", "W": "S", "K": "M", "M": "K",
+        "B": "V", "V": "B", "D":  "H", "H":  "D",
+        "r": "y", "y": "r", "s": "w", "w": "s", "k": "m", "m": "k",
+        "b": "v", "v": "b", "d":  "h", "h":  "d"
+    }
+
+    bases = list(sequence)
+    bases.reverse()
+    revcomp = []
+    for base in bases:
+        try:
+            revcomp.append(complement_bases[base])
+        except KeyError:
+            print("Unexpected base encountered: ", base, " returned as X!!!")
+            revcomp.append("X")
+    return "".join(revcomp)
+
+
+def get_file_locations():
+    """ All static files such as fasta genomes, snp files, etc. must be listed
+    in a file in the working directory. File name is file_locations.
+    It is a tab separated text file. First tab has 2 letter species name, or
+    "all" for general files used for all species. Second tab is the file name
+    and third is the location of the file, either relative to script working
+    directory, or the absolute path."""
+    file_locations = {}
+    with open("/opt/resources/file_locations", "r") as infile:
+        for line in infile:
+            if not line.startswith("#"):
+                newline = line.strip().split("\t")
+                if newline[0] not in list(file_locations.keys()):
+                    file_locations[newline[0]] = {newline[1]: newline[2]}
+                else:
+                    file_locations[newline[0]][newline[1]] = newline[2]
+    return file_locations
+
+
+def id_generator(N):
+    """ Generate a random string of length N consisting of uppercase letters
+    and digits. Used for generating names for temporary files, etc.
+    """
+    return ''.join(random.SystemRandom().choice(
+        string.ascii_uppercase + string.digits) for _ in range(N))
+
+
+##########################################################
+# Possibly deprecated functions
+##########################################################
+
+
+def cnv_stats(hom_case, hom_control,
+              wt_case, wt_control):
+    """
+    Given case/control genotype numbers in the order:
+    1) number of homozygous cases,
+    2) homozygous controls,
+    3) heterozygous cases,
+    4) heterozygous controls
+    5) wildtype cases
+    6) wildtype controls
+    Returns a list of length 9:
+    1-3) Homozygous mutant vs wildtype
+    1) Odds ratio from Fisher's exact test
+    2) P value from Fisher's
+    3) P value from chi squared test
+    4-6) Heterozygous mutant vs wildtype
+    7-9) Mutants combined vs witdtype
+    Errors return "na" in place of values
+    """
+    ho_v_wt = [[hom_case, hom_control],
+               [wt_case, wt_control]]
+    output = []
+    tbl = ho_v_wt
+    try:
+        fish = fisher_exact(tbl)
+    except:
+        fish = ["na", "na"]
+    try:
+        chi = chi2_contingency(tbl)
+    except:
+        chi = ["na", "na", "na", "na"]
+    output.extend(fish)
+    output.append(chi[1])
+    return output
 
 
 def snp_stats(hom_case, hom_control,
@@ -12708,186 +12046,3 @@ def snp_stats(hom_case, hom_control,
         output.extend(fish)
         output.append(chi[1])
     return output
-
-
-def cnv_stats(hom_case, hom_control,
-              wt_case, wt_control):
-    """
-    Given case/control genotype numbers in the order:
-    1) number of homozygous cases,
-    2) homozygous controls,
-    3) heterozygous cases,
-    4) heterozygous controls
-    5) wildtype cases
-    6) wildtype controls
-    Returns a list of length 9:
-    1-3) Homozygous mutant vs wildtype
-    1) Odds ratio from Fisher's exact test
-    2) P value from Fisher's
-    3) P value from chi squared test
-    4-6) Heterozygous mutant vs wildtype
-    7-9) Mutants combined vs witdtype
-    Errors return "na" in place of values
-    """
-    ho_v_wt = [[hom_case, hom_control],
-               [wt_case, wt_control]]
-    output = []
-    tbl = ho_v_wt
-    try:
-        fish = fisher_exact(tbl)
-    except:
-        fish = ["na", "na"]
-    try:
-        chi = chi2_contingency(tbl)
-    except:
-        chi = ["na", "na", "na", "na"]
-    output.extend(fish)
-    output.append(chi[1])
-    return output
-
-
-def strip_fasta (sequence):
-    seq_list = sequence.split('\n')[1:]
-    seq_join = "".join(seq_list)
-    return seq_join
-
-
-def calculate_gc(sequence, fasta=0):
-    if fasta:
-        seq_list = sequence.split('\n')[1:]
-        seq_join = "".join(seq_list)
-        seq = seq_join.lower()
-
-    else:
-        seq = sequence.lower()
-    gc_count = seq.count('g') + seq.count('c')
-    at_count = seq.count('a') + seq.count('t')
-    percent = int(gc_count * 100 / (gc_count + at_count))
-    return percent
-
-
-def translate(sequence, three_letter = False):
-    gencode = {
-    'ATA':'I', 'ATC':'I', 'ATT':'I', 'ATG':'M',
-    'ACA':'T', 'ACC':'T', 'ACG':'T', 'ACT':'T',
-    'AAC':'N', 'AAT':'N', 'AAA':'K', 'AAG':'K',
-    'AGC':'S', 'AGT':'S', 'AGA':'R', 'AGG':'R',
-    'CTA':'L', 'CTC':'L', 'CTG':'L', 'CTT':'L',
-    'CCA':'P', 'CCC':'P', 'CCG':'P', 'CCT':'P',
-    'CAC':'H', 'CAT':'H', 'CAA':'Q', 'CAG':'Q',
-    'CGA':'R', 'CGC':'R', 'CGG':'R', 'CGT':'R',
-    'GTA':'V', 'GTC':'V', 'GTG':'V', 'GTT':'V',
-    'GCA':'A', 'GCC':'A', 'GCG':'A', 'GCT':'A',
-    'GAC':'D', 'GAT':'D', 'GAA':'E', 'GAG':'E',
-    'GGA':'G', 'GGC':'G', 'GGG':'G', 'GGT':'G',
-    'TCA':'S', 'TCC':'S', 'TCG':'S', 'TCT':'S',
-    'TTC':'F', 'TTT':'F', 'TTA':'L', 'TTG':'L',
-    'TAC':'Y', 'TAT':'Y', 'TAA':'*', 'TAG':'*',
-    'TGC':'C', 'TGT':'C', 'TGA':'*', 'TGG':'W'}
-    gencode3 = {'A': 'Ala',
-             'C': 'Cys',
-             'D': 'Asp',
-             'E': 'Glu',
-             'F': 'Phe',
-             'G': 'Gly',
-             'H': 'His',
-             'I': 'Ile',
-             'K': 'Lys',
-             'L': 'Leu',
-             'M': 'Met',
-             'N': 'Asn',
-             'P': 'Pro',
-             'Q': 'Gln',
-             'R': 'Arg',
-             'S': 'Ser',
-             'T': 'Thr',
-             'V': 'Val',
-             'W': 'Trp',
-             'Y': 'Tyr'}
-    seq = sequence.upper()
-    """Return the translated protein from 'sequence' assuming +1 reading frame"""
-    if not three_letter:
-        return ''.join([gencode.get(seq[3*i:3*i+3],'X') for i in range(len(sequence)//3)])
-    else:
-        return ''.join([gencode3.get(gencode.get(seq[3*i:3*i+3],'X'), "X")                                     for i in range(len(sequence)//3)])
-
-
-def aa_converter(aa_name):
-    """
-    Output 3 letter and 1 letter amino acid codes for a given
-    list of 3 letter or 1 letter amino acid code list.
-    """
-    gencode3 = {'A': 'Ala',
-             'C': 'Cys',
-             'D': 'Asp',
-             'E': 'Glu',
-             'F': 'Phe',
-             'G': 'Gly',
-             'H': 'His',
-             'I': 'Ile',
-             'K': 'Lys',
-             'L': 'Leu',
-             'M': 'Met',
-             'N': 'Asn',
-             'P': 'Pro',
-             'Q': 'Gln',
-             'R': 'Arg',
-             'S': 'Ser',
-             'T': 'Thr',
-             'V': 'Val',
-             'W': 'Trp',
-             'Y': 'Tyr'}
-    for a in list(gencode3.keys()):
-        gencode3[gencode3[a]] = a
-    try:
-        return gencode3[aa_name.capitalize()]
-    except KeyError:
-        return "%s is not a valid amino acid name" %a
-
-
-
-def reverse_complement(sequence):
-    """ Return reverse complement of a sequence. """
-    complement_bases = {
-        'g':'c', 'c':'g', 'a':'t', 't':'a', 'n':'n',
-        'G':'C', 'C':'G', 'A':'T', 'T':'A', 'N':'N', "-":"-",
-        "R":"Y", "Y":"R", "S":"W", "W":"S", "K":"M", "M":"K",
-        "B":"V", "V":"B", "D": "H", "H": "D",
-        "r":"y", "y":"r", "s":"w", "w":"s", "k":"m", "m":"k",
-        "b":"v", "v":"b", "d": "h", "h": "d"
-    }
-
-    bases = list(sequence)
-    bases.reverse()
-    revcomp = []
-    for base in bases:
-        try:
-            revcomp.append(complement_bases[base])
-        except KeyError:
-            print("Unexpected base encountered: ", base, " returned as X!!!")
-            revcomp.append("X")
-    return "".join(revcomp)
-
-def get_file_locations():
-    """ All static files such as fasta genomes, snp files, etc. must be listed
-    in a file in the working directory. File name is file_locations.
-    It is a tab separated text file. First tab has 2 letter species name, or
-    "all" for general files used for all species. Second tab is the file name
-    and third is the location of the file, either relative to script working
-    directory, or the absolute path."""
-    file_locations = {}
-    with open("/opt/resources/file_locations", "r") as infile:
-        for line in infile:
-            if not line.startswith("#"):
-                newline = line.strip().split("\t")
-                if newline[0] not in list(file_locations.keys()):
-                    file_locations[newline[0]] = {newline[1]: newline[2]}
-                else:
-                    file_locations[newline[0]][newline[1]] = newline[2]
-    return file_locations
-
-
-def id_generator(N):
-    """ Generate a random string of length N consisting of uppercase letters and digits.
-    Used for generating names for temporary files, etc."""
-    return ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(N))
