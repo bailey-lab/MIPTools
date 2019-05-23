@@ -4645,11 +4645,26 @@ def parasight_shift(resource_dir, design_info_file, species,
     return
 
 
-def parasight_print(gene_list, extra_suffix=".extra"):
-    for g in gene_list:
-        print(("cd ../" + g))
-        print(("parasight76.pl -showseq " + g + ".show "
-               + "-extra " + g + extra_suffix))
+def parasight_print(resource_dir, design_dir, design_info_file,
+                    designed_gene_list=None, extra_extension=".extra",
+                    use_json=False, print_out=False):
+    if not use_json:
+        with open(design_info_file, "rb") as infile:
+            design_info = pickle.load(infile)
+    else:
+        with open(design_info_file) as infile:
+            design_info = json.load(infile)
+    output_file = os.path.join(resource_dir, "parasight_print.txt")
+    with open(output_file, "w") as outfile:
+        for g in design_info:
+            if (designed_gene_list is None) or (g in designed_gene_list):
+                show_file = os.path.join(design_dir, g, g + ".show")
+                extras_file = os.path.join(design_dir, g, g + extra_extension)
+                line = ("parasight76.pl -showseq " + show_file
+                        + "-extra " + extras_file)
+                if print_out:
+                    print(line)
+                outfile.write(line + "\n")
 
 
 def rescue_mips(design_dir,

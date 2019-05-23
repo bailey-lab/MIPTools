@@ -47,3 +47,6 @@ else:
     mip.parasight(resource_dir, design_info_file,
                   designed_gene_list=None, extra_extension=".extra",
                   use_json=True)
+    mip.parasight_print(resource_dir, design_dir, design_info_file,
+                        designed_gene_list=None, extra_extension=".extra",
+                        use_json=False, print_out=False)
