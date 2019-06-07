@@ -1,1 +1,0 @@
-myps2img.bash

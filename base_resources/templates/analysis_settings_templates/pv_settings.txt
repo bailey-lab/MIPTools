@@ -1,33 +1,21 @@
-##############################################################################
-##############################################################################
-##############  SETTINGS THAT CHANGE PER RUN #################################
-##############################################################################
-##############################################################################
-workingDir	analysis/pf/DRC_170828/
-runID	170828
-mipsterFile	170828_allinfo
-filteredMipsterFile	170828_allinfo_filtered
-existingData	na
-rawDataFile	170828_raw_data.json
-##############################################################################
-##############################################################################
-##############  SETTINGS THAT CHANGE FOR FIRST RUN OF A PROJECT ##############  
-##############################################################################
-##############################################################################
-haplotypeDictionary	unique_haplotype.dic
-sequenceToHaplotypeDictionary	sequence_to_haplotype.dic
-variationDictionary	variation.dic
-variationKeyToUniqueKey	variation_key_to_unique_key.dic
+### Settings are a tab separated file with two columns.
+### First column is the setting name, second setting value.
+### Values should be comma separated if more than one value is needed.
 ##############################################################################
 ##############################################################################
 ##############  SETTINGS THAT CHANGE PER PROJECT
 ##############################################################################
 ##############################################################################
-species	pf
-resourceDir	na
-callInfoDictionary	resources/mip_dictionaries/pv/call_info.json
-mipSetsDictionary	resources/mip_ids/probe_sets.json
-mipSetKey	PVS
+species	pv
+callInfoDictionary	/opt/project_resources/mip_ids/call_info.json
+mipSetsDictionary	/opt/project_resources/mip_ids/probe_sets.json
+### Multiple sequence aligner to be used for variant calling.
+multipleSequenceAligner	decipher
+##############################################################################
+##############################################################################
+### Annotation settings below are species specific, so do dot change
+### unless working with something other than plasmodium falciparum
+##############################################################################
 annotationScript	table_annovar_pf.pl
 annotationBuildVersion	Sal1
 annotationProtocol	refGene
@@ -36,23 +24,73 @@ annotationNaString	.
 annotationOutput	myanno
 annotationKeys	AAChange.refGene;ExonicFunc.refGene;Gene.refGene
 annotationIdKey	na
-caseControlStats	False
+##############################################################################
+snpEffDb	none
+##############################################################################
+##############  SETTINGS THAT CAN CHANGE PER RUN #############################
+##############################################################################
+##############################################################################
+workingDir	/opt/analysis/
+dataDir	/opt/data
+mipsterFile	data.tsv
+##############################################################################
+##############################################################################
+##############      SETTINGS FOR DATA FILTERS    #############################
+##############################################################################
+##############################################################################
+# filters for a haplotype to be considered valid,
+# across all samples in an analysis.
+# minimum total barcodes
+minHaplotypeBarcodes	1
+# minimum number of samples that the haplotype is observed in
+minHaplotypeSamples	1
+# minimum fraction of samples that the haplotype is observed in
+minHaplotypeSampleFraction	0
+##############################################################################
+##############################################################################
+# loci filters, across samples
+# minimum total depth (filters on INFO/AD)
+minVariantBarcodes	1
+# minimum number of samples variant observed in (filters on INFO/AC)
+minVariantSamples	1
+# minimum fraction of samples variant observed in (filters on INFO/AF)
+minVariantSampleFraction	0
+# minimum number of samples with genotypes called (filters on INFO/AN)
+minVariantSampleTotal	1
+# average sequence quality for variant across samples (filters on INFO/QS)
+minVariantMeanQuality	20
+# average within sample allele frequency when observed  (filters on INFO/WSAF)
+minVariantMeanWsaf	0.001
+# average number of MIPs supporting the variant normalized to MAX (filters on INFO/MCF)
+# this is a good filter to remove artifacts when multiple MIPs cover a locus
+minMipCountFraction	0
+# Filters for individual variants. This is not used across samples,
+# but within each sample for each variant.
+# Phred quality filter
+minVariantQuality	20
+# minimum coverage at locus to call any genotype
+minVariantCoverage	1
+# minimum allele depth to call variant genotype
+minVariantCount	1
+# minimum within sample allele frequency to call variant genotype
+minVariantWsaf	0
+# minimum (within sample) information of an amino acid variant
+# for genotype calling. For example, if minMutationFraction is set to 0.01
+# and a mutation is at 0.005 frequency in a sample, it'll be called WT
+# if frequency is between 0.01 and 0.99; it'll be called MIX
+# if over 0.99, it'll be called MUT
+minMutationFraction	0.005
+# minimum barcode count for a (aminoacid) variant to be considered valid
+minMutationCount	2
+minCoverage	5
+# Merge nucleotide changes happening on the same codon to convert to amino acid
+# change. Use only for Plasmodium falciparum.
+mergeSNPs	0
 ##############################################################################
 ##############################################################################
 ############# SETTINGS THAT CHANGE LESS FREQUENTLY ###########################
 ##############################################################################
 ##############################################################################
-psvPriority	1
-psvMultiplier	50
-bwaOptions	mem,-t 30,-L 500,-T 80
-# minimum barcode information for a haplotype to be considered valid, fraction to all barcodes of all haplotypes for that copy in that sample
-minBarcodeCount	0
-minBarcodeFraction	0
-# minSnpBarcodeCount is for filtering data for SNP analysis
-# haplotypes with less barcodes than this will not be considered valid
-minSnpBarcodeCount	0
-minSnpBarcodeFraction	0
-minSnpQuality	20
 # Data normalization settings per probe
 # Per probe data across samples will be normalized to normalizationPercentiles
 # Mean of the values at lower and upper specified percentiles will be considered
@@ -62,33 +100,37 @@ minSnpQuality	20
 # normalizationPercentiles and averageCopyCount are set to 2 and 0.5,0.5, respectively.
 normalizationPercentiles	0.4,0.6
 averageCopyCount	1
-# mutations with less frequency than minMutationFraction will be set to zero frequency
-minMutationFraction	0.005
-# Merge nucleotide changes happening on the same codon to convert to amino acid change
-mergeSNPs	1
-# median normalized barcode number for filtering probes used
-minimumProbeMedian	10
-# median raw barcode number for filtering samples used for a given gene
-minimumSampleMedian	10
+##############################################################################
+##############################################################################
+# psvPriority is used to determine which paralog a given sequence belong to
+# for paralogus/multi mapping results. A sequence is aligned to the genome
+# and an alignment score is generated by lastZ program. Number of Paralog
+# specific variants are multiplied by psvMultiplier to generate PSV scores.
+# There are 3 options to determine which Paralog a sequence is assigned to:
+# 0: only consider alignment scores
+# 1: supplement alignment scores with psv scores
+# 2: use psv score, break ties with alignment scores
+psvPriority	1
+psvMultiplier	50
+##############################################################################
+# options for bwa program when aligning the haplotypes to genome
+bwaOptions	mem,-a,-L 500
 ##############################################################################
 ##############################################################################
 ##############  SETTINGS THAT ARE UNLIKELY TO CHANGE #########################
 ##############################################################################
 ##############################################################################
-colNames	p_targetName,p_geneName,s_Sample,h_popUID,h_seq,h_qual,c_qual,c_readCnt,c_barcodeCnt
-givenNames	mip_name,gene_name,sample_name,haplotype_ID,haplotype_sequence,haplotype_quality_scores,sequence_quality,read_count,barcode_count
+colNames	p_targetName,p_geneName,s_Sample,h_popUID,h_seq,c_qual,c_readCnt,c_barcodeCnt
+givenNames	mip_name,gene_name,sample_name,haplotype_ID,haplotype_sequence,sequence_quality,read_count,barcode_count
 colTypes	str,str,str,str,str,str,str,int,int
-mipInfoDictionary	resources/mip_dictionaries/human/hsu_call_info.json
-mipDesignDictionary	resources/mip_dictionaries/human/human_mips_updated.dic
 alignmentDir	alignments/
-processorNumber	50
+processorNumber	20
 copyStableGenes	na
 ########################################################################
 ########################################################################
-###############   FILE NAMES THAT DO NOT CHANGE ########################  
+###############   FILE NAMES THAT DO NOT CHANGE ########################
 ########################################################################
 #########################################################################
-caseFile	case_file
 haplotypesSamFile	haplotypes_bwa.sam
 haplotypesFastqFile	haplotypes.fq
 filteredDataFile	filtered_data.json
@@ -98,31 +140,16 @@ tempOffTargetsFile	off_targets.tmp
 tempAlignmentStdOut	alignment_out.tmp
 tempAlignmentsFile	alignments.tmp
 tempMappedHaplotypesFile	mapped_haplotypes.tmp
-mipCountFile	mip_counts
-barcodeCountFile	barcode_counts
 rawVcfFile	raw.vcf
 normalizedVcfFile	norm.vcf
-variationTableFile	variation_table
-sampleVariationFile	sample_diffs
-sampleInfoFile	sample_info_out.dic
 rawProblemData	problem_raw_data
 normalizedProblemData	problem_normalized_data
-perSampleResults	sample_results
-perProbeResults	probe_results
-uniqueProbeFile	unique_probes
-tablesFile	tables
-filteredTablesFile	filtered_tables
-clusterOutputFile	cluster_output
-# plotting options
-dpi	96
-ymax	6
-figsize	10,40
-snpResultsFile	clinical_snp_results
-##########################
-# dbscan cluster parameters
-tsneKey	V
-tsnePlotKey	Y
-minClusterSamples	5
-maxUnclusteredFrac	0.01
-maxClusterCount	9
-dbScanOutputFile	dbscan_clusters
+##############################################################################
+##############################################################################
+##############  SETTINGS THAT CHANGE FOR FIRST RUN OF A PROJECT ##############
+##############################################################################
+##############################################################################
+haplotypeDictionary	unique_haplotype.dic
+sequenceToHaplotypeDictionary	sequence_to_haplotype.dic
+variationDictionary	variation.dic
+variationKeyToUniqueKey	variation_key_to_unique_key.dic

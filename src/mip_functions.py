@@ -22,6 +22,9 @@ import mip_classes as mod
 import pandas as pd
 import gzip
 from primer3 import calcHeterodimerTm
+import traceback
+from msa_to_vcf import msa_to_vcf as msa_to_vcf
+
 print("functions reloading")
 # backbone dictionary
 mip_backbones = {
@@ -74,23 +77,9 @@ class NoDaemonProcessPool(multiprocessing.pool.Pool):
         super(NoDaemonProcessPool, self).__init__(*args, **kwargs)
 
 
-def get_file_locations():
-    """ All static files such as fasta genomes, snp files, etc. must be listed
-    in a file in the working directory. File name is file_locations.
-    It is a tab separated text file. First tab has 2 letter species name, or
-    "all" for general files used for all species. Second tab is the file name
-    and third is the location of the file, either relative to script working
-    directory, or the absolute path."""
-    file_locations = {}
-    with open("/opt/resources/file_locations", "r") as infile:
-        for line in infile:
-            if not line.startswith("#"):
-                newline = line.strip().split("\t")
-                if newline[0] not in list(file_locations.keys()):
-                    file_locations[newline[0]] = {newline[1]: newline[2]}
-                else:
-                    file_locations[newline[0]][newline[1]] = newline[2]
-    return file_locations
+###############################################################
+# Region prep related functions
+###############################################################
 
 
 def coordinate_to_target(coordinates, snp_locations, capture_size):
@@ -107,7 +96,7 @@ def coordinate_to_target(coordinates, snp_locations, capture_size):
         chrom = rsl[r]["chrom"]
         try:
             snp_chroms[chrom].append([rsl[r]["begin"],
-                                  rsl[r]["end"]])
+                                      rsl[r]["end"]])
         except KeyError:
             snp_chroms[chrom] = [[rsl[r]["begin"],
                                   rsl[r]["end"]]]
@@ -122,7 +111,9 @@ def coordinate_to_target(coordinates, snp_locations, capture_size):
         for r in regions:
             snps_in_region = []
             for s in reference_snp_locations:
-                if (reference_snp_locations[s]["chrom"] == c) and                     (r[0] <= reference_snp_locations[s]["begin"] <=                     reference_snp_locations[s]["end"] <= r[1]):
+                if ((reference_snp_locations[s]["chrom"] == c)
+                    and (r[0] <= reference_snp_locations[s]["begin"]
+                         <= reference_snp_locations[s]["end"] <= r[1])):
                     snps_in_region.append(s)
             r.append(snps_in_region)
         for reg in regions:
@@ -134,7 +125,6 @@ def coordinate_to_target(coordinates, snp_locations, capture_size):
                 s_locations = []
                 locations = snp_locations[s]
                 ref_location = reference_snp_locations[s]
-                ref_chrom = ref_location["chrom"]
                 ref_begin = ref_location["begin"]
                 ref_end = ref_location["end"]
                 left_flank_buffer = ref_begin - reg_begin + capture_size
@@ -150,7 +140,6 @@ def coordinate_to_target(coordinates, snp_locations, capture_size):
             reg.append(reg_locations)
     # create target coordinate for each region
     target_coordinates = {}
-    target_names = {}
     for c in merged_snp_chroms:
         regions = merged_snp_chroms[c]
         for reg in regions:
@@ -167,14 +156,14 @@ def coordinate_to_target(coordinates, snp_locations, capture_size):
 
 def rsid_to_target(resource_dir, snp_file):
     """ Create MIP targets starting from a snp file that is produced offline,
-    usually from Annovar. This is a tab separated file with the following content:
-    chr1	2595307	2595307	A	G	rs3748816.
+    usually from Annovar. This is a tab separated file with the following
+    content: chr1	2595307	2595307	A	G	rs3748816.
     This can be generalized to any target with coordinates.
     """
     # one snp can have multiple locations on the reference genome,
     # this can happen with snps in regions where there are multiple different
-    # assemblies (HLA locus, for example). So first step is to get each of these
-    # locations in the genome.
+    # assemblies (HLA locus, for example). So first step is to get each of
+    # these locations in the genome.
     snp_locations = {}
     capture_types = {}
     with io.open(resource_dir + snp_file, encoding="utf-8") as infile:
@@ -191,21 +180,25 @@ def rsid_to_target(resource_dir, snp_file):
                 # check if this location is already in the dict
                 # append the new alternative base to the dict
                 for snp in snp_locations[rsid]:
-                    if (snp["begin"] == temp_dic["begin"]) and                         (snp["end"] == temp_dic["end"]) and                         (snp["chrom"] == temp_dic["chrom"]) and                         (snp["ref_base"] == temp_dic["ref_base"]):
+                    if ((snp["begin"] == temp_dic["begin"])
+                        and (snp["end"] == temp_dic["end"])
+                        and (snp["chrom"] == temp_dic["chrom"])
+                            and (snp["ref_base"] == temp_dic["ref_base"])):
                         snp["alt_bases"].append(temp_dic["alt_bases"][0])
                         break
                 else:
-                    # add the snp dict if the location is different than what is present
-                    # in the location dict.
+                    # add the snp dict if the location is different than what
+                    # is present in the location dict.
                     snp_locations[rsid].append(temp_dic)
             except KeyError:
-                # add the new rsid to location dict if it is not already present
+                # add the new rsid to location dict if it is not already there
                 snp_locations[rsid] = [temp_dic]
                 capture_types[rsid] = newline[6]
     # one reference location for each snp is required
     # alternative assambly chromosomes have an underscore in their names,
     # so that will be utilized to get the location in the orignal assembly,
-    # i.e. the chromosome that does not have the underscore (chr7 and not chr7_alt08)
+    # i.e. the chromosome that does not have the underscore
+    # (chr7 and not chr7_alt08)
     reference_snp_locations = {}
     problem_snps = []
     for s in snp_locations:
@@ -217,10 +210,13 @@ def rsid_to_target(resource_dir, snp_file):
                     reference_snp_locations[s] = snp_locations[s][i]
                     break
             else:
-                print("Short chromosome name not found! Please check the output list.")
+                print(("Short chromosome name not found! "
+                       "Please check the output list."))
                 problem_snps.append(s)
         reference_snp_locations[s]["capture_type"] = capture_types[s]
     return reference_snp_locations, snp_locations
+
+
 def gene_to_target(gene_list, species):
     target_coordinates = {}
     for gene in gene_list:
@@ -228,7 +224,7 @@ def gene_to_target(gene_list, species):
                                get_file_locations()[species]["refgene"],
                                alternative_chr=1))
         try:
-            target_coordinates[gene] = {"chrom":e["chrom"],
+            target_coordinates[gene] = {"chrom": e["chrom"],
                                         "begin": e["begin"],
                                         "end": e["end"]}
         except KeyError:
@@ -236,6 +232,8 @@ def gene_to_target(gene_list, species):
                                         "begin": np.nan,
                                         "end": np.nan}
     return target_coordinates
+
+
 def gene_to_target_exons(gene_list, species, exon_list):
     target_coordinates = {}
     for i in range(len(gene_list)):
@@ -251,7 +249,7 @@ def gene_to_target_exons(gene_list, species, exon_list):
             for j in range(len(exons)):
                 e = exons[j]
                 tar_name = "-".join([gene, "exon", str(j)])
-                target_coordinates[tar_name] = {"chrom":gene_exons["chrom"],
+                target_coordinates[tar_name] = {"chrom": gene_exons["chrom"],
                                                 "begin": e[0],
                                                 "end": e[1]}
         else:
@@ -259,12 +257,15 @@ def gene_to_target_exons(gene_list, species, exon_list):
                 try:
                     e = exons[j]
                     tar_name = "-".join(gene, "exon", str(j))
-                    target_coordinates[tar_name] = {"chrom":gene_exons["chrom"],
-                                                    "begin": e[0],
-                                                    "end": e[1]}
+                    target_coordinates[tar_name] = {
+                        "chrom": gene_exons["chrom"],
+                        "begin": e[0],
+                        "end": e[1]}
                 except IndexError:
                     print(("Exon ", j, " does not exist for gene ", gene))
     return target_coordinates
+
+
 def parse_alignment(reg_file):
     """ Create a rinfo dictionary from a rinfo file."""
     reg_dic = {}
@@ -272,204 +273,28 @@ def parse_alignment(reg_file):
         for line in infile:
             if line.startswith("REGION"):
                 newline = line.strip().split("\t")
-                #print newline
                 key1 = newline[1].split(":")[0]
                 key2 = newline[1].split(":")[1]
                 if key1 not in reg_dic:
-                    reg_dic[key1] = {key2:{"copyname":newline[2],
-                                            "chr":int(newline[3][3:]),
-                                            "begin":int(newline[4]),
-                                             "end":int(newline[5]),
-                                             "ori":(newline[6]=="F")}
-                                     }
+                    reg_dic[key1] = {key2: {"copyname": newline[2],
+                                            "chr": int(newline[3][3:]),
+                                            "begin": int(newline[4]),
+                                            "end": int(newline[5]),
+                                            "ori": (newline[6] == "F")}}
                 else:
-                    reg_dic[key1][key2] = {"copyname":newline[2],
-                                            "chr":int(newline[3][3:]),
-                                            "begin":int(newline[4]),
-                                             "end":int(newline[5]),
-                                             "ori":(newline[6]=="F")}
+                    reg_dic[key1][key2] = {"copyname": newline[2],
+                                           "chr": int(newline[3][3:]),
+                                           "begin": int(newline[4]),
+                                           "end": int(newline[5]),
+                                           "ori": (newline[6] == "F")}
     return reg_dic
-
-
-def id_generator(N):
-    """ Generate a random string of length N consisting of uppercase letters and digits.
-    Used for generating names for temporary files, etc."""
-    return ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(N))
-
-
-def ntthal(s1, s2, Na=25, Mg=10, conc=0.4, print_command=False,
-           td_path="/opt/resources/primer3_settings/primer3_config/"):
-    """ Return the melting temperature of two oligos at given conditions,
-    using ntthal from primer3 software.
-
-    Parameters
-    -----------
-    s1 : str, sequence of first oligo.
-    s2 : str, sequence of second oligo
-    Na : int, Sodium (or other monovalent cation) concentration in mM
-    Mg : int, Magnesium (or other divalent cation) concentration in mM
-    conc : float, concentration of the more concentrated oligo in nM
-    td_path : str, path to thermodynamic alignment parameters.
-    """
-    cmnd = ["ntthal", "-path", td_path, "-mv", str(Na), "-dv", str(Mg),
-            "-d", str(conc), "-s1", s1, "-s2", s2, "-r"]
-    if print_command:
-        return(" ".join(cmnd))
-    else:
-        ntt_res = subprocess.check_output(cmnd)
-        return float(ntt_res.decode("UTF-8").strip())
-
-
-def oligoTM(s, Na=25, Mg=10, conc=0.4,
-            thermodynamic_parameters=1, salt_correction=2):
-    """ Return the melting temperature an oligo at given conditions,
-    using oligotm from primer3 software.
-
-    Parameters
-    -----------
-    s : str, sequence of the oligo.
-    Na : int, Sodium (or other monovalent cation) concentration in mM
-    Mg : int, Magnesium (or other divalent cation) concentration in mM
-    conc : float, concentration of the more concentrated oligo in nM
-    tp : [0|1], Specifies the table of thermodynamic parameters and
-                the method of melting temperature calculation:
-                 0  Breslauer et al., 1986 and Rychlik et al., 1990
-                    (used by primer3 up to and including release 1.1.0).
-                    This is the default, but _not_ the recommended value.
-                 1  Use nearest neighbor parameters from SantaLucia 1998
-                    *THIS IS THE RECOMMENDED VALUE*
-    sc : [0..2], Specifies salt correction formula for the melting
-                 temperature calculation
-                  0  Schildkraut and Lifson 1965, used by primer3 up to
-                     and including release 1.1.0.
-                     This is the default but _not_ the recommended value.
-                  1  SantaLucia 1998
-                     *THIS IS THE RECOMMENDED VAULE*
-                  2  Owczarzy et al., 2004
-
-    """
-    ntt_res = subprocess.check_output(
-        ["oligotm", "-mv", str(Na), "-dv", str(Mg),
-         "-d", str(conc), "-tp", str(thermodynamic_parameters),
-         "-sc", str(salt_correction), s])
-    return float(ntt_res.decode("UTF-8").strip())
-
-
-def tm_calculator(sequence, conc, Na, Mg, dNTP_conc=0):
-    from math import log
-    from math import sqrt
-    monovalent_conc = Na/1000
-    divalent_conc = Mg/1000
-    oligo_conc = conc * pow(10, -9)
-    parameters = {}
-    parameters['AA'] = (-7900, -22.2, -1.0)
-    parameters['AT'] = (-7200, -20.4, -0.88)
-    parameters['AC'] = (-8400, -22.4, -1.44)
-    parameters['AG'] = (-7800, -21.0, -1.28)
-
-    parameters['TA'] = (-7200, -21.3, -0.58)
-    parameters['TT'] = (-7900, -22.2, -1.0)
-    parameters['TC'] = (-8200, -22.2, -1.3)
-    parameters['TG'] = (-8500, -22.7, -1.45)
-
-    parameters['CA'] = (-8500, -22.7, -1.45)
-    parameters['CT'] = (-7800, -21.0, -1.28)
-    parameters['CC'] = (-8000, -19.9, -1.84)
-    parameters['CG'] = (-10600, -27.2, -2.17)
-
-    parameters['GA'] = (-8200, -22.2, -1.3)
-    parameters['GT'] = (-8400, -22.4, -1.44)
-    parameters['GC'] = (-9800, -24.4, -2.24)
-    parameters['GG'] = (-8000, -19.9, -1.84)
-    params = parameters
-    # Normalize divalent_conc (Mg) for dNTP_conc
-    K_a = 30000
-    D = ((K_a * dNTP_conc - K_a * divalent_conc + 1) ** 2
-         + 4 * K_a * divalent_conc)
-    divalent_conc = (- (K_a * dNTP_conc - K_a * divalent_conc + 1)
-                     + sqrt(D)) / (2 * K_a)
-
-    # Define a, d, g coefficients used in salt adjustment
-    a_con = 3.92 * (
-        0.843 - 0.352 * sqrt(monovalent_conc) * log(monovalent_conc)
-    )
-    d_con = 1.42 * (
-        1.279 - 4.03 * pow(10, -3) * log(monovalent_conc)
-        - 8.03 * pow(10, -3) * ((log(monovalent_conc))**2)
-    )
-    g_con = 8.31 * (
-        0.486 - 0.258 * log(monovalent_conc)
-        + 5.25 * pow(10, -3) * ((log(monovalent_conc))**3)
-    )
-    dHsum = 0
-    dSsum = 0
-    sequence = sequence.upper()
-    # define duplex initiation values for T and G terminal nucleotides
-    if sequence[-1] == 'G' or sequence[-1] == 'C':
-        dHiTer = 100
-        dSiTer = -2.8
-    elif sequence[-1] == 'A' or sequence[-1] == 'T':
-        dHiTer = 2300
-        dSiTer = 4.1
-    if sequence[0] == 'G' or sequence[0] == 'C':
-        dHiIn = 100
-        dSiIn = -2.8
-    elif sequence[0] == 'A' or sequence[0] == 'T':
-        dHiIn = 2300
-        dSiIn = 4.1
-    dHi = dHiTer + dHiIn
-    dSi = dSiTer + dSiIn
-
-    R = 1.987  # ideal gas constant
-    for i in range(len(sequence)-1):
-        dinuc = sequence[i:(i+2)]
-        dinuc_params = params[dinuc]
-        dH = dinuc_params[0]
-        dS = dinuc_params[1]
-        dHsum += dH
-        dSsum += dS
-    # Tm w/o salt adjustment
-    Tm = (dHsum + dHi)/float(dSsum + dSi + (R*log(oligo_conc)))
-
-    # Salt adjustment
-    GC_frac = calculate_gc(sequence)/100
-    seq_length = len(sequence)
-    if sqrt(divalent_conc)/monovalent_conc < 0.22:
-        Tm = (Tm /
-              (pow(10, -5) * Tm * ((4.29 * GC_frac - 3.95)
-                                   * log(monovalent_conc)
-                                   + 0.94 * (log(monovalent_conc)**2))
-               + 1)
-              )
-
-    elif sqrt(divalent_conc)/monovalent_conc <= 6:
-        Tm = (Tm /
-              (Tm * (a_con
-                     - 0.911 * log(divalent_conc)
-                     + GC_frac * (6.26 + d_con * log(divalent_conc))
-                     + (1 / float(2 * (seq_length - 1))) *
-                     (-48.2 + 52.5 * log(divalent_conc) + g_con *
-                      (log(divalent_conc)) ** 2))
-               * pow(10, -5) + 1))
-    elif sqrt(divalent_conc)/monovalent_conc > 6:
-        a_con = 3.92
-        d_con = 1.42
-        g_con = 8.31
-        Tm = (Tm /
-              (Tm * (a_con
-                     - 0.911 * log(divalent_conc)
-                     + GC_frac * (6.26 + d_con * log(divalent_conc))
-                     + (1 / (2 * float(seq_length - 1))) *
-                     (-48.2 + 52.5 * log(divalent_conc) + g_con *
-                      (log(divalent_conc)) ** 2))
-               * pow(10, -5) + 1))
-    return Tm - 273.15
 
 
 def get_target_coordinates(res_dir, species, capture_size,
                            coordinates_file=None, snps_file=None,
-                           genes_file=None, capture_types={}):
+                           genes_file=None):
     """ Extract MIP target coordinates from provided files. """
+    capture_types = {}
     # Get target coordinates specified as genomic coordinates
     if coordinates_file is not None:
         coordinates_file = os.path.join(res_dir, coordinates_file)
@@ -482,7 +307,7 @@ def get_target_coordinates(res_dir, species, capture_size,
             # update capture types of targets
             for g in region_coordinates:
                 if g not in capture_types:
-                    capture_types[g] = region_coordinates[g]["Capture Type"]
+                    capture_types[g] = region_coordinates[g]["CaptureType"]
         except IOError:
             print(("Target coordinates file {} could not be found.").format(
                 (coordinates_file)))
@@ -506,10 +331,10 @@ def get_target_coordinates(res_dir, species, capture_size,
             gene_coordinates = {}
             for g in genes:
                 try:
-                    if np.isnan(genes[g]["Gene ID"]):
+                    if np.isnan(genes[g]["GeneID"]):
                         try:
                             gene_id = alias[g]
-                            genes[g]["Gene ID"] = gene_id
+                            genes[g]["GeneID"] = gene_id
                         except KeyError:
                             print("""Alias for gene %s is not found.
                                 Either provide a gene ID or use an alias
@@ -523,9 +348,9 @@ def get_target_coordinates(res_dir, species, capture_size,
                             continue
                 except TypeError:
                     pass
-                gene_ids.append(genes[g]["Gene ID"])
-                gene_id_to_gene[genes[g]["Gene ID"]] = g
-                capture_types[g] = genes[g]["Capture Type"]
+                gene_ids.append(genes[g]["GeneID"])
+                gene_id_to_gene[genes[g]["GeneID"]] = g
+                capture_types[g] = genes[g]["CaptureType"]
             gene_id_coordinates = gene_to_target(gene_ids, species)
             for gid in gene_id_coordinates:
                 gene_coordinates[gene_id_to_gene[gid]] = gene_id_coordinates[
@@ -539,7 +364,8 @@ def get_target_coordinates(res_dir, species, capture_size,
     # Get SNP target coordinates
     try:
         snps_file = os.path.join(res_dir, snps_file)
-        snp_df = pd.read_table(snps_file, index_col=False)
+        snp_df = pd.read_table(snps_file, index_col=False,
+                               dtype={"Start": int, "End": int})
         snp_df.rename(columns={"Name": "name", "Chrom": "chrom",
                                "Start": "begin", "End": "end"},
                       inplace=True)
@@ -1033,7 +859,9 @@ def alignment_parser(wdir, name, spacer=0, gene_names=[]):
     # e.g. if a overlaps b, b overlaps a also. We'll have {a: [a,b], b: [b, a]}
     # in the overlaps dict. We want only one of these, so reduce to {a:[a, b]}
     overlap_found = True
-    while overlap_found:
+    # place a failsafe counter to avoid unforseen infinite loops
+    exit_counter = 0
+    while (overlap_found and (exit_counter < 10000)):
         overlap_found = False
         for o in list(overlaps.keys()):
             # check if o is still in the overlaps and has not been removed
@@ -1046,14 +874,16 @@ def alignment_parser(wdir, name, spacer=0, gene_names=[]):
                         overlaps[o].extend(overlaps[v])
                         overlaps.pop(v)
                         overlap_found = True
+    if exit_counter > 9999:
+        print("Overlap removal while loop limit is reached.")
     # clean up overlapping region lists by removing duplicates.
     for o in overlaps:
         overlaps[o] = sorted(list(set(overlaps[o])))
-    #########################################
+    ##########################################################################
     # create a new dictionary for target regions.
     # for each target group in overlaps, we'll have genomic coordinates
     # that will be used as final targets.
-    #########################################
+    ##########################################################################
     # group regions according to their chromosomes
     separated_regions = {}
     for o in overlaps:
@@ -1072,6 +902,7 @@ def alignment_parser(wdir, name, spacer=0, gene_names=[]):
         for chrom in separated_regions[s]:
             merged_region = merge_overlap(separated_regions[s][chrom])
             merged_sep[chrom] = merged_region
+    ###########################################
     # organize target regions, assign region names based on the original
     # target names. Assign a reference target.
     ###########################################
@@ -1188,8 +1019,7 @@ def alignment_parser(wdir, name, spacer=0, gene_names=[]):
 def set_intra_alignment_options(target_regions, identity, coverage,
                                 max_allowed_indel_size,
                                 match_score=1, mismatch_score=5,
-                                gap_open_penalty=20, gap_extend_penalty=5
-                                ):
+                                gap_open_penalty=20, gap_extend_penalty=5):
     alignment_options_dict = {}
     for t in target_regions:
         temp_dict = {"gene_name": t, "identity": identity}
@@ -1490,9 +1320,8 @@ def alignment_mapper(family_name, res_dir):
     """
     alignment_file = family_name + ".aligned"
     difference_file = family_name + ".differences"
-    with open(
-        res_dir + alignment_file, "r"
-    ) as alignment, open(res_dir + difference_file, "r") as difference:
+    with open(res_dir + alignment_file, "r") as alignment, open(
+            res_dir + difference_file, "r") as difference:
         # create an alignment dictionary for each region that a query
         # aligns to these correspond to each line in the alignment file
         # and thus, are relative coordinates.
@@ -1687,6 +1516,12 @@ def alignment_mapper(family_name, res_dir):
     return alignment_dic
 
 
+
+###############################################################
+# Design related functions
+###############################################################
+
+
 def order_mips(mip_info, design_name, res_dir):
     mip_sequences = []
     for g in sorted(mip_info):
@@ -1745,1863 +1580,6 @@ def order_mips(mip_info, design_name, res_dir):
                 outfile_list.append("\t".join([wp, m[0], m[-1]]))
             outfile.write("\n".join(outfile_list))
     return
-###############################################################
-# Data analysis related functions
-###############################################################
-
-
-def align_haplotypes(
-        settings, target_actions=["unmask", "multiple"],
-        query_actions=["unmask"],
-        output_format="general:name1,text1,name2,text2,diff,score",
-        alignment_options=["--noytrim"], identity=75, coverage=75
-        ):
-    """ Get a haplotypes dict and a call_info dict, align each haplotype to
-    reference sequences from the call_info dict."""
-    wdir = settings["workingDir"]
-    haplotypes_file = os.path.join(wdir, settings["tempHaplotypesFile"])
-    with open(haplotypes_file) as infile:
-        haplotypes = json.load(infile)
-    species = settings["species"]
-    alignment_dir = wdir + settings["alignmentDir"]
-    num_processor = int(settings["processorNumber"])
-    command_list = []
-    with open(settings["callInfoDictionary"]) as infile:
-        call_info = json.load(infile)
-    # create alignment dir if it does not exist
-    if not os.path.exists(alignment_dir):
-        os.makedirs(alignment_dir)
-    for m in haplotypes:
-        # create a fasta file for each mip that contains all haplotype
-        # sequences for that mip
-        haplotype_fasta = alignment_dir + m + ".haps"
-        with open(haplotype_fasta, "w") as outfile:
-            outfile_list = []
-            for h in haplotypes[m]:
-                outlist = [">", h, "\n", haplotypes[m][h]["sequence"]]
-                outfile_list.append("".join(outlist))
-            outfile.write("\n".join(outfile_list))
-        haplotype_fasta = m + ".haps"
-        # create a reference file for each mip that contains reference
-        # sequences for each paralog copy for that mip
-        reference_fasta = alignment_dir + m + ".refs"
-        with open(reference_fasta, "w") as outfile:
-            outfile_list = []
-            gene_name = m.split("_")[0]
-            for c in call_info[gene_name][m]["copies"]:
-                c_ori = call_info[gene_name][m]["copies"][c]["orientation"]
-                c_seq = call_info[gene_name][m]["copies"][c][
-                    "capture_sequence"]
-                if c_ori == "reverse":
-                    c_seq = reverse_complement(c_seq)
-                outlist = [">", m + "_" + c, "\n", c_seq]
-                outfile_list.append("".join(outlist))
-            outfile.write("\n".join(outfile_list))
-        # name of the alignment output file for the mip
-        output_file = m + ".aligned"
-        # create the list to be passed to the alignment worker function
-        command = [haplotype_fasta, alignment_dir, output_file,
-                   reference_fasta, target_actions, query_actions, identity,
-                   coverage, output_format, alignment_options, species]
-        # add the command to the list that will be passed to the multi-aligner
-        command_list.append(command)
-    # run the alignment
-    alignment = align_region_multi(command_list, num_processor)
-    alignment_out_file = wdir + settings["tempAlignmentStdOut"]
-    with open(alignment_out_file, "w") as outfile:
-        json.dump(alignment, outfile)
-    return
-
-
-def parse_aligned_haplotypes(settings):
-    wdir = settings["workingDir"]
-    species = settings["species"]
-    alignment_dir = os.path.join(wdir, settings["alignmentDir"])
-    with open(settings["callInfoDictionary"]) as infile:
-        call_info = json.load(infile)
-    temp_haplotypes_file = os.path.join(wdir, settings["tempHaplotypesFile"])
-    with open(temp_haplotypes_file) as infile:
-        haplotypes = json.load(infile)
-    alignments = {}
-    inverted_alignments = []
-    problem_alignments = []
-    problem_snps = []
-    for m in haplotypes:
-        # each mip has all its haplotypes and reference sequences aligned
-        # in mipname.aligned file.
-        with open(os.path.join(alignment_dir, m + ".aligned")) as al_file:
-            for line in al_file:
-                problem_al = False
-                if not line.startswith("#"):
-                    # each line of the alignment file includes an alignment
-                    # between the reference copy sequences of a mip
-                    # and a haplotype sequence
-                    newline = line.strip().split("\t")
-                    gene_name = newline[0].split("_")[0]
-                    m_name = "_".join(newline[0].split("_")[:-1])
-                    ref_copy = newline[0].split("_")[-1]
-                    rf_ori = call_info[gene_name][m_name]["copies"][ref_copy][
-                        "orientation"]
-                    # aligned part of the reference sequence with gaps
-                    ref_al = newline[1].upper()
-                    if rf_ori == "reverse":
-                        ref_al = reverse_complement(ref_al)
-                    # aligned part of the reference without gaps
-                    ref_used = ref_al.translate(str.maketrans({"-": None}))
-                    ref_used = ref_used.upper()
-                    hap_name = newline[2]
-                    # aligned part of the haplotype with gaps
-                    hap_al = newline[3].upper()
-                    if rf_ori == "reverse":
-                        hap_al = reverse_complement(hap_al)
-                    # aligned part of the haplotype without gaps
-                    hap_used = hap_al.translate(str.maketrans({"-": None}))
-                    hap_used = hap_used.upper()
-                    # alignment diff (.for match, : and X mismatch, - gap)
-                    diff = newline[4]
-                    if rf_ori == "reverse":
-                        diff = diff[::-1]
-                    score = int(newline[5])
-                    # full haplotype sequence
-                    hap_seq = haplotypes[m][hap_name]["sequence"].upper()
-                    # full reference sequence
-                    ref_seq = call_info[gene_name][m]["copies"][ref_copy][
-                        "capture_sequence"].upper()
-                    # index of where in full reference the alignment begins
-                    ref_align_begin = ref_seq.find(ref_used)
-                    # index of where in full reference the alignment ends
-                    ref_align_end = ref_align_begin + len(ref_used)
-                    # index of where in full haplotype sequence the alignment begins
-                    hap_align_begin = hap_seq.find(hap_used)
-                    # if the alignment is inverted, i.e. there is a reverse
-                    # complement alignment with a significant score, the find
-                    # method will not find the haplotype sequence in query or
-                    # the target sequence in reference # and return -1. These
-                    # alignments have been happening when one copy differs so
-                    # much from another, an inverted alignment scores better.
-                    # These should be ignored because the real copy the
-                    # haplotype comes from will have a better score. However,
-                    # there can theoretically be an inversion within a capture
-                    # region that produces a legitimate inverted alignment.
-                    # Therefore these alignments may be inspected if desired.
-                    # We will keep such alignments in a dictionary and save.
-                    if min([hap_align_begin, ref_align_begin]) < 0:
-                        al_dict = {"gene_name": gene_name,
-                                   "mip_name": m,
-                                   "copy": ref_copy,
-                                   "score": score,
-                                   "aligned_hap": hap_al,
-                                   "aligned_ref": ref_al,
-                                   "diff": diff,
-                                   "haplotype_ID": hap_name}
-                        inverted_alignments.append(al_dict)
-                        continue
-                    # index of where in full haplotype sequence the alignment
-                    # ends
-                    hap_align_end = hap_align_begin + len(hap_used)
-                    # deal with any existing flanking deletions/insertions
-                    # is there any unaligned sequence on the left of alignment
-                    left_pad_len = max([hap_align_begin, ref_align_begin])
-                    left_pad_diff = abs(hap_align_begin - ref_align_begin)
-                    left_pad_ref = ""
-                    left_pad_hap = ""
-                    left_pad_ref_count = 0
-                    left_pad_hap_count = 0
-                    # where there are insertions on left, fill the other pad
-                    # with gaps
-                    for i in range(hap_align_begin - ref_align_begin):
-                        # only when ref_align_begin is smaller, we need to pad
-                        # left_pad_ref
-                        left_pad_ref = "-" + left_pad_ref
-                        left_pad_hap = hap_seq[i] + left_pad_hap
-                        # counting how many bases from hap_seq is used for
-                        # padding
-                        left_pad_hap_count += 1
-                    # do the same for haplotype sequence
-                    for i in range(ref_align_begin - hap_align_begin):
-                        # only when ref_align_begin is smaller, we need to pad
-                        # left_pad_ref
-                        left_pad_hap += "-"
-                        left_pad_ref += ref_seq[i]
-                        # counting how many bases from ref_seq is used for
-                        # padding
-                        left_pad_ref_count += 1
-                    # add to left_pads the sequences which are there but did
-                    # not align
-                    for i in range(left_pad_len - left_pad_diff):
-                        left_pad_ref += ref_seq[i + left_pad_ref_count]
-                        left_pad_hap += hap_seq[i + left_pad_hap_count]
-                    # add the left padding info to the alignment
-                    for i in range(0, len(left_pad_hap))[::-1]:
-                        if left_pad_ref[i] == "-" or left_pad_hap[i] == "-":
-                            diff = "-" + diff
-                        elif left_pad_ref[i] != left_pad_hap[i]:
-                            diff = "X" + diff
-                        else:
-                            diff = "." + diff
-                            problem_al = True
-                    # repeat the padding for the right side of alignment
-                    right_pad_ref_len = len(ref_seq) - ref_align_end
-                    right_pad_hap_len = len(hap_seq) - hap_align_end
-                    right_pad_len = max([right_pad_hap_len, right_pad_ref_len])
-                    right_pad_diff = abs(right_pad_hap_len - right_pad_ref_len)
-                    right_pad_ref = ""
-                    right_pad_hap = ""
-                    right_pad_ref_count = 0
-                    right_pad_hap_count = 0
-                    for i in range(right_pad_hap_len - right_pad_ref_len):
-                        right_pad_ref = "-" + right_pad_ref
-                        right_pad_hap = hap_seq[-i - 1] + right_pad_hap
-                        # counting how many bases from hap_seq is used for
-                        # padding
-                        right_pad_hap_count += 1
-                    # do the same for haplotype sequence
-                    for i in range(right_pad_ref_len - right_pad_hap_len):
-                        right_pad_hap = "-" + right_pad_hap
-                        right_pad_ref = ref_seq[-i - 1] + right_pad_ref
-                        right_pad_ref_count += 1
-                    # add to right the sequences which are there but did not
-                    # align
-                    for i in range(right_pad_len - right_pad_diff):
-                        right_pad_ref = (ref_seq[-i - right_pad_ref_count -1]
-                                         + right_pad_ref)
-                        right_pad_hap = (hap_seq[-i - right_pad_hap_count -1]
-                                         + right_pad_hap)
-                    # add the right padding info to the alignment
-                    for i in range(len(right_pad_hap)):
-                        if right_pad_ref[i] == "-" or right_pad_hap[i] == "-":
-                            diff += "-"
-                        elif right_pad_ref[i] != right_pad_hap[i]:
-                            diff += "X"
-                        else:
-                            diff += "."
-                            problem_al = True
-                    hap_al = left_pad_hap + hap_al + right_pad_hap
-                    ref_al = left_pad_ref + ref_al + right_pad_ref
-                    # we have padded the alignment so now all the ref and
-                    # hap sequence is accounted for and not just the aligned
-                    # part ref_name, ref_copy, ref_seq, ref_al
-                    # hap_name, hap_seq, hap_al, diff, score have information
-                    # we'll use
-                    c_name = ref_copy
-                    h_name = hap_name
-                    copy_dict = call_info[gene_name][m]["copies"][c_name]
-                    copy_ori = copy_dict["orientation"]
-                    copy_chrom = copy_dict["chrom"]
-                    copy_begin = int(copy_dict["capture_start"])
-                    copy_end = int(copy_dict["capture_end"])
-                    # if copy orientation is reverse, we'll reverse the alignment
-                    # so that coordinate conversions are easier and indels are always
-                    # left aligned on forward genomic strand
-                    if copy_ori == "reverse":
-                        ref_al = reverse_complement(ref_al)
-                        hap_al = reverse_complement(hap_al)
-                        diff = diff[::-1]
-                    genomic_pos = copy_begin
-                    differences = []
-                    indel_count = 0
-                    indels = []
-                    indel_types = []
-                    # keep track of the index of haplotype sequence
-                    # to use for checking sequence quality later
-                    hap_index = 0
-                    for i in range(len(diff)):
-                        d = diff[i]
-                        # each difference between the hap and ref can be an
-                        # indel ("-") or a snp (":" or "x") or the same as
-                        # the reference ("."). When dealing with indels, it is
-                        # best to call consecutive indels as a cumulative indel
-                        # rather than individual indels, i.e. AAA/--- instead
-                        # of A/-, A/-, A/- because if we are looking for a
-                        # frameshift insertion A/-, having AAA/--- means we
-                        # don't observe the frameshift. But if it is kept as
-                        # three A/-'s then it looks like the frameshift
-                        # mutation is there.
-                        if d == "-":
-                            # if an indel is encountered, we'll keep track of
-                            # it until the end of the indel. That is, when
-                            # d != "-"
-                            indel_count += 1
-                            if hap_al[i] == "-":
-                                # if a deletion, hap sequence should have "-"
-                                indel_types.append("del")
-                                indels.append(ref_al[i])
-                                # in cases of deletions, we increment the
-                                # genomic pos because the reference has a
-                                # nucleotide in this position.
-                                genomic_pos += 1
-                            elif ref_al[i] == "-":
-                                indel_types.append("ins")
-                                indels.append(hap_al[i])
-                                hap_index += 1
-                                # in cases of insertions, we don't increment
-                                # the genomic pos because the reference has no
-                                # nucleotide in this position insAAA would have
-                                # the same start and end positions
-                            else:
-                                # if neither hap nor ref has "-" at this
-                                # position there is a disagreement between the
-                                # alignment and the sequences.
-                                print(("For the haplotype {} the alignment "
-                                       " shows an indel but sequences do not."
-                                       " This haplotype  will not have "
-                                       "variant calls.").format(h_name))
-                                problem_al = True
-                                break
-                        else:
-                            # if the current diff is not an indel,
-                            # check if there is preceeding indel
-                            if len(indels) > 0:
-                                # there should only be a del or ins preceding
-                                # this base
-                                if len(set(indel_types)) != 1:
-                                    # Consecutive insertions and deletions
-                                    print(
-                                        ("For the haplotype {} there are "
-                                         "consecutive insertions and "
-                                         "deletions. This haplotype will not"
-                                         "have variant calls.").format(h_name)
-                                    )
-                                    problem_al = True
-                                else:
-                                    indel_type = list(set(indel_types))[0]
-                                    indel_length = len(indels)
-                                    # genomic_pos is the current position
-                                    # since this position is not an indel,
-                                    # indel has ended 1 nucleotide prior to
-                                    # this position.
-                                    indel_end = genomic_pos - 1
-                                    indel_seq = "".join(indels)
-                                    buffer_seq = "".join(["-" for j in
-                                                         range(indel_length)])
-                                    if indel_type == "del":
-                                        indel_begin = (genomic_pos
-                                                       - indel_length)
-                                        ref_base = indel_seq
-                                        hap_base = buffer_seq
-                                        h_index = [hap_index, hap_index - 1]
-                                    else:
-                                        # if the preceding indel was an
-                                        # insertion the start and end positions
-                                        # are the same
-                                        indel_begin = genomic_pos - 1
-                                        ref_base = buffer_seq
-                                        hap_base = indel_seq
-                                        h_index = [hap_index - indel_length, hap_index - 1]
-                                # create an indel dict and add to differences list
-                                differences.append({"begin": indel_begin,
-                                                    "end": indel_end,
-                                                    "type": indel_type,
-                                                    "ref_base": ref_base,
-                                                    "hap_base": hap_base,
-                                                    "hap_index": h_index,
-                                                    "chrom": copy_chrom})
-                            # clean up the indel variables
-                            indel_count = 0
-                            indels = []
-                            indel_types = []
-                            # continue with the current snp
-                            if d == ".":
-                                # "." denotes hap and ref has the same sequence
-                                pass
-                            else:
-                                # create a snp dict and add to differences list
-                                ref_base = ref_al[i]
-                                hap_base = hap_al[i]
-                                h_index = [hap_index, hap_index]
-                                differences.append({"begin": genomic_pos,
-                                                    "end": genomic_pos,
-                                                    "type": "snp",
-                                                    "ref_base": ref_base,
-                                                    "hap_base": hap_base,
-                                                    "hap_index": h_index,
-                                                    "chrom": copy_chrom})
-                            hap_index += 1
-                            genomic_pos += 1
-
-                    # since indel dicts are not created until a non-indel character
-                    # is encountered, we need to check if there was an indel at the
-                    # end of the alignment. If there is, indels list would not have been reset.
-                    # check if there is preceeding indel
-                    if len(indels) > 0:
-                        if len(set(indel_types)) != 1:
-                            # Consecutive insertions and deletions
-                            problem_al = True
-                        else:
-                            indel_type = list(set(indel_types))[0]
-                            indel_length = len(indels)
-                            indel_end = genomic_pos - 1
-                            indel_seq = "".join(indels)
-                            buffer_seq = "".join(["-" for idl in range(indel_length)])
-                            if indel_type == "del":
-                                indel_begin = genomic_pos - indel_length
-                                ref_base = indel_seq
-                                hap_base = buffer_seq
-                                h_index = [hap_index, hap_index - 1]
-                            else:
-                                indel_begin = genomic_pos - 1
-                                ref_base = buffer_seq
-                                hap_base = indel_seq
-                                h_index = [hap_index - indel_length, hap_index - 1]
-                        differences.append({"begin": indel_begin,
-                                            "end": indel_end,
-                                            "type": indel_type,
-                                            "ref_base": ref_base,
-                                            "hap_base": hap_base,
-                                            "hap_index": h_index,
-                                            "chrom": copy_chrom})
-                        # clean up the indel variables
-                        indel_count = 0
-                        indels = []
-                        indel_types = []
-                    # fix the positioning of homopolymer indels
-                    if copy_ori == "reverse":
-                        ref_seq = reverse_complement(ref_seq)
-                    for d in differences:
-                        d_chrom = d["chrom"]
-                        d_pos = int(d["begin"])
-                        ref_base = d["ref_base"].upper()
-                        hap_base = d["hap_base"].upper()
-                        d_type = d["type"]
-                        if d_type in ["ins", "del"]:
-                            if d_type == "del":
-                                d_pos -= 1
-                            d_prior_index = d_pos - copy_begin
-                            if d_prior_index >= 0:
-                                prior_base = ref_seq[d_prior_index]
-                            else:
-                                prior_base = get_sequence(d_chrom + ":" + str(d_pos)                                                        + "-" + str(d_pos), species).upper()
-                            vcf_ref = prior_base + ref_base
-                            vcf_hap = prior_base + hap_base
-                            vcf_ref = "".join([b for b in vcf_ref if b != "-"])
-                            vcf_hap = "".join([b for b in vcf_hap if b != "-"])
-                        else:
-                            vcf_ref = ref_base
-                            vcf_hap = hap_base
-                        vcf_key = d_chrom + ":" + str(d_pos) + ":.:" + vcf_ref + ":" + vcf_hap
-                        d["vcf_raw"] = vcf_key
-                    # all differences in between the ref and hap has been found
-                    # loop through differences and assign values for
-                    # ref_base, hap_base and hap_index.
-                    for d in differences:
-                        if copy_ori == "reverse":
-                            # revert bases to their original strand (-)
-                            d["ref_base"] = reverse_complement(d["ref_base"])
-                            d["hap_base"] = reverse_complement(d["hap_base"])
-                            d["hap_index"] = [-1 * d["hap_index"][0] - 1,
-                                              -1 * d["hap_index"][1] - 1]
-
-                    # create a dictionary that holds all the alignment
-                    # information for the mip and haplotype
-                    al_dict = {"gene_name": gene_name,
-                               "mip_name": m,
-                               "haplotype_ID": hap_name,
-                               "score": score,
-                               "differences": differences,
-                               "aligned_hap": hap_al,
-                               "aligned_ref": ref_al,
-                               "diff": diff}
-                    # also report alignments that had any problems
-                    if problem_al:
-                        problem_alignments.append(al_dict)
-                    try:
-                        alignments[hap_name][ref_copy].append(al_dict)
-                    except KeyError:
-                        try:
-                            alignments[hap_name][ref_copy] = [al_dict]
-                        except KeyError:
-                            alignments[hap_name] = {ref_copy: [al_dict]}
-    # pick top alignment by the score for rare cases where a capture sequence
-    # can align to a reference in multiple ways
-    cleaned_alignments = {}
-    for h in alignments:
-        for c in alignments[h]:
-            copy_als = alignments[h][c]
-            if len(copy_als) == 1:
-                best_al = copy_als[0]
-            else:
-                best_al_score = 0
-                for i in range(len(copy_als)):
-                    sc = copy_als[i]["score"]
-                    if sc > best_al_score:
-                        best_al_score = sc
-                        best_al = copy_als[i]
-            try:
-                cleaned_alignments[h][c] = best_al
-            except KeyError:
-                cleaned_alignments[h] = {c: best_al}
-    alignments = cleaned_alignments
-    # check if problem alignments and inverted alignments have a better alignment in
-    # alignment dictionary. Remove from list if better is found elsewhere.
-    problem_dicts = [problem_alignments, inverted_alignments]
-    for i in range(len(problem_dicts)):
-        probs = problem_dicts[i]
-        for j in range(len(probs)):
-            a = probs[j]
-            hap_name = a["haplotype_ID"]
-            al_score = a["score"]
-            try:
-                for copyname in alignments[hap_name]:
-                    other_score = alignments[hap_name][copyname]["score"]
-                    if other_score > al_score:
-                        # replace alignment in the list with string "remove"
-                        probs[j] = "remove"
-                        break
-            except KeyError:
-                continue
-        # replace the problem dictionary with the updated version
-        temp_dict = {}
-        for a in probs:
-            if a != "remove":
-                hap_name = a["haplotype_ID"]
-                try:
-                    temp_dict[hap_name].append(a)
-                except KeyError:
-                    temp_dict[hap_name] = [a]
-        problem_dicts[i] = temp_dict
-        if len(temp_dict) > 0:
-            print(("%d alignments may have problems, please check %s"
-                    %(len(temp_dict),
-                      settings["tempAlignmentsFile"])
-                  ))
-    if len(problem_snps) > 0:
-        print(("%d SNPs may have problems, please check please check %s"
-            %(len(problem_snps),
-              settings["tempAlignmentsFile"])
-              ))
-
-    result =  {"alignments": alignments,
-            "inverted_alignments": problem_dicts[1],
-            "problem_alignments": problem_dicts[0],
-            "problem_snps": problem_snps}
-    alignment_file = wdir + settings["tempAlignmentsFile"]
-    with open(alignment_file, "w") as outfile:
-        json.dump(result, outfile)
-    return
-
-
-def update_aligned_haplotypes(settings):
-    """
-    Update haplotypes with information from the alignment results.
-    Find which paralog copy the haplotype best maps to using the alignment
-    scores from lastZ.
-    """
-    wdir = settings["workingDir"]
-    temp_haplotype_file = wdir + settings["tempHaplotypesFile"]
-    with open(temp_haplotype_file) as infile:
-        haplotypes = json.load(infile)
-    with open(settings["callInfoDictionary"]) as infile:
-        call_info = json.load(infile)
-    temp_alignment_file = wdir + settings["tempAlignmentsFile"]
-    with open(temp_alignment_file) as infile:
-        parsed_alignments = json.load(infile)
-    # all alignments from the parsed alignments dict
-    alignments = parsed_alignments["alignments"]
-    # update each haplotype with alignment information
-    for m in haplotypes:
-        gene_name = m.split("_")[0]
-        for h in haplotypes[m]:
-            # create a copy dict for each haplotype for each possible
-            # paralog gene copy that haplotype may belong to
-            copies = haplotypes[m][h]["copies"] = {}
-            # get the alignment for this haplotype from alignment dict
-            try:
-                align = alignments[h]
-            except KeyError:
-                haplotypes[m][h]["mapped"] = False
-                continue
-            # update copies dict with alignment information
-            for c in align:
-                # update haplotype with alignment information
-                copies[c] = {"score": align[c]["score"]}
-            # sort copies considering alignment scores
-            copy_keys_sorted = sorted(copies,
-                                      key=lambda a: copies[a]["score"])
-            # below code prevents alt contigs to be the best mapping copy
-            # unless it is the only mapping copy. Uncomment if needed.
-            """
-            copy_keys_sorted_temp = copy.deepcopy(copy_keys_sorted)
-            # remove alt contigs
-            for cop_ind in range(len(copy_keys_sorted)):
-                cop = copy_keys_sorted[cop_ind]
-                if "alt" in call_info[gene_name][m]["copies"][cop[0]]["chrom"]:
-                    copy_keys_sorted[cop_ind] = "remove"
-            copy_keys_sorted = [cop_key for cop_key in copy_keys_sorted
-                                if cop_key != "remove"]
-            if len(copy_keys_sorted) == 0:
-                copy_keys_sorted = copy_keys_sorted_temp
-            """
-            # pick best scoring copies
-            # last item in copy_keys_sorted is the best
-            best_copy = copy_keys_sorted[-1]
-            # create a list of copies that has the best score
-            best_copies = [cop for cop in copy_keys_sorted
-                           if (copies[cop]["score"]
-                               == copies[best_copy]["score"])]
-            # create a map dict to be added to haplotype information
-            # extract copy keys of best copies
-            temp_dic = {}
-            for c in best_copies:
-                temp_dic[c] = {"copy_name": call_info[gene_name][m]["copies"][
-                               c]["copyname"],
-                               "differences": alignments[h][c]["differences"],
-                               "chrom": call_info[gene_name][m]["copies"][c][
-                               "chrom"]}
-            haplotypes[m][h]["mapped_copies"] = temp_dic
-            # create a single copy name for the haplotype such as HBA1_C0
-            # if there are multiple copies that the haplotype matched equally
-            # well name will be the compound name of all best mapping copies,
-            # e.g. HBA1_C0_HBA2_C1
-            mapped_copy_names = []
-            for k in sorted(temp_dic.keys()):
-                mapped_copy_names.append("_".join([temp_dic[k]["copy_name"],
-                                                   k]))
-            haplotypes[m][h]["copy_name"] = "_".join(mapped_copy_names)
-    temp_mapped_haps_file = wdir + settings["tempMappedHaplotypesFile"]
-    with open(temp_mapped_haps_file, "w") as outfile:
-        json.dump(haplotypes, outfile, indent=1)
-    return
-
-
-def update_unique_haplotypes(settings):
-    """
-    Add new on and off target haplotypes to the unique haplotypes.
-    Update sequence_to_haplotype dict with the new haplotypes.
-    """
-    wdir = settings["workingDir"]
-    unique_haplotype_file = wdir + settings["haplotypeDictionary"]
-    sequence_to_haplotype_file = wdir + settings["sequenceToHaplotypeDictionary"]
-    try:
-        with open(unique_haplotype_file) as infile:
-            unique_haplotypes = json.load(infile)
-    except IOError:
-        unique_haplotypes = {}
-    try:
-        with open(sequence_to_haplotype_file) as infile:
-            sequence_to_haplotype = json.load(infile)
-    except IOError:
-        sequence_to_haplotype = {}
-    temp_mapped_hap_file = wdir + settings["tempMappedHaplotypesFile"]
-    with open(temp_mapped_hap_file) as infile:
-        haplotypes = json.load(infile)
-    temp_off_file = wdir + settings["tempOffTargetsFile"]
-    with open(temp_off_file) as infile:
-        off_target_haplotypes = json.load(infile)
-    # update unique_haplotypes with on target haplotypes
-    for m in haplotypes:
-        for h in haplotypes[m]:
-            uniq_id = h + "-0"
-            try:
-                if uniq_id in unique_haplotypes[m]:
-                    counter = 0
-                    while uniq_id in unique_haplotypes[m]:
-                        counter += 1
-                        uniq_id = h + "-" + str(counter)
-                    unique_haplotypes[m][uniq_id] = haplotypes[m][h]
-                else:
-                    unique_haplotypes[m][uniq_id] = haplotypes[m][h]
-            except KeyError:
-                unique_haplotypes[m] = {uniq_id: haplotypes[m][h]}
-
-    # update unique_haplotypes with off target haplotypes
-    for h in off_target_haplotypes:
-        m = h.split(".")[0]
-        uniq_id = h + "-0"
-        try:
-            if uniq_id in unique_haplotypes[m]:
-                counter = 0
-                while uniq_id in unique_haplotypes[m]:
-                    counter += 1
-                    uniq_id = h + "-" + str(counter)
-                unique_haplotypes[m][uniq_id] = off_target_haplotypes[h]
-            else:
-                unique_haplotypes[m][uniq_id] = off_target_haplotypes[h]
-        except KeyError:
-            unique_haplotypes[m] = {uniq_id: off_target_haplotypes[h]}
-    # update sequence_to_haplotype with new haplotypes
-    for u in unique_haplotypes:
-        for h in unique_haplotypes[u]:
-            if not unique_haplotypes[u][h]["sequence"] in sequence_to_haplotype:
-                sequence_to_haplotype[unique_haplotypes[u][h]["sequence"]] = h
-    with open(unique_haplotype_file, "w") as outfile:
-        json.dump(unique_haplotypes, outfile, indent=1)
-    with open(sequence_to_haplotype_file, "w") as outfile:
-        json.dump(sequence_to_haplotype, outfile, indent=1)
-    return
-
-
-def update_variation(settings):
-    """
-    Add new on and off target haplotypes to the unique haplotypes.
-    Update sequence_to_haplotype dict with the new haplotypes.
-    """
-    wdir = settings["workingDir"]
-    species = settings["species"]
-    unique_haplotype_file = wdir + settings["haplotypeDictionary"]
-    variation_file = wdir + settings["variationDictionary"]
-    var_key_to_uniq_file = wdir + settings["variationKeyToUniqueKey"]
-    with open(unique_haplotype_file) as infile:
-        haplotypes = json.load(infile)
-    try:
-        with open(variation_file) as infile:
-            variation = json.load(infile)
-    except IOError:
-        variation = {}
-    var_key_to_uniq_file = wdir + settings["variationKeyToUniqueKey"]
-    try:
-        with open(var_key_to_uniq_file) as infile:
-            var_key_to_uniq = json.load(infile)
-    except IOError:
-        var_key_to_uniq = {}
-    outfile_list = ["##fileformat=VCFv4.1"]
-    outfile_list.append("\t".join(["#CHROM", "POS", "ID", "REF", "ALT"]))
-    temp_variations = []
-    for m in haplotypes:
-        for h in haplotypes[m]:
-            if haplotypes[m][h]["mapped"]:
-                try:
-                    haplotypes[m][h]["left_normalized"]
-                except KeyError:
-                    left_normalized = True
-                    for c in haplotypes[m][h]["mapped_copies"]:
-                        differences = haplotypes[m][h]["mapped_copies"][c][
-                            "differences"]
-                        for d in differences:
-                            var_key = d["vcf_raw"]
-                            try:
-                                uniq_var_key = var_key_to_uniq[var_key]
-                                d["annotation"] = variation[uniq_var_key]
-                                d["vcf_normalized"] = uniq_var_key
-                            except KeyError:
-                                left_normalized = False
-                                temp_variations.append(var_key)
-                    if left_normalized:
-                        haplotypes[m][h]["left_normalized"] = True
-    temp_variations = [temp_var.split(":")
-                       for temp_var in set(temp_variations)]
-    temp_variations = [[v[0], int(v[1])] + v[2:] for v in temp_variations]
-    temp_variations = sorted(temp_variations, key=itemgetter(0, 1))
-    temp_variations_lines = ["\t".join(map(str, v)) for v in temp_variations]
-    temp_variation_keys = [":".join(map(str, v)) for v in temp_variations]
-    outfile_list.extend(temp_variations_lines)
-    raw_vcf_file = settings["rawVcfFile"]
-    zipped_vcf = raw_vcf_file + ".gz"
-    norm_vcf_file = settings["normalizedVcfFile"]
-    with open(wdir + raw_vcf_file, "w") as outfile:
-        outfile.write("\n".join(outfile_list))
-    with open(wdir + zipped_vcf, "w") as outfile:
-        dump = subprocess.call(["bgzip", "-c", "-f", raw_vcf_file],
-                               cwd=wdir, stdout=outfile)
-    dump = subprocess.call(["bcftools", "index", "-f", raw_vcf_file + ".gz"],
-                           cwd=wdir)
-    unmasked_genome = get_file_locations()[species]["unmasked_fasta_genome"]
-    dump = subprocess.call(["bcftools", "norm", "-f", unmasked_genome,
-                            "-cw", "-w", "0",
-                           "-o", norm_vcf_file, raw_vcf_file + ".gz"],
-                           cwd=wdir)
-    ann_db_dir = get_file_locations()[species]["annotation_db_dir"]
-    ann_build = settings["annotationBuildVersion"]
-    ann_protocol = settings["annotationProtocol"].replace(";", ",")
-    ann_operation = settings["annotationOperation"].replace(";", ",")
-    ann_nastring = settings["annotationNaString"]
-    ann_out = settings["annotationOutput"]
-    try:
-        ann_script = settings["annotationScript"]
-    except KeyError:
-        ann_script = "table_annovar.pl"
-    ann_command = [ann_script,
-                   norm_vcf_file,
-                   ann_db_dir,
-                   "-buildver", ann_build,
-                   "-vcfinput",
-                   "-protocol",  ann_protocol,
-                   "-operation", ann_operation,
-                   "-nastring", ann_nastring,
-                   "-out", ann_out]
-    dump = subprocess.check_call(ann_command, cwd=wdir)
-    normalized_variation_keys = []
-    with open(wdir + norm_vcf_file) as infile:
-        line_num = 0
-        for line in infile:
-            if not line.startswith("#"):
-                newline = line.strip().split("\t")
-                var_key = temp_variation_keys[line_num]
-                normalized_key = ":".join(newline[:5])
-                var_key_to_uniq[var_key] = normalized_key
-                normalized_variation_keys.append(normalized_key)
-                line_num += 1
-    #
-    annotation_table_file = ann_out + "." + ann_build + "_multianno.txt"
-    with open(wdir + annotation_table_file) as infile:
-        line_num = -1
-        for line in infile:
-            newline = line.strip().split("\t")
-            if line_num == -1:
-                line_num += 1
-                colnames = newline
-            else:
-                normalized_key = normalized_variation_keys[line_num]
-                if normalized_key not in variation:
-                    variation[normalized_key] = {
-                        colnames[i]: newline[i] for i in range(len(colnames))
-                    }
-                line_num += 1
-    if line_num != len(temp_variation_keys):
-        print("There are more variation keys then annotated variants.")
-    for m in haplotypes:
-        for h in haplotypes[m]:
-            if haplotypes[m][h]["mapped"]:
-                try:
-                    haplotypes[m][h]["left_normalized"]
-                except KeyError:
-                    for c in haplotypes[m][h]["mapped_copies"]:
-                        differences = haplotypes[m][h]["mapped_copies"][c][
-                            "differences"]
-                        for d in differences:
-                            var_key = d["vcf_raw"]
-                            uniq_var_key = var_key_to_uniq[var_key]
-                            d["annotation"] = variation[uniq_var_key]
-                            d["vcf_normalized"] = uniq_var_key
-                            annotation_dict = d["annotation"]
-                            for ak in annotation_dict.keys():
-                                if ak.startswith("AAChange."):
-                                    annotation_dict["AAChangeClean"] = (
-                                        annotation_dict.pop(ak)
-                                    )
-                                elif ak.startswith("ExonicFunc."):
-                                    annotation_dict["ExonicFunc"] = (
-                                        annotation_dict.pop(ak)
-                                    )
-                                elif ak.startswith("Gene."):
-                                    annotation_dict["GeneID"] = (
-                                        annotation_dict.pop(ak)
-                                    )
-                    haplotypes[m][h]["left_normalized"] = True
-    with open(unique_haplotype_file, "w") as outfile:
-        json.dump(haplotypes, outfile)
-    with open(variation_file, "w") as outfile:
-        json.dump(variation, outfile)
-    with open(var_key_to_uniq_file, "w") as outfile:
-        json.dump(var_key_to_uniq, outfile)
-    try:
-        m_snps = int(settings["mergeSNPs"])
-    except KeyError:
-        m_snps = False
-    if m_snps:
-        dump = merge_snps(settings)
-    return
-
-
-def get_raw_data (settings):
-    """ Extract raw data from filtered_data file. If there is data from a previous run,
-    new data can be added to old data. If this sample set is new, or being analyzed
-    separately, than existing data should be "na".
-    Return a list of data point dictionaries. One dict for each haplotype/sample.
-    Write this list to disk."""
-    wdir = settings["workingDir"]
-    unique_haplotype_file = wdir + settings["haplotypeDictionary"]
-    sequence_to_haplotype_file = wdir + settings["sequenceToHaplotypeDictionary"]
-    with open(unique_haplotype_file) as infile:
-        unique_haplotypes = json.load(infile)
-    with open(sequence_to_haplotype_file) as infile:
-        sequence_to_haplotype = json.load(infile)
-    problem_data = []
-    existing_data_file = wdir + settings["existingData"]
-    try:
-        with open(existing_data_file) as infile:
-            raw_data = json.load(infile)
-    except IOError:
-        raw_data = []
-    mipster_file = wdir + settings["mipsterFile"]
-    colnames = dict(list(zip(settings["colNames"],
-                        settings["givenNames"])))
-    with open(mipster_file) as infile:
-        ## filteredData only contains relevant fields for this analysis
-        # the field names are given in the settings dict and
-        # kept in given_names list
-        run_ID = settings["runID"]
-        line_number = 0
-        for line in infile:
-            newline = line.strip().split("\t")
-            if not line_number == 0:
-                line_number += 1
-                col_indexes = {}
-                try:
-                    for ck in list(colnames.keys()):
-                        col_indexes[
-                            newline.index(ck)
-                        ] = {"name": colnames[ck]}
-                        if ck == 'c_barcodeCnt':
-                            bc_index = newline.index(ck)
-                        elif ck == 'c_readCnt':
-                            rc_index = newline.index(ck)
-                except ValueError:
-                    for ck in list(colnames.values()):
-                        col_indexes[
-                        newline.index(ck)
-                        ] = {"name" : ck}
-                        if ck == 'barcode_count':
-                            bc_index = newline.index(ck)
-                        elif ck == 'read_count':
-                            rc_index = newline.index(ck)
-                # each data point will be a dict
-                data_dic = {}
-                for i in list(col_indexes.keys()):
-                    # check data type and convert data appropriately
-                    if i in [bc_index, rc_index]:
-                        data_point = int(newline[i])
-                    else:
-                        data_point = newline[i]
-                    data_dic[col_indexes[i]["name"]] = data_point
-                data_dic["run_ID"] = run_ID
-                # once data dict is created, check the haplotype sequence
-                # in the sequence to haplotype dict and update the data dict
-                # with values in the haplotype dict
-                seq = data_dic.pop("haplotype_sequence")
-                try:
-                    uniq_id = sequence_to_haplotype[seq]
-                    data_dic.pop("haplotype_quality_scores")
-                    data_dic["haplotype_ID"] = uniq_id
-                    if unique_haplotypes[data_dic["mip_name"]][uniq_id]["mapped"]:
-                        raw_data.append(data_dic)
-                except KeyError:
-                    problem_data.append(data_dic)
-                    continue
-    # dump the raw_data list to a json file
-    raw_data_file = wdir + settings["rawDataFile"]
-    with open(raw_data_file, "w") as outfile:
-        json.dump(raw_data, outfile)
-    problem_data_file = wdir + settings["rawProblemData"]
-    with open(problem_data_file, "w") as outfile:
-        json.dump(problem_data, outfile, indent=1)
-    return
-def filter_data (data_file, filter_field, comparison, criteria, output_file):
-    """
-    Data fields to filter: sample_name, gene_name, mip_name, barcode_count etc.
-    Comparison: for numeric values: gt (greater than), lt, gte (greater than or equal to), lte
-    criteria must be numeric as well.
-    for string values: in, nin (not in), criteria must be a list to include or exclude.
-    for string equality assessments, a list with single value can be used.
-    """
-    filtered_data = []
-    with open(data_file) as infile:
-        data = json.load(infile)
-    for d in data:
-        field_value = d[filter_field]
-        if comparison == "gt":
-            if field_value > criteria:
-                filtered_data.append(d)
-        elif comparison == "gte":
-            if field_value >= criteria:
-                filtered_data.append(d)
-        elif comparison == "lt":
-            if field_value < criteria:
-                filtered_data.append(d)
-        elif comparison == "lte":
-            if field_value <= criteria:
-                filtered_data.append(d)
-        elif comparison == "in":
-            if field_value in criteria:
-                filtered_data.append(d)
-        elif comparison == "nin":
-            if field_value not in criteria:
-                filtered_data.append(d)
-    with open(output_file, "w") as outfile:
-        json.dump(filtered_data, outfile, indent = 1)
-def group_samples (settings):
-    wdir = settings["workingDir"]
-    raw_data_file = wdir  + settings["rawDataFile"]
-    with open(raw_data_file) as infile:
-        raw_data = json.load(infile)
-    samples = {}
-    problem_samples = {}
-    mip_names = {}
-    #diploid_mipnames = []
-    #all_mipnames = []
-    copy_stable_genes = settings["copyStableGenes"]
-    for c in raw_data:
-        gene_name = c["gene_name"]
-        sample_name = c["sample_name"]
-        mip_name = c["mip_name"]
-        if (copy_stable_genes == "na") or (gene_name in copy_stable_genes):
-            try:
-                samples[sample_name]["diploid_barcode_count"] += c["barcode_count"]
-                samples[sample_name]["diploid_read_count"] += c["read_count"]
-                samples[sample_name]["diploid_mip_names"].append(mip_name)
-                #diploid_mipnames.append(mip_name)
-                """
-                except KeyError:
-                    try:
-                        samples[sample_name]["diploid_barcode_count"] = c["barcode_count"]
-                        samples[sample_name]["diploid_read_count"] = c["read_count"]
-                        samples[sample_name]["diploid_mip_names"] = [mip_name]
-                        diploid_mipnames.append(mip_name)
-                """
-            except KeyError:
-                samples[sample_name] = {"diploid_barcode_count": c["barcode_count"],
-                                        "diploid_read_count": c["read_count"],
-                                        "diploid_mip_names": [mip_name],
-                                        "total_barcode_count": c["barcode_count"],
-                                        "total_read_count": c["read_count"],
-                                        "all_mip_names": [mip_name]
-                                        }
-                #diploid_mipnames.append(mip_name)
-        try:
-            samples[sample_name]["total_barcode_count"] += c["barcode_count"]
-            samples[sample_name]["total_read_count"] += c["read_count"]
-            samples[sample_name]["all_mip_names"].append(mip_name)
-            #all_mipnames.append(mip_name)
-            """
-            except KeyError:
-                try:
-                    samples[sample_name]["total_barcode_count"] = c["barcode_count"]
-                    samples[sample_name]["total_read_count"] = c["read_count"]
-                    samples[sample_name]["all_mip_names"] = [mip_name]
-                    all_mipnames.append(mip_name)
-            """
-        except KeyError:
-            samples[sample_name] = {"diploid_barcode_count": 0,
-                                        "diploid_read_count": 0,
-                                        "diploid_mip_names": [],
-                                        "total_barcode_count": c["barcode_count"],
-                                        "total_read_count": c["read_count"],
-                                        "all_mip_names": [mip_name]
-                                        }
-            #all_mipnames.append(mip_name)
-
-
-    for s in list(samples.keys()):
-        try:
-            samples[s]["diploid_mip_names"] = list(set((samples[s]["diploid_mip_names"])))
-            samples[s]["diploid_mip_number"] = len(samples[s]["diploid_mip_names"])
-            samples[s]["all_mip_names"] = list(set((samples[s]["all_mip_names"])))
-            samples[s]["total_mip_number"] = len(samples[s]["all_mip_names"])
-            mip_names[s] = {}
-            mip_names[s]["diploid_mip_names"] = samples[s].pop("diploid_mip_names")
-            mip_names[s]["all_mip_names"] = samples[s].pop("all_mip_names")
-            try:
-                samples[s]["average_diploid_barcode_count"] = round(
-                samples[s]['diploid_barcode_count']
-                 /samples[s]['diploid_mip_number'], 2)
-                samples[s]["sample_normalizer"] = round(
-                100/(samples[s]["average_diploid_barcode_count"]), 2)
-            except ZeroDivisionError:
-                problem_samples[s] = samples.pop(s)
-        except KeyError:
-            problem_samples[s] = samples.pop(s)
-
-    results =  {"samples": samples,
-            "problem_samples": problem_samples,
-            "mip_names": mip_names}
-    sample_info_file = wdir + settings["sampleInfoFile"]
-    with open(sample_info_file, "w") as outfile:
-        json.dump(results,outfile, indent=1)
-    return
-def update_raw_data (settings):
-    wdir = settings["workingDir"]
-    raw_data_file = wdir  + settings["rawDataFile"]
-    with open(raw_data_file) as infile:
-        raw_data = json.load(infile)
-    unique_haplotype_file = wdir + settings["haplotypeDictionary"]
-    with open(unique_haplotype_file) as infile:
-        unique_haplotypes = json.load(infile)
-    sample_info_file = wdir + settings["sampleInfoFile"]
-    with open(sample_info_file) as infile:
-        samples = json.load(infile)["samples"]
-    normalized_data = []
-    problem_data = []
-    for r in raw_data:
-        try:
-            sample_name = r["sample_name"]
-            r["sample_normalizer"] = samples[sample_name]["sample_normalizer"]
-            r["sample_normalized_barcode_count"] = r["sample_normalizer"] * r["barcode_count"]
-            hid = r["haplotype_ID"]
-            mid = r["mip_name"]
-            r["copy_name"] = unique_haplotypes[mid][hid]["copy_name"]
-            normalized_data.append(r)
-        except KeyError:
-            problem_data.append(r)
-    normalized_data_file = wdir + settings["normalizedDataFile"]
-    with open(normalized_data_file, "w") as outfile:
-        json.dump(normalized_data, outfile)
-    problem_data_file = wdir + settings["normalizedProblemData"]
-    with open(problem_data_file, "w") as outfile:
-        json.dump(problem_data, outfile, indent=1)
-    return
-def get_counts (settings):
-    wdir = settings["workingDir"]
-    data_file = wdir + settings["normalizedDataFile"]
-    with open(data_file) as infile:
-        data = json.load(infile)
-    min_barcode_count = int(settings["minBarcodeCount"])
-    min_barcode_fraction = float(settings["minBarcodeFraction"])
-    counts = {}
-    samples = {}
-    # get sample data across probes
-    for t in data:
-        g = t["gene_name"]
-        m = t["mip_name"]
-        c = t["copy_name"]
-        s = t["sample_name"]
-        try:
-            samples[s][g][m][c]["raw_data"].append(t)
-        except KeyError:
-            try:
-                samples[s][g][m][c] = {"raw_data": [t]}
-            except KeyError:
-                try:
-                    samples[s][g][m] = {c: {"raw_data": [t]}}
-                except KeyError:
-                    try:
-                        samples[s][g] = {m: {c: {"raw_data": [t]}}}
-                    except KeyError:
-                        samples[s] = {g: {m: {c: {"raw_data": [t]}}}}
-    # filter/merge individual data points for each sample/paralog copy
-    # data for the same haplotype, possibly from separate runs will be merged
-    # data that does not pass a low barcode threshold will be filtered
-    merge_keys = ["sample_normalized_barcode_count",
-                  "barcode_count",
-                  "read_count"]
-    for s in samples:
-        for g in samples[s]:
-            for m in samples[s][g]:
-                for c in samples[s][g][m]:
-                    data_points = samples[s][g][m][c]["raw_data"]
-                    grouped_data = samples[s][g][m][c]["grouped_data"] = []
-                    merged_data = samples[s][g][m][c]["merged_data"] = []
-                    filtered_data = samples[s][g][m][c]["filtered_data"] = []
-                    cumulative_data = samples[s][g][m][c]["cumulative_data"] = {                            "sample_normalized_barcode_count": 0,
-                            "barcode_count": 0,
-                            "read_count": 0,
-                            "haplotypes": []}
-                    temp_data_points = copy.deepcopy(data_points)
-                    # group data points with same haplotype_ID together
-                    for i in range(len(temp_data_points)):
-                        di = temp_data_points[i]
-                        if di != "remove":
-                            same_haps = [di]
-                            for j in range(len(temp_data_points)):
-                                if i != j:
-                                    dj = temp_data_points[j]
-                                    if dj != "remove" and (di["haplotype_ID"] ==                                                            dj["haplotype_ID"]):
-                                        same_haps.append(dj)
-                                        temp_data_points[j] = "remove"
-                            grouped_data.append(same_haps)
-                    for dl in grouped_data:
-                        # find data point with most barcodes
-                        temp_barcode_count = 0
-                        best_data_index = 0
-                        for i in range(len(dl)):
-                            b = dl[i]["barcode_count"]
-                            if b > temp_barcode_count:
-                                temp_barcode_count = b
-                                best_data_index = i
-                        # use data point with more barcodes as base
-                        dm = copy.deepcopy(dl[best_data_index])
-                        for i in range(len(dl)):
-                            if i != best_data_index:
-                                dt = dl[i]
-                                for k in merge_keys:
-                                    dm[k] += dt[k]
-                        merged_data.append(dm)
-                    # filter haplotypes with insufficient count/frequency
-                    temp_barcode_counts = []
-                    for d in merged_data:
-                        temp_barcode_counts.append(d["barcode_count"])
-                    frac_threshold = min_barcode_fraction * sum(temp_barcode_counts)
-                    for d in merged_data:
-                        if d["barcode_count"] >= frac_threshold and                           d["barcode_count"] >= min_barcode_count:
-                            filtered_data.append(d)
-                    for d in filtered_data:
-                        for k in merge_keys:
-                            cumulative_data[k] += d[k]
-                        cumulative_data["haplotypes"].append(d["haplotype_ID"])
-    # get probe information across samples
-    template_dict = {"sample_normalized_barcode_count": [],
-                     "barcode_count": [],
-                     "read_count" : [],
-                     "haplotypes": [],
-                     "sample_names": []}
-    for s in samples:
-        for g in samples[s]:
-            for m in samples[s][g]:
-                for c in samples[s][g][m]:
-                    filtered_data = samples[s][g][m][c]["filtered_data"]
-                    cumulative_data = samples[s][g][m][c]["cumulative_data"]
-                    try:
-                        norm_counts = counts[g][m][c]["sample_normalized_barcode_count"]
-                    except KeyError:
-                        try:
-                            counts[g][m][c] = copy.deepcopy(template_dict)
-                        except KeyError:
-                            try:
-                                counts[g][m] = {c: copy.deepcopy(template_dict)}
-                            except KeyError:
-                                counts[g] = {m: {c: copy.deepcopy(template_dict)}}
-                    for k in merge_keys:
-                        counts[g][m][c][k].append(cumulative_data[k])
-                    counts[g][m][c]["sample_names"].append(s)
-                    counts[g][m][c]["haplotypes"].append(filtered_data)
-    sample_results_file = wdir + settings["perSampleResults"]
-    with open(sample_results_file, "w") as outfile:
-        json.dump(samples, outfile, indent=1)
-    probe_results_file = wdir + settings["perProbeResults"]
-    with open(probe_results_file, "w") as outfile:
-        json.dump(counts, outfile, indent=1)
-    return
-def get_unique_probes(settings):
-    wdir = settings["workingDir"]
-    unique_haplotype_file = wdir + settings["haplotypeDictionary"]
-    with open(unique_haplotype_file) as infile:
-        unique_haplotypes = json.load(infile)
-    with open(settings["callInfoDictionary"]) as infile:
-        call_info = json.load(infile)
-    # keep which copies a mip can be mapped to in copy_names dictionary
-    copy_names = {}
-    problem_copy_names = []
-    gene_names = []
-    for m in unique_haplotypes:
-        g = m.split("_")[0]
-        gene_names.append(g)
-        for h in unique_haplotypes[m]:
-            if unique_haplotypes[m][h]["mapped"]:
-                try:
-                    cn = unique_haplotypes[m][h]["copy_name"]
-                except KeyError:
-                    problem_copy_names.append(h)
-                try:
-                    copy_names[g][m].append(cn)
-                except KeyError:
-                    try:
-                        copy_names[g][m] = [cn]
-                    except KeyError:
-                        copy_names[g] = {m: [cn]}
-    for g in copy_names:
-        for m in copy_names[g]:
-            copy_names[g][m] = sorted(list(set(copy_names[g][m])))
-    # keep all copy names that have been observed for a gene in all_copies dict
-    all_copy_names = {}
-    all_copy_names_list = []
-    for g in copy_names:
-        cn = []
-        for m in copy_names[g]:
-            cn.extend(copy_names[g][m])
-        cn = sorted(list(set(cn)))
-        all_copy_names[g] = cn
-        all_copy_names_list.extend(cn)
-
-    # keep probe names that always maps to specific paralog copies in unique_keys
-    # uniq_keys[g][m1] = ["HBA1_C0", "HBA2_C1"]
-    uniq_keys = {}
-    # keep probe names that never maps to specific paralog copies in non_uniq_keys
-    # non_uniq_keys[g][m2] = ["HBA1_C0_HBA2_C1"]
-    non_uniq_keys = {}
-    # keep probe names that maps to specific paralog copies for some copies only
-    # in semi_uniq_keys [g][m3] = ["HBA1_C0"] (only maps C0 specifically)
-    #semi_uniq_keys = {}
-    # if a mip does not map to any target copy (always off target or never works)
-    no_copy_keys = {}
-    for g in all_copy_names:
-        copies = all_copy_names[g]
-        keys = sorted(list(call_info[g].keys()),
-                      key= lambda a: call_info[g][a]["copies"]["C0"]["capture_start"])
-        for k in keys:
-            try:
-                key_copies = copy_names[g][k]
-                nucopies = []
-                toss_copies = []
-                try:
-                    for c in key_copies:
-                        split_copies = c.split("_")
-                        nucopies.append([split_copies[i+1]                                              for i in range(0, len(split_copies), 2)])
-                except IndexError:
-                    print(split_copies)
-                    break
-                for i in range(len(nucopies)):
-                    query_list = nucopies[i]
-                    for j in range(len(nucopies)):
-                        target_list = nucopies[j]
-                        if i != j:
-                            for c in query_list:
-                                if c in target_list:
-                                    toss_copies.append(i)
-                toss_copies = list(set(toss_copies))
-                uniq_copies = [key_copies[i]                                for i in range(len(key_copies)) if i not in toss_copies]
-                non_uniq_copies = [key_copies[i]                                for i in range(len(key_copies)) if i in toss_copies]
-                if len(uniq_copies) > 0:
-                    try:
-                        uniq_keys[g][k] = uniq_copies
-                    except KeyError:
-                        uniq_keys[g] = {k: uniq_copies}
-                if len(non_uniq_copies) > 0:
-                    try:
-                        non_uniq_keys[g][k] = non_uniq_copies
-                    except KeyError:
-                        non_uniq_keys[g] = {k: non_uniq_copies}
-            except KeyError:
-                try:
-                    no_copy_keys[g].append(k)
-                except KeyError:
-                    no_copy_keys[g] = [k]
-    gene_names = sorted(gene_names)
-    result =  {"copy_names": copy_names,
-            "all_copy_names": all_copy_names,
-            "problem_copy_names": problem_copy_names,
-            "gene_names": gene_names,
-            "unique_probes": uniq_keys,
-            "non_unique_probes": non_uniq_keys,
-            "no_copy_probes": no_copy_keys}
-    uniq_file = wdir + settings["uniqueProbeFile"]
-    with open(uniq_file, "w") as outfile:
-        json.dump(result, outfile, indent = 1)
-    return
-def create_data_table (settings):
-    wdir = settings["workingDir"]
-    with open(settings["callInfoDictionary"]) as infile:
-        call_info = json.load(infile)
-    uniq_file = wdir + settings["uniqueProbeFile"]
-    with open(uniq_file) as infile:
-        uniq_dict = json.load(infile)
-    sample_results_file = wdir + settings["perSampleResults"]
-    with open(sample_results_file) as infile:
-        counts = json.load(infile)
-    sample_names = list(counts.keys())
-    big_table = []
-    all_tables = {}
-    for gene in call_info:
-        gene_info = call_info[gene]
-        try:
-            all_probes = uniq_dict["unique_probes"][gene]
-        except KeyError:
-            all_probes = {}
-        table = []
-        for p in all_probes:
-            for c in all_probes[p]:
-                split_copies = c.split("_")
-                if len(split_copies) == 2:
-                    c_id = c.split("_")[-1]
-                    probe_info = gene_info[p]["copies"][c_id]
-                    try:
-                        chrom = int(probe_info["chrom"][3:])
-                    except ValueError:
-                        chrom = 23
-                    start = probe_info["capture_start"]
-                    end = probe_info["capture_end"]
-                    ori = probe_info["orientation"]
-                    gc_frac = calculate_gc(probe_info["capture_sequence"])
-                elif len(split_copies) > 2:
-                    gc_list = []
-                    for i in range(0, len(split_copies), 2):
-                        c_id = split_copies[i+1]
-                        probe_info = gene_info[p]["copies"][c_id]
-                        gc_list.append(calculate_gc(probe_info["capture_sequence"]))
-                    gc_frac = np.mean(gc_list)
-                    start = "na"
-                    end = "na"
-                    ori = "na"
-                    chrom = 99
-                s_counts = []
-                for s in sample_names:
-                    try:
-                        bc = counts[s][gene][p][c]["cumulative_data"]                             ["sample_normalized_barcode_count"]
-                    except KeyError:
-                        bc = 0
-
-                    s_counts.append(bc)
-                p_counts = [gene, p, c, chrom, start, end, gc_frac, ori]
-                p_counts.extend(s_counts)
-                table.append(p_counts)
-                big_table.append(p_counts)
-        table = sorted(table, key = itemgetter(3, 4, 5))
-        all_tables[gene] = table
-    big_table = sorted(big_table, key = itemgetter(3, 4, 5))
-    result = {"tables": all_tables,
-            "big_table" : big_table,
-            "sample_names": sample_names}
-    tables_file = wdir + settings["tablesFile"]
-    with open(tables_file, "w") as outfile:
-        json.dump(result, outfile)
-    return
-def filter_tables (settings):
-    wdir = settings["workingDir"]
-    tables_file = wdir + settings["tablesFile"]
-    with open(tables_file) as infile:
-        tables_dic = json.load(infile)
-    tables = copy.deepcopy(tables_dic["tables"])
-    sample_info_file = wdir + settings["sampleInfoFile"]
-    with open(sample_info_file) as infile:
-        sample_info = json.load(infile)["samples"]
-    min_probe_median = int(settings["minimumProbeMedian"])
-    min_sample_median = int(settings["minimumSampleMedian"])
-    filtered_tables = {}
-    #normalized_tables = {}
-    #barcode_tables = {}
-    sample_names = copy.deepcopy(tables_dic["sample_names"])
-    sample_normalizers = np.asarray([sample_info[s]["sample_normalizer"] for s in sample_names])
-    sample_array = np.asarray(sample_names)
-    #filtered_samples = sample_array[sample_filter]
-    for g in tables:
-        t_array = np.asarray(tables[g])
-        split_array = np.hsplit(t_array, [8])
-        t_info = split_array[0]
-        t_data = np.array(split_array[1], float)
-        #s_filtered = t_data[:, sample_filter]
-        barcode_table = np.transpose(t_data)/sample_normalizers[:, np.newaxis]
-        try:
-            probe_filter = np.median(t_data, axis = 1) >= min_probe_median
-        except IndexError:
-            continue
-        sample_filter = np.median(barcode_table, axis = 1) >= min_sample_median
-        info_filtered = t_info[probe_filter, :]
-        data_filtered = t_data[:, sample_filter]
-        data_filtered = data_filtered[probe_filter, :]
-        median_normalized = 2*(data_filtered / np.median(data_filtered, axis = 1)[:,np.newaxis])
-        barcode_filtered = np.transpose(barcode_table)[:, sample_filter]
-        barcode_filtered = barcode_filtered[probe_filter, :]
-        #filtered_data = np.hstack((info_filtered, data_filtered))
-        #normalized_data = np.hstack((info_filtered, median_normalized))
-        #barcode_data = np.hstack((info_filtered, barcode_filtered))
-        filtered_tables[g] = {"probe_information":info_filtered,
-                              "barcode_counts": barcode_filtered,
-                              "sample_normalized_barcode_counts": data_filtered,
-                              "median_normalized_copy_counts": median_normalized,
-                              "sample_names": sample_array[sample_filter]}
-        #normalized_tables[g] = normalized_data
-        #barcode_tables [g] = barcode_data
-    filtered_tables_file = wdir + settings["filteredTablesFile"]
-    with open(filtered_tables_file, "wb") as outfile:
-        pickle.dump(filtered_tables, outfile)
-    return
-def generate_clusters(settings):
-    cluster_output = {}
-    problem_clusters = []
-    wdir = settings["workingDir"]
-    filtered_tables_file = wdir + settings["filteredTablesFile"]
-    with open(filtered_tables_file, 'rb') as infile:
-        tables = pickle.load(infile)
-    case_file = wdir + settings["caseFile"]
-    case_status = {}
-    try:
-        with open(case_file) as infile:
-            for line in infile:
-                newline = line.strip().split("\t")
-                case_status[newline[0]] = newline[1]
-    except IOError:
-        pass
-    for g in tables:
-        try:
-            probes = list(tables[g]["probe_information"][:, 1])
-            uniq_probes = []
-            for p in probes:
-                if p not in uniq_probes:
-                    uniq_probes.append(p)
-            sample_names = tables[g]["sample_names"]
-            labels = []
-            for s in sample_names:
-                try:
-                    labels.append(case_status[s])
-                except KeyError:
-                    labels.append("na")
-            copy_counts = tables[g]["median_normalized_copy_counts"]
-            barcode_counts = np.transpose(tables[g]["sample_normalized_barcode_counts"])
-            collapsed_counts = np.zeros((len(uniq_probes), len(sample_names)))
-            for i in range(len(uniq_probes)):
-                u = uniq_probes[i]
-                for j in range(len(probes)):
-                    p = probes[j]
-                    if u == p:
-                        collapsed_counts[i] += copy_counts[j]
-            repeat_counts = []
-            for u in uniq_probes:
-                repeat_counts.append(probes.count(u))
-            upper_limit = np.asarray(repeat_counts)*2 + 0.5
-            lower_limit = np.asarray(repeat_counts)*2 - 0.5
-            copy_counts = np.transpose(copy_counts)
-            collapsed_counts = np.transpose(collapsed_counts)
-            ts = TSNE(n_components=2, init = "pca", random_state=0, perplexity=100)
-            #ts = TSNE(n_components=2, init = "pca", random_state=0, perplexity=30)
-            #Y  = ts.fit_transform(copy_counts)
-            Y  = ts.fit_transform(barcode_counts)
-            ts = TSNE(n_components=2, init = "pca", random_state=0, perplexity=50)
-            V  = ts.fit_transform(Y)
-            U  = ts.fit_transform(V)
-            T  = ts.fit_transform(U)
-            tsne_keys = {"Y": Y, "V": V, "U": U, "T": T}
-            ms = MeanShift(bandwidth = 5, cluster_all = True)
-            ms.fit(tsne_keys[settings["tsneKey"]])
-            cluster_labels = ms.labels_
-            cluster_centers = ms.cluster_centers_
-            labels_unique = np.unique(cluster_labels)
-            n_clusters_ = len(labels_unique)
-            cluster_dict = {"cluster_labels" : cluster_labels,
-                            "unique_probes": uniq_probes,
-                           "all_probes": probes,
-                           "plotting": {"upper_limit": upper_limit,
-                                        "lower_limit": lower_limit},
-                           "mean_shift": ms,
-                           "tsne": {"median": copy_counts,
-                                    "collapsed_median": collapsed_counts,
-                                    "T": T,
-                                    "U": U,
-                                    "V": V,
-                                    "Y": Y},
-                           "clusters": {}}
-            for k in range(n_clusters_):
-                my_members = cluster_labels == k
-                cluster_center = cluster_centers[k]
-                cluster_case_count = list(np.asarray(labels)[my_members]).count("case")
-                cluster_control_count = list(np.asarray(labels)[my_members]).count("control")
-                other_case_count = labels.count("case") - cluster_case_count
-                other_control_count = labels.count("control") - cluster_control_count
-                cluster_table = [[cluster_case_count, cluster_control_count],
-                                 [other_case_count, other_control_count]]
-                try:
-                    cluster_fish = fisher_exact(cluster_table)
-                except:
-                    cluster_fish = ["na", "na"]
-                try:
-                    cluster_chi = chi2_contingency(cluster_table)
-                except:
-                    cluster_chi = ["na", "na", "na", "na"]
-                cluster_dict["clusters"][k] = {"cluster_table": cluster_table,
-                           "cluster_stats": {"fisher": {"OR": cluster_fish[0],
-                                                        "pvalue": cluster_fish[1]},
-                                             "chi": {"pvalue": cluster_chi[1],
-                                                     "expected": cluster_chi[3]}},
-                           "cluster_data": copy_counts[my_members],
-                           "cluster_medians": np.median(copy_counts[my_members], axis=0),
-                           "cluster_samples": sample_names[my_members],
-                           "cluster_members": my_members,
-                           "collapsed_data": collapsed_counts[my_members],
-                           "collapsed_medians": np.median(collapsed_counts[my_members], axis=0)
-                           }
-            cluster_output[g] = cluster_dict
-        except Exception:
-            problem_clusters.append([g, e])
-    cluster_output_file = wdir + settings["clusterOutputFile"]
-    with open(cluster_output_file, "wb") as outfile:
-        pickle.dump(cluster_output, outfile)
-    return problem_clusters
-def dbscan_clusters(settings):
-    cluster_output = {}
-    problem_clusters = []
-    wdir = settings["workingDir"]
-    cluster_output_file = wdir + settings["clusterOutputFile"]
-    with open(cluster_output_file, "rb") as infile:
-        cnv_calls = pickle.load(infile)
-    filtered_tables_file = wdir + settings["filteredTablesFile"]
-    with open(filtered_tables_file, "rb") as infile:
-        tables = pickle.load(infile)
-    case_file = wdir + settings["caseFile"]
-    case_status = {}
-    try:
-        with open(case_file) as infile:
-            for line in infile:
-                newline = line.strip().split("\t")
-                case_status[newline[0]] = newline[1]
-    except IOError:
-        pass
-    tsne_key = settings["tsneKey"]
-    tsne_plot_key = settings["tsnePlotKey"]
-    min_samples = int(settings["minClusterSamples"])
-    max_unclustered_frac = float(settings["maxUnclusteredFrac"])
-    max_cluster_count = int(settings["maxClusterCount"])
-    #tsne_keys = {"Y": Y, "V": V, "U": U, "T": T}
-    for g in tables:
-        try:
-            probes = list(tables[g]["probe_information"][:, 1])
-            uniq_probes = []
-            for p in probes:
-                if p not in uniq_probes:
-                    uniq_probes.append(p)
-            sample_names = tables[g]["sample_names"]
-            labels = []
-            for s in sample_names:
-                try:
-                    labels.append(case_status[s])
-                except KeyError:
-                    labels.append("na")
-            copy_counts = tables[g]["median_normalized_copy_counts"]
-            collapsed_counts = np.zeros((len(uniq_probes), len(sample_names)))
-            for i in range(len(uniq_probes)):
-                u = uniq_probes[i]
-                for j in range(len(probes)):
-                    p = probes[j]
-                    if u == p:
-                        collapsed_counts[i] += copy_counts[j]
-            repeat_counts = []
-            for u in uniq_probes:
-                repeat_counts.append(probes.count(u))
-            upper_limit = np.asarray(repeat_counts)*2 + 0.5
-            lower_limit = np.asarray(repeat_counts)*2 - 0.5
-            copy_counts = np.transpose(copy_counts)
-            collapsed_counts = np.transpose(collapsed_counts)
-            Y = cnv_calls[g]["tsne"][tsne_key]
-            P = cnv_calls[g]["tsne"][tsne_plot_key]
-            cluster_count = []
-            eps_range = np.arange(2., 11.)/2
-            for eps in eps_range:
-                db = DBSCAN( eps = eps, min_samples = min_samples).fit(Y)
-                cluster_labels = db.labels_
-                unclustered = float(list(cluster_labels).count(-1))/len(cluster_labels)
-                # Number of clusters in labels, ignoring noise if present.
-                n_clusters_ = len(set(cluster_labels)) - (1 if -1 in cluster_labels else 0)
-                cluster_count.append([n_clusters_, unclustered])
-            # find the best clustering
-            indexes_PF = []
-            for i in range(len(cluster_count)):
-                cc = cluster_count[i][0]
-                un = cluster_count[i][1]
-                if cc <= max_cluster_count and un <= max_unclustered_frac :
-                    indexes_PF.append(i)
-            if len(indexes_PF) == 0:
-                problem_clusters.append([g, "no clusters found!"])
-                continue
-            else:
-                if len(indexes_PF) == 1:
-                    best_index = indexes_PF[0]
-                else:
-                    best_index = indexes_PF[0]
-                    for i in indexes_PF[1:]:
-                        cc = cluster_count[i][0]
-                        best_cc = cluster_count[best_index][0]
-                        if best_cc == cc:
-                            best_index = i
-                db = DBSCAN( eps = eps_range[best_index], min_samples = min_samples).fit(Y)
-                cluster_labels = db.labels_
-                unclustered = float(list(cluster_labels).count(-1))/len(cluster_labels)
-                # Number of clusters in labels, ignoring noise if present.
-                n_clusters_ = len(set(cluster_labels)) - (1 if -1 in cluster_labels else 0)
-            #cluster_labels = ms.labels_
-            #cluster_centers = ms.cluster_centers_
-            labels_unique = np.unique(cluster_labels)
-            cluster_dict = {"cluster_labels" : cluster_labels,
-                            "unique_probes": uniq_probes,
-                           "all_probes": probes,
-                           "plotting": {"upper_limit": upper_limit,
-                                        "lower_limit": lower_limit},
-                           "mean_shift": cnv_calls[g]["mean_shift"],
-                           "dbscan": db,
-                           "tsne": cnv_calls[g]["tsne"],
-                           "clusters": {}}
-            for k in range(n_clusters_):
-                my_members = cluster_labels == k
-                #cluster_center = cluster_centers[k]
-                cluster_case_count = list(np.asarray(labels)[my_members]).count("case")
-                cluster_control_count = list(np.asarray(labels)[my_members]).count("control")
-                other_case_count = labels.count("case") - cluster_case_count
-                other_control_count = labels.count("control") - cluster_control_count
-                cluster_table = [[cluster_case_count, cluster_control_count],
-                                 [other_case_count, other_control_count]]
-                try:
-                    cluster_fish = fisher_exact(cluster_table)
-                except:
-                    cluster_fish = ["na", "na"]
-                try:
-                    cluster_chi = chi2_contingency(cluster_table)
-                except:
-                    cluster_chi = ["na", "na", "na", "na"]
-                cluster_dict["clusters"][k] = {"cluster_table": cluster_table,
-                           "cluster_stats": {"fisher": {"OR": cluster_fish[0],
-                                                        "pvalue": cluster_fish[1]},
-                                             "chi": {"pvalue": cluster_chi[1],
-                                                     "expected": cluster_chi[3]}},
-                           "cluster_data": copy_counts[my_members],
-                           "cluster_medians": np.median(copy_counts[my_members], axis=0),
-                           "cluster_samples": sample_names[my_members],
-                           "cluster_members": my_members,
-                           "collapsed_data": collapsed_counts[my_members],
-                           "collapsed_medians": np.median(collapsed_counts[my_members], axis=0)
-                           }
-                cluster_output[g] = cluster_dict
-        except Exception as e:
-            problem_clusters.append([g, e])
-    db_output_file = wdir + settings["dbScanOutputFile"]
-    with open(db_output_file, "wb") as outfile:
-        pickle.dump(cluster_output, outfile)
-    return problem_clusters
-def plot_clusters(settings, cluster_method="dbscan"):
-    wdir = settings["workingDir"]
-    if cluster_method == "dbscan":
-        cluster_output_file = wdir + settings["dbScanOutputFile"]
-    else :
-        cluster_output_file = wdir + settings["clusterOutputFile"]
-    with open(cluster_output_file, "rb") as infile:
-        cnv_calls = pickle.load(infile)
-    filtered_tables_file = wdir + settings["filteredTablesFile"]
-    with open(filtered_tables_file, "rb") as infile:
-        all_tables = pickle.load(infile)
-    figsize = tuple(map(int, settings["figsize"]))
-    ymax = int(settings["ymax"])
-    if cluster_method == "dbscan":
-        image_dir = wdir + "dbscan_images/"
-    else:
-        image_dir = wdir + "cluster_images/"
-    if not os.path.exists(image_dir):
-        os.makedirs(image_dir)
-    for gene_name in cnv_calls:
-        clusters = cnv_calls[gene_name]["clusters"]
-        tables = all_tables[gene_name]
-        probe_table = tables["probe_information"]
-        copies = [probe_table[0,2]]
-        locations = [0]
-        for i in range(len(probe_table) -1):
-            current_copy = probe_table[i+1, 2]
-            if current_copy != copies[-1]:
-                copies.append(current_copy)
-                locations.extend([i, i+1])
-        locations.append(len(probe_table))
-        locations = [[locations[i], locations[i+1]] for i in range(0, len(locations), 2)]
-        upper_limit = cnv_calls[gene_name]["plotting"]["upper_limit"]
-        lower_limit = cnv_calls[gene_name]["plotting"]["lower_limit"]
-        fig1 = plt.figure(figsize=figsize)
-        fig2 = plt.figure(figsize=figsize)
-        fig3 = plt.figure(figsize=figsize)
-        for c in range(len(clusters)):
-            ax1 = fig1.add_subplot(len(clusters), 1, c)
-            ax2 = fig2.add_subplot(len(clusters), 1, c)
-            ax3 = fig3.add_subplot(len(clusters), 1, c)
-            #ax1 = axarray[c]
-            #fig, ax1 = plt.subplots()
-            plot_data = clusters[c]["cluster_data"]
-            median_data = clusters[c]["cluster_medians"]
-            collapsed_median = clusters[c]["collapsed_medians"]
-            odds = clusters[c]["cluster_stats"]["fisher"]["OR"]
-            fish_p = clusters[c]["cluster_stats"]["fisher"]["pvalue"]
-            chi_p = clusters[c]["cluster_stats"]["chi"]["pvalue"]
-            cluster_size = len(clusters[c]["cluster_samples"])
-            cluster_summary_list = ["cluster size " + str(cluster_size),
-                                    "odds ratio " + str(odds),
-                                    "fisher's exact pvalue " + str(fish_p),
-                                    "chi squared pvalue " + str(chi_p)]
-            cluster_summary = "\n".join(cluster_summary_list)
-            for d in plot_data:
-                ax1.plot(d, lw = 0.2)
-            ax1.axhline(1.5, lw = 2, c = "r")
-            ax1.axhline(2.5, lw = 2, c = "g")
-            ax2.plot(median_data, lw = 1, c = "k")
-            ax2.axhline(1.5, lw = 2, c = "r")
-            ax2.axhline(2.5, lw = 2, c = "g")
-            ax3.plot(collapsed_median, lw = 1, c = "k")
-            ax3.plot(upper_limit, lw = 2, c = "g")
-            ax3.plot(lower_limit, lw = 2, c = "r")
-            colors = ["y", "k"]
-            for i in range(len(copies)):
-                copyname = copies[i]
-                loc = locations[i]
-                ax1.plot(np.arange(loc[0]-1, loc[1]+1), np.zeros(loc[1]- loc[0]+2),
-                         lw = 8, c = colors[i%2])
-                ax1.text(x = np.mean(loc), y = - 0.5, s = copyname, fontsize = 10,
-                         horizontalalignment = "right", rotation = "vertical")
-                ax2.plot(np.arange(loc[0]-1, loc[1]+1), np.zeros(loc[1]- loc[0]+2),
-                         lw = 2, c = colors[i%2])
-                ax2.plot(np.arange(loc[0]-1, loc[1]+1), np.zeros(loc[1]- loc[0]+2),
-                         lw = 8, c = colors[i%2])
-                ax2.text(x = np.mean(loc), y = - 0.5, s = copyname, fontsize = 10,
-                         horizontalalignment = "right", rotation = "vertical")
-            ax1.legend(cluster_summary_list, loc= "upper right", fontsize=8)
-            ax1.set_title("Gene " + gene_name + " cluster " + str(c))
-            ax1.set_ylim([0,ymax])
-            ax2.legend(cluster_summary_list, loc= "upper right", fontsize=8)
-            #ax1.annotate(cluster_summary, xy=(-12, -12), xycoords='axes points',
-            #    size=10, ha='right', va='top',bbox=dict(boxstyle='round', fc='w'))
-            #ax2.annotate(cluster_summary, xy=(-12, -12), xycoords='axes points',
-            #    size=8, ha='right', va='top',bbox=dict(boxstyle='round', fc='w'))
-            ax2.set_title("Gene " + gene_name + " cluster " + str(c))
-            ax2.set_ylim([0,ymax])
-            ax3.legend(cluster_summary_list, loc= "upper right", fontsize=8)
-            ax3.set_title("Gene " + gene_name + " cluster " + str(c))
-            ax3.set_ylim([0,2*ymax])
-        # plot clusters
-        if cluster_method == "dbscan":
-            ms = cnv_calls[gene_name]["dbscan"]
-            Y_plot = cnv_calls[gene_name]["tsne"]["Y"]
-            T_plot = cnv_calls[gene_name]["tsne"]["V"]
-        else:
-            ms = cnv_calls[gene_name]["mean_shift"]
-            Y_plot = cnv_calls[gene_name]["tsne"]["Y"]
-            T_plot = cnv_calls[gene_name]["tsne"]["T"]
-        cluster_labels = ms.labels_
-        labels_unique = np.unique(cluster_labels)
-        colors = plt.cm.Spectral(np.linspace(0, 1, len(labels_unique)))
-        n_clusters_ = len(set(cluster_labels)) - (1 if -1 in cluster_labels else 0)
-        fig4 = plt.figure()
-        if cluster_method != "dbscan":
-            ax4 = fig4.add_subplot(2,1,2)
-            ax5 = fig4.add_subplot(2,1,1)
-            cluster_centers = ms.cluster_centers_
-            for k, col in zip(labels_unique, colors):
-                if k == -1:
-                    # Black used for noise.
-                    col = 'k'
-                my_members = cluster_labels == k
-                cluster_center = cluster_centers[k]
-                ax5.plot(T_plot[my_members, 0], T_plot[my_members, 1],
-                         'o', markerfacecolor=col,
-                     markeredgecolor='k', markersize=5)
-                ax5.plot(cluster_center[0], cluster_center[1], 'o', markerfacecolor="w",
-                         markeredgecolor='k', markersize=14)
-                ax5.annotate(str(k), xy = cluster_center, ha="center",
-                             va = "center", fontsize = 12)
-        else:
-            ax4 = fig4.add_subplot(1,1,1)
-        for k, col in zip(labels_unique, colors):
-            if k == -1:
-                # Black used for noise.
-                col = 'k'
-            my_members = cluster_labels == k
-            ax4.plot(Y_plot[my_members, 0], Y_plot[my_members, 1],
-                     'o', markerfacecolor=col,
-                     markeredgecolor='k', markersize=5)
-            ax4.plot(np.mean(Y_plot[my_members, 0]), np.mean(Y_plot[my_members, 1]),
-                     'o', markerfacecolor="w",
-                     markeredgecolor='k', markersize=14)
-            ax4.annotate(str(k), xy = (np.mean(Y_plot[my_members, 0]),
-                                       np.mean(Y_plot[my_members, 1])),
-                         ha="center",
-                         va = "center", fontsize = 12)
-        if cluster_method == "dbscan":
-            ax4.set_title(gene_name + " DBSCAN clusters")
-        else:
-            ax4.set_title(gene_name + " meanshift clusters")
-            ax5.set_title(gene_name + " tSNE clusters")
-        # save figures
-        fig1.tight_layout(pad = 1, w_pad = 1, h_pad = 10)
-        fig2.tight_layout(pad = 1, w_pad = 1, h_pad = 10)
-        fig3.tight_layout(pad = 1, w_pad = 1, h_pad = 10)
-        fig1.savefig(image_dir + gene_name, dpi = 96)
-        fig2.savefig(image_dir + gene_name + "_medians", dpi = 96)
-        fig3.savefig(image_dir + gene_name + "_collapsed", dpi = 96)
-        fig4.savefig(image_dir + gene_name + "_meanshift", dpi = 96)
-        plt.close("all")
-    return
-
-
-def check_overlap(r1, r2, padding=0):
-    """ Check if two regions overlap. Regions are given as lists of chrom (str),
-    begin (int), end (int)."""
-    # check chromosome equivalency
-    o1 = r1[0] == r2[0]
-    # check interval overlap
-    merged = merge_overlap([r1[1:], r2[1:]], padding)
-    o2 = len(merged) == 1
-    return o1 & o2
-
-
-def make_region(chromosome, begin, end):
-    """ Create region string from coordinates.
-    takes 2 (1 for human 1-9) digit chromosome,
-    begin and end positions (1 indexed)"""
-    region = "chr" + str(chromosome) + ":" + str(begin) + "-" + str(end)
-    return region
-
-
-def create_region(chromosome, begin, end):
-    """ Create region string from coordinates.
-    chromosome string,
-    begin and end positions (1 indexed)"""
-    region = chromosome + ":" + str(begin) + "-" + str(end)
-    return region
 
 
 def create_dirs(dir_name):
@@ -3616,66 +1594,6 @@ def create_dirs(dir_name):
     mfold_output_DIR = dir_name + "/mfold_output/"
     return [primer3_input_DIR, primer3_output_DIR, bowtie2_input_DIR,
             bowtie2_output_DIR, mfold_input_DIR, mfold_output_DIR]
-
-
-def get_coordinates(region):
-    """ Define coordinates chr, start pos and end positions
-    from region string chrX:start-end. Return coordinate list.
-    """
-    chromosome = region.split(":")[0]
-    coord = region.split(":")[1]
-    coord_list = coord.split("-")
-    begin = int(coord_list[0])
-    end = int(coord_list[1])
-    return [chromosome, begin, end]
-
-
-def get_fasta(region, species="pf", offset=1, header="na"):
-    """ Take a region string (chrX:begin-end (1 indexed)),
-    and species (human=hs, plasmodium= pf),Return fasta record.
-    """
-    if offset == 0:
-        region_coordinates = get_coordinates(region)
-        region = (region_coordinates[0] + ":" + str(region_coordinates[1] + 1)
-                  + "-" + str(region_coordinates[2]))
-    region = region.encode("utf-8")
-    file_locations = get_file_locations()
-    genome_fasta = file_locations[species]["fasta_genome"].encode("utf-8")
-    fasta = pysam.faidx(genome_fasta, region)
-    if header != "na":
-        fasta_seq = "\n".join(fasta.split("\n")[1:])
-        fasta = ">" + header + "\n" + fasta_seq
-    return fasta
-
-
-def get_fasta_list(regions, species):
-    """ Take a list of regions and return fasta sequences."""
-    if len(regions) == 0:
-        print("Region list is empty.")
-        return
-    file_locations = get_file_locations()
-    genome_fasta = file_locations[species]["fasta_genome"]
-    region_file = "/tmp/regions_" + id_generator(10) + ".txt"
-    with open(region_file, "w") as outfile:
-        for r in regions:
-            outfile.write(r + "\n")
-    fasta_dic = {}
-    command = ["samtools",  "faidx", "-r", region_file, genome_fasta]
-    out = subprocess.check_output(command).decode("UTF-8")
-    fasta_list = out.split(">")[1:]
-    for f in fasta_list:
-        fl = f.strip().split("\n")
-        fhead = fl[0]
-        fseq = "".join(fl[1:])
-        fasta_dic[fhead] = fseq
-    return fasta_dic
-
-
-def create_fasta_file(region, species, output_file):
-    if not os.path.exists(output_file):
-        os.makedirs(output_file)
-    with open(output_file, "w") as outfile:
-        outfile.write(get_fasta(region, species))
 
 
 def get_snps(region, snp_file):
@@ -3755,183 +1673,17 @@ def targets(must_file, diff_list):
     return targets
 
 
-def merge_overlap (intervals, spacer=0):
-    """ Merge overlapping intervals. Take a list of lists of 2 elements, [start, stop],
-    check if any [start, stop] pairs overlap and merge if any. Return the merged [start, stop]
-    list."""
-    exons = copy.deepcopy(intervals)
-    exons = [e for e in exons if len(e) == 2]
-    for e in exons:
-        e.sort()
-    exons.sort()
-    if len(exons) < 2:
-        return exons
-    # reuse a piece of code from get_exons:
-    #######################################
-    overlapping = 1
-    while overlapping:
-        overlapping = 0
-        for i in range(len(exons)):
-            e = exons[i]
-            for j in range(len(exons)):
-                x = exons[j]
-                if i == j :
-                    continue
-                else:
-                    if e[1] >= x[1]:
-                        if (e[0] - x[1]) <= spacer:
-                            overlapping = 1
-                    elif x[1] >= e[1]:
-                        if (x[0] - e[1]) <= spacer:
-                            ovrelapping = 1
-                    if overlapping:
-                        # merge exons and add to the exon list
-                        exons.append([min(e[0], x[0]), max(e[1], x[1])])
-                        # remove the exons e and x
-                        exons.remove(e)
-                        exons.remove(x)
-                        # once an overlapping exon is found, break out of the for loop
-                        break
-            if overlapping:
-                # if an overlapping exon is found, stop this for loop and continue with the
-                # while loop with the updated exon list
-                break
-    exons.sort()
-    return exons
-
-
-def overlap(reg1, reg2, spacer = 0):
+def get_exons(gene_list):
+    """ Take a list of transcript information in refgene format and return a
+    list of exons in the region as [[e1_start, e1_end], [e2_start], [e2_end],
+    ..]. The transcripts must belong to the same gene (i.e. have the same gene
+    name).Merge overlapping exons.
     """
-    Return overlap between two regions.
-    e.g. [10, 30], [20, 40] returns [20, 30]
-    """
-    regions = sorted([sorted(reg1), sorted(reg2)])
-    try:
-        if regions[0][1] - regions[1][0] >= spacer:
-            return[max([regions[0][0], regions[1][0]]),
-                   min([regions[0][1], regions[1][1]])]
-        else:
-            return []
-    except IndexError:
-        return []
-
-
-def remove_overlap(reg1, reg2, spacer = 0):
-    """
-    Remove overlap between two regions.
-    e.g. [10, 30], [20, 40] returns [10, 20], [30, 40]
-    """
-    regions = sorted([sorted(reg1), sorted(reg2)])
-    try:
-        if regions[0][1] - regions[1][0] >= spacer:
-            coords = sorted(reg1 + reg2)
-            return[[coords[0], coords[1]],
-                   [coords[2], coords[3]]]
-        else:
-            return regions
-    except IndexError:
-        return []
-
-
-def subtract_overlap (uncovered_regions, covered_regions, spacer = 0):
-    """
-    Given two sets of regions in the form
-    [[start, end], [start, end]], return a set
-    of regions that is the second set subtracted from
-    the first.
-    """
-    uncovered_set = set()
-    for r in uncovered_regions:
-        try:
-            uncovered_set.update(list(range(r[0], r[1] + 1)))
-        except IndexError:
-            pass
-    covered_set = set()
-    for r in covered_regions:
-        try:
-            covered_set.update(list(range(r[0], r[1] + 1)))
-        except IndexError:
-            pass
-    uncovered_remaining = sorted(uncovered_set.difference(covered_set))
-    if len(uncovered_remaining) > 0:
-        uncovered = [[uncovered_remaining[i-1],
-                      uncovered_remaining[i]] for i in \
-                     range(1, len(uncovered_remaining))\
-                    if uncovered_remaining[i] - uncovered_remaining[i-1]\
-                     > 1]
-        unc = [uncovered_remaining[0]]
-        for u in uncovered:
-            unc.extend(u)
-        unc.append(uncovered_remaining[-1])
-        return [[unc[i], unc[i+1]]for i in range(0, len(unc), 2)               if unc[i+1] - unc[i] > spacer]
-    else:
-        return []
-
-
-def trim_overlap (region_list, low = 0.1, high = 0.9, spacer = 0):
-    """
-    Given a set of regions in the form [[start, end], [start, end]],
-    return a set of regions with any overlapping parts trimmed
-    when overlap size / smaller region size ratio is lower than "low";
-    or flanking region outside of overlap is trimmed when the ratio
-    is higher than "high".
-    """
-    do_trim = True
-    while do_trim:
-        do_trim = False
-        break_for = False
-        region_list = [r for r in region_list if r != "remove"]
-        for i in range(len(region_list)):
-            if break_for:
-                break
-            else:
-                for j in range(len(region_list)):
-                    if i != j:
-                        reg_i = region_list[i]
-                        reg_j = region_list[j]
-                        if reg_i == reg_j:
-                            region_list[i] = "remove"
-                            break_for = True
-                            do_trim = True
-                            break
-                        else:
-                            overlapping_region = overlap(reg_i, reg_j, spacer)
-                            if len(overlapping_region) > 0:
-                                reg_sizes = sorted([reg_i[1] - reg_i[0] + 1,
-                                                    reg_j[1] - reg_j[0] + 1])
-                                overlap_size = float(overlapping_region[1]                                                     - overlapping_region[0])
-                                overlap_ratio = overlap_size/reg_sizes[0]
-                                if overlap_ratio <= low:
-                                    region_list[i] = "remove"
-                                    region_list[j] = "remove"
-                                    region_list.extend(remove_overlap(reg_i, reg_j, spacer))
-                                    break_for = True
-                                    do_trim = True
-                                    break
-                                elif overlap_ratio >= high:
-                                    region_list[i] = "remove"
-                                    region_list[j] = "remove"
-                                    region_list.append(overlapping_region)
-                                    break_for = True
-                                    do_trim = True
-                                    break
-                                else:
-                                    print((overlap_ratio, "is outside trim range for ",                                    reg_i, reg_j))
-
-    return region_list
-
-
-def get_exons (gene_list):
-    """Take a list of transcript information in refgene format and return a list of exons
-    in the region as [[e1_start, e1_end], [e2_start], [e2_end], ..]. The transcripts must
-    belong to the same gene (i.e. have the same gene name).
-    Merge overlapping exons. """
     # get start and end coordinates of exons in gene list
     starts = []
     ends = []
     gene_names = []
-    gene_ids= []
-    #print gene_list
+    gene_ids = []
     chrom_list = []
     for gene in gene_list:
         chrom_list.append(gene[2])
@@ -3965,7 +1717,9 @@ def get_exons (gene_list):
             e = exons[i]
             for j in range(len(exons)):
                 x = exons[j]
-                if (i != j) and                    ((e[0] <= x[0] <= e[1]) or (e[0] <= x[1] <= e[1]) or (x[0] <= e[0] <= x[1])):
+                if (i != j) and ((e[0] <= x[0] <= e[1])
+                                 or (e[0] <= x[1] <= e[1])
+                                 or (x[0] <= e[0] <= x[1])):
                     # merge exons and add to the exon list
                     exons.append([min(e[0], x[0]), max(e[1], x[1])])
                     # remove the exons e and x
@@ -3973,14 +1727,14 @@ def get_exons (gene_list):
                     exons.remove(x)
                     # change overlapping to 1 so we can stop the outer for loop
                     overlapping = 1
-                    # once an overlapping exon is found, break out of the for loop
+                    # once an overlapping exon is found, break the for loop
                     break
             if overlapping:
-                # if an overlapping exon is found, stop this for loop and continue with the
-                # while loop with the updated exon list
+                # if an overlapping exon is found, stop this for loop and
+                # continue with the while loop with the updated exon list
                 break
     # get the gene start and end coordinates
-    if (len(starts) >= 1) and (len(ends)>=1):
+    if (len(starts) >= 1) and (len(ends) >= 1):
         start = min(starts)
         end = max(ends)
     else:
@@ -4002,7 +1756,8 @@ def get_gene_name(region, species):
     """ Return the gene(s) in a region. """
     gene_names = []
     try:
-        genes = get_snps(region, get_file_locations()[species]["refgene_tabix"])
+        genes = get_snps(region, get_file_locations()[species][
+            "refgene_tabix"])
         for g in genes:
             gene_names.append(g[12])
     except KeyError:
@@ -4010,7 +1765,7 @@ def get_gene_name(region, species):
     return gene_names
 
 
-def get_gene (gene_name, refgene_file, chrom=None, alternative_chr=1):
+def get_gene(gene_name, refgene_file, chrom=None, alternative_chr=1):
     """ Return genomic coordinates of a gene extracted from the refseq genes file.
     Refgene fields are as follows:
     0:bin, 1:name, 2:chrom, 3:strand, 4:txStart, 5:txEnd, 6:cdsStart, 7:cdsEnd, 8:exonCount,
@@ -4045,10 +1800,11 @@ def get_gene (gene_name, refgene_file, chrom=None, alternative_chr=1):
     return alter
 
 
-def create_gene_fasta (gene_name_list, wdir, species = "hs", flank=150, multi_file=False):
+def create_gene_fasta(gene_name_list, wdir, species="hs", flank=150,
+                      multi_file=False):
     """ Get a list of genes, extract exonic sequence + flanking sequence.
-    Create fasta files in corresponding directory for each gene if multi_file is True,
-    create a single fasta file if False.
+    Create fasta files in corresponding directory for each gene if multi_file
+    is True, create a single fasta file if False.
     """
     region_list = []
     for gene_name in gene_name_list:
@@ -4057,27 +1813,35 @@ def create_gene_fasta (gene_name_list, wdir, species = "hs", flank=150, multi_fi
             query = make_region(coord[0], coord[1] - flank, coord[2] + flank)
         else:
             e = get_exons(
-                get_gene(gene_name, get_file_locations()[species]["refgene"], alternative_chr=1)
+                get_gene(gene_name, get_file_locations()[species]["refgene"],
+                         alternative_chr=1)
                 )
-            query = e["chrom"] + ":" + str(e["begin"] - flank) + "-" + str(e["end"] + flank)
+            query = e["chrom"] + ":" + str(e["begin"] - flank) + "-" + str(
+               e["end"] + flank)
         region_list.append(query)
     regions = get_fasta_list(region_list, species)
+    fasta_dict = {}
+    for i in range(len(region_list)):
+        r = region_list[i]
+        gene_name = gene_name_list[i]
+        fasta_dict[gene_name] = regions[r]
     if multi_file:
-        for i in range(len(region_list)):
-            r = region_list[i]
-            gene_name = gene_name_list[i]
+        for gene_name in fasta_dict:
+            save_dict = {gene_name: fasta_dict[gene_name]}
             filename = wdir + gene_name + ".fa"
-            with open(filename, "w") as outfile:
-                outfile.write("\n".join())
+            save_fasta_dict(save_dict, filename)
     else:
-        with open(wdir + "multi.fa", "w") as outfile:
-            outfile.write("\n".join(region_list))
+        save_fasta_dict(fasta_dict, wdir + "multi.fa")
+
+
 def get_region_exons(region, species):
     try:
         genes = get_snps(region, get_file_locations()[species]["refgene_tabix"])
     except KeyError:
         genes = []
     return get_exons(genes)
+
+
 def get_cds(gene_name, species):
     gene_list = get_gene(gene_name,
                          get_file_locations()[species]["refgene"],
@@ -4133,7 +1897,7 @@ def get_cds(gene_name, species):
     return cds
 
 
-def make_boulder (fasta,
+def make_boulder(fasta,
                   primer3_input_DIR,
                   exclude_list=[],
                   output_file_name="",
@@ -4168,6 +1932,8 @@ def make_boulder (fasta,
     with open(primer3_input_DIR + outname, 'w') as outfile:
         outfile.write(boulder)
     return boulder
+
+
 def snp_masker(wdir,
                output_name,
                region_key,
@@ -4222,7 +1988,9 @@ def snp_masker(wdir,
     make_boulder (fasta_rec, wdir,exclude_list=excluded,                      output_file_name=output_name,
                       sequence_targets = sequence_targets)
     return
-def make_primers (input_file,  settings, primer3_input_DIR, primer3_output_DIR, output_file="input_file"):
+
+
+def make_primers(input_file,  settings, primer3_input_DIR, primer3_output_DIR, output_file="input_file"):
     """ make primers using boulder record file in primer3_input_DIR
     using settings file in primer3_settings_DIR and output as boulder
     record to primer3_output_DIR"""
@@ -4243,7 +2011,7 @@ def make_primers (input_file,  settings, primer3_input_DIR, primer3_output_DIR, 
     return
 
 
-def make_primers_worker (l):
+def make_primers_worker(l):
     """ A worker function to make primers for multiple regions
     using separate processors. Read boulder record in given input
     directory and creates primer output files in output directory"""
@@ -4567,40 +2335,6 @@ def paralog_primers_multi(primer_dict, copies, coordinate_converter, settings,
     return primer_dict
 
 
-def fasta_parser(fasta):
-    """ Convert a fasta file with multiple sequences
-    to a dictionary with fasta headers as keys and sequences
-    as values."""
-    fasta_dic = {}
-    with open(fasta) as infile:
-        for line in infile:
-            # find the headers
-            if line.startswith(">"):
-                header = line[1:-1].split(" ")[0]
-                if header in fasta_dic:
-                    print(("%s occurs multiple times in fasta file" % header))
-                fasta_dic[header] = ""
-                continue
-            try:
-                fasta_dic[header] = fasta_dic[header] + line.strip()
-            except KeyError:
-                fasta_dic[header] = line.strip()
-    return fasta_dic
-
-
-def fasta_to_sequence(fasta):
-    """ Convert a fasta sequence to one line sequence"""
-    f = fasta.strip().split("\n")
-    if len(f) > 0:
-        return "".join(f[1:])
-    else:
-        return ""
-
-
-def get_sequence(region, species):
-    return fasta_to_sequence(get_fasta(region, species))
-
-
 def bowtie2_run(fasta_file, output_file, bowtie2_input_DIR,
                 bowtie2_output_DIR, species, process_num=4,
                 seed_MM=1, mode="-a", seed_len=18, gbar=1, local=0):
@@ -4616,34 +2350,17 @@ def bowtie2_run(fasta_file, output_file, bowtie2_input_DIR,
         check_local = "--local"
     else:
         check_local = "--end-to-end"
-    dump = subprocess.check_output(["bowtie2",
-                                    "-p",
-                                    str(process_num),
-                                   "-D",
-                                    "20",
-                                    "-R",
-                                    "3",
-                                    "-N",
-                                    str(seed_MM),
-                                    "-L",
-                                    str(seed_len),
-                                    "-i",
-                                    "S,1,0.5",
-                                    "--gbar",
-                                    str(gbar),
-                                    mode,
-                                    check_local,
-                                   "-x",
-                                    genome,
-                                    "-f",
-                                    bowtie2_input_DIR + fasta_file,
-                                   "-S",
-                                    bowtie2_output_DIR + output_file])
+    subprocess.check_output(["bowtie2", "-p", str(process_num),  "-D", "20",
+                             "-R", "3", "-N", str(seed_MM), "-L",
+                             str(seed_len), "-i", "S,1,0.5", "--gbar",
+                             str(gbar), mode, check_local, "-x", genome, "-f",
+                             bowtie2_input_DIR + fasta_file, "-S",
+                             bowtie2_output_DIR + output_file])
     return 0
 
 
-def bowtie(fasta_file, output_file, bowtie2_input_DIR, bowtie2_output_DIR, options,
-           species,process_num=4, mode="-a", local=0, fastq = 0):
+def bowtie(fasta_file, output_file, bowtie2_input_DIR, bowtie2_output_DIR,
+           options, species, process_num=4, mode="-a", local=0, fastq=0):
     """ Extract primer sequences from the fasta file,
     check alignments for given species genome(s), create
     sam output file(s). Species must be a list!"""
@@ -4666,7 +2383,7 @@ def bowtie(fasta_file, output_file, bowtie2_input_DIR, bowtie2_output_DIR, optio
     else:
         com.append("-f " + bowtie2_input_DIR + fasta_file)
     com.append("-S " + bowtie2_output_DIR + output_file)
-    dump = subprocess.check_output(com)
+    subprocess.check_output(com)
     return 0
 
 
@@ -4676,9 +2393,9 @@ def bwa(fastq_file, output_file, output_type, input_dir,
     options should be a list that starts with the command (e.g. mem, aln etc).
     Additional options should be appended as strings of "option value",
     for example, "-t 30" to use 30 threads. Output type can be sam or bam.
-    Recommended options ["-t30", "-L500", "-T100"]. Here L500 penalizes clipping
-    severely so the alignment becomes end-to-end and T100 stops reporting secondary
-    alignments, assuming their score is below 100."""
+    Recommended options ["-t30", "-L500", "-T100"]. Here L500 penalizes
+    clipping severely so the alignment becomes end-to-end and T100 stops
+    reporting secondary alignments, assuming their score is below 100."""
     genome_file = get_file_locations()[species]["bwa_genome"]
     if output_type == "sam":
         com = ["bwa"]
@@ -4686,7 +2403,7 @@ def bwa(fastq_file, output_file, output_type, input_dir,
         com.append(genome_file)
         com.append(input_dir + fastq_file)
         with open(output_dir + output_file, "w") as outfile:
-            dump = subprocess.check_call(com, stdout=outfile)
+            subprocess.check_call(com, stdout=outfile)
     else:
         com = ["bwa"]
         com.extend(options)
@@ -4695,29 +2412,7 @@ def bwa(fastq_file, output_file, output_type, input_dir,
         sam = subprocess.Popen(com, stdout=subprocess.PIPE)
         bam_com = ["samtools", "view", "-b"]
         with open(output_dir + output_file, "w") as outfile:
-            bam = subprocess.Popen(bam_com, stdin=sam.stdout,
-                                   stdout=outfile)
-def reverse_complement(sequence):
-    """ Return reverse complement of a sequence. """
-    complement_bases = {
-        'g':'c', 'c':'g', 'a':'t', 't':'a', 'n':'n',
-        'G':'C', 'C':'G', 'A':'T', 'T':'A', 'N':'N', "-":"-",
-        "R":"Y", "Y":"R", "S":"W", "W":"S", "K":"M", "M":"K",
-        "B":"V", "V":"B", "D": "H", "H": "D",
-        "r":"y", "y":"r", "s":"w", "w":"s", "k":"m", "m":"k",
-        "b":"v", "v":"b", "d": "h", "h": "d"
-    }
-
-    bases = list(sequence)
-    bases.reverse()
-    revcomp = []
-    for base in bases:
-        try:
-            revcomp.append(complement_bases[base])
-        except KeyError:
-            print("Unexpected base encountered: ", base, " returned as X!!!")
-            revcomp.append("X")
-    return "".join(revcomp)
+            subprocess.Popen(bam_com, stdin=sam.stdout, stdout=outfile)
 
 
 def parse_cigar(cigar):
@@ -4754,19 +2449,22 @@ def get_cigar_length(cigar):
     """ Get the length of the reference sequence that a read is aligned to,
     given their cigar string."""
     try:
-        # parse cigar string and find out how many insertions are in the alignment
+        # parse cigar string and find out how many insertions are in the
+        # alignment
         insertions = parse_cigar(cigar)["I"]
     except KeyError:
-        # the key "I" will not be present in the cigar string if there is no insertion
+        # the key "I" will not be present in the cigar string if there is no
+        # insertion
         insertions = 0
-    # all the values in the cigar dictionary represent a base in the reference seq,
+    # all the values in the cigar dictionary represent a base in the reference
+    # seq,
     # except the insertions, so they should be subtracted
     return sum(parse_cigar(cigar).values()) - insertions
 
 
 def parse_bowtie(primer_dict, bt_file, primer_out, primer3_output_DIR,
                  bowtie2_output_DIR, species, settings, outp=1):
-    """ Take a bowtie output file and filter top N hits per primer.
+    """ Take a bowtie output (sam) file and filter top N hits per primer.
     When a primer has more than "upper_hit_limit" bowtie hits,
     remove that primer.
     Add the bowtie hit information, including hit sequence to
@@ -5636,9 +3334,9 @@ def pick_paralog_primer_pairs(extension, ligation, output_file,
                                 "max_size"].sum()
                         else:
                             max_insertion_size = 0
-                        adjusted_max_size = max((max_size
-                                                 - max_insertion_size),
-                                                min_size)
+                        adjusted_max_size = max_size - max_insertion_size
+                        if adjusted_max_size < (min_size/2):
+                            continue
                         # we do not have to adsjust min_size unless the max
                         # size get too close to min_size, in which case
                         # we leave a 30 bp distance between min an max so
@@ -5667,9 +3365,9 @@ def pick_paralog_primer_pairs(extension, ligation, output_file,
                                     "max_size"].sum()
                             else:
                                 max_insertion_size = 0
-                            adjusted_max_size = max((max_size
-                                                     - max_insertion_size),
-                                                    min_size)
+                            adjusted_max_size = max_size - max_insertion_size
+                            if adjusted_max_size < (min_size/2):
+                                continue
                             if (adjusted_max_size
                                     >= pairs[p]["capture_size"] >= 0):
                                 captured_copies.append(p)
@@ -5793,9 +3491,10 @@ def pick_paralog_primer_pairs(extension, ligation, output_file,
                                         "max_size"].sum()
                                 else:
                                     max_insertion_size = 0
-                                adjusted_max_size = max((max_size
-                                                         - max_insertion_size),
-                                                        min_size)
+                                adjusted_max_size = (max_size
+                                                     - max_insertion_size)
+                                if adjusted_max_size < (min_size/2):
+                                    continue
                                 if (adjusted_max_size
                                         >= alts[a]["capture_size"] >= 0):
                                     captured_copies.append(a)
@@ -5959,13 +3658,13 @@ def check_hairpin(pairs, output_file, settings, output_dir, outp=1):
     # tm since the backbones will be more in concentration, so it could
     # make sense to keep this threshold high. On the other hand, eliminating
     # even low likelyhood interactions could be useful.
-    backbone_tm = float(settings["ligation"]["hairpin_tm"])
+    backbone_tm = float(settings["mip"]["hairpin_tm"])
     backbone_name = settings["mip"]["backbone"]
     backbone = mip_backbones[backbone_name]
     # go through mips and calculate hairpins
     # we will calculate hairpins by looking at TMs between arm sequences
     # and backbone sequences since the whole MIP sequence is too long
-    # for nearest neighbor calculations (at least or primer3 implementation).
+    # for nearest neighbor calculations (at least for primer3 implementation).
     for p in pairs["pair_information"].keys():
         pair_dict = pairs["pair_information"][p]
         mip_dict = pair_dict["mip_information"]
@@ -6026,52 +3725,10 @@ def check_hairpin(pairs, output_file, settings, output_dir, outp=1):
     return pairs
 
 
-def make_chunks(l, n):
-    """ Yield successive n-sized chunks from list l.
+def filter_mips(mip_dic, bin_size, mip_limit):
     """
-    for i in range(0, len(l), n):
-        yield l[i:i+n]
-
-
-def split_file(input_file,
-               primer3_output_DIR,
-               mfold_input_DIR,
-               mfold_output_DIR,
-               hairpin_tm,
-               line_limit = 600):
-    # open the mip fasta file
-    # divide the file into smaller, 300 mip sized files
-    map_input = []
-    with open(mfold_input_DIR + input_file, 'r') as infile:
-        counter = 0
-        linenum = 0
-        outlist = []
-        for line in infile:
-            linenum += 1
-            outlist.append(line.strip())
-            if linenum == line_limit:
-                with open(mfold_input_DIR + input_file +
-                                       str(counter),  'w') as outfile:
-                    outfile.write("\n".join(outlist))
-                temp = [input_file + str(counter), input_file, hairpin_tm,
-                                 primer3_output_DIR, mfold_input_DIR, mfold_output_DIR]
-                map_input.append(temp)
-                counter += 1
-                linenum = 0
-                outlist = []
-        if linenum != 0:
-            with open(mfold_input_DIR + input_file +                       str(counter),  'w') as outfile:
-                    outfile.write("\n".join(outlist))
-            temp = [input_file + str(counter), input_file, hairpin_tm,             primer3_output_DIR, mfold_input_DIR, mfold_output_DIR]
-            map_input.append(temp)
-    return map_input
-
-
-def filter_mips (mip_dic, bin_size, mip_limit):
-    """
-    Filter mips in "mip_dic" so that only top scoring mip
-    ending within the "bin_size" nucleotides on the same
-    strand remain.
+    Filter mips in "mip_dic" so that only top scoring mip ending within the
+    "bin_size" nucleotides on the same strand remain.
     """
     # load extension and ligation primers from file
     shuffled = list(mip_dic.keys())
@@ -6080,14 +3737,11 @@ def filter_mips (mip_dic, bin_size, mip_limit):
         if len(mip_dic) <= mip_limit:
             return
         try:
-            found = 0
             m_start = mip_dic[m].mip["C0"]["capture_start"]
             m_end = mip_dic[m].mip["C0"]["capture_end"]
             m_func = mip_dic[m].func_score
             m_tech = mip_dic[m].tech_score
             m_ori = mip_dic[m].mip["C0"]["orientation"]
-            #shuffled_keys = list(mip_dic.keys())
-            #random.shuffle(shuffled_keys)
             for n in shuffled:
                 if len(mip_dic) <= mip_limit:
                     return
@@ -6098,7 +3752,9 @@ def filter_mips (mip_dic, bin_size, mip_limit):
                         n_func = mip_dic[n].func_score
                         n_tech = mip_dic[n].tech_score
                         n_ori = mip_dic[n].mip["C0"]["orientation"]
-                        if ((abs(n_start - m_start) <= bin_size) or                             (abs(n_end - m_end) <= bin_size)) and                             (m_ori == n_ori):
+                        if (((abs(n_start - m_start) <= bin_size)
+                             or (abs(n_end - m_end) <= bin_size))
+                                and (m_ori == n_ori)):
                             if (m_tech + m_func) >= (n_tech + n_func):
                                 mip_dic.pop(n)
                             else:
@@ -6109,6 +3765,8 @@ def filter_mips (mip_dic, bin_size, mip_limit):
         except KeyError:
             continue
     return
+
+
 def remove_mips (mip_dic):
     """ filter primers so that only top n scoring primers
     ending within the same subregion (determined by bin_size)
@@ -6157,216 +3815,8 @@ def remove_mips (mip_dic):
         except KeyError:
             continue
     return
-def score_mips (mip_file, primer3_output_DIR, output_file):
-    """ Score mips in a dictionary according to a scoring matrix
-    Scoring matrices are somewhat crude at this time.
-    Arm GC content weighs the most, then arms GC clamp and arm length
-    Next_base values are last."""
-    # open mip dictionary from file
-    with open (primer3_output_DIR + mip_file, 'r') as infile:
-        dic = json.load(infile)
-    # add "NEXT_BASES" tag:value pair to dictionary.
-    # next_bases are 2 bases immediately downstream of extension primer and ligation primer
-    # extract template sequence
-    seq_template = dic["sequence_information"]["SEQUENCE_TEMPLATE"]
-    # find the coordinates of next bases
-    for mip in dic["pair_information"]:
-        # get coordinates of primers in the form of "start_base, len"
-        extension_coord = dic["pair_information"][mip]["extension_primer_information"]["COORDINATES"]
-        ligation_coord = dic["pair_information"][mip]["ligation_primer_information"]["COORDINATES"]
-        # orientation of the mip is used to determine if extension arm or ligation arm is originating
-        # from PRIMER_LEFT or PRIMER_RIGTH. When an arm originates from LEFT_PRIMER, it is on the plus
-        # strand of DNA and its length is added to the start coordinate to get the end coordinate,
-        # while it is subtracted for RIGHT_PRIMERs
-        strand = dic["pair_information"][mip]["orientation"]
-        if strand == "forward": # then the extension arm is the LEFT primer and ligation arm is RIGHT
-            extension_end = int(extension_coord.split(",")[0]) + int(extension_coord.split(",")[1]) - 1
-            # 1 is added or subtracted due to sequence index being zero based.
-            ligation_end = int(ligation_coord.split(",")[0]) - int(ligation_coord.split(",")[1]) + 1
-            ext_next = seq_template [(extension_end+1):(extension_end+3)]
-            lig_next = reverse_complement(seq_template [(ligation_end - 2):ligation_end])
-        elif strand == "reverse": # then the extension arm is the RIGHT primer and ligation is LEFT
-            extension_end = int(extension_coord.split(",")[0]) - int(extension_coord.split(",")[1]) + 1
-            ligation_end = int(ligation_coord.split(",")[0]) + int(ligation_coord.split(",")[1]) - 1
-            ext_next = reverse_complement(seq_template [(extension_end - 2):extension_end])
-            lig_next = seq_template [(ligation_end+1):(ligation_end+3)]
-        # add "NEXT_BASES" key and its value to mip dictionary
-        dic["pair_information"][mip]["extension_primer_information"]["NEXT_BASES"] = ext_next
-        dic["pair_information"][mip]["ligation_primer_information"]["NEXT_BASES"] = lig_next
-    # arm gc content score matrix
-    # define best to worst values for gc content. Best is very important so it has a huge effect on score.
-    best = 1000
-    mid = 100
-    low = 10
-    worst = 0
-    # define matrix
-    arm_gc_con = {}
-    for i in range(100):
-        if i < 35:
-            arm_gc_con[i] = worst
-        elif i < 40:
-            arm_gc_con[i] = low
-        elif i < 45:
-            arm_gc_con[i] = mid
-        elif i < 60:
-                arm_gc_con[i] = best
-        elif i < 65:
-                arm_gc_con[i] = mid
-        elif i < 70:
-            arm_gc_con[i] = low
-        else :
-            arm_gc_con[i] = worst
-    # capture gc content score matrix
-    # define best to worst values for gc content. Best is very important so it has a huge effect on score.
-    best = 10000
-    mid = 3000
-    low = 100
-    worse = 0
-    worst = -5000
-    # define matrix
-    cap_gc_con = {}
-    for i in range(100):
-        if i< 20:
-            cap_gc_con[i] = worst
-        elif i < 35:
-            cap_gc_con[i] = worse
-        elif i < 40:
-            cap_gc_con[i] = low
-        elif i < 45:
-            cap_gc_con[i] = mid
-        elif i < 55:
-                cap_gc_con[i] = best
-        elif i < 60:
-                cap_gc_con[i] = mid
-        elif i < 65:
-            cap_gc_con[i] = low
-        elif i < 80:
-            cap_gc_con[i] = worse
-        else :
-            cap_gc_con[i] = worst
-    # next base score matrix
-    # define best to worst values for next bases. This parameter should be important only when comparing
-    # mips with equally good gc contents. Therefore the values are low and does not give a mip a big +.
-    best = 10
-    mid = 5
-    low = 2
-    worst = 0
-    # define matrix
-    next_bases = ({"GG":best, "CC":best, "GC":best, "CG":best,
-                  "GA":mid, "CA":mid, "GT":mid, "CT":mid,
-                  "AG":low, "TG":low, "AC":low, "TC":low,
-                  "AA":worst, "AT":worst, "TA":worst, "TT":worst})
-    # gc clamp matrix: a mid score for g or c clamp and best for extension gg or cc
-    best = 200
-    mid = 100
-    worst = 0
-    ext_gc_clamp = ({"GG":best, "CC":best, "GC":best, "CG":best,
-                  "GA":worst, "CA":worst, "GT":worst, "CT":worst,
-                  "AG":mid, "TG":mid, "AC":mid, "TC":mid,
-                  "AA":worst, "AT":worst, "TA":worst, "TT":worst})
-    lig_gc_clamp = {"G": mid, "C": mid, "A": worst, "T": worst}
 
-    # extension arm lengths score matrix
-    # this is added for plasmodium since length is more relaxed to get best possible mips with higher TMs
-    # which sometimes leads to very long arms.
-    best = 50
-    mid = 25
-    low = 5
-    worst = 0
-    extension_len_matrix = {}
-    for i in range(18,36):
-        if (i == 18) or (25 <= i <= 28):
-            extension_len_matrix [i] = mid
-        elif (19 <= i <= 24):
-            extension_len_matrix [i] = best
-        elif (30 > i > 28):
-            extension_len_matrix [i] = low
-        elif (i > 29):
-            extension_len_matrix [i] = worst
-    # ligation arm lengths score matrix
-    best = 50
-    mid = 25
-    low = 10
-    worst = 0
-    ligation_len_matrix = {}
-    for i in range(18,36):
-        if (i == 18) or (i == 19):
-            ligation_len_matrix [i] = mid
-        elif (20 <= i <= 26):
-            ligation_len_matrix [i] = best
-        elif (27 <= i <= 30):
-            ligation_len_matrix [i] = low
-        elif (i > 30):
-            ligation_len_matrix [i] = worst
-    # score all mips using above matrices
-    for mip in list(dic["pair_information"].keys()):
-        # get arm sequences
-        ligation_seq = dic["pair_information"][mip]["ligation_primer_information"]["SEQUENCE"]
-        extension_seq = dic["pair_information"][mip]["extension_primer_information"]["SEQUENCE"]
-        # count lower case masked nucleotides
-        ligation_mask_penalty = sum(-1000 for n in ligation_seq if n.islower())
-        ligation_mask_penalty += sum(-5000 for n in ligation_seq[-5:] if n.islower())
-        extension_mask_penalty = sum(-1000 for n in extension_seq if n.islower())
-        extension_mask_penalty += sum(-5000 for n in extension_seq[-5:] if n.islower())
-        # arm lengths
-        ligation_len = len(ligation_seq)
-        extension_len = len(extension_seq)
-        # find capture gc content
-        ligation_start = int(dic["pair_information"][mip]["ligation_primer_information"]["GENOMIC_START"])
-        ligation_end = int(dic["pair_information"][mip]["ligation_primer_information"]["GENOMIC_END"])
-        extension_start = int(dic["pair_information"][mip]["extension_primer_information"]["GENOMIC_START"])
-        extension_end = int(dic["pair_information"][mip]["extension_primer_information"]["GENOMIC_END"])
-        chrom = dic["pair_information"][mip]["extension_primer_information"]["CHR"]
-        mip_coord = sorted([ligation_start, ligation_end, extension_end, extension_start])
-        capture_key = chrom + ":" + str(mip_coord[1]) + "-" + str(mip_coord[2])
-        capture_seq = fasta_to_sequence(get_fasta(capture_key, species="hs"))
-        capture_gc = calculate_gc(capture_seq)
-        # gc clamp
-        gc_clamp = ext_gc_clamp[extension_seq[-2:].upper()] + lig_gc_clamp[ligation_seq[-1]]
-        # get gc percentages and convert to int.
-        extension_gc = int(float(dic["pair_information"][mip]["extension_primer_information"]["GC_PERCENT"]))
-        ligation_gc = int(float(dic["pair_information"][mip]["ligation_primer_information"]["GC_PERCENT"]))
-        # get next base values
-        extension_next = dic["pair_information"][mip]["extension_primer_information"]["NEXT_BASES"]
-        ligation_next = dic["pair_information"][mip]["ligation_primer_information"]["NEXT_BASES"]
-        # desired/undesired copies captured
-        copy_bonus = 0
-        if "AMP_PARA" in list(dic["pair_information"][mip]["extension_primer_information"].keys())            and "pairs" in list(dic["pair_information"][mip].keys()):
-            ext_copies = dic["pair_information"][mip]["extension_primer_information"]["AMP_PARA"]
-            pairs = dic["pair_information"][mip]["pairs"]
-        else:
-            ext_copies = []
-        if "AMP_PARA" in list(dic["pair_information"][mip]["ligation_primer_information"].keys())            and "pairs" in list(dic["pair_information"][mip].keys()):
-            lig_copies = dic["pair_information"][mip]["ligation_primer_information"]["AMP_PARA"]
-        else:
-            lig_copies = []
-        wanted = []
-        unwanted = []
-        for ec in ext_copies:
-            if ec in lig_copies:
-                if (ec in desired_copies) and (pairs[ec][-1]):
-                    copy_bonus += 1000
-                    wanted.append(ec)
-                else:
-                    copy_bonus -= 500
-                    unwanted.append(ec)
 
-        all_scores = {"extension_arm_len":[extension_len, extension_len_matrix[extension_len]],                      "ligation_arm_len":[ligation_len, ligation_len_matrix[ligation_len]],                      "extension_arm_gc":[extension_gc, arm_gc_con[extension_gc]],                      "ligation_arm_gc":[ligation_gc, arm_gc_con[ligation_gc]],                      "ligation_mask_penalty":ligation_mask_penalty,                      "extension_mask_penalty":extension_mask_penalty,                      "capture_gc_content":[capture_gc, cap_gc_con[capture_gc]],                      "copy_bonus": {"intended_copies": wanted, "unintended_copies": unwanted,                                     "desired_copies": desired_copies,"bonus": copy_bonus}, "gc_clamp": gc_clamp,                      "extension_next_bases":[extension_next, next_bases[extension_next.upper()]],                      "ligation_next_bases":[ligation_next, next_bases[ligation_next.upper()]],                         }
-        # calculate total score
-        score = (extension_len_matrix[extension_len] + ligation_len_matrix[ligation_len] +
-                 arm_gc_con[extension_gc] + arm_gc_con[ligation_gc] +
-                 next_bases[extension_next.upper()] + next_bases[ligation_next.upper()] +
-                 gc_clamp + ligation_mask_penalty + extension_mask_penalty + cap_gc_con[capture_gc] + \
-                 copy_bonus)
-        # add mip_score to dictionary
-        dic["pair_information"][mip]["mip_information"]["mip_score"] = score
-        dic["pair_information"][mip]["mip_information"]["all_scores"] = all_scores
-        dic["pair_information"][mip]["mip_information"]["capture_seq"] = capture_seq
-    # write dictionary to json file
-    outfile = open (primer3_output_DIR + output_file, "w")
-    json.dump(dic, outfile, indent=1)
-    outfile.close()
-    return dic
 def add_captures (mip_dic, target_dic):
     for mip in list(mip_dic["pair_information"].keys()):
         d = mip_dic["pair_information"][mip]
@@ -6387,6 +3837,8 @@ def add_captures (mip_dic, target_dic):
         # add captured diffs information to mip dictionary
         d["mip_information"]["captured_diffs"] = captured_snps
     return mip_dic
+
+
 def add_paralog_info(mip_dic, num_para):
     for mip in list(mip_dic["pair_information"].keys()):
         # extract the captured diffs from the mip_dic
@@ -6417,642 +3869,34 @@ def add_paralog_info(mip_dic, num_para):
         # add this information to mip dic
         mip_dic["pair_information"][mip]["mip_information"]["captured_paralog_number"] = mip_para
     return mip_dic
-def score_mip_objects (mip_object):
-    """ Score mips in a dictionary according to a scoring matrix
-    Scoring matrices are somewhat crude at this time.
-    Arm GC content weighs the most, then arms GC clamp and arm length
-    Next_base values are last."""
-    # open mip dictionary from file
-    infile = open (primer3_output_DIR + mip_file, 'r')
-    dic = json.load(infile)
-    infile.close()
-    # add "NEXT_BASES" tag:value pair to dictionary.
-    # next_bases are 2 bases immediately downstream of extension primer and ligation primer
-    # extract template sequence
-    seq_template = dic["sequence_information"]["SEQUENCE_TEMPLATE"]
-    # find the coordinates of next bases
-    for mip in dic["pair_information"]:
-        # get coordinates of primers in the form of "start_base, len"
-        extension_coord = dic["pair_information"][mip]["extension_primer_information"]["COORDINATES"]
-        ligation_coord = dic["pair_information"][mip]["ligation_primer_information"]["COORDINATES"]
-        # orientation of the mip is used to determine if extension arm or ligation arm is originating
-        # from PRIMER_LEFT or PRIMER_RIGTH. When an arm originates from LEFT_PRIMER, it is on the plus
-        # strand of DNA and its length is added to the start coordinate to get the end coordinate,
-        # while it is subtracted for RIGHT_PRIMERs
-        strand = dic["pair_information"][mip]["orientation"]
-        if strand == "forward": # then the extension arm is the LEFT primer and ligation arm is RIGHT
-            extension_end = int(extension_coord.split(",")[0]) + int(extension_coord.split(",")[1]) - 1
-            # 1 is added or subtracted due to sequence index being zero based.
-            ligation_end = int(ligation_coord.split(",")[0]) - int(ligation_coord.split(",")[1]) + 1
-            ext_next = seq_template [(extension_end+1):(extension_end+3)]
-            lig_next = reverse_complement(seq_template [(ligation_end - 2):ligation_end])
-        elif strand == "reverse": # then the extension arm is the RIGHT primer and ligation is LEFT
-            extension_end = int(extension_coord.split(",")[0]) - int(extension_coord.split(",")[1]) + 1
-            ligation_end = int(ligation_coord.split(",")[0]) + int(ligation_coord.split(",")[1]) - 1
-            ext_next = reverse_complement(seq_template [(extension_end - 2):extension_end])
-            lig_next = seq_template [(ligation_end+1):(ligation_end+3)]
-        # add "NEXT_BASES" key and its value to mip dictionary
-        dic["pair_information"][mip]["extension_primer_information"]["NEXT_BASES"] = ext_next
-        dic["pair_information"][mip]["ligation_primer_information"]["NEXT_BASES"] = lig_next
-    # arm gc content score matrix
-    # define best to worst values for gc content. Best is very important so it has a huge effect on score.
-    best = 1000
-    mid = 100
-    low = 10
-    worst = 0
-    # define matrix
-    arm_gc_con = {}
-    for i in range(100):
-        if i < 35:
-            arm_gc_con[i] = worst
-        elif i < 40:
-            arm_gc_con[i] = low
-        elif i < 45:
-            arm_gc_con[i] = mid
-        elif i < 60:
-                arm_gc_con[i] = best
-        elif i < 65:
-                arm_gc_con[i] = mid
-        elif i < 70:
-            arm_gc_con[i] = low
-        else :
-            arm_gc_con[i] = worst
-    # capture gc content score matrix
-    # define best to worst values for gc content. Best is very important so it has a huge effect on score.
-    best = 10000
-    mid = 3000
-    low = 100
-    worse = 0
-    worst = -5000
-    # define matrix
-    cap_gc_con = {}
-    for i in range(100):
-        if i<20:
-            cap_gc_con[i] = worst
-        elif i < 35:
-            cap_gc_con[i] = worse
-        elif i < 40:
-            cap_gc_con[i] = low
-        elif i < 45:
-            cap_gc_con[i] = mid
-        elif i < 55:
-                cap_gc_con[i] = best
-        elif i < 60:
-                cap_gc_con[i] = mid
-        elif i < 65:
-            cap_gc_con[i] = low
-        elif i < 80:
-            cap_gc_con[i] = worse
-        else :
-            cap_gc_con[i] = worst
-    # next base score matrix
-    # define best to worst values for next bases. This parameter should be important only when comparing
-    # mips with equally good gc contents. Therefore the values are low and does not give a mip a big +.
-    best = 10
-    mid = 5
-    low = 2
-    worst = 0
-    # define matrix
-    next_bases = ({"GG":best, "CC":best, "GC":best, "CG":best,
-                  "GA":mid, "CA":mid, "GT":mid, "CT":mid,
-                  "AG":low, "TG":low, "AC":low, "TC":low,
-                  "AA":worst, "AT":worst, "TA":worst, "TT":worst})
-    # gc clamp matrix: a mid score for g or c clamp and best for extension gg or cc
-    best = 200
-    mid = 100
-    worst = 0
-    ext_gc_clamp = ({"GG":best, "CC":best, "GC":best, "CG":best,
-                  "GA":worst, "CA":worst, "GT":worst, "CT":worst,
-                  "AG":mid, "TG":mid, "AC":mid, "TC":mid,
-                  "AA":worst, "AT":worst, "TA":worst, "TT":worst})
-    lig_gc_clamp = {"G": mid, "C": mid, "A": worst, "T": worst}
-
-    # extension arm lengths score matrix
-    # this is added for plasmodium since length is more relaxed to get best possible mips with higher TMs
-    # which sometimes leads to very long arms.
-    best = 50
-    mid = 25
-    low = 5
-    worst = 0
-    extension_len_matrix = {}
-    for i in range(18,36):
-        if (i == 18) or (25 <= i <= 28):
-            extension_len_matrix [i] = mid
-        elif (19 <= i <= 24):
-            extension_len_matrix [i] = best
-        elif (30 > i > 28):
-            extension_len_matrix [i] = low
-        elif (i > 29):
-            extension_len_matrix [i] = worst
-    # ligation arm lengths score matrix
-    best = 50
-    mid = 25
-    low = 10
-    worst = 0
-    ligation_len_matrix = {}
-    for i in range(18,36):
-        if (i == 18) or (i == 19):
-            ligation_len_matrix [i] = mid
-        elif (20 <= i <= 26):
-            ligation_len_matrix [i] = best
-        elif (27 <= i <= 30):
-            ligation_len_matrix [i] = low
-        elif (i > 30):
-            ligation_len_matrix [i] = worst
-    # score all mips using above matrices
-    for mip in list(dic["pair_information"].keys()):
-        # get arm sequences
-        ligation_seq = dic["pair_information"][mip]["ligation_primer_information"]["SEQUENCE"]
-        extension_seq = dic["pair_information"][mip]["extension_primer_information"]["SEQUENCE"]
-        # count lower case masked nucleotides
-        ligation_mask_penalty = sum(-1000 for n in ligation_seq if n.islower())
-        ligation_mask_penalty += sum(-5000 for n in ligation_seq[-5:] if n.islower())
-        extension_mask_penalty = sum(-1000 for n in extension_seq if n.islower())
-        extension_mask_penalty += sum(-5000 for n in extension_seq[-5:] if n.islower())
-        # arm lengths
-        ligation_len = len(ligation_seq)
-        extension_len = len(extension_seq)
-        # find capture gc content
-        ligation_start = int(dic["pair_information"][mip]["ligation_primer_information"]["GENOMIC_START"])
-        ligation_end = int(dic["pair_information"][mip]["ligation_primer_information"]["GENOMIC_END"])
-        extension_start = int(dic["pair_information"][mip]["extension_primer_information"]["GENOMIC_START"])
-        extension_end = int(dic["pair_information"][mip]["extension_primer_information"]["GENOMIC_END"])
-        chrom = dic["pair_information"][mip]["extension_primer_information"]["CHR"]
-        mip_coord = sorted([ligation_start, ligation_end, extension_end, extension_start])
-        capture_key = chrom + ":" + str(mip_coord[1]) + "-" + str(mip_coord[2])
-        capture_seq = fasta_to_sequence(get_fasta(capture_key, species="hs"))
-        capture_gc = calculate_gc(capture_seq)
-        # gc clamp
-        gc_clamp = ext_gc_clamp[extension_seq[-2:].upper()] + lig_gc_clamp[ligation_seq[-1]]
-        # get gc percentages and convert to int.
-        extension_gc = int(float(dic["pair_information"][mip]["extension_primer_information"]["GC_PERCENT"]))
-        ligation_gc = int(float(dic["pair_information"][mip]["ligation_primer_information"]["GC_PERCENT"]))
-        # get next base values
-        extension_next = dic["pair_information"][mip]["extension_primer_information"]["NEXT_BASES"]
-        ligation_next = dic["pair_information"][mip]["ligation_primer_information"]["NEXT_BASES"]
-        # desired/undesired copies captured
-        copy_bonus = 0
-        if "AMP_PARA" in list(dic["pair_information"][mip]["extension_primer_information"].keys())            and "pairs" in list(dic["pair_information"][mip].keys()):
-            ext_copies = dic["pair_information"][mip]["extension_primer_information"]["AMP_PARA"]
-            pairs = dic["pair_information"][mip]["pairs"]
-        else:
-            ext_copies = []
-        if "AMP_PARA" in list(dic["pair_information"][mip]["ligation_primer_information"].keys())            and "pairs" in list(dic["pair_information"][mip].keys()):
-            lig_copies = dic["pair_information"][mip]["ligation_primer_information"]["AMP_PARA"]
-        else:
-            lig_copies = []
-        wanted = []
-        unwanted = []
-        for ec in ext_copies:
-            if ec in lig_copies:
-                if (ec in desired_copies) and (pairs[ec][-1]):
-                    copy_bonus += 1000
-                    wanted.append(ec)
-                else:
-                    copy_bonus -= 500
-                    unwanted.append(ec)
-
-        all_scores = {"extension_arm_len":[extension_len, extension_len_matrix[extension_len]],                      "ligation_arm_len":[ligation_len, ligation_len_matrix[ligation_len]],                      "extension_arm_gc":[extension_gc, arm_gc_con[extension_gc]],                      "ligation_arm_gc":[ligation_gc, arm_gc_con[ligation_gc]],                      "ligation_mask_penalty":ligation_mask_penalty,                      "extension_mask_penalty":extension_mask_penalty,                      "capture_gc_content":[capture_gc, cap_gc_con[capture_gc]],                      "copy_bonus": {"intended_copies": wanted, "unintended_copies": unwanted,                                     "desired_copies": desired_copies,"bonus": copy_bonus}, "gc_clamp": gc_clamp,                      "extension_next_bases":[extension_next, next_bases[extension_next.upper()]],                      "ligation_next_bases":[ligation_next, next_bases[ligation_next.upper()]],                         }
-        # calculate total score
-        score = (extension_len_matrix[extension_len] + ligation_len_matrix[ligation_len] +
-                 arm_gc_con[extension_gc] + arm_gc_con[ligation_gc] +
-                 next_bases[extension_next.upper()] + next_bases[ligation_next.upper()] +
-                 gc_clamp + ligation_mask_penalty + extension_mask_penalty + cap_gc_con[capture_gc] + \
-                 copy_bonus)
-        # add mip_score to dictionary
-        dic["pair_information"][mip]["mip_information"]["mip_score"] = score
-        dic["pair_information"][mip]["mip_information"]["all_scores"] = all_scores
-        dic["pair_information"][mip]["mip_information"]["capture_seq"] = capture_seq
-    # write dictionary to json file
-    outfile = open (primer3_output_DIR + output_file, "w")
-    json.dump(dic, outfile, indent=1)
-    outfile.close()
-    return dic
-def score_mips_hla (mip_file, primer3_output_DIR, output_file, desired_copies=[]):
-    """ Score mips in a dictionary according to a scoring matrix
-    Scoring matrices are somewhat crude at this time.
-    Arm GC content weighs the most, then arms GC clamp and arm length
-    Next_base values are last."""
-    # open mip dictionary from file
-    infile = open (primer3_output_DIR + mip_file, 'r')
-    dic = json.load(infile)
-    infile.close()
-    # add "NEXT_BASES" tag:value pair to dictionary.
-    # next_bases are 2 bases immediately downstream of extension primer and ligation primer
-    # extract template sequence
-    seq_template = dic["sequence_information"]["SEQUENCE_TEMPLATE"]
-    # find the coordinates of next bases
-    for mip in dic["pair_information"]:
-        # get coordinates of primers in the form of "start_base, len"
-        extension_coord = dic["pair_information"][mip]["extension_primer_information"]["COORDINATES"]
-        ligation_coord = dic["pair_information"][mip]["ligation_primer_information"]["COORDINATES"]
-        # orientation of the mip is used to determine if extension arm or ligation arm is originating
-        # from PRIMER_LEFT or PRIMER_RIGTH. When an arm originates from LEFT_PRIMER, it is on the plus
-        # strand of DNA and its length is added to the start coordinate to get the end coordinate,
-        # while it is subtracted for RIGHT_PRIMERs
-        strand = dic["pair_information"][mip]["orientation"]
-        if strand == "forward": # then the extension arm is the LEFT primer and ligation arm is RIGHT
-            extension_end = int(extension_coord.split(",")[0]) + int(extension_coord.split(",")[1]) - 1
-            # 1 is added or subtracted due to sequence index being zero based.
-            ligation_end = int(ligation_coord.split(",")[0]) - int(ligation_coord.split(",")[1]) + 1
-            ext_next = seq_template [(extension_end+1):(extension_end+3)]
-            lig_next = reverse_complement(seq_template [(ligation_end - 2):ligation_end])
-        elif strand == "reverse": # then the extension arm is the RIGHT primer and ligation is LEFT
-            extension_end = int(extension_coord.split(",")[0]) - int(extension_coord.split(",")[1]) + 1
-            ligation_end = int(ligation_coord.split(",")[0]) + int(ligation_coord.split(",")[1]) - 1
-            ext_next = reverse_complement(seq_template [(extension_end - 2):extension_end])
-            lig_next = seq_template [(ligation_end+1):(ligation_end+3)]
-        # add "NEXT_BASES" key and its value to mip dictionary
-        dic["pair_information"][mip]["extension_primer_information"]["NEXT_BASES"] = ext_next
-        dic["pair_information"][mip]["ligation_primer_information"]["NEXT_BASES"] = lig_next
-    # arm gc content score matrix
-    # define best to worst values for gc content. Best is very important so it has a huge effect on score.
-    best = 1000
-    mid = 100
-    low = 10
-    worst = 0
-    # define matrix
-    arm_gc_con = {}
-    for i in range(100):
-        if i < 35:
-            arm_gc_con[i] = worst
-        elif i < 40:
-            arm_gc_con[i] = low
-        elif i < 45:
-            arm_gc_con[i] = mid
-        elif i < 60:
-                arm_gc_con[i] = best
-        elif i < 65:
-                arm_gc_con[i] = mid
-        elif i < 70:
-            arm_gc_con[i] = low
-        else :
-            arm_gc_con[i] = worst
-    # capture gc content score matrix
-    # define best to worst values for gc content. Best is very important so it has a huge effect on score.
-    best = 10000
-    mid = 3000
-    low = 100
-    worse = 0
-    worst = -5000
-    # define matrix
-    cap_gc_con = {}
-    for i in range(100):
-        if i<20:
-            cap_gc_con[i] = worst
-        elif i < 35:
-            cap_gc_con[i] = worse
-        elif i < 40:
-            cap_gc_con[i] = low
-        elif i < 45:
-            cap_gc_con[i] = mid
-        elif i < 55:
-                cap_gc_con[i] = best
-        elif i < 60:
-                cap_gc_con[i] = mid
-        elif i < 65:
-            cap_gc_con[i] = low
-        elif i < 80:
-            cap_gc_con[i] = worse
-        else :
-            cap_gc_con[i] = worst
-    # next base score matrix
-    # define best to worst values for next bases. This parameter should be important only when comparing
-    # mips with equally good gc contents. Therefore the values are low and does not give a mip a big +.
-    best = 10
-    mid = 5
-    low = 2
-    worst = 0
-    # define matrix
-    next_bases = ({"GG":best, "CC":best, "GC":best, "CG":best,
-                  "GA":mid, "CA":mid, "GT":mid, "CT":mid,
-                  "AG":low, "TG":low, "AC":low, "TC":low,
-                  "AA":worst, "AT":worst, "TA":worst, "TT":worst})
-    # gc clamp matrix: a mid score for g or c clamp and best for extension gg or cc
-    best = 200
-    mid = 100
-    worst = 0
-    ext_gc_clamp = ({"GG":best, "CC":best, "GC":best, "CG":best,
-                  "GA":worst, "CA":worst, "GT":worst, "CT":worst,
-                  "AG":mid, "TG":mid, "AC":mid, "TC":mid,
-                  "AA":worst, "AT":worst, "TA":worst, "TT":worst})
-    lig_gc_clamp = {"G": mid, "C": mid, "A": worst, "T": worst}
-
-    # extension arm lengths score matrix
-    # this is added for plasmodium since length is more relaxed to get best possible mips with higher TMs
-    # which sometimes leads to very long arms.
-    best = 50
-    mid = 25
-    low = 5
-    worst = 0
-    extension_len_matrix = {}
-    for i in range(18,36):
-        if (i == 18) or (25 <= i <= 28):
-            extension_len_matrix [i] = mid
-        elif (19 <= i <= 24):
-            extension_len_matrix [i] = best
-        elif (30 > i > 28):
-            extension_len_matrix [i] = low
-        elif (i > 29):
-            extension_len_matrix [i] = worst
-    # ligation arm lengths score matrix
-    best = 50
-    mid = 25
-    low = 10
-    worst = 0
-    ligation_len_matrix = {}
-    for i in range(18,36):
-        if (i == 18) or (i == 19):
-            ligation_len_matrix [i] = mid
-        elif (20 <= i <= 26):
-            ligation_len_matrix [i] = best
-        elif (27 <= i <= 30):
-            ligation_len_matrix [i] = low
-        elif (i > 30):
-            ligation_len_matrix [i] = worst
-    # score all mips using above matrices
-    for mip in list(dic["pair_information"].keys()):
-        # get arm sequences
-        ligation_seq = dic["pair_information"][mip]["ligation_primer_information"]["SEQUENCE"]
-        extension_seq = dic["pair_information"][mip]["extension_primer_information"]["SEQUENCE"]
-        # count lower case masked nucleotides
-        ligation_mask_penalty = sum(-1000 for n in ligation_seq if n.islower())
-        ligation_mask_penalty += sum(-5000 for n in ligation_seq[-5:] if n.islower())
-        extension_mask_penalty = sum(-1000 for n in extension_seq if n.islower())
-        extension_mask_penalty += sum(-5000 for n in extension_seq[-5:] if n.islower())
-        # arm lengths
-        ligation_len = len(ligation_seq)
-        extension_len = len(extension_seq)
-        # find capture gc content
-        ligation_start = int(dic["pair_information"][mip]["ligation_primer_information"]["GENOMIC_START"])
-        ligation_end = int(dic["pair_information"][mip]["ligation_primer_information"]["GENOMIC_END"])
-        extension_start = int(dic["pair_information"][mip]["extension_primer_information"]["GENOMIC_START"])
-        extension_end = int(dic["pair_information"][mip]["extension_primer_information"]["GENOMIC_END"])
-        chrom = dic["pair_information"][mip]["extension_primer_information"]["CHR"]
-        mip_coord = sorted([ligation_start, ligation_end, extension_end, extension_start])
-        capture_key = chrom + ":" + str(mip_coord[1]) + "-" + str(mip_coord[2])
-        capture_seq = fasta_to_sequence(get_fasta(capture_key, species="hs"))
-        capture_gc = calculate_gc(capture_seq)
-        # gc clamp
-        gc_clamp = ext_gc_clamp[extension_seq[-2:].upper()] + lig_gc_clamp[ligation_seq[-1]]
-        # get gc percentages and convert to int.
-        extension_gc = int(float(dic["pair_information"][mip]["extension_primer_information"]["GC_PERCENT"]))
-        ligation_gc = int(float(dic["pair_information"][mip]["ligation_primer_information"]["GC_PERCENT"]))
-        # get next base values
-        extension_next = dic["pair_information"][mip]["extension_primer_information"]["NEXT_BASES"]
-        ligation_next = dic["pair_information"][mip]["ligation_primer_information"]["NEXT_BASES"]
-        # desired/undesired copies captured
-        copy_bonus = 0
-        if "AMP_PARA" in list(dic["pair_information"][mip]["extension_primer_information"].keys())            and "pairs" in list(dic["pair_information"][mip].keys()):
-            ext_copies = dic["pair_information"][mip]["extension_primer_information"]["AMP_PARA"]
-            pairs = dic["pair_information"][mip]["pairs"]
-        else:
-            ext_copies = []
-        if "AMP_PARA" in list(dic["pair_information"][mip]["ligation_primer_information"].keys())            and "pairs" in list(dic["pair_information"][mip].keys()):
-            lig_copies = dic["pair_information"][mip]["ligation_primer_information"]["AMP_PARA"]
-        else:
-            lig_copies = []
-        wanted = []
-        unwanted = []
-        for ec in ext_copies:
-            if ec in lig_copies:
-                if (ec in desired_copies) and (pairs[ec][-1]):
-                    copy_bonus += 1000
-                    wanted.append(ec)
-                else:
-                    copy_bonus -= 500
-                    unwanted.append(ec)
-
-        all_scores = {"extension_arm_len":[extension_len, extension_len_matrix[extension_len]],                      "ligation_arm_len":[ligation_len, ligation_len_matrix[ligation_len]],                      "extension_arm_gc":[extension_gc, arm_gc_con[extension_gc]],                      "ligation_arm_gc":[ligation_gc, arm_gc_con[ligation_gc]],                      "ligation_mask_penalty":ligation_mask_penalty,                      "extension_mask_penalty":extension_mask_penalty,                      "capture_gc_content":[capture_gc, cap_gc_con[capture_gc]],                      "copy_bonus": {"intended_copies": wanted, "unintended_copies": unwanted,                                     "desired_copies": desired_copies,"bonus": copy_bonus}, "gc_clamp": gc_clamp,                      "extension_next_bases":[extension_next, next_bases[extension_next.upper()]],                      "ligation_next_bases":[ligation_next, next_bases[ligation_next.upper()]],                         }
-        # calculate total score
-        score = (extension_len_matrix[extension_len] + ligation_len_matrix[ligation_len] +
-                 arm_gc_con[extension_gc] + arm_gc_con[ligation_gc] +
-                 next_bases[extension_next.upper()] + next_bases[ligation_next.upper()] +
-                 gc_clamp + ligation_mask_penalty + extension_mask_penalty + cap_gc_con[capture_gc] + \
-                 copy_bonus)
-        # add mip_score to dictionary
-        dic["pair_information"][mip]["mip_information"]["mip_score"] = score
-        dic["pair_information"][mip]["mip_information"]["all_scores"] = all_scores
-        dic["pair_information"][mip]["mip_information"]["capture_seq"] = capture_seq
-    # write dictionary to json file
-    outfile = open (primer3_output_DIR + output_file, "w")
-    json.dump(dic, outfile, indent=1)
-    outfile.close()
-    return dic
-def score_hs_mips(mip_file, primer3_output_DIR, output_file):
-    """ Score mips in a dictionary according to scoring matrix
-    Scoring matrices are somewhat crude at this time.
-    Arm GC content weighs the most, then extension arm having
-    GC clamp of 2. next_base values are last."""
-    # open mip dictionary from file
-    infile = open (primer3_output_DIR + mip_file, 'r')
-    dic = json.load(infile)
-    infile.close()
-    # add "NEXT_BASES" tag:value pair to dictionary.
-    # next_bases are 2 bases immediately downstream of extension primer and ligation primer
-    # extract template sequence
-    seq_template = dic["sequence_information"]["SEQUENCE_TEMPLATE"]
-    # find the coordinates of next bases
-    for mip in dic["pair_information"]:
-        # get coordinates of primers in the form of "start_base, len"
-        extension_coord = dic["pair_information"][mip]["extension_primer_information"]["COORDINATES"]
-        ligation_coord = dic["pair_information"][mip]["ligation_primer_information"]["COORDINATES"]
-        # orientation of the mip is used to determine if extension arm or ligation arm is originating
-        # from PRIMER_LEFT or PRIMER_RIGTH. When an arm originates from LEFT_PRIMER, it is on the plus
-        # strand of DNA and its length is added to the start coordinate to get the end coordinate,
-        # while it is subtracted for RIGHT_PRIMERs
-        strand = dic["pair_information"][mip]["orientation"]
-        if strand == "forward": # then the extension arm is the LEFT primer and ligation arm is RIGHT
-            extension_end = int(extension_coord.split(",")[0]) + int(extension_coord.split(",")[1]) - 1
-            # 1 is added or subtracted due to sequence index being zero based.
-            ligation_end = int(ligation_coord.split(",")[0]) - int(ligation_coord.split(",")[1]) + 1
-            ext_next = seq_template [(extension_end+1):(extension_end+3)]
-            lig_next = reverse_complement(seq_template [(ligation_end - 2):ligation_end])
-        elif strand == "reverse": # then the extension arm is the RIGHT primer and ligation is LEFT
-            extension_end = int(extension_coord.split(",")[0]) - int(extension_coord.split(",")[1]) + 1
-            ligation_end = int(ligation_coord.split(",")[0]) + int(ligation_coord.split(",")[1]) - 1
-            ext_next = reverse_complement(seq_template [(extension_end - 2):extension_end])
-            lig_next = seq_template [(ligation_end+1):(ligation_end+3)]
-        # add "NEXT_BASES" key and its value to mip dictionary
-        dic["pair_information"][mip]["extension_primer_information"]["NEXT_BASES"] = ext_next
-        dic["pair_information"][mip]["ligation_primer_information"]["NEXT_BASES"] = lig_next
-    # arm gc content score matrix
-    # define best to worst values for gc content. Best is very important so it has a huge effect on score.
-    best = 1000
-    mid = 100
-    low = 10
-    worst = 0
-    # define matrix
-    arm_gc_con = {}
-    for i in range(20,81):
-        if i < 35:
-            arm_gc_con[i] = worst
-        elif i < 40:
-            arm_gc_con[i] = low
-        elif i < 45:
-            arm_gc_con[i] = mid
-        elif i < 60:
-                arm_gc_con[i] = best
-        elif i < 65:
-                arm_gc_con[i] = mid
-        elif i < 70:
-            arm_gc_con[i] = low
-        else :
-            arm_gc_con[i] = worst
-    # next base score matrix
-    # define best to worst values for next bases. This parameter should be important only when comparing
-    # mips with equally good gc contents. Therefore the values are low and does not give a mip a big +.
-    best = 10
-    mid = 5
-    low = 2
-    worst = 0
-    # define matrix
-    next_bases = ({"GG":best, "CC":best, "GC":best, "CG":best,
-                  "GA":mid, "CA":mid, "GT":mid, "CT":mid,
-                  "AG":low, "TG":low, "AC":low, "TC":low,
-                  "AA":worst, "AT":worst, "TA":worst, "TT":worst})
-    # score all mips using above matrices
-    for mip in list(dic["pair_information"].keys()):
-        # get arm sequences
-        ligation_seq = dic["pair_information"][mip]["ligation_primer_information"]["SEQUENCE"]
-        extension_seq = dic["pair_information"][mip]["extension_primer_information"]["SEQUENCE"]
-        # all arms have gc clamp 1. Check if extension arm has gc clamp of 2
-        extension_clamp = 0
-        if  (extension_seq[-2] == "G") or  (extension_seq[-2] == "C"):
-            extension_clamp = 100 # score changed to 100 if arm ends in GG, GC, CG or CC
-        # get gc percentages and convert to int.
-        extension_gc = int(float(dic["pair_information"][mip]["extension_primer_information"]["GC_PERCENT"]))
-        ligation_gc = int(float(dic["pair_information"][mip]["ligation_primer_information"]["GC_PERCENT"]))
-        # get next base values
-        extension_next = dic["pair_information"][mip]["extension_primer_information"]["NEXT_BASES"]
-        ligation_next = dic["pair_information"][mip]["ligation_primer_information"]["NEXT_BASES"]
-        # calculate total score
-        score = (arm_gc_con[extension_gc] + arm_gc_con[ligation_gc] +
-                 next_bases[extension_next.upper()] + next_bases[ligation_next.upper()] +
-                 extension_clamp)
-        # add mip_score to dictionary
-        dic["pair_information"][mip]["mip_information"]["mip_score"] = score
-    # write dictionary to json file
-    outfile = open (primer3_output_DIR + output_file, "w")
-    json.dump(dic, outfile, indent=1)
-    outfile.close()
-    return dic
 
 
-def strip_fasta (sequence):
-    seq_list = sequence.split('\n')[1:]
-    seq_join = "".join(seq_list)
-    return seq_join
 
 
-def calculate_gc (sequence, fasta=0):
-    if fasta:
-        seq_list = sequence.split('\n')[1:]
-        seq_join = "".join(seq_list)
-        seq = seq_join.lower()
 
-    else:
-        seq = sequence.lower()
-    gc_count = seq.count('g') + seq.count('c')
-    at_count = seq.count('a') + seq.count('t')
-    percent = int(gc_count * 100 / (gc_count + at_count))
-    return percent
-
-
-def translate(sequence, three_letter = False):
-    gencode = {
-    'ATA':'I', 'ATC':'I', 'ATT':'I', 'ATG':'M',
-    'ACA':'T', 'ACC':'T', 'ACG':'T', 'ACT':'T',
-    'AAC':'N', 'AAT':'N', 'AAA':'K', 'AAG':'K',
-    'AGC':'S', 'AGT':'S', 'AGA':'R', 'AGG':'R',
-    'CTA':'L', 'CTC':'L', 'CTG':'L', 'CTT':'L',
-    'CCA':'P', 'CCC':'P', 'CCG':'P', 'CCT':'P',
-    'CAC':'H', 'CAT':'H', 'CAA':'Q', 'CAG':'Q',
-    'CGA':'R', 'CGC':'R', 'CGG':'R', 'CGT':'R',
-    'GTA':'V', 'GTC':'V', 'GTG':'V', 'GTT':'V',
-    'GCA':'A', 'GCC':'A', 'GCG':'A', 'GCT':'A',
-    'GAC':'D', 'GAT':'D', 'GAA':'E', 'GAG':'E',
-    'GGA':'G', 'GGC':'G', 'GGG':'G', 'GGT':'G',
-    'TCA':'S', 'TCC':'S', 'TCG':'S', 'TCT':'S',
-    'TTC':'F', 'TTT':'F', 'TTA':'L', 'TTG':'L',
-    'TAC':'Y', 'TAT':'Y', 'TAA':'*', 'TAG':'*',
-    'TGC':'C', 'TGT':'C', 'TGA':'*', 'TGG':'W'}
-    gencode3 = {'A': 'Ala',
-             'C': 'Cys',
-             'D': 'Asp',
-             'E': 'Glu',
-             'F': 'Phe',
-             'G': 'Gly',
-             'H': 'His',
-             'I': 'Ile',
-             'K': 'Lys',
-             'L': 'Leu',
-             'M': 'Met',
-             'N': 'Asn',
-             'P': 'Pro',
-             'Q': 'Gln',
-             'R': 'Arg',
-             'S': 'Ser',
-             'T': 'Thr',
-             'V': 'Val',
-             'W': 'Trp',
-             'Y': 'Tyr'}
-    seq = sequence.upper()
-    """Return the translated protein from 'sequence' assuming +1 reading frame"""
-    if not three_letter:
-        return ''.join([gencode.get(seq[3*i:3*i+3],'X') for i in range(len(sequence)//3)])
-    else:
-        return ''.join([gencode3.get(gencode.get(seq[3*i:3*i+3],'X'), "X")                                     for i in range(len(sequence)//3)])
-def aa_converter(aa_name):
-    """
-    Output 3 letter and 1 letter amino acid codes for a given
-    list of 3 letter or 1 letter amino acid code list.
-    """
-    gencode3 = {'A': 'Ala',
-             'C': 'Cys',
-             'D': 'Asp',
-             'E': 'Glu',
-             'F': 'Phe',
-             'G': 'Gly',
-             'H': 'His',
-             'I': 'Ile',
-             'K': 'Lys',
-             'L': 'Leu',
-             'M': 'Met',
-             'N': 'Asn',
-             'P': 'Pro',
-             'Q': 'Gln',
-             'R': 'Arg',
-             'S': 'Ser',
-             'T': 'Thr',
-             'V': 'Val',
-             'W': 'Trp',
-             'Y': 'Tyr'}
-    for a in list(gencode3.keys()):
-        gencode3[gencode3[a]] = a
-    try:
-        return gencode3[aa_name.capitalize()]
-    except KeyError:
-        return "%s is not a valid amino acid name" %a
 def compatible_mip_check(m1, m2, overlap_same, overlap_opposite):
     d = m1.mip_dic
-    es = ext_start = d["extension_primer_information"]["GENOMIC_START"]
-    ee = ext_end = d["extension_primer_information"]["GENOMIC_END"]
-    ls = lig_start = d["ligation_primer_information"]["GENOMIC_START"]
-    le = lig_end = d["ligation_primer_information"]["GENOMIC_END"]
+    ext_start = d["extension_primer_information"]["GENOMIC_START"]
+    ext_end = d["extension_primer_information"]["GENOMIC_END"]
+    lig_start = d["ligation_primer_information"]["GENOMIC_START"]
+    lig_end = d["ligation_primer_information"]["GENOMIC_END"]
     # get mip orientation
     ori = d["orientation"]
-    m1_set = set(list(range(min([es, ee]), max([es, ee]) + 1))
-              + list(range(min([ls, le]), max([ls, le]) + 1)))
+    m1_set = set(list(range(min([ext_start, ext_end]),
+                            max([ext_start, ext_end]) + 1))
+                 + list(range(min([lig_start, lig_end]),
+                              max([lig_start, lig_end]) + 1)))
     m = m2.mip_dic
-    nes = next_ext_start = m["extension_primer_information"]["GENOMIC_START"]
-    nee = next_ext_end = m["extension_primer_information"]["GENOMIC_END"]
-    nls = next_lig_start = m["ligation_primer_information"]["GENOMIC_START"]
-    nle = next_lig_end = m["ligation_primer_information"]["GENOMIC_END"]
+    next_ext_start = m["extension_primer_information"]["GENOMIC_START"]
+    next_ext_end = m["extension_primer_information"]["GENOMIC_END"]
+    next_lig_start = m["ligation_primer_information"]["GENOMIC_START"]
+    next_lig_end = m["ligation_primer_information"]["GENOMIC_END"]
     # get mip orientation
     next_ori = m["orientation"]
-    m2_set = set(list(range(min([nes, nee]), max([nes, nee]) + 1))
-              + list(range(min([nls, nle]), max([nls, nle]) + 1)))
+    m2_set = set(list(range(min([next_ext_start, next_ext_end]),
+                            max([next_ext_start, next_ext_end]) + 1))
+                 + list(range(min([next_lig_start, next_lig_end]),
+                              max([next_lig_start, next_lig_end]) + 1)))
     overlap = len(m1_set.intersection(m2_set))
     if ori == next_ori:
         return overlap <= overlap_same
@@ -7225,106 +4069,8 @@ def compatible_chains(primer_file, primer3_output_DIR, primer_out, output_file,
     return mip_sets
 
 
-def compatible_mips(primer_file, primer3_output_DIR, primer_out, output_file,
-               overlap_same = 0, overlap_opposite = 0):
-    try:
-        with open (primer3_output_DIR + primer_file, "r") as infile:
-            scored_mips = json.load(infile)
-    except IOError:
-        print("Primer file does not exist.")
-        return 1
-    else:
-        # create in/compatibility lists for each mip
-        for k in list(scored_mips["pair_information"].keys()):
-            # get coordinates of mip arms
-            d = scored_mips["pair_information"][k]
-            es = ext_start = d["extension_primer_information"]["GENOMIC_START"]
-            ee = ext_end = d["extension_primer_information"]["GENOMIC_END"]
-            ls = lig_start = d["ligation_primer_information"]["GENOMIC_START"]
-            le = lig_end = d["ligation_primer_information"]["GENOMIC_END"]
-            # get mip orientation
-            ori = d["orientation"]
-            #print k, es, ee, ls, le, ori
-            # create an incompatibility list
-            incompatible = []
-            compatible = []
-            for mip in list(scored_mips["pair_information"].keys()):
-                m = scored_mips["pair_information"][mip]
-                nes = next_ext_start = m["extension_primer_information"]                ["GENOMIC_START"]
-                nee = next_ext_end = m["extension_primer_information"]                ["GENOMIC_END"]
-                nls = next_lig_start = m["ligation_primer_information"]                ["GENOMIC_START"]
-                nle = next_lig_end = m["ligation_primer_information"]                ["GENOMIC_END"]
-                # get mip orientation
-                next_ori = m["orientation"]
-                compat = 0
-                # check if the two mips are compatible in terms of
-                # orientation and coordinates
-                if ori == next_ori == "forward":
-                    if ((ls < nls) and (ls < nes + overlap_same)) or                      ((ls > nls) and (es + overlap_same> nls)):
-                        compat = 1
-                elif ori == next_ori == "reverse":
-                    if ((ls < nls) and (es < nls + overlap_same)) or                       ((ls > nls) and (ls + overlap_same> nes)):
-                        compat = 1
-                elif (ori == "forward") and (next_ori == "reverse"):
-                    if (ls < nls + overlap_opposite) or                     (es  + overlap_opposite> nes):
-                        compat = 1
-                    elif (es < nls) and (ee < nls + overlap_opposite) and                         (le  + overlap_opposite> nle) and                         (ls < nee + overlap_opposite):
-                        compat = 1
-                    elif (es > nls) and (es  + overlap_opposite> nle) and                          (ee < nee + overlap_opposite) and                         (le + overlap_opposite > nes):
-                        compat = 1
-                elif (ori == "reverse") and (next_ori == "forward"):
-                    if (ls + overlap_opposite > nls) or                     (es < nes + overlap_opposite):
-                        compat = 1
-                    elif (ls > nes) and (ls + overlap_opposite > nee) and                         (le < nle + overlap_opposite) and                         (ee + overlap_opposite>nls):
-                        compat = 1
-                    elif (ls < nes) and (le < nes + overlap_opposite) and                          (ee + overlap_opposite > nee) and                         (es < nle + overlap_opposite):
-                        compat = 1
-                if not compat:
-                    incompatible.append(mip)
-                else:
-                    compatible.append(mip)
-            d["incompatible"] = incompatible
-            d["compatible"] = compatible
-        f = open(primer3_output_DIR + output_file, "w")
-        #f = []
-        def compatible_recurse (l):
-            """
-            Take a list, l,  of numbers that represent a mip set with
-            their corresponding "place" in the mip dictionary, and index
-            number, i. Find the subset of mips in the rest of the list
-            that are compatible with the mip at index i, using compatibility
-            dictionary d. For each mip in the subset, find compatible mips
-            in the rest of the list. Recurse until the subset does not have
-            any mips. Append each compatible subset to a final result list, f.
-            """
-            incomp = list(l)
-            for il in l:
-                incomp.extend(scored_mips["pair_information"][il]["incompatible"])
-            comp = set(scored_mips["pair_information"][l[-1]]["compatible"]).difference(incomp)
-            if len(comp) > 0:
-                for n in comp:
-                    compatible_recurse(l + [n])
-            else:
-                f.write(",".join(l) + "\n")
-                #f.append(l)
-        keys = list(scored_mips["pair_information"].keys())
-        for k in keys:
-            comp_list = scored_mips["pair_information"][k]["compatible"]
-            if len(comp_list) > 0:
-                # for each of the mips in the compatibility list,
-                for m in comp_list:
-                    # create an initial result list to be used by the
-                    # compatible_recurse function
-                    compatible_recurse([k, m])
-            else:
-                comp_list = [k]
-                f.write(k + "\n")
 
-        f.close()
-        #print len(output)
-        with open(primer3_output_DIR + primer_out, "w") as outfile:
-            json.dump(scored_mips, outfile, indent=1)
-    return
+
 def compatibility (scored_mips, primer3_output_DIR = "", primer_out = "",
                       overlap_same = 0, overlap_opposite = 0):
     # create in/compatibility lists for each mip
@@ -7387,6 +4133,8 @@ def compatibility (scored_mips, primer3_output_DIR = "", primer_out = "",
     """
 
     return scored_mips
+
+
 def best_mip_set (compatible_mip_sets, compatible_mip_dic, num_para, diff_score_dic, outfile):
     # open file containing compatible mip lists
     with open(primer3_output_DIR + compatible_mip_sets, "r") as infile:
@@ -7529,669 +4277,6 @@ def best_mip_set (compatible_mip_sets, compatible_mip_dic, num_para, diff_score_
         return
 
 
-def get_analysis_settings(settings_file):
-    """ Convert analysis settings file to dictionary"""
-    settings = {}
-    with open(settings_file) as infile:
-        for line in infile:
-            if not line.startswith("#"):
-                newline = line.strip().split("\t")
-                value = newline[1].split(",")
-                if len(value) == 1:
-                    settings[newline[0]] = value[0]
-                else:
-                    settings[newline[0]] = [v for v in value if v != ""]
-    return settings
-
-
-def write_analysis_settings(settings, settings_file):
-    """ Create a settings file from a settings dictionary."""
-    outfile_list = [["# Setting Name", "Setting Value"]]
-    for k, v in settings.items():
-        if isinstance(v, list):
-            val = ",".join(map(str, v))
-        else:
-            val = str(v)
-        outfile_list.append([k, val])
-    with open(settings_file, "w") as outfile:
-        outfile.write("\n".join(["\t".join(o) for o in outfile_list]) + "\n")
-    return
-
-
-def filter_mipster (settings):
-    """
-    Import data from Mipster pipeline, filter and save to filtered_file
-    We use a tab separated file coming from Mipster pipeline for data analysis
-    This file has a lot of information that will not be used initially
-    We will select the columns that will be used.
-    Selected colnames are should be specified in settings file
-    """
-    wdir = settings["workingDir"]
-    mipster_file = wdir + settings["mipsterFile"]
-    filtered_file = wdir + settings["filteredMipsterFile"]
-    # extract data column names from the mipster file
-    with open(mipster_file) as infile:
-        all_colnames = infile.readline().strip().split("\t")
-    # select the relevant columns
-    colnames = settings["colNames"]
-    # colnames are names from the mipster pipeline and
-    # given names are names to be used in this pipeline
-    given_names = settings["givenNames"]
-    # check if column names are in equal number and match
-    col_map = {}
-    if len(colnames) == len(given_names):
-        for i in range(len(colnames)):
-            col_map [colnames[i]] = {"given_name": given_names[i]}
-    else:
-        print("number of column names and number of given names do not match! Colnames will be used")
-        for i in range(len(colnames)):
-            col_map [colnames[i]] = {"given_name": colnames[i]}
-    # get index of colnames in data file
-    for i in range(len(all_colnames)):
-        if all_colnames[i] in colnames:
-            col_map[all_colnames[i]]["index"] = i
-    # extract data of selected columns
-    with open(filtered_file, "w") as outfile, open(mipster_file) as all_data:
-        outfile.write("#" + "\t".join(given_names) + "\n")
-        counter = 0
-        for line in all_data:
-            if counter > 0 and not line.startswith("s_Sample"):
-                newline = line.strip().split("\t")
-                outlist = []
-                for c in colnames:
-                    outlist.append(newline[col_map[c]["index"]])
-                outfile.write("\t".join(outlist) + "\n")
-            counter += 1
-    return
-
-
-def get_haplotypes(settings):
-    """ 1) Extract all haplotypes from new data.
-        2) Remove known haplotypes using previous data (if any).
-        3) Map haplotypes to species genome to get the best hit(s)
-        4) Crosscheck best bowtie hit with the targeted region
-        5) Output haplotypes dictionary and off_targets dictionary
-
-        Once this function is called, we will get the new haplotypes present
-        in this data set that are on target and where they map on the genome.
-        Mapping haplotypes to specific targets/copies is not accomplished here
-        """
-    wdir = settings["workingDir"]
-    mipster_file = wdir + settings["mipsterFile"]
-    haplotypes_fq_file = wdir + settings["haplotypesFastqFile"]
-    haplotypes_sam_file = wdir + settings["haplotypesSamFile"]
-    bwa_options = settings["bwaOptions"]
-    sequence_to_haplotype_file = (wdir
-                                  + settings["sequenceToHaplotypeDictionary"])
-    call_info_file = settings["callInfoDictionary"]
-    species = settings["species"]
-    try:
-        tol = int(settings["alignmentTolerance"])
-    except KeyError:
-        tol = 50
-    # DATA EXTRACTION ###
-    # if there is no previous haplotype information, an empty dict will be used
-    # for instead of the known haplotypes dict
-    try:
-        with open(sequence_to_haplotype_file) as infile:
-            sequence_to_haplotype = json.load(infile)
-    except IOError:
-        sequence_to_haplotype = {}
-    with open(call_info_file) as infile:
-        call_info = json.load(infile)
-    # extract haplotype name and sequence from new data file
-    haps = {}
-    # extract data column names from the mipster file
-    with open(mipster_file) as infile:
-        line_number = 0
-        for line in infile:
-            newline = line.strip().split("\t")
-            line_number += 1
-            if line_number == 1:
-                for i in range(len(newline)):
-                    if newline[i] in ["haplotype_ID",
-                                      "h_popUID"]:
-                        hap_index = i
-                    elif newline[i] in ["haplotype_sequence",
-                                        'h_seq']:
-                        seq_index = i
-            else:
-                hapname = newline[hap_index]
-                hapseq = newline[seq_index]
-                hapqual = "H" * len(hapseq)
-                # add the haplotype to the dict
-                # if it has not been mapped before
-                if hapseq not in sequence_to_haplotype:
-                    haps[hapname] = {"sequence": hapseq,
-                                     "quality": hapqual}
-
-    # BWA alignment ####
-    # create a fastq file for bwa input
-    with open(haplotypes_fq_file, "w") as outfile:
-        for h in haps:
-            outfile.write("@" + h + "\n")
-            outfile.write(haps[h]["sequence"] + "\n" + "+" + "\n")
-            outfile.write(haps[h]["quality"] + "\n")
-    # re-structure haplotypes dictionary and initialize a hits dictionary for
-    # all haplotypes that will hold the bowtie hits for each of the haplotypes
-    # keys for this dict will be mipnames
-    haplotypes = {}
-    for h in haps:
-        mip_name = h.split(".")[0]
-        try:
-            haplotypes[mip_name][h] = {"sequence": haps[h]["sequence"]}
-        except KeyError:
-            haplotypes[mip_name] = {h: {"sequence": haps[h]["sequence"]}}
-    # run bwa
-    bwa(haplotypes_fq_file, haplotypes_sam_file, "sam", "", "", bwa_options,
-        species)
-    # get best hits from alignment results
-    hap_hits = {}
-    for h in haps:
-        # initialize each haplotype with an empty list and a -5000 score
-        hap_hits[h] = [[], [-5000]]
-    # find the best bwa hit(s) for each genotype
-    with open(haplotypes_sam_file) as infile:
-        for line in infile:
-            if not line.startswith("@"):
-                newline = line.strip().split("\t")
-                try:
-                    if newline[13].startswith("AS"):
-                        score = int(newline[13].split(":")[-1])
-                    else:
-                        score = -5000
-                except IndexError:
-                    if newline[11].startswith("AS"):
-                        score = int(newline[11].split(":")[-1])
-                    else:
-                        score = -5000
-                hapname = newline[0]
-                if max(hap_hits[hapname][1]) < score:
-                    hap_hits[hapname][0] = [newline]
-                    hap_hits[hapname][1] = [score]
-                elif max(hap_hits[hapname][1]) == score:
-                    hap_hits[hapname][0].append(newline)
-                    hap_hits[hapname][1].append(score)
-    # update haplotypes dict with bowtie best hit information
-    for m in haplotypes:
-        for h in haplotypes[m]:
-            haplotypes[m][h]["best_hits"] = hap_hits[h]
-    # create a dataframe from the call info dictionary
-    # to determine minimum and maximum coordinates for each gene
-    # this will be used for haplotypes that do not map to their intended
-    # targets but still are not offtarget haplotypes because they map
-    # to one of the regions of interest. A situation like this could be caused
-    # by two regions of sufficient similarity to be captured by a single mip
-    # even though regions were not determined to be paralogus. Or in any
-    # situation where the reads were assigned to the wrong MIP for any reason.
-    call_copy = copy.deepcopy(call_info)
-    call_df_list = []
-    for g in call_copy:
-        for m in call_copy[g]:
-            mip_number = int(m.split("_")[-1][3:])
-            sub_number = int(m.split("_")[-2][3:])
-            for c in call_copy[g][m]["copies"]:
-                call_dict = call_copy[g][m]["copies"][c]
-                try:
-                    call_dict.pop("genes")
-                except KeyError:
-                    pass
-                call_dict["gene"] = g
-                call_dict["copy"] = c
-                call_dict["mip_number"] = mip_number
-                call_dict["sub_number"] = sub_number
-                call_df_list.append(pd.DataFrame(call_dict, index=[0]))
-    call_df = pd.concat(call_df_list)
-    gene_df = call_df.groupby(["gene", "copy"]).agg(
-        {"chrom": "first",
-         "capture_start": np.min,
-         "capture_end": np.max,
-         "copyname": "first",
-         "mip_number": np.max,
-         "sub_number": np.max}
-    )
-    gene_dict = gene_df.to_dict(orient="index")
-    gene_df = gene_df.reset_index()
-    # crosscheck the best bwa hit(s) for each haplotype with mip targets
-    # mark off target haplotypes
-    for m in haplotypes:
-        gene_name = m.split("_")[0]
-        try:
-            call_dict = call_info[gene_name][m]["copies"]
-            for h in list(haplotypes[m].keys()):
-                haplotypes[m][h]["mapped"] = False
-                best_hits = haplotypes[m][h]["best_hits"][0]
-                for hit in best_hits:
-                    if haplotypes[m][h]["mapped"]:
-                        break
-                    hit_chrom = hit[2]
-                    hit_pos = int(hit[3])
-                    for copy_name in call_dict:
-                        copy_chrom = call_dict[copy_name]["chrom"]
-                        copy_begin = call_dict[copy_name]["capture_start"]
-                        copy_end = call_dict[copy_name]["capture_end"]
-                        if ((copy_chrom == hit_chrom) and
-                                (copy_begin - tol < hit_pos < copy_end + tol)):
-                            haplotypes[m][h]["mapped"] = True
-                            break
-        except KeyError:
-            for h in list(haplotypes[m].keys()):
-                haplotypes[m][h]["mapped"] = False
-    # remove haplotypes that mapped best to an untargeted location on genome
-    off_target_haplotypes = {}
-    secondary_haplotypes = []
-    secondary_haylotype_dict = {}
-    for m in list(haplotypes.keys()):
-        for h in list(haplotypes[m].keys()):
-            if not haplotypes[m][h]["mapped"]:
-                # check other genes/MIPs for off targets that are
-                # on other possible targets due to sequence similarity
-                best_hits = haplotypes[m][h]["best_hits"][0]
-                secondary_haplotype_found = False
-                for record in best_hits:
-                    if secondary_haplotype_found:
-                        break
-                    flag = record[1]
-                    # a flag value of 4 means there was no hit,
-                    # so pass those records
-                    if flag == "4":
-                        continue
-                    hit_chrom = record[2]
-                    hit_pos = int(record[3])
-                    # get cigar string of alignment
-                    cigar = record[5]
-                    # extract which strand is the bowtie hit on
-                    # true if forward
-                    strand = ((int(record[1]) % 256) == 0)
-                    # bowtie gives us the start position of the hit
-                    # end position is calculated using the cigar string
-                    # of the hit
-                    hit_end = hit_pos + get_cigar_length(cigar) - 1
-                    # create region keys required for sequence retrieval
-                    hit_region_key = (hit_chrom + ":" + str(hit_pos)
-                                      + "-" + str(hit_end))
-                    if strand:
-                        orient = "forward"
-                    else:
-                        orient = "reverse"
-                    for k in gene_dict:
-                        copy_chrom = gene_dict[k]["chrom"]
-                        copy_begin = gene_dict[k]["capture_start"]
-                        copy_end = gene_dict[k]["capture_end"]
-                        if (((copy_chrom == hit_chrom) and
-                                (copy_begin - tol
-                                 < hit_pos < copy_end + tol))
-                                or ((copy_chrom == hit_chrom) and
-                                    (copy_begin - tol
-                                     < hit_end < copy_end + tol))):
-                            secondary_haplotypes.append(
-                                [k[0], k[1], h, hit_chrom, hit_pos, hit_end,
-                                 orient, hit_region_key]
-                            )
-                            haplotypes[m][h]["mapped"] = True
-                            secondary_haylotype_dict[h] = (
-                                haplotypes[m].pop(h)
-                            )
-                            secondary_haplotype_found = True
-                            break
-    if len(secondary_haplotypes) > 0:
-        secondary_haplotypes = pd.DataFrame(
-            secondary_haplotypes,
-            columns=["gene", "copy", "original_hap_ID", "chrom",
-                     "capture_start", "capture_end", "orientation",
-                     "region_key"]
-        )
-        secondary_haplotypes = secondary_haplotypes.merge(
-            gene_df[["gene", "copy", "copyname", "mip_number", "sub_number"]]
-        )
-        secondary_haplotypes.to_csv(wdir + "secondary_haplotypes.csv")
-
-    for m in list(haplotypes.keys()):
-        for h in list(haplotypes[m].keys()):
-            if not haplotypes[m][h]["mapped"]:
-                """
-                anoter solution to this should be found
-                if m.startswith("AMELX"):
-                    # AMELX also maps to Y chromosome, which is not off target
-                    # this is a quick fix for now but ideally Y chromosome
-                    # should be included in the design as a paralogous copy
-
-                    haplotypes[m][h]["mapped"] = True
-                else:
-                """
-                off_target_haplotypes[h] = haplotypes[m].pop(h)
-        if len(haplotypes[m]) == 0:
-            haplotypes.pop(m)
-    hap_file = wdir + settings["tempHaplotypesFile"]
-    off_file = wdir + settings["tempOffTargetsFile"]
-    with open(hap_file, "w") as out1, open(off_file, "w") as out2:
-        json.dump(haplotypes, out1, indent=1)
-        json.dump(off_target_haplotypes, out2, indent=1)
-    return
-
-
-def rename_mipster_haplotypes(settings):
-    """ 1) Extract all haplotypes from new data.
-        2) Remove known haplotypes using previous data (if any).
-        3) Map haplotypes to species genome to get the best hit(s)
-        4) Crosscheck best bowtie hit with the targeted region
-        5) Output haplotypes dictionary and off_targets dictionary
-
-        Once this function is called, we will get the new haplotypes present
-        in this data set that are on target and where they map on the genome.
-        Mapping haplotypes to specific targets/copies is not accomplished here
-        """
-    wdir = settings["workingDir"]
-    filtered_data = wdir + settings["filteredMipsterFile"]
-    renamed_file = filtered_data + "_renamed"
-    sequence_to_haplotype_file = wdir +     settings["sequenceToHaplotypeDictionary"]
-    # if there is no previous haplotype information, an empty dict will be used
-    # for instead of the known haplotypes dict
-    with open(sequence_to_haplotype_file) as infile:
-            sequence_to_haplotype = json.load(infile)
-    # extract haplotype name and sequence from new data file
-    problem_sequences = []
-    with open(filtered_data) as infile, open(renamed_file, "w") as outfile:
-        for line in infile:
-            if line.startswith("#"):
-                filtered_colnames = line.strip().split("\t")
-                filtered_colnames[0] = filtered_colnames[0][1:]
-                # find column indexes of relevant fields
-                for i in range(len(filtered_colnames)):
-                    if filtered_colnames[i] == "haplotype_ID":
-                        hap_index = i
-                    elif filtered_colnames[i] == "haplotype_sequence":
-                        seq_index = i
-                    elif filtered_colnames[i] == "haplotype_quality_scores":
-                        qual_index = i
-                outfile.write(line)
-            else:
-                newline = line.split("\t")
-                hapseq = newline[seq_index]
-                try:
-                    hapname = sequence_to_haplotype[hapseq]
-                    newline[hap_index] = hapname
-                    outfile.write("\t".join(newline))
-                except KeyError:
-                    problem_sequences.append(hapseq)
-    return problem_sequences
-
-
-def filter_variation(variation_json,
-                     min_barcode_count,
-                     min_barcode_fraction,
-                     samples_to_exclude=None,
-                     samples_to_include=None):
-    """
-    Filter SNP variation for total minimum total depth and minimum
-    barcode fraction for case control sample sets.
-    """
-    with open(variation_json) as infile:
-        var_table = json.load(infile)
-    # each item in the table list is a unique variation
-    # except the first item which is the header
-    header = copy.deepcopy(var_table[0])
-    for h_ind in [0, 6, 7, 8, 9, 10, 11, 12]:
-        header[h_ind] = "remove"
-    exclude_indexes = []
-    # sample IDs are index 40 and above,
-    # remove those in the exclude list
-    if samples_to_include is not None:
-        for i in range(40, len(header)):
-            if header[i] not in samples_to_include:
-                exclude_indexes.append(i)
-                header[i] = "remove"
-    if samples_to_exclude is not None:
-        for i in range(40, len(header)):
-            if header[i] in samples_to_exclude:
-                header[i] = "remove"
-                exclude_indexes.append(i)
-    header = [h for h in header if h != "remove"]
-    header = header[:22] + ["HOR", "HPval"] + header[22:]
-
-    filtered_var_table = [header]
-    for var in var_table[1:]:
-        wt = 0
-        wt_case = 0
-        wt_control = 0
-        het = 0
-        het_case = 0
-        het_control = 0
-        hom = 0
-        hom_case = 0
-        hom_control = 0
-        AD = 0
-        DP = 0
-        NS = 0
-        sample_infos = []
-        # first 40 items in each variation list describes
-        # general information for the variation such as chromosome
-        # and base change, as well as population information such as
-        # allele frequency in the sample set. Item at index 40 has
-        # the first sample genotype
-        for gen_index in range(40, len(var)):
-            if gen_index in exclude_indexes:
-                continue
-            sam = var[gen_index]
-            info = sam.split(":")
-            # allele depth (mutant)
-            ad = int(float(info[1]))
-            # total depth at position
-            dp= int(float(info[2]))
-            # filter for minimum depth
-            if dp< min_barcode_count:
-                # change genotype to unknown (na)
-                info[0] = "./."
-            else:
-                #AD += ad
-                DP += dp
-                NS += 1
-                af = float(ad)/dp
-                if af < min_barcode_fraction:
-                    wt += 1
-                    info[0] = "0/0"
-                    if info[-1] == "case":
-                        wt_case += 1
-                    elif info[-1] == "control":
-                        wt_control += 1
-                elif af > 1 - min_barcode_fraction:
-                    hom += 1
-                    AD += ad
-                    info[0] = "1/1"
-                    if info[-1] == "case":
-                        hom_case += 1
-                    elif info[-1] == "control":
-                        hom_control += 1
-                else:
-                    het += 1
-                    AD += ad
-                    info[0] = "0/1"
-                    if info[-1] == "case":
-                        het_case += 1
-                    elif info[-1] == "control":
-                        het_control += 1
-            sample_infos.append(":".join(info))
-        stats = snp_stats(hom_case, hom_control,
-                           het_case, het_control,
-                          wt_case, wt_control)
-        try:
-            fish = list(fisher_exact([[hom_case, hom_control],
-                                 [het_case + wt_case,
-                                  het_control + wt_control]]))
-        except:
-            fish = ["na", "na"]
-        stats = fish + stats
-        updated_var = copy.deepcopy(var[:18])
-        for p_ind in [0, 6, 7, 8, 9, 10, 11, 12]:
-            updated_var[p_ind] = "remove"
-        updated_var = [uv for uv in updated_var if uv != "remove"]
-        try:
-            AF = (het + hom)/float(NS)
-        except ZeroDivisionError:
-            AF = 0
-        updated_var.extend([NS, DP, AD, AF, hom, het,
-                           hom_case, hom_control,
-                           het_case, het_control,
-                           wt_case, wt_control])
-        updated_var.extend(stats)
-        updated_var.append(var[39])
-        updated_var.extend(sample_infos)
-        if AF > 0:
-            filtered_var_table.append(updated_var)
-    write_list(filtered_var_table, variation_json + ".filtered")
-    return
-def variation_filter(variation_json, min_barcode_count, min_barcode_fraction):
-    """
-    Filter SNP variation for total minimum total depth and minimum
-    barcode fraction for sample sets with no case control comparison.
-    """
-    with open(variation_json) as infile:
-        var_table = json.load(infile)
-    # each item in the table list is a unique variation
-    # except the first item which is the header
-    header = copy.deepcopy(var_table[0])
-    for h_ind in [0, 6, 7, 8, 9, 10, 11, 12]:
-        header[h_ind] = "remove"
-    header = [h for h in header if h != "remove"]
-    #header = header[:24] + ["HOR", "HPval"] + header[24:]
-    filtered_var_table = [header]
-    for var in var_table[1:]:
-        wt = 0
-        het = 0
-        hom = 0
-        hom_control = 0
-        AD = 0
-        DP = 0
-        NS = 0
-        sample_infos = []
-        # first 40 items in each variation list describes
-        # general information for the variation such as chromosome
-        # and base change, as well as population information such as
-        # allele frequency in the sample set. Item at index 40 has
-        # the first sample genotype
-        for sam in var[25:]:
-            info = sam.split(":")
-            # allele depth (mutant)
-            ad = int(float(info[1]))
-            # total depth at position
-            dp= int(float(info[2]))
-            # filter for minimum depth
-            if dp< min_barcode_count:
-                # change genotype to unknown (na)
-                info[0] = "./."
-            else:
-                AD += ad
-                DP += dp
-                NS += 1
-                af = float(ad)/dp
-                if af < min_barcode_fraction:
-                    wt += 1
-                    info[0] = "0/0"
-                elif af > 1 - min_barcode_fraction:
-                    hom += 1
-                    info[0] = "1/1"
-                else:
-                    het += 1
-                    info[0] = "0/1"
-            sample_infos.append(":".join(info))
-        updated_var = copy.deepcopy(var[:18])
-        for p_ind in [0, 6, 7, 8, 9, 10, 11, 12]:
-            updated_var[p_ind] = "remove"
-        updated_var = [uv for uv in updated_var if uv != "remove"]
-        try:
-            AF = (het + hom)/float(NS)
-        except ZeroDivisionError:
-            AF = 0
-        updated_var.extend([NS, DP, AD, AF, hom, het])
-        updated_var.append(var[24])
-        updated_var.extend(sample_infos)
-        if AF > 0:
-            filtered_var_table.append(updated_var)
-    write_list(filtered_var_table, variation_json + ".filtered.tsv")
-    return
-def write_list(alist, outfile_name):
-    """ Convert values of a list to strings and save to file."""
-    with open(outfile_name, "w") as outfile:
-        outfile.write("\n".join(["\t".join(map(str, l))
-                                for l in alist]) + "\n")
-    return
-def snp_stats(hom_case, hom_control,
-               het_case, het_control,
-              wt_case, wt_control):
-    """
-    Given case/control genotype numbers in the order:
-    1) number of homozygous cases,
-    2) homozygous controls,
-    3) heterozygous cases,
-    4) heterozygous controls
-    5) wildtype cases
-    6) wildtype controls
-    Returns a list of length 9:
-    1-3) Homozygous mutant vs wildtype
-    1) Odds ratio from Fisher's exact test
-    2) P value from Fisher's
-    3) P value from chi squared test
-    4-6) Heterozygous mutant vs wildtype
-    7-9) Mutants combined vs witdtype
-    Errors return "na" in place of values
-    """
-    mut_case = het_case + hom_case
-    mut_control = het_control + hom_control
-    ho_v_wt = [[hom_case, hom_control],
-               [wt_case, wt_control]]
-    het_v_wt = [[het_case, het_control],
-                [wt_case, wt_control]]
-    mut_v_wt = [[mut_case, mut_control],
-                [wt_case, wt_control]]
-    output = []
-    for tbl in [ho_v_wt, het_v_wt, mut_v_wt]:
-        try:
-            fish = fisher_exact(tbl)
-        except:
-            fish = ["na", "na"]
-        try:
-            chi = chi2_contingency(tbl)
-        except:
-            chi = ["na", "na", "na", "na"]
-        output.extend(fish)
-        output.append(chi[1])
-    return output
-def cnv_stats(hom_case, hom_control,
-              wt_case, wt_control):
-    """
-    Given case/control genotype numbers in the order:
-    1) number of homozygous cases,
-    2) homozygous controls,
-    3) heterozygous cases,
-    4) heterozygous controls
-    5) wildtype cases
-    6) wildtype controls
-    Returns a list of length 9:
-    1-3) Homozygous mutant vs wildtype
-    1) Odds ratio from Fisher's exact test
-    2) P value from Fisher's
-    3) P value from chi squared test
-    4-6) Heterozygous mutant vs wildtype
-    7-9) Mutants combined vs witdtype
-    Errors return "na" in place of values
-    """
-    ho_v_wt = [[hom_case, hom_control],
-               [wt_case, wt_control]]
-    output = []
-    tbl = ho_v_wt
-    try:
-        fish = fisher_exact(tbl)
-    except:
-        fish = ["na", "na"]
-    try:
-        chi = chi2_contingency(tbl)
-    except:
-        chi = ["na", "na", "na", "na"]
-    output.extend(fish)
-    output.append(chi[1])
-    return output
-
-
 def design_mips(design_dir, g):
     print(("Designing MIPs for ", g))
     try:
@@ -8244,37 +4329,17 @@ def design_mips_multi(design_dir, g_list, num_processor):
     return res
 
 
-def unmask_fasta(masked_fasta, unmasked_fasta):
-    """ Unmask lowercased masked fasta file, save """
-    with open(masked_fasta) as infile, open(unmasked_fasta, "w") as outfile:
-        for line in infile:
-            if not line.startswith((">", "#")):
-                outfile.write(line.upper())
-            else:
-                outfile.write(line)
-    return
-
-
-def fasta_to_fastq(fasta_file, fastq_file):
-    """ Create a fastq file from fasta file with dummy quality scores."""
-    fasta = fasta_parser(fasta_file)
-    fastq_list = []
-    for f in fasta:
-        fastq_list.append("@" + f)
-        fastq_list.append(fasta[f])
-        fastq_list.append("+")
-        fastq_list.append("H" * len(fasta[f]))
-    with open(fastq_file, "w") as outfile:
-        outfile.write("\n".join(fastq_list))
-    return
-
-
 def parasight(resource_dir,
               design_info_file,
               designed_gene_list=None,
-              extra_extension=".extra"):
-    with open(design_info_file, "rb") as infile:
-        design_info = pickle.load(infile)
+              extra_extension=".extra",
+              use_json=False):
+    if not use_json:
+        with open(design_info_file, "rb") as infile:
+            design_info = pickle.load(infile)
+    else:
+        with open(design_info_file) as infile:
+            design_info = json.load(infile)
     output_list = ["#!/usr/bin/env bash"]
     pdf_dir = os.path.join(resource_dir, "pdfs")
     backup_list = ["#!/usr/bin/env bash"]
@@ -8338,7 +4403,7 @@ def parasight(resource_dir,
     visualization_list.append("./copy_commands")
     visualization_list.append("chmod +x convert_commands")
     visualization_list.append("./convert_commands")
-    with open(resource_dir + "visualize", "w") as outfile:
+    with open(resource_dir + "visualize.sh", "w") as outfile:
         outfile.write("\n".join(visualization_list))
     return
 
@@ -8475,7 +4540,7 @@ def parasight_mod(resource_dir,  design_info_file, species,
     visualization_list.append("./copy_commands")
     visualization_list.append("chmod +x convert_commands")
     visualization_list.append("./convert_commands")
-    with open(resource_dir + "visualize_mod", "w") as outfile:
+    with open(resource_dir + "visualize_mod.sh", "w") as outfile:
         outfile.write("\n".join(visualization_list))
     return
 
@@ -8566,16 +4631,31 @@ def parasight_shift(resource_dir, design_info_file, species,
     visualization_list.append("./copy_commands")
     visualization_list.append("chmod +x convert_commands")
     visualization_list.append("./convert_commands")
-    with open(resource_dir + "visualize_mod", "w") as outfile:
+    with open(resource_dir + "visualize_mod.sh", "w") as outfile:
         outfile.write("\n".join(visualization_list))
     return
 
 
-def parasight_print(gene_list, extra_suffix=".extra"):
-    for g in gene_list:
-        print(("cd ../" + g))
-        print(("parasight76.pl -showseq " + g + ".show "
-               + "-extra " + g + extra_suffix))
+def parasight_print(resource_dir, design_dir, design_info_file,
+                    designed_gene_list=None, extra_extension=".extra",
+                    use_json=False, print_out=False):
+    if not use_json:
+        with open(design_info_file, "rb") as infile:
+            design_info = pickle.load(infile)
+    else:
+        with open(design_info_file) as infile:
+            design_info = json.load(infile)
+    output_file = os.path.join(resource_dir, "parasight_print.txt")
+    with open(output_file, "w") as outfile:
+        for g in design_info:
+            if (designed_gene_list is None) or (g in designed_gene_list):
+                show_file = os.path.join(design_dir, g, g + ".show")
+                extras_file = os.path.join(design_dir, g, g + extra_extension)
+                line = ("parasight76.pl -showseq " + show_file
+                        + "-extra " + extras_file)
+                if print_out:
+                    print(line)
+                outfile.write(line + "\n")
 
 
 def rescue_mips(design_dir,
@@ -8768,42 +4848,1159 @@ def rescue_mips(design_dir,
     return
 
 
-def get_data(settings_file):
-    settings = get_analysis_settings(settings_file)
-    get_haplotypes(settings)
-    align_haplotypes(settings)
-    parse_aligned_haplotypes(settings)
-    update_aligned_haplotypes(settings)
-    update_unique_haplotypes(settings)
-    update_variation(settings)
-    get_raw_data(settings)
+
+###############################################################
+# Data analysis related functions
+###############################################################
+
+
+def get_analysis_settings(settings_file):
+    """ Convert analysis settings file to dictionary"""
+    settings = {}
+    with open(settings_file) as infile:
+        for line in infile:
+            try:
+                if not line.startswith("#"):
+                    newline = line.strip().split("\t")
+                    value = newline[1].split(",")
+                    if len(value) == 1:
+                        settings[newline[0]] = value[0]
+                    else:
+                        settings[newline[0]] = [v for v in value if v != ""]
+            except Exception as e:
+                print(("Formatting error in settings file, line {}"
+                       "causing error '{}''").format(line, e))
+                print(newline)
+                return
+    return settings
+
+
+def write_analysis_settings(settings, settings_file):
+    """ Create a settings file from a settings dictionary."""
+    outfile_list = [["# Setting Name", "Setting Value"]]
+    for k, v in settings.items():
+        if isinstance(v, list):
+            val = ",".join(map(str, v))
+        else:
+            val = str(v)
+        outfile_list.append([k, val])
+    with open(settings_file, "w") as outfile:
+        outfile.write("\n".join(["\t".join(o) for o in outfile_list]) + "\n")
     return
 
 
-def analyze_data(settings_file):
-    settings = get_analysis_settings(settings_file)
-    group_samples(settings)
-    update_raw_data(settings)
-    get_counts(settings)
+def get_haplotypes(settings):
+    """ 1) Extract all haplotypes from new data.
+        2) Remove known haplotypes using previous data (if any).
+        3) Map haplotypes to species genome to get the best hit(s)
+        4) Crosscheck best bowtie hit with the targeted region
+        5) Output haplotypes dictionary and off_targets dictionary
+
+        Once this function is called, we will get the new haplotypes present
+        in this data set that are on target and where they map on the genome.
+        Mapping haplotypes to specific targets/copies is not accomplished here
+        """
+    wdir = settings["workingDir"]
+    mipster_file = wdir + settings["mipsterFile"]
+    haplotypes_fq_file = wdir + settings["haplotypesFastqFile"]
+    haplotypes_sam_file = wdir + settings["haplotypesSamFile"]
+    bwa_options = settings["bwaOptions"]
+    sequence_to_haplotype_file = (wdir
+                                  + settings["sequenceToHaplotypeDictionary"])
+    call_info_file = settings["callInfoDictionary"]
+    species = settings["species"]
+    try:
+        tol = int(settings["alignmentTolerance"])
+    except KeyError:
+        tol = 50
+    # DATA EXTRACTION ###
+    # if there is no previous haplotype information, an empty dict will be used
+    # for instead of the known haplotypes dict
+    try:
+        with open(sequence_to_haplotype_file) as infile:
+            sequence_to_haplotype = json.load(infile)
+    except IOError:
+        sequence_to_haplotype = {}
+    with open(call_info_file) as infile:
+        call_info = json.load(infile)
+    # extract haplotype name and sequence from new data file
+    haps = {}
+    # extract data column names from the mipster file
+    with open(mipster_file) as infile:
+        line_number = 0
+        for line in infile:
+            newline = line.strip().split("\t")
+            line_number += 1
+            if line_number == 1:
+                for i in range(len(newline)):
+                    if newline[i] in ["haplotype_ID",
+                                      "h_popUID"]:
+                        hap_index = i
+                    elif newline[i] in ["haplotype_sequence",
+                                        'h_seq']:
+                        seq_index = i
+            else:
+                hapname = newline[hap_index]
+                hapseq = newline[seq_index]
+                hapqual = "H" * len(hapseq)
+                # add the haplotype to the dict
+                # if it has not been mapped before
+                if hapseq not in sequence_to_haplotype:
+                    haps[hapname] = {"sequence": hapseq,
+                                     "quality": hapqual}
+
+    # BWA alignment ####
+    # create a fastq file for bwa input
+    with open(haplotypes_fq_file, "w") as outfile:
+        for h in haps:
+            outfile.write("@" + h + "\n")
+            outfile.write(haps[h]["sequence"] + "\n" + "+" + "\n")
+            outfile.write(haps[h]["quality"] + "\n")
+    # re-structure haplotypes dictionary and initialize a hits dictionary for
+    # all haplotypes that will hold the bowtie hits for each of the haplotypes
+    # keys for this dict will be mipnames
+    haplotypes = {}
+    for h in haps:
+        mip_name = h.split(".")[0]
+        try:
+            haplotypes[mip_name][h] = {"sequence": haps[h]["sequence"]}
+        except KeyError:
+            haplotypes[mip_name] = {h: {"sequence": haps[h]["sequence"]}}
+    # run bwa
+    bwa(haplotypes_fq_file, haplotypes_sam_file, "sam", "", "", bwa_options,
+        species)
+    # get best hits from alignment results
+    hap_hits = {}
+    for h in haps:
+        # initialize each haplotype with an empty list and a -5000 score
+        hap_hits[h] = [[], [-5000]]
+    # find the best bwa hit(s) for each genotype
+    with open(haplotypes_sam_file) as infile:
+        for line in infile:
+            if not line.startswith("@"):
+                newline = line.strip().split("\t")
+                try:
+                    if newline[13].startswith("AS"):
+                        score = int(newline[13].split(":")[-1])
+                    else:
+                        score = -5000
+                except IndexError:
+                    if newline[11].startswith("AS"):
+                        score = int(newline[11].split(":")[-1])
+                    else:
+                        score = -5000
+                hapname = newline[0]
+                if max(hap_hits[hapname][1]) < score:
+                    hap_hits[hapname][0] = [newline]
+                    hap_hits[hapname][1] = [score]
+                elif max(hap_hits[hapname][1]) == score:
+                    hap_hits[hapname][0].append(newline)
+                    hap_hits[hapname][1].append(score)
+    # update haplotypes dict with bowtie best hit information
+    for m in haplotypes:
+        for h in haplotypes[m]:
+            haplotypes[m][h]["best_hits"] = hap_hits[h]
+    # create a dataframe from the call info dictionary
+    # to determine minimum and maximum coordinates for each gene
+    # this will be used for haplotypes that do not map to their intended
+    # targets but still are not offtarget haplotypes because they map
+    # to one of the regions of interest. A situation like this could be caused
+    # by two regions of sufficient similarity to be captured by a single mip
+    # even though regions were not determined to be paralogus. Or in any
+    # situation where the reads were assigned to the wrong MIP for any reason.
+    call_copy = copy.deepcopy(call_info)
+    call_df_list = []
+    for g in call_copy:
+        for m in call_copy[g]:
+            mip_number = int(m.split("_")[-1][3:])
+            sub_number = int(m.split("_")[-2][3:])
+            for c in call_copy[g][m]["copies"]:
+                call_dict = call_copy[g][m]["copies"][c]
+                try:
+                    call_dict.pop("genes")
+                except KeyError:
+                    pass
+                call_dict["gene"] = g
+                call_dict["copy"] = c
+                call_dict["mip_number"] = mip_number
+                call_dict["sub_number"] = sub_number
+                call_df_list.append(pd.DataFrame(call_dict, index=[0]))
+    call_df = pd.concat(call_df_list)
+    gene_df = call_df.groupby(["gene", "copy"]).agg(
+        {"chrom": "first",
+         "capture_start": np.min,
+         "capture_end": np.max,
+         "copyname": "first",
+         "mip_number": np.max,
+         "sub_number": np.max}
+    )
+    gene_dict = gene_df.to_dict(orient="index")
+    gene_df = gene_df.reset_index()
+    # crosscheck the best bwa hit(s) for each haplotype with mip targets
+    # mark off target haplotypes
+    for m in haplotypes:
+        gene_name = m.split("_")[0]
+        try:
+            call_dict = call_info[gene_name][m]["copies"]
+            for h in list(haplotypes[m].keys()):
+                haplotypes[m][h]["mapped"] = False
+                best_hits = haplotypes[m][h]["best_hits"][0]
+                for hit in best_hits:
+                    if haplotypes[m][h]["mapped"]:
+                        break
+                    hit_chrom = hit[2]
+                    hit_pos = int(hit[3])
+                    for copy_name in call_dict:
+                        copy_chrom = call_dict[copy_name]["chrom"]
+                        copy_begin = call_dict[copy_name]["capture_start"]
+                        copy_end = call_dict[copy_name]["capture_end"]
+                        if ((copy_chrom == hit_chrom) and
+                                (copy_begin - tol < hit_pos < copy_end + tol)):
+                            haplotypes[m][h]["mapped"] = True
+                            break
+        except KeyError:
+            for h in list(haplotypes[m].keys()):
+                haplotypes[m][h]["mapped"] = False
+    # remove haplotypes that mapped best to an untargeted location on genome
+    off_target_haplotypes = {}
+    secondary_haplotypes = []
+    secondary_haplotype_dict = {}
+    for m in list(haplotypes.keys()):
+        for h in list(haplotypes[m].keys()):
+            if not haplotypes[m][h]["mapped"]:
+                # check other genes/MIPs for off targets that are
+                # on other possible targets due to sequence similarity
+                best_hits = haplotypes[m][h]["best_hits"][0]
+                secondary_haplotype_found = False
+                for record in best_hits:
+                    if secondary_haplotype_found:
+                        break
+                    flag = record[1]
+                    # a flag value of 4 means there was no hit,
+                    # so pass those records
+                    if flag == "4":
+                        continue
+                    hit_chrom = record[2]
+                    hit_pos = int(record[3])
+                    # get cigar string of alignment
+                    cigar = record[5]
+                    # extract which strand is the bowtie hit on
+                    # true if forward
+                    strand = ((int(record[1]) % 256) == 0)
+                    # bowtie gives us the start position of the hit
+                    # end position is calculated using the cigar string
+                    # of the hit
+                    hit_end = hit_pos + get_cigar_length(cigar) - 1
+                    # create region keys required for sequence retrieval
+                    hit_region_key = (hit_chrom + ":" + str(hit_pos)
+                                      + "-" + str(hit_end))
+                    if strand:
+                        orient = "forward"
+                    else:
+                        orient = "reverse"
+                    for k in gene_dict:
+                        copy_chrom = gene_dict[k]["chrom"]
+                        copy_begin = gene_dict[k]["capture_start"]
+                        copy_end = gene_dict[k]["capture_end"]
+                        if (((copy_chrom == hit_chrom) and
+                                (copy_begin - tol
+                                 < hit_pos < copy_end + tol))
+                                or ((copy_chrom == hit_chrom) and
+                                    (copy_begin - tol
+                                     < hit_end < copy_end + tol))):
+                            secondary_haplotypes.append(
+                                [k[0], k[1], h, hit_chrom, hit_pos, hit_end,
+                                 orient, hit_region_key]
+                            )
+                            haplotypes[m][h]["mapped"] = True
+                            secondary_haplotype_dict[h] = (
+                                haplotypes[m].pop(h)
+                            )
+                            secondary_haplotype_found = True
+                            break
+    if len(secondary_haplotypes) > 0:
+        secondary_haplotypes = pd.DataFrame(
+            secondary_haplotypes,
+            columns=["gene", "copy", "original_hap_ID", "chrom",
+                     "capture_start", "capture_end", "orientation",
+                     "region_key"]
+        )
+        secondary_haplotypes = secondary_haplotypes.merge(
+            gene_df[["gene", "copy", "copyname", "mip_number", "sub_number"]]
+        )
+        secondary_haplotypes.to_csv(wdir + "secondary_haplotypes.csv")
+
+    for m in list(haplotypes.keys()):
+        for h in list(haplotypes[m].keys()):
+            if not haplotypes[m][h]["mapped"]:
+                """
+                anoter solution to this should be found
+                if m.startswith("AMELX"):
+                    # AMELX also maps to Y chromosome, which is not off target
+                    # this is a quick fix for now but ideally Y chromosome
+                    # should be included in the design as a paralogous copy
+
+                    haplotypes[m][h]["mapped"] = True
+                else:
+                """
+                off_target_haplotypes[h] = haplotypes[m].pop(h)
+        if len(haplotypes[m]) == 0:
+            haplotypes.pop(m)
+    hap_file = wdir + settings["tempHaplotypesFile"]
+    off_file = wdir + settings["tempOffTargetsFile"]
+    with open(hap_file, "w") as out1, open(off_file, "w") as out2:
+        json.dump(haplotypes, out1, indent=1)
+        json.dump(off_target_haplotypes, out2, indent=1)
     return
 
 
-def process_data(wdir, run_ids):
-    for rid in run_ids:
-        settings_file = wdir + "settings_" + rid
-        get_data(settings_file)
-        analyze_data(settings_file)
+def align_haplotypes(
+        settings, target_actions=["unmask", "multiple"],
+        query_actions=["unmask"],
+        output_format="general:name1,text1,name2,text2,diff,score",
+        alignment_options=["--noytrim"], identity=75, coverage=75
+        ):
+    """ Get a haplotypes dict and a call_info dict, align each haplotype to
+    reference sequences from the call_info dict."""
+    wdir = settings["workingDir"]
+    haplotypes_file = os.path.join(wdir, settings["tempHaplotypesFile"])
+    with open(haplotypes_file) as infile:
+        haplotypes = json.load(infile)
+    species = settings["species"]
+    alignment_dir = wdir + settings["alignmentDir"]
+    num_processor = int(settings["processorNumber"])
+    command_list = []
+    with open(settings["callInfoDictionary"]) as infile:
+        call_info = json.load(infile)
+    # create alignment dir if it does not exist
+    if not os.path.exists(alignment_dir):
+        os.makedirs(alignment_dir)
+    for m in haplotypes:
+        # create a fasta file for each mip that contains all haplotype
+        # sequences for that mip
+        haplotype_fasta = alignment_dir + m + ".haps"
+        with open(haplotype_fasta, "w") as outfile:
+            outfile_list = []
+            for h in haplotypes[m]:
+                outlist = [">", h, "\n", haplotypes[m][h]["sequence"]]
+                outfile_list.append("".join(outlist))
+            outfile.write("\n".join(outfile_list))
+        haplotype_fasta = m + ".haps"
+        # create a reference file for each mip that contains reference
+        # sequences for each paralog copy for that mip
+        reference_fasta = alignment_dir + m + ".refs"
+        with open(reference_fasta, "w") as outfile:
+            outfile_list = []
+            gene_name = m.split("_")[0]
+            for c in call_info[gene_name][m]["copies"]:
+                c_ori = call_info[gene_name][m]["copies"][c]["orientation"]
+                c_seq = call_info[gene_name][m]["copies"][c][
+                    "capture_sequence"]
+                if c_ori == "reverse":
+                    c_seq = reverse_complement(c_seq)
+                outlist = [">", m + "_" + c, "\n", c_seq]
+                outfile_list.append("".join(outlist))
+            outfile.write("\n".join(outfile_list))
+        # name of the alignment output file for the mip
+        output_file = m + ".aligned"
+        # create the list to be passed to the alignment worker function
+        command = [haplotype_fasta, alignment_dir, output_file,
+                   reference_fasta, target_actions, query_actions, identity,
+                   coverage, output_format, alignment_options, species]
+        # add the command to the list that will be passed to the multi-aligner
+        command_list.append(command)
+    # run the alignment
+    alignment = align_region_multi(command_list, num_processor)
+    alignment_out_file = wdir + settings["tempAlignmentStdOut"]
+    with open(alignment_out_file, "w") as outfile:
+        json.dump(alignment, outfile)
     return
 
 
-def process_haplotypes(settings_file):
-    settings = get_analysis_settings(settings_file)
-    get_haplotypes(settings)
-    align_haplotypes(settings)
-    parse_aligned_haplotypes(settings)
-    update_aligned_haplotypes(settings)
-    update_unique_haplotypes(settings)
-    update_variation(settings)
+def parse_aligned_haplotypes(settings):
+    wdir = settings["workingDir"]
+    species = settings["species"]
+    alignment_dir = os.path.join(wdir, settings["alignmentDir"])
+    with open(settings["callInfoDictionary"]) as infile:
+        call_info = json.load(infile)
+    temp_haplotypes_file = os.path.join(wdir, settings["tempHaplotypesFile"])
+    with open(temp_haplotypes_file) as infile:
+        haplotypes = json.load(infile)
+    alignments = {}
+    inverted_alignments = []
+    problem_alignments = []
+    problem_snps = []
+    for m in haplotypes:
+        # each mip has all its haplotypes and reference sequences aligned
+        # in mipname.aligned file.
+        with open(os.path.join(alignment_dir, m + ".aligned")) as al_file:
+            for line in al_file:
+                problem_al = False
+                if not line.startswith("#"):
+                    # each line of the alignment file includes an alignment
+                    # between the reference copy sequences of a mip
+                    # and a haplotype sequence
+                    newline = line.strip().split("\t")
+                    gene_name = newline[0].split("_")[0]
+                    m_name = "_".join(newline[0].split("_")[:-1])
+                    ref_copy = newline[0].split("_")[-1]
+                    rf_ori = call_info[gene_name][m_name]["copies"][ref_copy][
+                        "orientation"]
+                    # aligned part of the reference sequence with gaps
+                    ref_al = newline[1].upper()
+                    if rf_ori == "reverse":
+                        ref_al = reverse_complement(ref_al)
+                    # aligned part of the reference without gaps
+                    ref_used = ref_al.translate(str.maketrans({"-": None}))
+                    ref_used = ref_used.upper()
+                    hap_name = newline[2]
+                    # aligned part of the haplotype with gaps
+                    hap_al = newline[3].upper()
+                    if rf_ori == "reverse":
+                        hap_al = reverse_complement(hap_al)
+                    # aligned part of the haplotype without gaps
+                    hap_used = hap_al.translate(str.maketrans({"-": None}))
+                    hap_used = hap_used.upper()
+                    # alignment diff (.for match, : and X mismatch, - gap)
+                    diff = newline[4]
+                    if rf_ori == "reverse":
+                        diff = diff[::-1]
+                    score = int(newline[5])
+                    # full haplotype sequence
+                    hap_seq = haplotypes[m][hap_name]["sequence"].upper()
+                    # full reference sequence
+                    ref_seq = call_info[gene_name][m]["copies"][ref_copy][
+                        "capture_sequence"].upper()
+                    # index of where in full reference the alignment begins
+                    ref_align_begin = ref_seq.find(ref_used)
+                    # index of where in full reference the alignment ends
+                    ref_align_end = ref_align_begin + len(ref_used)
+                    # index of where in full haplotype sequence the alignment
+                    # begins
+                    hap_align_begin = hap_seq.find(hap_used)
+                    # if the alignment is inverted, i.e. there is a reverse
+                    # complement alignment with a significant score, the find
+                    # method will not find the haplotype sequence in query or
+                    # the target sequence in reference # and return -1. These
+                    # alignments have been happening when one copy differs so
+                    # much from another, an inverted alignment scores better.
+                    # These should be ignored because the real copy the
+                    # haplotype comes from will have a better score. However,
+                    # there can theoretically be an inversion within a capture
+                    # region that produces a legitimate inverted alignment.
+                    # Therefore these alignments may be inspected if desired.
+                    # We will keep such alignments in a dictionary and save.
+                    if min([hap_align_begin, ref_align_begin]) < 0:
+                        al_dict = {"gene_name": gene_name,
+                                   "mip_name": m,
+                                   "copy": ref_copy,
+                                   "score": score,
+                                   "aligned_hap": hap_al,
+                                   "aligned_ref": ref_al,
+                                   "diff": diff,
+                                   "haplotype_ID": hap_name}
+                        inverted_alignments.append(al_dict)
+                        continue
+                    # index of where in full haplotype sequence the alignment
+                    # ends
+                    hap_align_end = hap_align_begin + len(hap_used)
+                    # deal with any existing flanking deletions/insertions
+                    # is there any unaligned sequence on the left of alignment
+                    left_pad_len = max([hap_align_begin, ref_align_begin])
+                    left_pad_diff = abs(hap_align_begin - ref_align_begin)
+                    left_pad_ref = ""
+                    left_pad_hap = ""
+                    left_pad_ref_count = 0
+                    left_pad_hap_count = 0
+                    # where there are insertions on left, fill the other pad
+                    # with gaps
+                    for i in range(hap_align_begin - ref_align_begin):
+                        # only when ref_align_begin is smaller, we need to pad
+                        # left_pad_ref
+                        left_pad_ref = "-" + left_pad_ref
+                        left_pad_hap = hap_seq[i] + left_pad_hap
+                        # counting how many bases from hap_seq is used for
+                        # padding
+                        left_pad_hap_count += 1
+                    # do the same for haplotype sequence
+                    for i in range(ref_align_begin - hap_align_begin):
+                        # only when ref_align_begin is smaller, we need to pad
+                        # left_pad_ref
+                        left_pad_hap += "-"
+                        left_pad_ref += ref_seq[i]
+                        # counting how many bases from ref_seq is used for
+                        # padding
+                        left_pad_ref_count += 1
+                    # add to left_pads the sequences which are there but did
+                    # not align
+                    for i in range(left_pad_len - left_pad_diff):
+                        left_pad_ref += ref_seq[i + left_pad_ref_count]
+                        left_pad_hap += hap_seq[i + left_pad_hap_count]
+                    # add the left padding info to the alignment
+                    for i in range(0, len(left_pad_hap))[::-1]:
+                        if left_pad_ref[i] == "-" or left_pad_hap[i] == "-":
+                            diff = "-" + diff
+                        elif left_pad_ref[i] != left_pad_hap[i]:
+                            diff = "X" + diff
+                        else:
+                            diff = "." + diff
+                            problem_al = True
+                    # repeat the padding for the right side of alignment
+                    right_pad_ref_len = len(ref_seq) - ref_align_end
+                    right_pad_hap_len = len(hap_seq) - hap_align_end
+                    right_pad_len = max([right_pad_hap_len, right_pad_ref_len])
+                    right_pad_diff = abs(right_pad_hap_len - right_pad_ref_len)
+                    right_pad_ref = ""
+                    right_pad_hap = ""
+                    right_pad_ref_count = 0
+                    right_pad_hap_count = 0
+                    for i in range(right_pad_hap_len - right_pad_ref_len):
+                        right_pad_ref = "-" + right_pad_ref
+                        right_pad_hap = hap_seq[-i - 1] + right_pad_hap
+                        # counting how many bases from hap_seq is used for
+                        # padding
+                        right_pad_hap_count += 1
+                    # do the same for haplotype sequence
+                    for i in range(right_pad_ref_len - right_pad_hap_len):
+                        right_pad_hap = "-" + right_pad_hap
+                        right_pad_ref = ref_seq[-i - 1] + right_pad_ref
+                        right_pad_ref_count += 1
+                    # add to right the sequences which are there but did not
+                    # align
+                    for i in range(right_pad_len - right_pad_diff):
+                        right_pad_ref = (ref_seq[-i - right_pad_ref_count - 1]
+                                         + right_pad_ref)
+                        right_pad_hap = (hap_seq[-i - right_pad_hap_count - 1]
+                                         + right_pad_hap)
+                    # add the right padding info to the alignment
+                    for i in range(len(right_pad_hap)):
+                        if right_pad_ref[i] == "-" or right_pad_hap[i] == "-":
+                            diff += "-"
+                        elif right_pad_ref[i] != right_pad_hap[i]:
+                            diff += "X"
+                        else:
+                            diff += "."
+                            problem_al = True
+                    hap_al = left_pad_hap + hap_al + right_pad_hap
+                    ref_al = left_pad_ref + ref_al + right_pad_ref
+                    # we have padded the alignment so now all the ref and
+                    # hap sequence is accounted for and not just the aligned
+                    # part ref_name, ref_copy, ref_seq, ref_al
+                    # hap_name, hap_seq, hap_al, diff, score have information
+                    # we'll use
+                    c_name = ref_copy
+                    h_name = hap_name
+                    copy_dict = call_info[gene_name][m]["copies"][c_name]
+                    copy_ori = copy_dict["orientation"]
+                    copy_chrom = copy_dict["chrom"]
+                    copy_begin = int(copy_dict["capture_start"])
+                    copy_end = int(copy_dict["capture_end"])
+                    # if copy orientation is reverse, we'll reverse the
+                    # alignment so that coordinate conversions are easier and
+                    # indels are always left aligned on forward genomic strand
+                    if copy_ori == "reverse":
+                        ref_al = reverse_complement(ref_al)
+                        hap_al = reverse_complement(hap_al)
+                        diff = diff[::-1]
+                    genomic_pos = copy_begin
+                    differences = []
+                    indel_count = 0
+                    indels = []
+                    indel_types = []
+                    # keep track of the index of haplotype sequence
+                    # to use for checking sequence quality later
+                    hap_index = 0
+                    for i in range(len(diff)):
+                        d = diff[i]
+                        # each difference between the hap and ref can be an
+                        # indel ("-") or a snp (":" or "x") or the same as
+                        # the reference ("."). When dealing with indels, it is
+                        # best to call consecutive indels as a cumulative indel
+                        # rather than individual indels, i.e. AAA/--- instead
+                        # of A/-, A/-, A/- because if we are looking for a
+                        # frameshift insertion A/-, having AAA/--- means we
+                        # don't observe the frameshift. But if it is kept as
+                        # three A/-'s then it looks like the frameshift
+                        # mutation is there.
+                        if d == "-":
+                            # if an indel is encountered, we'll keep track of
+                            # it until the end of the indel. That is, when
+                            # d != "-"
+                            indel_count += 1
+                            if hap_al[i] == "-":
+                                # if a deletion, hap sequence should have "-"
+                                indel_types.append("del")
+                                indels.append(ref_al[i])
+                                # in cases of deletions, we increment the
+                                # genomic pos because the reference has a
+                                # nucleotide in this position.
+                                genomic_pos += 1
+                            elif ref_al[i] == "-":
+                                indel_types.append("ins")
+                                indels.append(hap_al[i])
+                                hap_index += 1
+                                # in cases of insertions, we don't increment
+                                # the genomic pos because the reference has no
+                                # nucleotide in this position insAAA would have
+                                # the same start and end positions
+                            else:
+                                # if neither hap nor ref has "-" at this
+                                # position there is a disagreement between the
+                                # alignment and the sequences.
+                                print(("For the haplotype {} the alignment "
+                                       " shows an indel but sequences do not."
+                                       " This haplotype  will not have "
+                                       "variant calls.").format(h_name))
+                                problem_al = True
+                                break
+                        else:
+                            # if the current diff is not an indel,
+                            # check if there is preceeding indel
+                            if len(indels) > 0:
+                                # there should only be a del or ins preceding
+                                # this base
+                                if len(set(indel_types)) != 1:
+                                    # Consecutive insertions and deletions
+                                    print(
+                                        ("For the haplotype {} there are "
+                                         "consecutive insertions and "
+                                         "deletions. This haplotype will not"
+                                         "have variant calls.").format(h_name)
+                                    )
+                                    problem_al = True
+                                else:
+                                    indel_type = list(set(indel_types))[0]
+                                    indel_length = len(indels)
+                                    # genomic_pos is the current position
+                                    # since this position is not an indel,
+                                    # indel has ended 1 nucleotide prior to
+                                    # this position.
+                                    indel_end = genomic_pos - 1
+                                    indel_seq = "".join(indels)
+                                    buffer_seq = "".join(["-" for j in
+                                                         range(indel_length)])
+                                    if indel_type == "del":
+                                        indel_begin = (genomic_pos
+                                                       - indel_length)
+                                        ref_base = indel_seq
+                                        hap_base = buffer_seq
+                                        h_index = [hap_index, hap_index - 1]
+                                    else:
+                                        # if the preceding indel was an
+                                        # insertion the start and end positions
+                                        # are the same
+                                        indel_begin = genomic_pos - 1
+                                        ref_base = buffer_seq
+                                        hap_base = indel_seq
+                                        h_index = [hap_index - indel_length,
+                                                   hap_index - 1]
+                                # create an indel dict and add to differences
+                                # list
+                                differences.append({"begin": indel_begin,
+                                                    "end": indel_end,
+                                                    "type": indel_type,
+                                                    "ref_base": ref_base,
+                                                    "hap_base": hap_base,
+                                                    "hap_index": h_index,
+                                                    "chrom": copy_chrom})
+                            # clean up the indel variables
+                            indel_count = 0
+                            indels = []
+                            indel_types = []
+                            # continue with the current snp
+                            if d == ".":
+                                # "." denotes hap and ref has the same sequence
+                                pass
+                            else:
+                                # create a snp dict and add to differences list
+                                ref_base = ref_al[i]
+                                hap_base = hap_al[i]
+                                h_index = [hap_index, hap_index]
+                                differences.append({"begin": genomic_pos,
+                                                    "end": genomic_pos,
+                                                    "type": "snp",
+                                                    "ref_base": ref_base,
+                                                    "hap_base": hap_base,
+                                                    "hap_index": h_index,
+                                                    "chrom": copy_chrom})
+                            hap_index += 1
+                            genomic_pos += 1
+
+                    # since indel dicts are not created until a non-indel
+                    # character is encountered, we need to check if there was
+                    # an indel at the end of the alignment. If there is, indels
+                    # list would not have been reset. check if there is
+                    # preceeding indel
+                    if len(indels) > 0:
+                        if len(set(indel_types)) != 1:
+                            # Consecutive insertions and deletions
+                            problem_al = True
+                        else:
+                            indel_type = list(set(indel_types))[0]
+                            indel_length = len(indels)
+                            indel_end = genomic_pos - 1
+                            indel_seq = "".join(indels)
+                            buffer_seq = "".join(["-" for idl in range(indel_length)])
+                            if indel_type == "del":
+                                indel_begin = genomic_pos - indel_length
+                                ref_base = indel_seq
+                                hap_base = buffer_seq
+                                h_index = [hap_index, hap_index - 1]
+                            else:
+                                indel_begin = genomic_pos - 1
+                                ref_base = buffer_seq
+                                hap_base = indel_seq
+                                h_index = [hap_index - indel_length, hap_index - 1]
+                        differences.append({"begin": indel_begin,
+                                            "end": indel_end,
+                                            "type": indel_type,
+                                            "ref_base": ref_base,
+                                            "hap_base": hap_base,
+                                            "hap_index": h_index,
+                                            "chrom": copy_chrom})
+                        # clean up the indel variables
+                        indel_count = 0
+                        indels = []
+                        indel_types = []
+                    # fix the positioning of homopolymer indels
+                    if copy_ori == "reverse":
+                        ref_seq = reverse_complement(ref_seq)
+                    for d in differences:
+                        d_chrom = d["chrom"]
+                        d_pos = int(d["begin"])
+                        ref_base = d["ref_base"].upper()
+                        hap_base = d["hap_base"].upper()
+                        d_type = d["type"]
+                        if d_type in ["ins", "del"]:
+                            if d_type == "del":
+                                d_pos -= 1
+                            d_prior_index = d_pos - copy_begin
+                            if d_prior_index >= 0:
+                                prior_base = ref_seq[d_prior_index]
+                            else:
+                                prior_base = get_sequence(d_chrom + ":" + str(d_pos)                                                        + "-" + str(d_pos), species).upper()
+                            vcf_ref = prior_base + ref_base
+                            vcf_hap = prior_base + hap_base
+                            vcf_ref = "".join([b for b in vcf_ref if b != "-"])
+                            vcf_hap = "".join([b for b in vcf_hap if b != "-"])
+                        else:
+                            vcf_ref = ref_base
+                            vcf_hap = hap_base
+                        vcf_key = d_chrom + ":" + str(d_pos) + ":.:" + vcf_ref + ":" + vcf_hap
+                        d["vcf_raw"] = vcf_key
+                    # all differences in between the ref and hap has been found
+                    # loop through differences and assign values for
+                    # ref_base, hap_base and hap_index.
+                    for d in differences:
+                        if copy_ori == "reverse":
+                            # revert bases to their original strand (-)
+                            d["ref_base"] = reverse_complement(d["ref_base"])
+                            d["hap_base"] = reverse_complement(d["hap_base"])
+                            d["hap_index"] = [-1 * d["hap_index"][0] - 1,
+                                              -1 * d["hap_index"][1] - 1]
+
+                    # create a dictionary that holds all the alignment
+                    # information for the mip and haplotype
+                    al_dict = {"gene_name": gene_name,
+                               "mip_name": m,
+                               "haplotype_ID": hap_name,
+                               "score": score,
+                               "differences": differences,
+                               "aligned_hap": hap_al,
+                               "aligned_ref": ref_al,
+                               "diff": diff}
+                    # also report alignments that had any problems
+                    if problem_al:
+                        problem_alignments.append(al_dict)
+                    try:
+                        alignments[hap_name][ref_copy].append(al_dict)
+                    except KeyError:
+                        try:
+                            alignments[hap_name][ref_copy] = [al_dict]
+                        except KeyError:
+                            alignments[hap_name] = {ref_copy: [al_dict]}
+    # pick top alignment by the score for rare cases where a capture sequence
+    # can align to a reference in multiple ways
+    cleaned_alignments = {}
+    for h in alignments:
+        for c in alignments[h]:
+            copy_als = alignments[h][c]
+            if len(copy_als) == 1:
+                best_al = copy_als[0]
+            else:
+                best_al_score = 0
+                for i in range(len(copy_als)):
+                    sc = copy_als[i]["score"]
+                    if sc > best_al_score:
+                        best_al_score = sc
+                        best_al = copy_als[i]
+            try:
+                cleaned_alignments[h][c] = best_al
+            except KeyError:
+                cleaned_alignments[h] = {c: best_al}
+    alignments = cleaned_alignments
+    # check if problem alignments and inverted alignments have a better alignment in
+    # alignment dictionary. Remove from list if better is found elsewhere.
+    problem_dicts = [problem_alignments, inverted_alignments]
+    for i in range(len(problem_dicts)):
+        probs = problem_dicts[i]
+        for j in range(len(probs)):
+            a = probs[j]
+            hap_name = a["haplotype_ID"]
+            al_score = a["score"]
+            try:
+                for copyname in alignments[hap_name]:
+                    other_score = alignments[hap_name][copyname]["score"]
+                    if other_score > al_score:
+                        # replace alignment in the list with string "remove"
+                        probs[j] = "remove"
+                        break
+            except KeyError:
+                continue
+        # replace the problem dictionary with the updated version
+        temp_dict = {}
+        for a in probs:
+            if a != "remove":
+                hap_name = a["haplotype_ID"]
+                try:
+                    temp_dict[hap_name].append(a)
+                except KeyError:
+                    temp_dict[hap_name] = [a]
+        problem_dicts[i] = temp_dict
+        if len(temp_dict) > 0:
+            print(("%d alignments may have problems, please check %s"
+                    %(len(temp_dict),
+                      settings["tempAlignmentsFile"])
+                  ))
+    if len(problem_snps) > 0:
+        print(("%d SNPs may have problems, please check please check %s"
+            %(len(problem_snps),
+              settings["tempAlignmentsFile"])
+              ))
+
+    result =  {"alignments": alignments,
+            "inverted_alignments": problem_dicts[1],
+            "problem_alignments": problem_dicts[0],
+            "problem_snps": problem_snps}
+    alignment_file = wdir + settings["tempAlignmentsFile"]
+    with open(alignment_file, "w") as outfile:
+        json.dump(result, outfile)
+    return
+
+
+def update_aligned_haplotypes(settings):
+    """
+    Update haplotypes with information from the alignment results.
+    Find which paralog copy the haplotype best maps to using the alignment
+    scores from lastZ.
+    """
+    wdir = settings["workingDir"]
+    temp_haplotype_file = wdir + settings["tempHaplotypesFile"]
+    with open(temp_haplotype_file) as infile:
+        haplotypes = json.load(infile)
+    with open(settings["callInfoDictionary"]) as infile:
+        call_info = json.load(infile)
+    temp_alignment_file = wdir + settings["tempAlignmentsFile"]
+    with open(temp_alignment_file) as infile:
+        parsed_alignments = json.load(infile)
+    # all alignments from the parsed alignments dict
+    alignments = parsed_alignments["alignments"]
+    # allow alt contig mapping if non_alt alignments are possible?
+    try:
+        allow_alts = int(settings["allowAltContigs"])
+    except KeyError:
+        allow_alts = 0
+    # update each haplotype with alignment information
+    for m in haplotypes:
+        gene_name = m.split("_")[0]
+        for h in haplotypes[m]:
+            # create a copy dict for each haplotype for each possible
+            # paralog gene copy that haplotype may belong to
+            copies = haplotypes[m][h]["copies"] = {}
+            # get the alignment for this haplotype from alignment dict
+            try:
+                align = alignments[h]
+            except KeyError:
+                haplotypes[m][h]["mapped"] = False
+                continue
+            # update copies dict with alignment information
+            for c in align:
+                # update haplotype with alignment information
+                copies[c] = {"score": align[c]["score"]}
+            # sort copies considering alignment scores
+            copy_keys_sorted = sorted(copies,
+                                      key=lambda a: copies[a]["score"])
+            # below code prevents alt contigs to be the best mapping copy
+            if not allow_alts:
+                copy_keys_sorted_temp = copy.deepcopy(copy_keys_sorted)
+                # remove alt contigs
+                for cop_ind in range(len(copy_keys_sorted)):
+                    cop = copy_keys_sorted[cop_ind]
+                    if "alt" in call_info[gene_name][m]["copies"][cop][
+                            "chrom"]:
+                        copy_keys_sorted[cop_ind] = "remove"
+                copy_keys_sorted = [cop_key for cop_key in copy_keys_sorted
+                                    if cop_key != "remove"]
+                if len(copy_keys_sorted) == 0:
+                    copy_keys_sorted = copy_keys_sorted_temp
+            # pick best scoring copies
+            # last item in copy_keys_sorted is the best
+            best_copy = copy_keys_sorted[-1]
+            # create a list of copies that has the best score
+            best_copies = [cop for cop in copy_keys_sorted
+                           if (copies[cop]["score"]
+                               == copies[best_copy]["score"])]
+            # create a map dict to be added to haplotype information
+            # extract copy keys of best copies
+            temp_dic = {}
+            for c in best_copies:
+                temp_dic[c] = {"copy_name": call_info[gene_name][m]["copies"][
+                               c]["copyname"],
+                               "differences": alignments[h][c]["differences"],
+                               "chrom": call_info[gene_name][m]["copies"][c][
+                               "chrom"]}
+            haplotypes[m][h]["mapped_copies"] = temp_dic
+            # create a single copy name for the haplotype such as HBA1_C0
+            # if there are multiple copies that the haplotype matched equally
+            # well name will be the compound name of all best mapping copies,
+            # e.g. HBA1_C0_HBA2_C1
+            mapped_copy_names = []
+            for k in sorted(temp_dic.keys()):
+                mapped_copy_names.append("_".join([temp_dic[k]["copy_name"],
+                                                   k]))
+            haplotypes[m][h]["copy_name"] = "_".join(mapped_copy_names)
+    temp_mapped_haps_file = wdir + settings["tempMappedHaplotypesFile"]
+    with open(temp_mapped_haps_file, "w") as outfile:
+        json.dump(haplotypes, outfile, indent=1)
+    return
+
+
+def update_unique_haplotypes(settings):
+    """
+    Add new on and off target haplotypes to the unique haplotypes.
+    Update sequence_to_haplotype dict with the new haplotypes.
+    """
+    wdir = settings["workingDir"]
+    unique_haplotype_file = wdir + settings["haplotypeDictionary"]
+    sequence_to_haplotype_file = wdir + settings["sequenceToHaplotypeDictionary"]
+    try:
+        with open(unique_haplotype_file) as infile:
+            unique_haplotypes = json.load(infile)
+    except IOError:
+        unique_haplotypes = {}
+    try:
+        with open(sequence_to_haplotype_file) as infile:
+            sequence_to_haplotype = json.load(infile)
+    except IOError:
+        sequence_to_haplotype = {}
+    temp_mapped_hap_file = wdir + settings["tempMappedHaplotypesFile"]
+    with open(temp_mapped_hap_file) as infile:
+        haplotypes = json.load(infile)
+    temp_off_file = wdir + settings["tempOffTargetsFile"]
+    with open(temp_off_file) as infile:
+        off_target_haplotypes = json.load(infile)
+    # update unique_haplotypes with on target haplotypes
+    for m in haplotypes:
+        for h in haplotypes[m]:
+            uniq_id = h + "-0"
+            try:
+                if uniq_id in unique_haplotypes[m]:
+                    counter = 0
+                    while uniq_id in unique_haplotypes[m]:
+                        counter += 1
+                        uniq_id = h + "-" + str(counter)
+                    unique_haplotypes[m][uniq_id] = haplotypes[m][h]
+                else:
+                    unique_haplotypes[m][uniq_id] = haplotypes[m][h]
+            except KeyError:
+                unique_haplotypes[m] = {uniq_id: haplotypes[m][h]}
+
+    # update unique_haplotypes with off target haplotypes
+    for h in off_target_haplotypes:
+        m = h.split(".")[0]
+        uniq_id = h + "-0"
+        try:
+            if uniq_id in unique_haplotypes[m]:
+                counter = 0
+                while uniq_id in unique_haplotypes[m]:
+                    counter += 1
+                    uniq_id = h + "-" + str(counter)
+                unique_haplotypes[m][uniq_id] = off_target_haplotypes[h]
+            else:
+                unique_haplotypes[m][uniq_id] = off_target_haplotypes[h]
+        except KeyError:
+            unique_haplotypes[m] = {uniq_id: off_target_haplotypes[h]}
+    # update sequence_to_haplotype with new haplotypes
+    for u in unique_haplotypes:
+        for h in unique_haplotypes[u]:
+            if not unique_haplotypes[u][h]["sequence"] in sequence_to_haplotype:
+                sequence_to_haplotype[unique_haplotypes[u][h]["sequence"]] = h
+    with open(unique_haplotype_file, "w") as outfile:
+        json.dump(unique_haplotypes, outfile, indent=1)
+    with open(sequence_to_haplotype_file, "w") as outfile:
+        json.dump(sequence_to_haplotype, outfile, indent=1)
+    return
+
+
+def update_variation(settings):
+    """
+    Add new on and off target haplotypes to the unique haplotypes.
+    Update sequence_to_haplotype dict with the new haplotypes.
+    """
+    wdir = settings["workingDir"]
+    species = settings["species"]
+    unique_haplotype_file = wdir + settings["haplotypeDictionary"]
+    variation_file = wdir + settings["variationDictionary"]
+    var_key_to_uniq_file = wdir + settings["variationKeyToUniqueKey"]
+    with open(unique_haplotype_file) as infile:
+        haplotypes = json.load(infile)
+    try:
+        with open(variation_file) as infile:
+            variation = json.load(infile)
+    except IOError:
+        variation = {}
+    var_key_to_uniq_file = wdir + settings["variationKeyToUniqueKey"]
+    try:
+        with open(var_key_to_uniq_file) as infile:
+            var_key_to_uniq = json.load(infile)
+    except IOError:
+        var_key_to_uniq = {}
+    outfile_list = ["##fileformat=VCFv4.1"]
+    outfile_list.append("\t".join(["#CHROM", "POS", "ID", "REF", "ALT"]))
+    temp_variations = []
+    for m in haplotypes:
+        for h in haplotypes[m]:
+            if haplotypes[m][h]["mapped"]:
+                try:
+                    haplotypes[m][h]["left_normalized"]
+                except KeyError:
+                    left_normalized = True
+                    for c in haplotypes[m][h]["mapped_copies"]:
+                        differences = haplotypes[m][h]["mapped_copies"][c][
+                            "differences"]
+                        for d in differences:
+                            var_key = d["vcf_raw"]
+                            try:
+                                uniq_var_key = var_key_to_uniq[var_key]
+                                d["annotation"] = variation[uniq_var_key]
+                                d["vcf_normalized"] = uniq_var_key
+                            except KeyError:
+                                left_normalized = False
+                                temp_variations.append(var_key)
+                    if left_normalized:
+                        haplotypes[m][h]["left_normalized"] = True
+    temp_variations = [temp_var.split(":")
+                       for temp_var in set(temp_variations)]
+    temp_variations = [[v[0], int(v[1])] + v[2:] for v in temp_variations]
+    temp_variations = sorted(temp_variations, key=itemgetter(0, 1))
+    temp_variations_lines = ["\t".join(map(str, v)) for v in temp_variations]
+    temp_variation_keys = [":".join(map(str, v)) for v in temp_variations]
+    outfile_list.extend(temp_variations_lines)
+    raw_vcf_file = settings["rawVcfFile"]
+    zipped_vcf = raw_vcf_file + ".gz"
+    norm_vcf_file = settings["normalizedVcfFile"]
+    with open(wdir + raw_vcf_file, "w") as outfile:
+        outfile.write("\n".join(outfile_list))
+    with open(wdir + zipped_vcf, "w") as outfile:
+        dump = subprocess.call(["bgzip", "-c", "-f", raw_vcf_file],
+                               cwd=wdir, stdout=outfile)
+    dump = subprocess.call(["bcftools", "index", "-f", raw_vcf_file + ".gz"],
+                           cwd=wdir)
+    unmasked_genome = get_file_locations()[species]["unmasked_fasta_genome"]
+    dump = subprocess.call(["bcftools", "norm", "-f", unmasked_genome,
+                            "-cw", "-w", "0",
+                           "-o", norm_vcf_file, raw_vcf_file + ".gz"],
+                           cwd=wdir)
+    ann_db_dir = get_file_locations()[species]["annotation_db_dir"]
+    ann_build = settings["annotationBuildVersion"]
+    ann_protocol = settings["annotationProtocol"].replace(";", ",")
+    ann_operation = settings["annotationOperation"].replace(";", ",")
+    ann_nastring = settings["annotationNaString"]
+    ann_out = settings["annotationOutput"]
+    try:
+        ann_script = settings["annotationScript"]
+    except KeyError:
+        ann_script = "table_annovar.pl"
+    ann_command = [ann_script,
+                   norm_vcf_file,
+                   ann_db_dir,
+                   "-buildver", ann_build,
+                   "-vcfinput",
+                   "-protocol",  ann_protocol,
+                   "-operation", ann_operation,
+                   "-nastring", ann_nastring,
+                   "-out", ann_out]
+    dump = subprocess.check_call(ann_command, cwd=wdir)
+    normalized_variation_keys = []
+    with open(wdir + norm_vcf_file) as infile:
+        line_num = 0
+        for line in infile:
+            if not line.startswith("#"):
+                newline = line.strip().split("\t")
+                var_key = temp_variation_keys[line_num]
+                normalized_key = ":".join(newline[:5])
+                var_key_to_uniq[var_key] = normalized_key
+                normalized_variation_keys.append(normalized_key)
+                line_num += 1
+    #
+    annotation_table_file = ann_out + "." + ann_build + "_multianno.txt"
+    with open(wdir + annotation_table_file) as infile:
+        line_num = -1
+        for line in infile:
+            newline = line.strip().split("\t")
+            if line_num == -1:
+                line_num += 1
+                colnames = newline
+            else:
+                normalized_key = normalized_variation_keys[line_num]
+                if normalized_key not in variation:
+                    variation[normalized_key] = {
+                        colnames[i]: newline[i] for i in range(len(colnames))
+                    }
+                line_num += 1
+    if line_num != len(temp_variation_keys):
+        print("There are more variation keys then annotated variants.")
+    for m in haplotypes:
+        for h in haplotypes[m]:
+            if haplotypes[m][h]["mapped"]:
+                try:
+                    haplotypes[m][h]["left_normalized"]
+                except KeyError:
+                    for c in haplotypes[m][h]["mapped_copies"]:
+                        differences = haplotypes[m][h]["mapped_copies"][c][
+                            "differences"]
+                        for d in differences:
+                            var_key = d["vcf_raw"]
+                            uniq_var_key = var_key_to_uniq[var_key]
+                            d["annotation"] = variation[uniq_var_key]
+                            d["vcf_normalized"] = uniq_var_key
+                            annotation_dict = d["annotation"]
+                            for ak in annotation_dict.keys():
+                                if ak.startswith("AAChange."):
+                                    annotation_dict["AAChangeClean"] = (
+                                        annotation_dict.pop(ak)
+                                    )
+                                elif ak.startswith("ExonicFunc."):
+                                    annotation_dict["ExonicFunc"] = (
+                                        annotation_dict.pop(ak)
+                                    )
+                                elif ak.startswith("Gene."):
+                                    annotation_dict["GeneID"] = (
+                                        annotation_dict.pop(ak)
+                                    )
+                    haplotypes[m][h]["left_normalized"] = True
+    with open(unique_haplotype_file, "w") as outfile:
+        json.dump(haplotypes, outfile)
+    with open(variation_file, "w") as outfile:
+        json.dump(variation, outfile)
+    with open(var_key_to_uniq_file, "w") as outfile:
+        json.dump(var_key_to_uniq, outfile)
+    try:
+        m_snps = int(settings["mergeSNPs"])
+    except KeyError:
+        m_snps = False
+    if m_snps:
+        dump = merge_snps(settings)
     return
 
 
@@ -8904,9 +6101,9 @@ def make_snp_vcf(variant_file, haplotype_file, call_info_file,
         cops = call_info[g][m]["copies"]
         copy_keys = list(call_info[g][m]["copies"].keys())
         for c in copy_keys:
-            mp = mip_positions[(m, c)]
             capture_chrom = cops[c]["chrom"]
             if capture_chrom == vcf_chrom:
+                mp = mip_positions[(m, c)]
                 for h in haplotypes[m]:
                     hap = haplotypes[m][h]
                     refs = {p: 1 for p in mp}
@@ -9147,6 +6344,19 @@ def make_chrom_vcf(wdir, header_count, min_cov=1, min_count=1, min_freq=0):
                          header_count=header_count)
         except FileNotFoundError:
             continue
+
+
+def process_haplotypes(settings_file):
+    settings = get_analysis_settings(settings_file)
+    get_haplotypes(settings)
+    align_haplotypes(settings)
+    parse_aligned_haplotypes(settings)
+    update_aligned_haplotypes(settings)
+    update_unique_haplotypes(settings)
+    update_variation(settings)
+    return
+
+
 
 
 def process_results(wdir,
@@ -10294,6 +7504,2382 @@ def process_results(wdir,
     return
 
 
+###############################################################################
+# New contig based analysis for vcf generation
+###############################################################################
+
+def get_vcf_haplotypes(settings):
+    """ 1) Extract all haplotypes from new data.
+        2) Remove known haplotypes using previous data (if any).
+        3) Map haplotypes to species genome to get the best hit(s)
+        4) Crosscheck best bowtie hit with the targeted region
+        5) Output haplotypes dictionary and off_targets dictionary
+
+        Once this function is called, we will get the new haplotypes present
+        in this data set that are on target and where they map on the genome.
+        Mapping haplotypes to specific targets/copies is not accomplished here
+        """
+    wdir = settings["workingDir"]
+    haplotypes_fq_file = wdir + settings["haplotypesFastqFile"]
+    haplotypes_sam_file = wdir + settings["haplotypesSamFile"]
+    bwa_options = settings["bwaOptions"]
+    call_info_file = settings["callInfoDictionary"]
+    species = settings["species"]
+    try:
+        tol = int(settings["alignmentTolerance"])
+    except KeyError:
+        tol = 200
+    # DATA EXTRACTION ###
+    # try loading unique haplotypes values. This file is generated
+    # in the recent versions of the pipeline but will be missing in older
+    # data. If missing, we'll generate it.
+    try:
+        hap_df = pd.read_csv(wdir + "unique_haplotypes.csv")
+    except IOError:
+        raw_results = pd.read_table(wdir + settings["mipsterFile"])
+        hap_df = raw_results.groupby(
+            ["gene_name", "mip_name", "haplotype_ID"])[
+            "haplotype_sequence"].first().reset_index()
+    # fill in fake sequence quality scores for each haplotype. These scores
+    # will be used for mapping only and the real scores for each haplotype
+    # for each sample will be added later.
+    hap_df["quality"] = hap_df["haplotype_sequence"].apply(
+        lambda a: "H" * len(a))
+    haps = hap_df.set_index("haplotype_ID").to_dict(orient="index")
+    # BWA alignment ####
+    # create a fastq file for bwa input
+    with open(haplotypes_fq_file, "w") as outfile:
+        for h in haps:
+            outfile.write("@" + h + "\n")
+            outfile.write(haps[h]["haplotype_sequence"] + "\n" + "+" + "\n")
+            outfile.write(haps[h]["quality"] + "\n")
+    # run bwa
+    bwa(haplotypes_fq_file, haplotypes_sam_file, "sam", "", "", bwa_options,
+        species)
+    # process alignment output sam file
+    header = ["haplotype_ID", "FLAG", "CHROM", "POS", "MAPQ", "CIGAR", "RNEXT",
+              "PNEXT", "TLEN", "SEQ", "QUAL"]
+    sam_list = []
+    with open(haplotypes_sam_file) as infile:
+        for line in infile:
+            if not line.startswith("@"):
+                newline = line.strip().split()
+                samline = newline[:11]
+                for item in newline[11:]:
+                    value = item.split(":")
+                    if value[0] == "AS":
+                        samline.append(int(value[-1]))
+                        break
+                else:
+                    samline.append(-5000)
+                sam_list.append(samline)
+    sam = pd.DataFrame(sam_list, columns=header + ["alignment_score"])
+    # find alignment with the highest alignment score. We will consider these
+    # the primary alignments and the source of the sequence.
+    sam["best_alignment"] = (sam["alignment_score"] == sam.groupby(
+        "haplotype_ID")["alignment_score"].transform("max"))
+    # add MIP column to alignment results
+    sam["MIP"] = sam["haplotype_ID"].apply(lambda a: a.split(".")[0])
+    # create call_info data frame for all used probes in the experiment
+    probe_sets_file = settings["mipSetsDictionary"]
+    probe_set_keys = settings["mipSetKey"]
+    used_probes = set()
+    for psk in probe_set_keys:
+        with open(probe_sets_file) as infile:
+            used_probes.update(json.load(infile)[psk])
+    with open(call_info_file) as infile:
+        call_info = json.load(infile)
+    call_df_list = []
+    for g in call_info:
+        for m in call_info[g]:
+            if m in used_probes:
+                mip_number = int(m.split("_")[-1][3:])
+                sub_number = int(m.split("_")[-2][3:])
+                for c in call_info[g][m]["copies"]:
+                    call_dict = call_info[g][m]["copies"][c]
+                    try:
+                        call_dict.pop("genes")
+                    except KeyError:
+                        pass
+                    call_dict["gene"] = g
+                    call_dict["MIP"] = m
+                    call_dict["copy"] = c
+                    call_dict["mip_number"] = mip_number
+                    call_dict["sub_number"] = sub_number
+                    call_df_list.append(pd.DataFrame(call_dict, index=[0]))
+    call_df = pd.concat(call_df_list)
+    # combine alignment information with design information (call_info)
+    haplotype_maps = call_df.merge(
+        sam[["MIP", "haplotype_ID", "CHROM", "POS", "best_alignment",
+             "alignment_score"]])
+    haplotype_maps["POS"] = haplotype_maps["POS"].astype(int)
+    haplotype_maps = haplotype_maps.merge(
+        hap_df[["haplotype_ID", "haplotype_sequence"]])
+    # determine which haplotype/mapping combinations are for intended targets
+    # first, compare mapping coordinate to the MIP coordinate to see  if
+    # a MIP copy matches with the alignment.
+    haplotype_maps["aligned_copy"] = (
+        (haplotype_maps["CHROM"] == haplotype_maps["chrom"])
+        & (abs(haplotype_maps["POS"] - haplotype_maps["capture_start"]) <= tol)
+    )
+    # aligned_copy means the alignment is on the intended MIP target
+    # this is not necessarily the best target, though. For a haplotype sequence
+    # to be matched to a MIP target, it also needs to be the best alignment.
+    haplotype_maps["mapped_copy"] = (haplotype_maps["aligned_copy"]
+                                     & haplotype_maps["best_alignment"])
+    # rename some fields to be compatible with previous code
+    haplotype_maps.rename(columns={"gene": "Gene", "copy": "Copy",
+                                   "chrom": "Chrom"}, inplace=True)
+    # any haplotype that does was not best mapped to at least one target
+    # will be considered an off target haplotype.
+    haplotype_maps["off_target"] = ~haplotype_maps.groupby(
+        "haplotype_ID")["mapped_copy"].transform("any")
+    off_target_haplotypes = haplotype_maps.loc[haplotype_maps["off_target"]]
+    # filter off targets and targets that do not align to haplotypes
+    haplotypes = haplotype_maps.loc[(~haplotype_maps["off_target"])
+                                    & haplotype_maps["aligned_copy"]]
+    # each MIP copy/haplotype_ID combination must have a single alignment
+    # if there are multiple, the best one will be chosen
+
+    def get_best_alignment(group):
+        return group.sort_values("alignment_score", ascending=False).iloc[0]
+
+    haplotypes = haplotypes.groupby(["MIP", "Copy", "haplotype_ID"],
+                                    as_index=False).apply(get_best_alignment)
+    haplotypes.index = (range(len(haplotypes)))
+    # filter to best mapping copy/haplotype pairs
+    mapped_haplotypes = haplotypes.loc[haplotypes["mapped_copy"]]
+    mapped_haplotypes["mapped_copy_number"] = mapped_haplotypes.groupby(
+        ["haplotype_ID"])["haplotype_ID"].transform(len)
+
+    mapped_haplotypes.to_csv(wdir + "mapped_haplotypes.csv", index=False)
+    off_target_haplotypes.to_csv(wdir + "offtarget_haplotypes.csv",
+                                 index=False)
+    haplotypes.to_csv(wdir + "aligned_haplotypes.csv", index=False)
+    haplotype_maps.to_csv(wdir + "all_haplotypes.csv", index=False)
+    num_hap = len(set(haplotype_maps["haplotype_ID"]))
+    num_off = len(set(off_target_haplotypes["haplotype_ID"]))
+    print(("{} of {} haplotypes were off-target, either not mapping to "
+           "the reference genome, or best mapping to a region which was "
+           "not targeted.").format(num_off, num_hap))
+    return
+
+
+def get_haplotype_counts(settings):
+    wdir = settings["workingDir"]
+    ##########################################################
+    ##########################################################
+    # Process 1: use sample sheet to determine which data points from the
+    # mipster file should be used, print relevant statistics.
+    ##########################################################
+    ##########################################################
+    # process sample sheets
+    run_meta = pd.read_table(os.path.join(wdir, "samples.tsv"))
+    # create a unique sample ID for each sample using sample name,
+    # sample set and replicate fields from the sample list file.
+    run_meta["sample_name"] = (
+            run_meta["sample_name"].astype(str)
+        )
+    run_meta["Sample Name"] = run_meta["sample_name"]
+    run_meta["Sample ID"] = run_meta[
+        ["sample_name", "sample_set", "replicate"]
+    ].apply(lambda a: "-".join(map(str, a)), axis=1)
+    # Sample Set key is reserved for meta data
+    # but sometimes erroneously included in the
+    # sample sheet. It should be removed.
+    try:
+        run_meta.drop("Sample Set", inplace=True, axis=1)
+    except (ValueError, KeyError):
+        pass
+    # drop duplicate values originating from
+    # multiple sequencing runs of the same libraries
+    run_meta = run_meta.drop_duplicates()
+    run_meta = run_meta.groupby(
+        ["Sample ID", "Library Prep"]
+    ).first().reset_index()
+    run_meta.to_csv(wdir + "run_meta.csv")
+    # get used sample ids
+    sample_ids = run_meta["Sample ID"].unique().tolist()
+    ##########################################################
+    ##########################################################
+    # Process 2: extract all observed variants from observed
+    # haplotypes and create a variation data frame that will
+    # be able to map haplotype IDs to variation.
+    ##########################################################
+    ##########################################################
+    # get the haplotype dataframe for all mapped haplotypes
+    mapped_haplotype_df = pd.read_csv(
+        os.path.join(wdir, "mapped_haplotypes.csv"))
+    ##########################################################
+    ##########################################################
+    # Process 3: load the MIPWrangler output which has
+    # per sample per haplotype information, such as
+    # haplotype sequence quality, barcode counts etc.
+    # Create a suitable dataframe that can be merged
+    # with variant data to get the same information for each
+    # variant (variant barcode count, variant quality, etc.)
+    ##########################################################
+    ##########################################################
+    # get the MIPWrangler Output
+    raw_results = pd.read_table(wdir + settings["mipsterFile"])
+    # limit the results to the samples intended for this analysis
+    raw_results = raw_results.loc[
+        raw_results["sample_name"].isin(sample_ids)
+    ]
+    # rename some columns for better visualization in tables
+    raw_results.rename(
+        columns={"sample_name": "Sample ID",
+                 "mip_name": "MIP",
+                 "gene_name": "Gene",
+                 "barcode_count": "Barcode Count",
+                 "read_count": "Read Count"},
+        inplace=True
+    )
+    # use only the data corresponding to mapped haplotypes
+    # filtering the off target haplotypes.
+    mapped_results = raw_results.merge(mapped_haplotype_df, how="inner")
+    # Try to estimate the distribution of data that is mapping
+    # to multiple places in the genome.
+    # This is done in 4 steps.
+    # 1) Get uniquely mapping haplotypes and barcode counts
+    unique_df = mapped_results.loc[mapped_results["mapped_copy_number"] == 1]
+    unique_table = pd.pivot_table(unique_df,
+                                  index="Sample ID",
+                                  columns=["Gene", "MIP", "Copy", "Chrom"],
+                                  values=["Barcode Count"],
+                                  aggfunc=np.sum)
+    # 2) Estimate the copy number of each paralog gene
+    # for each sample from the uniquely mapping data
+    # Two values from the settings are used to determine the copy number
+    # in a given gene. Average copy count is the ploidy of the organism
+    # and the normalization percentile is what percentile is used for
+    # normalizing data. For example, for human genes ACC is 2 and
+    # if the percentiles are given as 0.4, 0.6: we would calculate the
+    # take the 40th and 60th percentile of them barcode counts for each probe
+    # across the samples and assume that the average of 40th and 60 pctl values
+    # to represent the average copy count of 2. Then caluculate this value
+    # for each probe and each sample.
+    try:
+        average_copy_count = float(settings["averageCopyCount"])
+        norm_percentiles = list(map(float,
+                                settings["normalizationPercentiles"]))
+    except KeyError:
+        average_copy_count = 2
+        norm_percentiles = [0.4, 0.6]
+    unique_df.loc[:, "Copy Average"] = average_copy_count
+    # Adjusted barcode count will represent the estimated barcode count
+    # for multimapping haplotypes. For example, if hap1 is mapping to 2
+    # places in the genome and its barcode count for a sample containing this
+    # haplotype is 100. If we determined the copy numbers of the two mapping
+    # regions to be 1 and 1, the adjusted barcode count for each region
+    # would be 50. We'll set this value for uniquely mapping haplotypes
+    # to the Barcode Count, as they are not multi mapping.
+    unique_df.loc[:, "Adjusted Barcode Count"] = unique_df["Barcode Count"]
+    unique_df.loc[:, "Adjusted Read Count"] = unique_df["Read Count"]
+    unique_table.fillna(0, inplace=True)
+    # calculate the copy counts using the get_copy_counts function.
+    # this function normalizes data for each probe across samples
+    # and estimates copy counts using the percentile values as mentioned.
+    copy_counts = get_copy_counts(unique_table,
+                                  average_copy_count,
+                                  norm_percentiles)
+    # 3) Estimate the copy number of each "Gene"
+    # from the average copy count of uniquely mapping
+    # data for all MIPs within the gene.
+    cc = copy_counts.groupby(level=["Gene", "Copy"], axis=1).sum()
+    gc = copy_counts.groupby(level=["Gene"], axis=1).sum()
+    ac = cc/gc
+    # 4) Distribute multi mapping data proportional to
+    # Paralog's copy number determined from the
+    # uniquely mapping data
+    multi_df = mapped_results.loc[mapped_results["mapped_copy_number"] > 1]
+    if not multi_df.empty:
+        # get the average copy count for the gene the haplotype belongs to
+        mca = multi_df.apply(lambda r: get_copy_average(r, ac), axis=1)
+        multi_df.loc[mca.index, "Copy Average"] = mca
+        multi_df["copy_sum"] = multi_df.groupby(
+            ["Sample ID", "haplotype_ID"])["Copy Average"].transform("sum")
+        multi_df["copy_len"] = multi_df.groupby(
+            ["Sample ID", "haplotype_ID"])["Copy Average"].transform("size")
+        null_index = multi_df["copy_sum"] == 0
+        multi_df.loc[null_index, "Copy Average"] = (
+            average_copy_count / multi_df.loc[null_index, "copy_len"])
+        multi_df.loc[null_index, "copy_sum"] = average_copy_count
+        multi_df["Copy Average"].fillna(0, inplace=True)
+        multi_df["Adjusted Barcode Count"] = (multi_df["Barcode Count"]
+                                              * multi_df["Copy Average"]
+                                              / multi_df["copy_sum"])
+        multi_df["Adjusted Read Count"] = (multi_df["Read Count"]
+                                           * multi_df["Copy Average"]
+                                           / multi_df["copy_sum"])
+
+    # Combine unique and multimapping data
+    combined_df = pd.concat([unique_df, multi_df], ignore_index=True)
+    combined_df.rename(
+        columns={
+            "Barcode Count": "Raw Barcode Count",
+            "Adjusted Barcode Count": "Barcode Count",
+            "Read Count": "Raw Read Count",
+            "Adjusted Read Count": "Read Count"
+        },
+        inplace=True
+    )
+    # print total read and barcode counts
+    print(
+        (
+         "Total number of reads and barcodes were {0[0]} and {0[1]}."
+         " On target number of reads and barcodes were {1[0]} and {1[1]}."
+        ).format(
+            raw_results[["Read Count", "Barcode Count"]].sum(),
+            combined_df[["Read Count", "Barcode Count"]].sum().astype(int)
+        )
+    )
+    combined_df.to_csv(os.path.join(wdir, "haplotype_counts.csv"), index=False)
+    # Create pivot table of combined barcode counts
+    # This is a per MIP per sample barcode count table
+    # of the samples with sequencing data
+    barcode_counts = pd.pivot_table(combined_df,
+                                    index="Sample ID",
+                                    columns=["MIP",
+                                             "Copy"],
+                                    values=["Barcode Count"],
+                                    aggfunc=np.sum)
+    print("There are {} samples with sequence data".format(
+        barcode_counts.shape[0]
+    ))
+    # After pivot table is created, the column names have an extra
+    # row with the name "Barcode Count". Remove that from column names.
+    bc_cols = barcode_counts.columns
+    bc_cols = [bc[1:] for bc in bc_cols]
+    # barcode count data is only available for samples with data
+    # so if a sample has not produced any data, it will be missing
+    # these samples should be added with 0 values for each probe
+    all_barcode_counts = pd.merge(
+        run_meta[["Sample ID", "replicate"]].set_index("Sample ID"),
+        barcode_counts, left_index=True, right_index=True, how="left")
+    all_barcode_counts.drop("replicate", axis=1, inplace=True)
+    # fix column names
+    all_barcode_counts.columns = pd.MultiIndex.from_tuples(
+        bc_cols, names=["MIP", "Copy"]
+    )
+    all_barcode_counts.fillna(0, inplace=True)
+    print("There are {} total samples.".format(all_barcode_counts.shape[0]))
+    all_barcode_counts.to_csv(os.path.join(wdir, "all_barcode_counts.csv"))
+    # Continue working with the barcode counts that does not include the
+    # samples which did not have any data.
+    barcode_counts.columns = pd.MultiIndex.from_tuples(bc_cols,
+                                                       names=["MIP", "Copy"])
+    barcode_counts.fillna(0, inplace=True)
+    barcode_counts.to_csv(os.path.join(wdir, "barcode_counts.csv"))
+    # Create an overview statistics file for samples including
+    # total read count, barcode count, and how well they cover each MIP.
+    sample_counts = combined_df.groupby("Sample ID")[["Read Count",
+                                                      "Barcode Count"]].sum()
+    target_cov = pd.concat(
+        [(barcode_counts >= 1).sum(axis=1),
+         (barcode_counts >= 5).sum(axis=1),
+         (barcode_counts >= 10).sum(axis=1)],
+        axis=1,
+    ).rename(
+        columns={
+            0: "targets_with_1_barcodes",
+            1: "targets_with_5_barcodes",
+            2: "targets_with_10_barcodes"
+        }
+    )
+    sample_counts = sample_counts.merge(target_cov,
+                                        how="outer",
+                                        left_index=True,
+                                        right_index=True).fillna(0)
+    target_cov_file = os.path.join(wdir, "sample_summary.csv")
+    sample_counts.to_csv(target_cov_file)
+
+    # Create a file with meta data for samples without any data
+    no_data = run_meta.loc[
+        ~run_meta["Sample ID"].isin(sample_counts.index)
+    ]
+    print(("{} out of {} samples had no data and they were excluded from the"
+           " variant calls.").format(no_data.shape[0], run_meta.shape[0]))
+    no_data_file = os.path.join(wdir, "samples_without_data.csv")
+    no_data.to_csv(no_data_file)
+    return
+
+
+def split_contigs(settings):
+    """ Get a haplotypes dict and a call_info dict, align each haplotype to
+    reference sequences from the call_info dict."""
+    wdir = settings["workingDir"]
+    # load mapped haplotypes dataframe
+    mapped_haplotypes = pd.read_csv(os.path.join(wdir,
+                                                 "mapped_haplotypes.csv"))
+
+    # get all sample IDs to use in variant files.
+    sample_ids = pd.read_csv(os.path.join(wdir, "run_meta.csv"))[
+        "Sample ID"].tolist()
+    # split haplotypes to contigs where any overlapping haplotype will be
+    # added to the contig. There is also going to be a buffer of 35 bp, that
+    # is, any haplotypes that are closer than 35 bp to a contig will also
+    # end up in the contig even if there is no overlap.
+
+    def get_contig(g):
+        intervals = zip(g["capture_start"], g["capture_end"])
+        return pd.DataFrame(merge_overlap(
+            [list(i) for i in intervals], spacer=35))
+    contigs = mapped_haplotypes.groupby("Chrom").apply(get_contig)
+    contigs = contigs.reset_index()
+    contigs.rename(columns={"level_1": "contig", 0: "contig_capture_start",
+                            1: "contig_capture_end"}, inplace=True)
+    contigs["contig_start"] = contigs["contig_capture_start"] - 20
+    contigs["contig_end"] = contigs["contig_capture_end"] + 20
+
+    # get target SNPs if targets are to be included in the variants results
+    # even if they are not observed. This is specified by targetJoin parameter
+    # in settings
+    if int(settings["targetJoin"]):
+        targets = pd.read_table("/opt/project_resources/targets.tsv")
+        targets["target_length"] = targets["Ref"].apply(len)
+        targets["End"] = targets["Pos"] + targets["target_length"] - 1
+        targets = targets.merge(contigs)
+        targets = targets.loc[(targets["contig_start"] <= targets["Pos"])
+                              & (targets["contig_end"] >= targets["End"])]
+        targets["capture_start"] = targets["Pos"]
+        targets["capture_end"] = targets["End"]
+        targets["orientation"] = "forward"
+        targets["forward_sequence"] = targets["Alt"]
+    # create a contig dictionary in this format:
+    # {chromX: {contig#: {contig_start: .., contig_end: ..}}}
+    c_dict = contigs.set_index(["Chrom", "contig"]).to_dict(orient="index")
+    contig_dict = {}
+    for key, value in c_dict.items():
+        try:
+            contig_dict[key[0]][key[1]] = value
+        except KeyError:
+            contig_dict[key[0]] = {key[1]: value}
+    # assign each haplotype to its contig
+    merge_contigs = mapped_haplotypes.merge(contigs)
+    mapped_haplotypes = merge_contigs.loc[
+        (merge_contigs["contig_capture_start"]
+         <= merge_contigs["capture_start"])
+        & (merge_contigs["contig_capture_end"]
+           >= merge_contigs["capture_end"])]
+    species = settings["species"]
+
+    haplotype_counts = pd.read_csv(os.path.join(wdir, "haplotype_counts.csv"))
+    contig_list = []
+    contigs_dir = os.path.join(wdir, "contigs")
+    if not os.path.exists(contigs_dir):
+        os.makedirs(contigs_dir)
+    gb = mapped_haplotypes.groupby(["Chrom", "contig"])
+    contig_info_dict = {}
+    for k in gb.groups.keys():
+        contig_info = {}
+        contig_haplotypes = gb.get_group(k)
+        contig_info["chrom"] = k[0]
+        contig_info["contig"] = k[1]
+        contig_name = contig_info["chrom"] + "_" + str(contig_info["contig"])
+        contig_info["contig_name"] = contig_name
+        contig_info["contig_start"] = int(
+            contig_haplotypes.iloc[0]["contig_start"])
+        contig_info["contig_end"] = int(
+            contig_haplotypes.iloc[0]["contig_end"])
+        contig_info["contigs_dir"] = contigs_dir
+        contig_counts = haplotype_counts.merge(
+            contig_haplotypes[["haplotype_ID", "Copy"]])
+        contig_counts_file = os.path.join(contigs_dir,
+                                          contig_name + "_counts.csv")
+        contig_info["contig_counts_file"] = contig_counts_file
+        contig_counts.to_csv(contig_counts_file, index=False)
+        contig_info["species"] = species
+        contig_haplotypes_file = os.path.join(contigs_dir,
+                                              contig_name + "_haps.csv")
+        contig_info["contig_haplotypes_file"] = contig_haplotypes_file
+        contig_haplotypes.to_csv(contig_haplotypes_file, index=False)
+        contig_info["min_coverage"] = int(settings["minVariantCoverage"])
+        contig_info["min_count"] = int(settings["minVariantCount"])
+        contig_info["min_wsaf"] = int(settings["minVariantWsaf"])
+        contig_info["sample_ids"] = sample_ids
+        contig_info["aligner"] = settings["multipleSequenceAligner"]
+        contig_info["msa_to_vcf"] = settings["msaToVcf"]
+        contig_info["snp_only"] = int(settings["snpOnlyVcf"])
+        try:
+            contig_info["contig_targets"] = targets.loc[
+                (targets["Chrom"] == contig_info["chrom"])
+                & (targets["contig"] == contig_info["contig"])]
+            if contig_info["contig_targets"].empty:
+                contig_info["contig_targets"] = None
+        except NameError:
+            contig_info["contig_targets"] = None
+        contig_list.append(contig_info)
+        try:
+            contig_info_dict[k[0]][k[1]] = contig_info
+        except KeyError:
+            contig_info_dict[k[0]] = {k[1]: contig_info}
+
+    with open(os.path.join(wdir, "contig_info.pkl"), "wb") as outfile:
+        pickle.dump(contig_info_dict, outfile)
+    results = []
+    pro = int(settings["processorNumber"])
+    p = NoDaemonProcessPool(pro)
+    p.map_async(process_contig, contig_list, callback=results.extend)
+    p.close()
+    p.join()
+
+    with open(os.path.join(wdir, "contig_process_results.json"),
+              "w") as outfile:
+        json.dump(results, outfile)
+
+    return (contig_info_dict, results)
+
+
+def merge_contigs(settings, contig_info_dict, results):
+    # merge contig vcfs for each chromosome
+    wdir = settings["workingDir"]
+    species = settings["species"]
+    genome_fasta = get_file_locations()[species]["fasta_genome"]
+    for chrom in contig_info_dict:
+        chrom_vcf_list = os.path.join(wdir, chrom + "_vcf_files.txt")
+        chrom_vcf_file = os.path.join(wdir, chrom + ".vcf")
+        with open(chrom_vcf_list, "w") as outf:
+            for contig in contig_info_dict[chrom]:
+                contig_name = contig_info_dict[chrom][contig]["contig_name"]
+                if contig_name in results:
+                    contigs_dir = contig_info_dict[chrom][contig][
+                        "contigs_dir"]
+                    contig_vcf_file = os.path.join(contigs_dir,
+                                                   contig_name + ".vcf")
+                    subprocess.call(["bgzip", "-f", contig_vcf_file],
+                                    cwd=contigs_dir)
+                    subprocess.call(["bcftools", "index", "-f",
+                                     contig_vcf_file + ".gz"],
+                                    cwd=contigs_dir)
+                    outf.write(contig_vcf_file + ".gz" + "\n")
+        subprocess.call(["bcftools", "concat", "-f", chrom_vcf_list,
+                         "-o", chrom_vcf_file])
+
+        split_vcf_file = os.path.join(wdir, chrom + ".split.vcf")
+        subprocess.call(["bcftools", "norm", "-m-both", "-N",
+                         chrom_vcf_file, "-o", split_vcf_file])
+
+        filt_vcf_file = os.path.join(wdir, chrom + ".split.filt.vcf")
+
+        minVariantBarcodes = settings["minVariantBarcodes"]
+        minVariantSamples = settings["minVariantSamples"]
+        minVariantSampleFraction = settings["minVariantSampleFraction"]
+        minVariantSampleTotal = settings["minVariantSampleTotal"]
+        minVariantMeanQuality = settings["minVariantMeanQuality"]
+        minVariantMeanWsaf = settings["minVariantMeanWsaf"]
+        minMipCountFraction = settings["minMipCountFraction"]
+
+        filter_expressions = [
+            "((INFO/AD[1] >= " + minVariantBarcodes + ")",
+            "(INFO/AC[1] >= " + minVariantSamples + ")",
+            "(INFO/AF[1] >= " + minVariantSampleFraction + ")",
+            "(INFO/AN >= " + minVariantSampleTotal + ")",
+            "(INFO/QS[1] >= " + minVariantMeanQuality + ")",
+            "(INFO/WSAF[1] >= " + minVariantMeanWsaf + ")",
+            "(INFO/MCF[1] >= " + minMipCountFraction + ")"]
+
+        filter_expressions = " & ".join(filter_expressions)
+        filter_expressions = filter_expressions + ') | (OT !=".")'
+
+        subprocess.call(["bcftools", "view", "-i", filter_expressions,
+                         split_vcf_file, "-o", filt_vcf_file])
+
+        merged_vcf_file = os.path.join(wdir, chrom + ".merged.filt.vcf")
+        subprocess.call(["bcftools", "norm", "+m-any", "-N",
+                         filt_vcf_file, "-o", merged_vcf_file])
+
+        norm_vcf_file = os.path.join(wdir, chrom + ".norm.vcf")
+        subprocess.call(["bcftools", "norm", "-m-both", "-f", genome_fasta,
+                         filt_vcf_file, "-o", norm_vcf_file])
+
+        # annotate with snpEff
+        ann_db = settings["snpEffDb"]
+        ann = subprocess.Popen(["java", "-Xmx10g", "-jar",
+                                "/opt/species_resources/snpEff/snpEff.jar",
+                                ann_db, norm_vcf_file], stdout=subprocess.PIPE)
+        annotated_vcf_file = os.path.join(wdir, chrom + ".norm.ann.vcf")
+        with open(annotated_vcf_file, "wb") as outfile:
+            outfile.write(ann.communicate()[0])
+
+
+def process_contig(contig_dict):
+    try:
+        chrom = contig_dict["chrom"]
+        contig_start = contig_dict["contig_start"]
+        contig_end = contig_dict["contig_end"]
+        species = contig_dict["species"]
+        contig_ref_seq = get_sequence(create_region(
+            chrom, contig_start, contig_end), species)
+        contig_haplotypes_file = contig_dict["contig_haplotypes_file"]
+        contig_haps = pd.read_csv(contig_haplotypes_file)
+        # Create a contig sequence for each haplotype.
+        # This will be done by gettig the forward strand sequence for each
+        # haplotype and padding it on both flanks with the reference sequence
+        # up to the contig start/end.
+        #
+        # get forward strand sequence for all haplotypes
+        contig_haps["forward_sequence"] = contig_haps["haplotype_sequence"]
+        reverse_index = contig_haps["orientation"] == "reverse"
+        contig_haps.loc[reverse_index, "forward_sequence"] = (
+            contig_haps.loc[reverse_index, "forward_sequence"].apply(
+                reverse_complement))
+
+        def get_padded_sequence(row):
+            chrom = row["Chrom"]
+            contig_start = int(row["contig_start"])
+            contig_end = int(row["contig_end"])
+            capture_start = int(row["capture_start"])
+            capture_end = int(row["capture_end"])
+            left_key = create_region(chrom, contig_start, capture_start - 1)
+            right_key = create_region(chrom, capture_end + 1, contig_end)
+            left_pad = get_sequence(left_key, species)
+            right_pad = get_sequence(right_key, species)
+            return left_pad + str(row["forward_sequence"]) + right_pad
+
+        contig_haps["padded_sequence"] = contig_haps.apply(
+            get_padded_sequence, axis=1)
+        g_dict = contig_haps.set_index(
+            ["MIP", "Copy", "haplotype_ID"]).to_dict(orient="index")
+        sequences = {"ref": contig_ref_seq}
+        contig_targets = contig_dict["contig_targets"]
+        if contig_targets is not None:
+            contig_targets["padded_sequence"] = contig_targets.apply(
+                get_padded_sequence, axis=1)
+            target_pos = contig_targets[
+                ["Pos", "End", "Mutation Name"]].to_dict(orient="records")
+            targets_dict = contig_targets.to_dict(orient="index")
+            for t in targets_dict:
+                sequences[t] = targets_dict[t]["padded_sequence"]
+        else:
+            targets_dict = {}
+            target_pos = []
+        for k in g_dict.keys():
+            sequences[":".join(k)] = g_dict[k]["padded_sequence"]
+        wdir = contig_dict["contigs_dir"]
+        contig_name = contig_dict["contig_name"]
+        fasta_file = os.path.join(wdir, contig_name + ".fa")
+        alignment_file = os.path.join(wdir, contig_name + ".aln")
+        save_fasta_dict(sequences, fasta_file)
+        if contig_dict["aligner"] == "muscle":
+            subprocess.call(["muscle", "-in", fasta_file, "-out",
+                             alignment_file])
+        elif contig_dict["aligner"] == "decipher":
+            subprocess.call(["Rscript", "/opt/src/align.R", fasta_file,
+                             alignment_file])
+        alignments = fasta_parser(alignment_file)
+        ref_seq = alignments["ref"]
+        alignment_to_genomic = {0: contig_start - 1}
+        insertion_count = 0
+        for i in range(len(ref_seq)):
+            if ref_seq[i] != "-":
+                alignment_to_genomic[i+1] = i + contig_start - insertion_count
+            else:
+                insertion_count += 1
+        genomic_to_alignment = {}
+        for alignment_position in alignment_to_genomic:
+            genomic_to_alignment[alignment_to_genomic[
+                alignment_position]] = alignment_position
+
+        def get_hap_start_index(row):
+            hid = row["haplotype_ID"]
+            cop = row["Copy"]
+            hap_start = row["capture_start"] - 1
+            hap_start_index = genomic_to_alignment[hap_start]
+            hap_mip = row["MIP"]
+            alignment_header = ":".join([hap_mip, cop, hid])
+            hap_al = alignments[alignment_header][:hap_start_index]
+            ref_al = alignments["ref"][:hap_start_index]
+            diff = ref_al.count("-") - hap_al.count("-")
+            return hap_start_index - diff
+
+        contig_haps["haplotype_start_index"] = contig_haps.apply(
+            get_hap_start_index, axis=1)
+
+        raw_vcf_file = os.path.join(wdir, contig_name + ".raw.vcf")
+        if contig_dict["msa_to_vcf"] == "miptools":
+            msa_to_vcf(alignment_file, raw_vcf_file, ref="ref",
+                       snp_only=contig_dict["snp_only"])
+        subprocess.call(
+            ["java", "-jar", "/opt/programs/jvarkit/dist/msa2vcf.jar",
+             "-m", "-c", "ref", "-o", raw_vcf_file, alignment_file])
+        contig_dict["raw_vcf_file"] = raw_vcf_file
+        # find  comment line number
+        with open(raw_vcf_file) as infile:
+            line_count = 0
+            for line in infile:
+                if line.startswith("##"):
+                    line_count += 1
+                else:
+                    break
+        vcf = pd.read_table(raw_vcf_file, skiprows=line_count)
+        if vcf.empty:
+            return
+        vcf = vcf.drop(["ID", "QUAL", "FILTER", "INFO", "FORMAT"],
+                       axis=1).set_index(["#CHROM", "POS", "REF", "ALT"])
+        vcf = vcf.applymap(lambda a: 0 if a == "." else int(a.split(":")[0]))
+        vcf = vcf.reset_index()
+        vcf["alignment_position"] = vcf["POS"]
+        vcf["POS"] = vcf["alignment_position"].map(alignment_to_genomic)
+        vcf["CHROM"] = chrom
+        vcf.drop("#CHROM",  inplace=True, axis=1)
+        vcf = vcf.set_index(["CHROM", "POS", "REF", "ALT",
+                             "alignment_position"])
+        drop_seqs = ["ref"] + list(map(str, targets_dict.keys()))
+        vcf.drop(drop_seqs, axis=1, inplace=True)
+        vcf_stack = pd.DataFrame(vcf.stack()).reset_index()
+        vcf_stack.rename(
+            columns={"level_5": "alignment_header", 0: "genotype"},
+            inplace=True)
+        vcf_stack[["MIP", "Copy", "haplotype_ID"]] = vcf_stack[
+            "alignment_header"].apply(lambda a: pd.Series(a.split(":")))
+        vcf_merge = vcf_stack.merge(
+            contig_haps[["MIP", "Copy", "haplotype_ID",
+                         "capture_start", "capture_end",
+                         "haplotype_start_index"]])
+        vcf_merge["END"] = vcf_merge["REF"].apply(len) + vcf_merge["POS"] - 1
+        vcf_merge["covered"] = (
+            (vcf_merge["capture_start"] <= vcf_merge["END"])
+            & (vcf_merge["capture_end"] >= vcf_merge["POS"]))
+        vcf_merge.loc[~vcf_merge["covered"], "genotype"] = np.nan
+        vcf_clean = vcf_merge.loc[~vcf_merge["genotype"].isnull()]
+        contig_seq = pd.DataFrame(contig_haps.groupby("haplotype_ID")[
+            "forward_sequence"].first()).to_dict(orient="index")
+
+        def get_variant_index(row):
+            pos_index = row["alignment_position"]
+            hap_start_index = row["haplotype_start_index"]
+            hap_copy = row["Copy"]
+            hid = row["haplotype_ID"]
+            hap_mip = row["MIP"]
+            alignment_header = ":".join([hap_mip, hap_copy, hid])
+            hap_al = alignments[alignment_header]
+            hap_al = hap_al[hap_start_index:pos_index]
+            variant_index = len(hap_al) - hap_al.count("-") - 1
+            alts = [row["REF"]]
+            alts.extend(row["ALT"].split(","))
+            gen = int(row["genotype"])
+            alt = alts[gen]
+            variant_end_index = variant_index + len(alt)
+            if variant_index < 0:
+                variant_index = 0
+            if variant_end_index < 1:
+                variant_end_index = 1
+            seq = contig_seq[hid]["forward_sequence"]
+            var_seq = seq[variant_index:variant_end_index]
+            return pd.Series([variant_index, variant_end_index, alt, var_seq])
+
+        vcf_clean[
+            ["variant_index", "variant_end_index", "allele", "variant"]
+        ] = vcf_clean.apply(get_variant_index, axis=1)
+
+        contig_counts_file = contig_dict["contig_counts_file"]
+        contig_counts = pd.read_csv(contig_counts_file)
+        contig_counts["forward_sequence_quality"] = contig_counts[
+            "sequence_quality"]
+        reverse_index = contig_counts["orientation"] == "reverse"
+        contig_counts.loc[reverse_index, "forward_sequence_quality"] = (
+            contig_counts.loc[reverse_index, "forward_sequence_quality"].apply(
+                lambda a: a[::-1]))
+        combined_vcf = vcf_clean[
+            ["CHROM", "POS", "REF", "ALT", "genotype",
+             "MIP", "Copy", "haplotype_ID", "variant_index",
+             "variant_end_index"]].merge(contig_counts[
+                 ["Sample ID", "haplotype_ID", "MIP", "Copy",
+                  "Barcode Count", "forward_sequence_quality"]])
+
+        def get_variant_quality(row):
+            start_index = row["variant_index"]
+            end_index = row["variant_end_index"]
+            qual = row["forward_sequence_quality"]
+            if end_index > len(qual) - 1:
+                end_index = len(qual) - 1
+            qual_scores = [ord(qual[i]) - 33 for i in
+                           range(start_index, end_index)]
+            return np.mean(qual_scores)
+
+        combined_vcf["variant_quality"] = combined_vcf.apply(
+            get_variant_quality, axis=1)
+
+        min_count = contig_dict["min_count"]
+        if min_count < 1:
+            min_count = 1
+        min_depth = contig_dict["min_coverage"]
+        if min_depth < 1:
+            min_depth = 1
+        min_wsaf = contig_dict["min_wsaf"]
+        if min_wsaf == 0:
+            min_wsaf = 0.0001
+
+        def collapse_vcf(group):
+            key = group.iloc[0][["CHROM", "POS", "REF", "ALT"]].values
+            alts = key[3].split(",")
+            allele_count = len(alts) + 1
+            allele_depths = []
+            for i in range(allele_count):
+                allele_depths.append(group.loc[group["genotype"] == i,
+                                               "Barcode Count"].sum().round(0))
+            total_depth = int(round(np.sum(allele_depths), 0))
+            wsaf = np.array(allele_depths)/total_depth
+            if total_depth < min_depth:
+                return "."
+            genotypes = []
+            for i in range(allele_count):
+                if (allele_depths[i] >= min_count) and (wsaf[i] >= min_wsaf):
+                    genotypes.append(i)
+            if len(genotypes) == 0:
+                return "."
+            else:
+                gt = "/".join(map(str, sorted(genotypes)))
+            allele_depths = [str(int(a)) for a in allele_depths]
+            variant_quals = []
+            for i in range(allele_count):
+                variant_quals.append(group.loc[group["genotype"] == i,
+                                               "variant_quality"].max())
+            variant_quals = ["." if np.isnan(v) else str(int(round(v, 0)))
+                             for v in variant_quals]
+            mip_count = []
+            for i in range(allele_count):
+                mip_count.append(len(set(group.loc[group["genotype"] == i,
+                                                   "MIP"])))
+            hap_count = []
+            for i in range(allele_count):
+                hap_count.append(len(set(group.loc[group["genotype"] == i,
+                                                   "haplotype_ID"])))
+            return ":".join([gt, ",".join(allele_depths),
+                             str(total_depth),
+                             ",".join(variant_quals),
+                             ",".join(map(str, mip_count)),
+                             ",".join(map(str, hap_count)),
+                             ",".join(map(str, wsaf.round(3)))])
+
+        collapsed_vcf = pd.DataFrame(combined_vcf.groupby(
+            ["CHROM", "POS", "REF", "ALT", "Sample ID"]).apply(collapse_vcf)
+        ).reset_index()
+        vcf_table = collapsed_vcf.pivot_table(
+            index=["CHROM", "POS", "REF", "ALT"],
+            columns="Sample ID", aggfunc="first")
+        vcf_table.fillna(".", inplace=True)
+
+        def get_var_summary(row):
+            val = row.values
+            ad = []
+            quals = []
+            wsafs = []
+            mip_counts = []
+            hap_counts = []
+            for v in val:
+                if v != ".":
+                    ad.append(list(map(int, v.split(":")[1].split(","))))
+                    quals.append(v.split(":")[3].split(","))
+                    mip_counts.append(list(map(
+                        int, v.split(":")[4].split(","))))
+                    hap_counts.append(list(map(
+                        int, v.split(":")[5].split(","))))
+                    wsafs.append(list(map(float, v.split(":")[6].split(","))))
+            if len(ad) == 0:
+                return "."
+            quality = []
+            for q in quals:
+                nq = []
+                for q_val in q:
+                    if q_val == ".":
+                        nq.append(np.nan)
+                    else:
+                        nq.append(int(q_val))
+                quality.append(nq)
+            quals = np.nanmean(quality, axis=0)
+            quality = []
+            for q in quals:
+                if np.isnan(q):
+                    quality.append(".")
+                else:
+                    quality.append(str(round(q, 1)))
+
+            wsafs = pd.DataFrame(wsafs)
+            wsafs = wsafs.applymap(
+                lambda a: a if a >= min_wsaf else np.nan).mean().round(4)
+            wsafs = wsafs.fillna(0).astype(str)
+
+            mip_counts = pd.DataFrame(mip_counts)
+            mip_counts = mip_counts.applymap(
+                lambda a: a if a > 0 else np.nan).mean().round(2)
+            mip_frac = (mip_counts / (mip_counts.max())).round(2)
+            mip_frac = mip_frac.fillna(0).astype(str)
+            mip_counts = mip_counts.fillna(0).astype(str)
+
+            hap_counts = pd.DataFrame(hap_counts)
+            hap_counts = hap_counts.applymap(
+                lambda a: a if a > 0 else np.nan).mean().round(2)
+            hap_counts = hap_counts.fillna(0).astype(str)
+
+            info_cols = [
+                "DP=" + str(np.sum(ad)),
+                "AD=" + ",".join(map(str, np.sum(ad, axis=0))),
+                "AC=" + ",".join(map(str, (np.array(ad) >= min_count).sum(
+                    axis=0))),
+                "AF=" + ",".join(map(str, ((np.array(ad) >= min_count).sum(
+                    axis=0)/len(ad)).round(5))),
+                "AN=" + str(len(ad)),
+                "QS=" + ",".join(quality),
+                "WSAF=" + ",".join(wsafs),
+                "MC=" + ",".join(mip_counts),
+                "MCF=" + ",".join(mip_frac),
+                "HC=" + ",".join(hap_counts)]
+
+            variant_pos = row.name[1]
+            ref_len = len(row.name[2])
+            variant_end = variant_pos + ref_len - 1
+            overlapping_targets = set()
+            for p in target_pos:
+                ol = overlap([variant_pos, variant_end],
+                             [p["Pos"], p["End"]])
+                if len(ol) > 0:
+                    overlapping_targets.add(p["Mutation Name"])
+            if len(overlapping_targets) > 0:
+                ot_field = ",".join(sorted(overlapping_targets))
+                info_cols.append("OT=" + ot_field)
+
+            return ";".join(info_cols)
+
+        var_summary = pd.DataFrame(vcf_table.apply(
+            get_var_summary, axis=1)).rename(columns={0: "INFO"})
+        var_summary["FORMAT"] = "GT:AD:DP:QS:MC:HC:WSAF"
+        var_summary["ID"] = "."
+        var_summary["QUAL"] = "."
+        var_summary["FILTER"] = "."
+        samples = vcf_table.columns.droplevel(0).tolist()
+        vcf_table.columns = samples
+        samples = contig_dict["sample_ids"]
+        vcf_table = vcf_table.loc[:, samples].fillna(".")
+        vcf_table = vcf_table.merge(var_summary, left_index=True,
+                                    right_index=True)
+        vcf_table = vcf_table.reset_index()[
+            ["CHROM", "POS", "ID", "REF", "ALT", "QUAL", "FILTER", "INFO",
+             "FORMAT"] + samples]
+        vcf_table.rename(columns={"CHROM": "#CHROM"}, inplace=True)
+        vcf_table = vcf_table.sort_values("POS")
+        vcf_header = [
+            "##fileformat=VCFv4.2",
+            '##INFO=<ID=DP,Number=1,Type=Integer,Description='
+            '"Total coverage for locus, across samples.">',
+            "##INFO=<ID=AD,Number=R,Type=Integer,Description="
+            '"Total coverage per allele, across samples.">',
+            "##INFO=<ID=QS,Number=R,Type=Float,Description="
+            '"Average sequence quality per allele.">',
+            "##INFO=<ID=AN,Number=1,Type=Integer,Description="
+            '"Number of samples with genotype calls.">',
+            "##INFO=<ID=AC,Number=R,Type=Integer,Description="
+            '"Number of samples carrying the allele.">',
+            "##INFO=<ID=AF,Number=R,Type=Float,Description="
+            '"Frequency of samples carrying the allele.">',
+            "##INFO=<ID=WSAF,Number=R,Type=Float,Description="
+            '"Average nonzero WithinSampleAlleleFrequency.">',
+            "##INFO=<ID=MC,Number=R,Type=Float,Description="
+            '"Average number of MIPs supporting the allele (when called).">',
+            "##INFO=<ID=HC,Number=R,Type=Float,Description="
+            '"Average number of haplotypes supporting the allele'
+            ' (when called).">',
+            "##INFO=<ID=MCF,Number=R,Type=Float,Description="
+            '"MC expressed as the fraction of MAX MC.">',
+            "##INFO=<ID=OT,Number=.,Type=String,Description="
+            '"Variant position overlaps with a target.">',
+            '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">',
+            '##FORMAT=<ID=AD,Number=R,Type=Integer,Description='
+            '"Allelic depths for the ref and alt alleles in that order.">',
+            '##FORMAT=<ID=DP,Number=1,Type=Integer,Description='
+            '"Total read depth (coverage) at this position">',
+            '##FORMAT=<ID=QS,Number=R,Type=Integer,Description='
+            '"Sequence quality per allele.">',
+            '##FORMAT=<ID=MC,Number=R,Type=Integer,Description='
+            '"Number of MIPs supporting the allele.">',
+            '##FORMAT=<ID=HC,Number=R,Type=Integer,Description='
+            '"Number of haplotypes supporting the allele.">',
+            '##FORMAT=<ID=WSAF,Number=R,Type=Float,Description='
+            '"Within sample allele frequency.">']
+        # save vcf file
+        contig_vcf_file = os.path.join(wdir, contig_name + ".vcf")
+        with open(contig_vcf_file, "w") as outfile:
+            outfile.write("\n".join(vcf_header) + "\n")
+            vcf_table.to_csv(outfile, index=False, sep="\t")
+        contig_variants_file = os.path.join(wdir,
+                                            contig_name + "_variants.csv")
+        combined_vcf.to_csv(contig_variants_file)
+        collapsed_variants_file = os.path.join(wdir, contig_name
+                                               + "_collapsed_variants.csv")
+        collapsed_vcf.to_csv(collapsed_variants_file)
+        contig_haps.to_csv(contig_haplotypes_file)
+        contig_counts.to_csv(contig_counts_file)
+        return contig_name
+    except Exception as e:
+        print(("Caught exception in worker thread for contig {}.").format(
+            contig_name))
+        traceback.print_exc()
+        print()
+        raise e
+
+
+
+###############################################################################
+# older analysis functions.
+###############################################################################
+
+
+def get_raw_data (settings):
+    """ Extract raw data from filtered_data file. If there is data from a previous run,
+    new data can be added to old data. If this sample set is new, or being analyzed
+    separately, than existing data should be "na".
+    Return a list of data point dictionaries. One dict for each haplotype/sample.
+    Write this list to disk."""
+    wdir = settings["workingDir"]
+    unique_haplotype_file = wdir + settings["haplotypeDictionary"]
+    sequence_to_haplotype_file = wdir + settings["sequenceToHaplotypeDictionary"]
+    with open(unique_haplotype_file) as infile:
+        unique_haplotypes = json.load(infile)
+    with open(sequence_to_haplotype_file) as infile:
+        sequence_to_haplotype = json.load(infile)
+    problem_data = []
+    existing_data_file = wdir + settings["existingData"]
+    try:
+        with open(existing_data_file) as infile:
+            raw_data = json.load(infile)
+    except IOError:
+        raw_data = []
+    mipster_file = wdir + settings["mipsterFile"]
+    colnames = dict(list(zip(settings["colNames"],
+                        settings["givenNames"])))
+    with open(mipster_file) as infile:
+        ## filteredData only contains relevant fields for this analysis
+        # the field names are given in the settings dict and
+        # kept in given_names list
+        run_ID = settings["runID"]
+        line_number = 0
+        for line in infile:
+            newline = line.strip().split("\t")
+            if not line_number == 0:
+                line_number += 1
+                col_indexes = {}
+                try:
+                    for ck in list(colnames.keys()):
+                        col_indexes[
+                            newline.index(ck)
+                        ] = {"name": colnames[ck]}
+                        if ck == 'c_barcodeCnt':
+                            bc_index = newline.index(ck)
+                        elif ck == 'c_readCnt':
+                            rc_index = newline.index(ck)
+                except ValueError:
+                    for ck in list(colnames.values()):
+                        col_indexes[
+                        newline.index(ck)
+                        ] = {"name" : ck}
+                        if ck == 'barcode_count':
+                            bc_index = newline.index(ck)
+                        elif ck == 'read_count':
+                            rc_index = newline.index(ck)
+                # each data point will be a dict
+                data_dic = {}
+                for i in list(col_indexes.keys()):
+                    # check data type and convert data appropriately
+                    if i in [bc_index, rc_index]:
+                        data_point = int(newline[i])
+                    else:
+                        data_point = newline[i]
+                    data_dic[col_indexes[i]["name"]] = data_point
+                data_dic["run_ID"] = run_ID
+                # once data dict is created, check the haplotype sequence
+                # in the sequence to haplotype dict and update the data dict
+                # with values in the haplotype dict
+                seq = data_dic.pop("haplotype_sequence")
+                try:
+                    uniq_id = sequence_to_haplotype[seq]
+                    data_dic.pop("haplotype_quality_scores")
+                    data_dic["haplotype_ID"] = uniq_id
+                    if unique_haplotypes[data_dic["mip_name"]][uniq_id]["mapped"]:
+                        raw_data.append(data_dic)
+                except KeyError:
+                    problem_data.append(data_dic)
+                    continue
+    # dump the raw_data list to a json file
+    raw_data_file = wdir + settings["rawDataFile"]
+    with open(raw_data_file, "w") as outfile:
+        json.dump(raw_data, outfile)
+    problem_data_file = wdir + settings["rawProblemData"]
+    with open(problem_data_file, "w") as outfile:
+        json.dump(problem_data, outfile, indent=1)
+    return
+
+
+def filter_data (data_file, filter_field, comparison, criteria, output_file):
+    """
+    Data fields to filter: sample_name, gene_name, mip_name, barcode_count etc.
+    Comparison: for numeric values: gt (greater than), lt, gte (greater than or equal to), lte
+    criteria must be numeric as well.
+    for string values: in, nin (not in), criteria must be a list to include or exclude.
+    for string equality assessments, a list with single value can be used.
+    """
+    filtered_data = []
+    with open(data_file) as infile:
+        data = json.load(infile)
+    for d in data:
+        field_value = d[filter_field]
+        if comparison == "gt":
+            if field_value > criteria:
+                filtered_data.append(d)
+        elif comparison == "gte":
+            if field_value >= criteria:
+                filtered_data.append(d)
+        elif comparison == "lt":
+            if field_value < criteria:
+                filtered_data.append(d)
+        elif comparison == "lte":
+            if field_value <= criteria:
+                filtered_data.append(d)
+        elif comparison == "in":
+            if field_value in criteria:
+                filtered_data.append(d)
+        elif comparison == "nin":
+            if field_value not in criteria:
+                filtered_data.append(d)
+    with open(output_file, "w") as outfile:
+        json.dump(filtered_data, outfile, indent = 1)
+
+
+def group_samples (settings):
+    wdir = settings["workingDir"]
+    raw_data_file = wdir  + settings["rawDataFile"]
+    with open(raw_data_file) as infile:
+        raw_data = json.load(infile)
+    samples = {}
+    problem_samples = {}
+    mip_names = {}
+    #diploid_mipnames = []
+    #all_mipnames = []
+    copy_stable_genes = settings["copyStableGenes"]
+    for c in raw_data:
+        gene_name = c["gene_name"]
+        sample_name = c["sample_name"]
+        mip_name = c["mip_name"]
+        if (copy_stable_genes == "na") or (gene_name in copy_stable_genes):
+            try:
+                samples[sample_name]["diploid_barcode_count"] += c["barcode_count"]
+                samples[sample_name]["diploid_read_count"] += c["read_count"]
+                samples[sample_name]["diploid_mip_names"].append(mip_name)
+                #diploid_mipnames.append(mip_name)
+                """
+                except KeyError:
+                    try:
+                        samples[sample_name]["diploid_barcode_count"] = c["barcode_count"]
+                        samples[sample_name]["diploid_read_count"] = c["read_count"]
+                        samples[sample_name]["diploid_mip_names"] = [mip_name]
+                        diploid_mipnames.append(mip_name)
+                """
+            except KeyError:
+                samples[sample_name] = {"diploid_barcode_count": c["barcode_count"],
+                                        "diploid_read_count": c["read_count"],
+                                        "diploid_mip_names": [mip_name],
+                                        "total_barcode_count": c["barcode_count"],
+                                        "total_read_count": c["read_count"],
+                                        "all_mip_names": [mip_name]
+                                        }
+                #diploid_mipnames.append(mip_name)
+        try:
+            samples[sample_name]["total_barcode_count"] += c["barcode_count"]
+            samples[sample_name]["total_read_count"] += c["read_count"]
+            samples[sample_name]["all_mip_names"].append(mip_name)
+            #all_mipnames.append(mip_name)
+            """
+            except KeyError:
+                try:
+                    samples[sample_name]["total_barcode_count"] = c["barcode_count"]
+                    samples[sample_name]["total_read_count"] = c["read_count"]
+                    samples[sample_name]["all_mip_names"] = [mip_name]
+                    all_mipnames.append(mip_name)
+            """
+        except KeyError:
+            samples[sample_name] = {"diploid_barcode_count": 0,
+                                        "diploid_read_count": 0,
+                                        "diploid_mip_names": [],
+                                        "total_barcode_count": c["barcode_count"],
+                                        "total_read_count": c["read_count"],
+                                        "all_mip_names": [mip_name]
+                                        }
+            #all_mipnames.append(mip_name)
+
+
+    for s in list(samples.keys()):
+        try:
+            samples[s]["diploid_mip_names"] = list(set((samples[s]["diploid_mip_names"])))
+            samples[s]["diploid_mip_number"] = len(samples[s]["diploid_mip_names"])
+            samples[s]["all_mip_names"] = list(set((samples[s]["all_mip_names"])))
+            samples[s]["total_mip_number"] = len(samples[s]["all_mip_names"])
+            mip_names[s] = {}
+            mip_names[s]["diploid_mip_names"] = samples[s].pop("diploid_mip_names")
+            mip_names[s]["all_mip_names"] = samples[s].pop("all_mip_names")
+            try:
+                samples[s]["average_diploid_barcode_count"] = round(
+                samples[s]['diploid_barcode_count']
+                 /samples[s]['diploid_mip_number'], 2)
+                samples[s]["sample_normalizer"] = round(
+                100/(samples[s]["average_diploid_barcode_count"]), 2)
+            except ZeroDivisionError:
+                problem_samples[s] = samples.pop(s)
+        except KeyError:
+            problem_samples[s] = samples.pop(s)
+
+    results =  {"samples": samples,
+            "problem_samples": problem_samples,
+            "mip_names": mip_names}
+    sample_info_file = wdir + settings["sampleInfoFile"]
+    with open(sample_info_file, "w") as outfile:
+        json.dump(results,outfile, indent=1)
+    return
+
+
+def update_raw_data (settings):
+    wdir = settings["workingDir"]
+    raw_data_file = wdir  + settings["rawDataFile"]
+    with open(raw_data_file) as infile:
+        raw_data = json.load(infile)
+    unique_haplotype_file = wdir + settings["haplotypeDictionary"]
+    with open(unique_haplotype_file) as infile:
+        unique_haplotypes = json.load(infile)
+    sample_info_file = wdir + settings["sampleInfoFile"]
+    with open(sample_info_file) as infile:
+        samples = json.load(infile)["samples"]
+    normalized_data = []
+    problem_data = []
+    for r in raw_data:
+        try:
+            sample_name = r["sample_name"]
+            r["sample_normalizer"] = samples[sample_name]["sample_normalizer"]
+            r["sample_normalized_barcode_count"] = r["sample_normalizer"] * r["barcode_count"]
+            hid = r["haplotype_ID"]
+            mid = r["mip_name"]
+            r["copy_name"] = unique_haplotypes[mid][hid]["copy_name"]
+            normalized_data.append(r)
+        except KeyError:
+            problem_data.append(r)
+    normalized_data_file = wdir + settings["normalizedDataFile"]
+    with open(normalized_data_file, "w") as outfile:
+        json.dump(normalized_data, outfile)
+    problem_data_file = wdir + settings["normalizedProblemData"]
+    with open(problem_data_file, "w") as outfile:
+        json.dump(problem_data, outfile, indent=1)
+    return
+
+
+def get_counts (settings):
+    wdir = settings["workingDir"]
+    data_file = wdir + settings["normalizedDataFile"]
+    with open(data_file) as infile:
+        data = json.load(infile)
+    min_barcode_count = int(settings["minBarcodeCount"])
+    min_barcode_fraction = float(settings["minBarcodeFraction"])
+    counts = {}
+    samples = {}
+    # get sample data across probes
+    for t in data:
+        g = t["gene_name"]
+        m = t["mip_name"]
+        c = t["copy_name"]
+        s = t["sample_name"]
+        try:
+            samples[s][g][m][c]["raw_data"].append(t)
+        except KeyError:
+            try:
+                samples[s][g][m][c] = {"raw_data": [t]}
+            except KeyError:
+                try:
+                    samples[s][g][m] = {c: {"raw_data": [t]}}
+                except KeyError:
+                    try:
+                        samples[s][g] = {m: {c: {"raw_data": [t]}}}
+                    except KeyError:
+                        samples[s] = {g: {m: {c: {"raw_data": [t]}}}}
+    # filter/merge individual data points for each sample/paralog copy
+    # data for the same haplotype, possibly from separate runs will be merged
+    # data that does not pass a low barcode threshold will be filtered
+    merge_keys = ["sample_normalized_barcode_count",
+                  "barcode_count",
+                  "read_count"]
+    for s in samples:
+        for g in samples[s]:
+            for m in samples[s][g]:
+                for c in samples[s][g][m]:
+                    data_points = samples[s][g][m][c]["raw_data"]
+                    grouped_data = samples[s][g][m][c]["grouped_data"] = []
+                    merged_data = samples[s][g][m][c]["merged_data"] = []
+                    filtered_data = samples[s][g][m][c]["filtered_data"] = []
+                    cumulative_data = samples[s][g][m][c]["cumulative_data"] = {                            "sample_normalized_barcode_count": 0,
+                            "barcode_count": 0,
+                            "read_count": 0,
+                            "haplotypes": []}
+                    temp_data_points = copy.deepcopy(data_points)
+                    # group data points with same haplotype_ID together
+                    for i in range(len(temp_data_points)):
+                        di = temp_data_points[i]
+                        if di != "remove":
+                            same_haps = [di]
+                            for j in range(len(temp_data_points)):
+                                if i != j:
+                                    dj = temp_data_points[j]
+                                    if dj != "remove" and (di["haplotype_ID"] ==                                                            dj["haplotype_ID"]):
+                                        same_haps.append(dj)
+                                        temp_data_points[j] = "remove"
+                            grouped_data.append(same_haps)
+                    for dl in grouped_data:
+                        # find data point with most barcodes
+                        temp_barcode_count = 0
+                        best_data_index = 0
+                        for i in range(len(dl)):
+                            b = dl[i]["barcode_count"]
+                            if b > temp_barcode_count:
+                                temp_barcode_count = b
+                                best_data_index = i
+                        # use data point with more barcodes as base
+                        dm = copy.deepcopy(dl[best_data_index])
+                        for i in range(len(dl)):
+                            if i != best_data_index:
+                                dt = dl[i]
+                                for k in merge_keys:
+                                    dm[k] += dt[k]
+                        merged_data.append(dm)
+                    # filter haplotypes with insufficient count/frequency
+                    temp_barcode_counts = []
+                    for d in merged_data:
+                        temp_barcode_counts.append(d["barcode_count"])
+                    frac_threshold = min_barcode_fraction * sum(temp_barcode_counts)
+                    for d in merged_data:
+                        if d["barcode_count"] >= frac_threshold and                           d["barcode_count"] >= min_barcode_count:
+                            filtered_data.append(d)
+                    for d in filtered_data:
+                        for k in merge_keys:
+                            cumulative_data[k] += d[k]
+                        cumulative_data["haplotypes"].append(d["haplotype_ID"])
+    # get probe information across samples
+    template_dict = {"sample_normalized_barcode_count": [],
+                     "barcode_count": [],
+                     "read_count" : [],
+                     "haplotypes": [],
+                     "sample_names": []}
+    for s in samples:
+        for g in samples[s]:
+            for m in samples[s][g]:
+                for c in samples[s][g][m]:
+                    filtered_data = samples[s][g][m][c]["filtered_data"]
+                    cumulative_data = samples[s][g][m][c]["cumulative_data"]
+                    try:
+                        norm_counts = counts[g][m][c]["sample_normalized_barcode_count"]
+                    except KeyError:
+                        try:
+                            counts[g][m][c] = copy.deepcopy(template_dict)
+                        except KeyError:
+                            try:
+                                counts[g][m] = {c: copy.deepcopy(template_dict)}
+                            except KeyError:
+                                counts[g] = {m: {c: copy.deepcopy(template_dict)}}
+                    for k in merge_keys:
+                        counts[g][m][c][k].append(cumulative_data[k])
+                    counts[g][m][c]["sample_names"].append(s)
+                    counts[g][m][c]["haplotypes"].append(filtered_data)
+    sample_results_file = wdir + settings["perSampleResults"]
+    with open(sample_results_file, "w") as outfile:
+        json.dump(samples, outfile, indent=1)
+    probe_results_file = wdir + settings["perProbeResults"]
+    with open(probe_results_file, "w") as outfile:
+        json.dump(counts, outfile, indent=1)
+    return
+
+
+def get_unique_probes(settings):
+    wdir = settings["workingDir"]
+    unique_haplotype_file = wdir + settings["haplotypeDictionary"]
+    with open(unique_haplotype_file) as infile:
+        unique_haplotypes = json.load(infile)
+    with open(settings["callInfoDictionary"]) as infile:
+        call_info = json.load(infile)
+    # keep which copies a mip can be mapped to in copy_names dictionary
+    copy_names = {}
+    problem_copy_names = []
+    gene_names = []
+    for m in unique_haplotypes:
+        g = m.split("_")[0]
+        gene_names.append(g)
+        for h in unique_haplotypes[m]:
+            if unique_haplotypes[m][h]["mapped"]:
+                try:
+                    cn = unique_haplotypes[m][h]["copy_name"]
+                except KeyError:
+                    problem_copy_names.append(h)
+                try:
+                    copy_names[g][m].append(cn)
+                except KeyError:
+                    try:
+                        copy_names[g][m] = [cn]
+                    except KeyError:
+                        copy_names[g] = {m: [cn]}
+    for g in copy_names:
+        for m in copy_names[g]:
+            copy_names[g][m] = sorted(list(set(copy_names[g][m])))
+    # keep all copy names that have been observed for a gene in all_copies dict
+    all_copy_names = {}
+    all_copy_names_list = []
+    for g in copy_names:
+        cn = []
+        for m in copy_names[g]:
+            cn.extend(copy_names[g][m])
+        cn = sorted(list(set(cn)))
+        all_copy_names[g] = cn
+        all_copy_names_list.extend(cn)
+
+    # keep probe names that always maps to specific paralog copies in unique_keys
+    # uniq_keys[g][m1] = ["HBA1_C0", "HBA2_C1"]
+    uniq_keys = {}
+    # keep probe names that never maps to specific paralog copies in non_uniq_keys
+    # non_uniq_keys[g][m2] = ["HBA1_C0_HBA2_C1"]
+    non_uniq_keys = {}
+    # keep probe names that maps to specific paralog copies for some copies only
+    # in semi_uniq_keys [g][m3] = ["HBA1_C0"] (only maps C0 specifically)
+    #semi_uniq_keys = {}
+    # if a mip does not map to any target copy (always off target or never works)
+    no_copy_keys = {}
+    for g in all_copy_names:
+        copies = all_copy_names[g]
+        keys = sorted(list(call_info[g].keys()),
+                      key= lambda a: call_info[g][a]["copies"]["C0"]["capture_start"])
+        for k in keys:
+            try:
+                key_copies = copy_names[g][k]
+                nucopies = []
+                toss_copies = []
+                try:
+                    for c in key_copies:
+                        split_copies = c.split("_")
+                        nucopies.append([split_copies[i+1]                                              for i in range(0, len(split_copies), 2)])
+                except IndexError:
+                    print(split_copies)
+                    break
+                for i in range(len(nucopies)):
+                    query_list = nucopies[i]
+                    for j in range(len(nucopies)):
+                        target_list = nucopies[j]
+                        if i != j:
+                            for c in query_list:
+                                if c in target_list:
+                                    toss_copies.append(i)
+                toss_copies = list(set(toss_copies))
+                uniq_copies = [key_copies[i]                                for i in range(len(key_copies)) if i not in toss_copies]
+                non_uniq_copies = [key_copies[i]                                for i in range(len(key_copies)) if i in toss_copies]
+                if len(uniq_copies) > 0:
+                    try:
+                        uniq_keys[g][k] = uniq_copies
+                    except KeyError:
+                        uniq_keys[g] = {k: uniq_copies}
+                if len(non_uniq_copies) > 0:
+                    try:
+                        non_uniq_keys[g][k] = non_uniq_copies
+                    except KeyError:
+                        non_uniq_keys[g] = {k: non_uniq_copies}
+            except KeyError:
+                try:
+                    no_copy_keys[g].append(k)
+                except KeyError:
+                    no_copy_keys[g] = [k]
+    gene_names = sorted(gene_names)
+    result =  {"copy_names": copy_names,
+            "all_copy_names": all_copy_names,
+            "problem_copy_names": problem_copy_names,
+            "gene_names": gene_names,
+            "unique_probes": uniq_keys,
+            "non_unique_probes": non_uniq_keys,
+            "no_copy_probes": no_copy_keys}
+    uniq_file = wdir + settings["uniqueProbeFile"]
+    with open(uniq_file, "w") as outfile:
+        json.dump(result, outfile, indent = 1)
+    return
+
+
+def create_data_table (settings):
+    wdir = settings["workingDir"]
+    with open(settings["callInfoDictionary"]) as infile:
+        call_info = json.load(infile)
+    uniq_file = wdir + settings["uniqueProbeFile"]
+    with open(uniq_file) as infile:
+        uniq_dict = json.load(infile)
+    sample_results_file = wdir + settings["perSampleResults"]
+    with open(sample_results_file) as infile:
+        counts = json.load(infile)
+    sample_names = list(counts.keys())
+    big_table = []
+    all_tables = {}
+    for gene in call_info:
+        gene_info = call_info[gene]
+        try:
+            all_probes = uniq_dict["unique_probes"][gene]
+        except KeyError:
+            all_probes = {}
+        table = []
+        for p in all_probes:
+            for c in all_probes[p]:
+                split_copies = c.split("_")
+                if len(split_copies) == 2:
+                    c_id = c.split("_")[-1]
+                    probe_info = gene_info[p]["copies"][c_id]
+                    try:
+                        chrom = int(probe_info["chrom"][3:])
+                    except ValueError:
+                        chrom = 23
+                    start = probe_info["capture_start"]
+                    end = probe_info["capture_end"]
+                    ori = probe_info["orientation"]
+                    gc_frac = calculate_gc(probe_info["capture_sequence"])
+                elif len(split_copies) > 2:
+                    gc_list = []
+                    for i in range(0, len(split_copies), 2):
+                        c_id = split_copies[i+1]
+                        probe_info = gene_info[p]["copies"][c_id]
+                        gc_list.append(calculate_gc(probe_info["capture_sequence"]))
+                    gc_frac = np.mean(gc_list)
+                    start = "na"
+                    end = "na"
+                    ori = "na"
+                    chrom = 99
+                s_counts = []
+                for s in sample_names:
+                    try:
+                        bc = counts[s][gene][p][c]["cumulative_data"]                             ["sample_normalized_barcode_count"]
+                    except KeyError:
+                        bc = 0
+
+                    s_counts.append(bc)
+                p_counts = [gene, p, c, chrom, start, end, gc_frac, ori]
+                p_counts.extend(s_counts)
+                table.append(p_counts)
+                big_table.append(p_counts)
+        table = sorted(table, key = itemgetter(3, 4, 5))
+        all_tables[gene] = table
+    big_table = sorted(big_table, key = itemgetter(3, 4, 5))
+    result = {"tables": all_tables,
+            "big_table" : big_table,
+            "sample_names": sample_names}
+    tables_file = wdir + settings["tablesFile"]
+    with open(tables_file, "w") as outfile:
+        json.dump(result, outfile)
+    return
+
+
+def filter_tables (settings):
+    wdir = settings["workingDir"]
+    tables_file = wdir + settings["tablesFile"]
+    with open(tables_file) as infile:
+        tables_dic = json.load(infile)
+    tables = copy.deepcopy(tables_dic["tables"])
+    sample_info_file = wdir + settings["sampleInfoFile"]
+    with open(sample_info_file) as infile:
+        sample_info = json.load(infile)["samples"]
+    min_probe_median = int(settings["minimumProbeMedian"])
+    min_sample_median = int(settings["minimumSampleMedian"])
+    filtered_tables = {}
+    #normalized_tables = {}
+    #barcode_tables = {}
+    sample_names = copy.deepcopy(tables_dic["sample_names"])
+    sample_normalizers = np.asarray([sample_info[s]["sample_normalizer"] for s in sample_names])
+    sample_array = np.asarray(sample_names)
+    #filtered_samples = sample_array[sample_filter]
+    for g in tables:
+        t_array = np.asarray(tables[g])
+        split_array = np.hsplit(t_array, [8])
+        t_info = split_array[0]
+        t_data = np.array(split_array[1], float)
+        #s_filtered = t_data[:, sample_filter]
+        barcode_table = np.transpose(t_data)/sample_normalizers[:, np.newaxis]
+        try:
+            probe_filter = np.median(t_data, axis = 1) >= min_probe_median
+        except IndexError:
+            continue
+        sample_filter = np.median(barcode_table, axis = 1) >= min_sample_median
+        info_filtered = t_info[probe_filter, :]
+        data_filtered = t_data[:, sample_filter]
+        data_filtered = data_filtered[probe_filter, :]
+        median_normalized = 2*(data_filtered / np.median(data_filtered, axis = 1)[:,np.newaxis])
+        barcode_filtered = np.transpose(barcode_table)[:, sample_filter]
+        barcode_filtered = barcode_filtered[probe_filter, :]
+        #filtered_data = np.hstack((info_filtered, data_filtered))
+        #normalized_data = np.hstack((info_filtered, median_normalized))
+        #barcode_data = np.hstack((info_filtered, barcode_filtered))
+        filtered_tables[g] = {"probe_information":info_filtered,
+                              "barcode_counts": barcode_filtered,
+                              "sample_normalized_barcode_counts": data_filtered,
+                              "median_normalized_copy_counts": median_normalized,
+                              "sample_names": sample_array[sample_filter]}
+        #normalized_tables[g] = normalized_data
+        #barcode_tables [g] = barcode_data
+    filtered_tables_file = wdir + settings["filteredTablesFile"]
+    with open(filtered_tables_file, "wb") as outfile:
+        pickle.dump(filtered_tables, outfile)
+    return
+
+
+def generate_clusters(settings):
+    cluster_output = {}
+    problem_clusters = []
+    wdir = settings["workingDir"]
+    filtered_tables_file = wdir + settings["filteredTablesFile"]
+    with open(filtered_tables_file, 'rb') as infile:
+        tables = pickle.load(infile)
+    case_file = wdir + settings["caseFile"]
+    case_status = {}
+    try:
+        with open(case_file) as infile:
+            for line in infile:
+                newline = line.strip().split("\t")
+                case_status[newline[0]] = newline[1]
+    except IOError:
+        pass
+    for g in tables:
+        try:
+            probes = list(tables[g]["probe_information"][:, 1])
+            uniq_probes = []
+            for p in probes:
+                if p not in uniq_probes:
+                    uniq_probes.append(p)
+            sample_names = tables[g]["sample_names"]
+            labels = []
+            for s in sample_names:
+                try:
+                    labels.append(case_status[s])
+                except KeyError:
+                    labels.append("na")
+            copy_counts = tables[g]["median_normalized_copy_counts"]
+            barcode_counts = np.transpose(tables[g]["sample_normalized_barcode_counts"])
+            collapsed_counts = np.zeros((len(uniq_probes), len(sample_names)))
+            for i in range(len(uniq_probes)):
+                u = uniq_probes[i]
+                for j in range(len(probes)):
+                    p = probes[j]
+                    if u == p:
+                        collapsed_counts[i] += copy_counts[j]
+            repeat_counts = []
+            for u in uniq_probes:
+                repeat_counts.append(probes.count(u))
+            upper_limit = np.asarray(repeat_counts)*2 + 0.5
+            lower_limit = np.asarray(repeat_counts)*2 - 0.5
+            copy_counts = np.transpose(copy_counts)
+            collapsed_counts = np.transpose(collapsed_counts)
+            ts = TSNE(n_components=2, init = "pca", random_state=0, perplexity=100)
+            #ts = TSNE(n_components=2, init = "pca", random_state=0, perplexity=30)
+            #Y  = ts.fit_transform(copy_counts)
+            Y  = ts.fit_transform(barcode_counts)
+            ts = TSNE(n_components=2, init = "pca", random_state=0, perplexity=50)
+            V  = ts.fit_transform(Y)
+            U  = ts.fit_transform(V)
+            T  = ts.fit_transform(U)
+            tsne_keys = {"Y": Y, "V": V, "U": U, "T": T}
+            ms = MeanShift(bandwidth = 5, cluster_all = True)
+            ms.fit(tsne_keys[settings["tsneKey"]])
+            cluster_labels = ms.labels_
+            cluster_centers = ms.cluster_centers_
+            labels_unique = np.unique(cluster_labels)
+            n_clusters_ = len(labels_unique)
+            cluster_dict = {"cluster_labels" : cluster_labels,
+                            "unique_probes": uniq_probes,
+                           "all_probes": probes,
+                           "plotting": {"upper_limit": upper_limit,
+                                        "lower_limit": lower_limit},
+                           "mean_shift": ms,
+                           "tsne": {"median": copy_counts,
+                                    "collapsed_median": collapsed_counts,
+                                    "T": T,
+                                    "U": U,
+                                    "V": V,
+                                    "Y": Y},
+                           "clusters": {}}
+            for k in range(n_clusters_):
+                my_members = cluster_labels == k
+                cluster_center = cluster_centers[k]
+                cluster_case_count = list(np.asarray(labels)[my_members]).count("case")
+                cluster_control_count = list(np.asarray(labels)[my_members]).count("control")
+                other_case_count = labels.count("case") - cluster_case_count
+                other_control_count = labels.count("control") - cluster_control_count
+                cluster_table = [[cluster_case_count, cluster_control_count],
+                                 [other_case_count, other_control_count]]
+                try:
+                    cluster_fish = fisher_exact(cluster_table)
+                except:
+                    cluster_fish = ["na", "na"]
+                try:
+                    cluster_chi = chi2_contingency(cluster_table)
+                except:
+                    cluster_chi = ["na", "na", "na", "na"]
+                cluster_dict["clusters"][k] = {"cluster_table": cluster_table,
+                           "cluster_stats": {"fisher": {"OR": cluster_fish[0],
+                                                        "pvalue": cluster_fish[1]},
+                                             "chi": {"pvalue": cluster_chi[1],
+                                                     "expected": cluster_chi[3]}},
+                           "cluster_data": copy_counts[my_members],
+                           "cluster_medians": np.median(copy_counts[my_members], axis=0),
+                           "cluster_samples": sample_names[my_members],
+                           "cluster_members": my_members,
+                           "collapsed_data": collapsed_counts[my_members],
+                           "collapsed_medians": np.median(collapsed_counts[my_members], axis=0)
+                           }
+            cluster_output[g] = cluster_dict
+        except Exception:
+            problem_clusters.append([g, e])
+    cluster_output_file = wdir + settings["clusterOutputFile"]
+    with open(cluster_output_file, "wb") as outfile:
+        pickle.dump(cluster_output, outfile)
+    return problem_clusters
+
+
+def dbscan_clusters(settings):
+    cluster_output = {}
+    problem_clusters = []
+    wdir = settings["workingDir"]
+    cluster_output_file = wdir + settings["clusterOutputFile"]
+    with open(cluster_output_file, "rb") as infile:
+        cnv_calls = pickle.load(infile)
+    filtered_tables_file = wdir + settings["filteredTablesFile"]
+    with open(filtered_tables_file, "rb") as infile:
+        tables = pickle.load(infile)
+    case_file = wdir + settings["caseFile"]
+    case_status = {}
+    try:
+        with open(case_file) as infile:
+            for line in infile:
+                newline = line.strip().split("\t")
+                case_status[newline[0]] = newline[1]
+    except IOError:
+        pass
+    tsne_key = settings["tsneKey"]
+    tsne_plot_key = settings["tsnePlotKey"]
+    min_samples = int(settings["minClusterSamples"])
+    max_unclustered_frac = float(settings["maxUnclusteredFrac"])
+    max_cluster_count = int(settings["maxClusterCount"])
+    #tsne_keys = {"Y": Y, "V": V, "U": U, "T": T}
+    for g in tables:
+        try:
+            probes = list(tables[g]["probe_information"][:, 1])
+            uniq_probes = []
+            for p in probes:
+                if p not in uniq_probes:
+                    uniq_probes.append(p)
+            sample_names = tables[g]["sample_names"]
+            labels = []
+            for s in sample_names:
+                try:
+                    labels.append(case_status[s])
+                except KeyError:
+                    labels.append("na")
+            copy_counts = tables[g]["median_normalized_copy_counts"]
+            collapsed_counts = np.zeros((len(uniq_probes), len(sample_names)))
+            for i in range(len(uniq_probes)):
+                u = uniq_probes[i]
+                for j in range(len(probes)):
+                    p = probes[j]
+                    if u == p:
+                        collapsed_counts[i] += copy_counts[j]
+            repeat_counts = []
+            for u in uniq_probes:
+                repeat_counts.append(probes.count(u))
+            upper_limit = np.asarray(repeat_counts)*2 + 0.5
+            lower_limit = np.asarray(repeat_counts)*2 - 0.5
+            copy_counts = np.transpose(copy_counts)
+            collapsed_counts = np.transpose(collapsed_counts)
+            Y = cnv_calls[g]["tsne"][tsne_key]
+            P = cnv_calls[g]["tsne"][tsne_plot_key]
+            cluster_count = []
+            eps_range = np.arange(2., 11.)/2
+            for eps in eps_range:
+                db = DBSCAN( eps = eps, min_samples = min_samples).fit(Y)
+                cluster_labels = db.labels_
+                unclustered = float(list(cluster_labels).count(-1))/len(cluster_labels)
+                # Number of clusters in labels, ignoring noise if present.
+                n_clusters_ = len(set(cluster_labels)) - (1 if -1 in cluster_labels else 0)
+                cluster_count.append([n_clusters_, unclustered])
+            # find the best clustering
+            indexes_PF = []
+            for i in range(len(cluster_count)):
+                cc = cluster_count[i][0]
+                un = cluster_count[i][1]
+                if cc <= max_cluster_count and un <= max_unclustered_frac :
+                    indexes_PF.append(i)
+            if len(indexes_PF) == 0:
+                problem_clusters.append([g, "no clusters found!"])
+                continue
+            else:
+                if len(indexes_PF) == 1:
+                    best_index = indexes_PF[0]
+                else:
+                    best_index = indexes_PF[0]
+                    for i in indexes_PF[1:]:
+                        cc = cluster_count[i][0]
+                        best_cc = cluster_count[best_index][0]
+                        if best_cc == cc:
+                            best_index = i
+                db = DBSCAN( eps = eps_range[best_index], min_samples = min_samples).fit(Y)
+                cluster_labels = db.labels_
+                unclustered = float(list(cluster_labels).count(-1))/len(cluster_labels)
+                # Number of clusters in labels, ignoring noise if present.
+                n_clusters_ = len(set(cluster_labels)) - (1 if -1 in cluster_labels else 0)
+            #cluster_labels = ms.labels_
+            #cluster_centers = ms.cluster_centers_
+            labels_unique = np.unique(cluster_labels)
+            cluster_dict = {"cluster_labels" : cluster_labels,
+                            "unique_probes": uniq_probes,
+                           "all_probes": probes,
+                           "plotting": {"upper_limit": upper_limit,
+                                        "lower_limit": lower_limit},
+                           "mean_shift": cnv_calls[g]["mean_shift"],
+                           "dbscan": db,
+                           "tsne": cnv_calls[g]["tsne"],
+                           "clusters": {}}
+            for k in range(n_clusters_):
+                my_members = cluster_labels == k
+                #cluster_center = cluster_centers[k]
+                cluster_case_count = list(np.asarray(labels)[my_members]).count("case")
+                cluster_control_count = list(np.asarray(labels)[my_members]).count("control")
+                other_case_count = labels.count("case") - cluster_case_count
+                other_control_count = labels.count("control") - cluster_control_count
+                cluster_table = [[cluster_case_count, cluster_control_count],
+                                 [other_case_count, other_control_count]]
+                try:
+                    cluster_fish = fisher_exact(cluster_table)
+                except:
+                    cluster_fish = ["na", "na"]
+                try:
+                    cluster_chi = chi2_contingency(cluster_table)
+                except:
+                    cluster_chi = ["na", "na", "na", "na"]
+                cluster_dict["clusters"][k] = {"cluster_table": cluster_table,
+                           "cluster_stats": {"fisher": {"OR": cluster_fish[0],
+                                                        "pvalue": cluster_fish[1]},
+                                             "chi": {"pvalue": cluster_chi[1],
+                                                     "expected": cluster_chi[3]}},
+                           "cluster_data": copy_counts[my_members],
+                           "cluster_medians": np.median(copy_counts[my_members], axis=0),
+                           "cluster_samples": sample_names[my_members],
+                           "cluster_members": my_members,
+                           "collapsed_data": collapsed_counts[my_members],
+                           "collapsed_medians": np.median(collapsed_counts[my_members], axis=0)
+                           }
+                cluster_output[g] = cluster_dict
+        except Exception as e:
+            problem_clusters.append([g, e])
+    db_output_file = wdir + settings["dbScanOutputFile"]
+    with open(db_output_file, "wb") as outfile:
+        pickle.dump(cluster_output, outfile)
+    return problem_clusters
+
+
+def plot_clusters(settings, cluster_method="dbscan"):
+    wdir = settings["workingDir"]
+    if cluster_method == "dbscan":
+        cluster_output_file = wdir + settings["dbScanOutputFile"]
+    else :
+        cluster_output_file = wdir + settings["clusterOutputFile"]
+    with open(cluster_output_file, "rb") as infile:
+        cnv_calls = pickle.load(infile)
+    filtered_tables_file = wdir + settings["filteredTablesFile"]
+    with open(filtered_tables_file, "rb") as infile:
+        all_tables = pickle.load(infile)
+    figsize = tuple(map(int, settings["figsize"]))
+    ymax = int(settings["ymax"])
+    if cluster_method == "dbscan":
+        image_dir = wdir + "dbscan_images/"
+    else:
+        image_dir = wdir + "cluster_images/"
+    if not os.path.exists(image_dir):
+        os.makedirs(image_dir)
+    for gene_name in cnv_calls:
+        clusters = cnv_calls[gene_name]["clusters"]
+        tables = all_tables[gene_name]
+        probe_table = tables["probe_information"]
+        copies = [probe_table[0,2]]
+        locations = [0]
+        for i in range(len(probe_table) -1):
+            current_copy = probe_table[i+1, 2]
+            if current_copy != copies[-1]:
+                copies.append(current_copy)
+                locations.extend([i, i+1])
+        locations.append(len(probe_table))
+        locations = [[locations[i], locations[i+1]] for i in range(0, len(locations), 2)]
+        upper_limit = cnv_calls[gene_name]["plotting"]["upper_limit"]
+        lower_limit = cnv_calls[gene_name]["plotting"]["lower_limit"]
+        fig1 = plt.figure(figsize=figsize)
+        fig2 = plt.figure(figsize=figsize)
+        fig3 = plt.figure(figsize=figsize)
+        for c in range(len(clusters)):
+            ax1 = fig1.add_subplot(len(clusters), 1, c)
+            ax2 = fig2.add_subplot(len(clusters), 1, c)
+            ax3 = fig3.add_subplot(len(clusters), 1, c)
+            #ax1 = axarray[c]
+            #fig, ax1 = plt.subplots()
+            plot_data = clusters[c]["cluster_data"]
+            median_data = clusters[c]["cluster_medians"]
+            collapsed_median = clusters[c]["collapsed_medians"]
+            odds = clusters[c]["cluster_stats"]["fisher"]["OR"]
+            fish_p = clusters[c]["cluster_stats"]["fisher"]["pvalue"]
+            chi_p = clusters[c]["cluster_stats"]["chi"]["pvalue"]
+            cluster_size = len(clusters[c]["cluster_samples"])
+            cluster_summary_list = ["cluster size " + str(cluster_size),
+                                    "odds ratio " + str(odds),
+                                    "fisher's exact pvalue " + str(fish_p),
+                                    "chi squared pvalue " + str(chi_p)]
+            cluster_summary = "\n".join(cluster_summary_list)
+            for d in plot_data:
+                ax1.plot(d, lw = 0.2)
+            ax1.axhline(1.5, lw = 2, c = "r")
+            ax1.axhline(2.5, lw = 2, c = "g")
+            ax2.plot(median_data, lw = 1, c = "k")
+            ax2.axhline(1.5, lw = 2, c = "r")
+            ax2.axhline(2.5, lw = 2, c = "g")
+            ax3.plot(collapsed_median, lw = 1, c = "k")
+            ax3.plot(upper_limit, lw = 2, c = "g")
+            ax3.plot(lower_limit, lw = 2, c = "r")
+            colors = ["y", "k"]
+            for i in range(len(copies)):
+                copyname = copies[i]
+                loc = locations[i]
+                ax1.plot(np.arange(loc[0]-1, loc[1]+1), np.zeros(loc[1]- loc[0]+2),
+                         lw = 8, c = colors[i%2])
+                ax1.text(x = np.mean(loc), y = - 0.5, s = copyname, fontsize = 10,
+                         horizontalalignment = "right", rotation = "vertical")
+                ax2.plot(np.arange(loc[0]-1, loc[1]+1), np.zeros(loc[1]- loc[0]+2),
+                         lw = 2, c = colors[i%2])
+                ax2.plot(np.arange(loc[0]-1, loc[1]+1), np.zeros(loc[1]- loc[0]+2),
+                         lw = 8, c = colors[i%2])
+                ax2.text(x = np.mean(loc), y = - 0.5, s = copyname, fontsize = 10,
+                         horizontalalignment = "right", rotation = "vertical")
+            ax1.legend(cluster_summary_list, loc= "upper right", fontsize=8)
+            ax1.set_title("Gene " + gene_name + " cluster " + str(c))
+            ax1.set_ylim([0,ymax])
+            ax2.legend(cluster_summary_list, loc= "upper right", fontsize=8)
+            #ax1.annotate(cluster_summary, xy=(-12, -12), xycoords='axes points',
+            #    size=10, ha='right', va='top',bbox=dict(boxstyle='round', fc='w'))
+            #ax2.annotate(cluster_summary, xy=(-12, -12), xycoords='axes points',
+            #    size=8, ha='right', va='top',bbox=dict(boxstyle='round', fc='w'))
+            ax2.set_title("Gene " + gene_name + " cluster " + str(c))
+            ax2.set_ylim([0,ymax])
+            ax3.legend(cluster_summary_list, loc= "upper right", fontsize=8)
+            ax3.set_title("Gene " + gene_name + " cluster " + str(c))
+            ax3.set_ylim([0,2*ymax])
+        # plot clusters
+        if cluster_method == "dbscan":
+            ms = cnv_calls[gene_name]["dbscan"]
+            Y_plot = cnv_calls[gene_name]["tsne"]["Y"]
+            T_plot = cnv_calls[gene_name]["tsne"]["V"]
+        else:
+            ms = cnv_calls[gene_name]["mean_shift"]
+            Y_plot = cnv_calls[gene_name]["tsne"]["Y"]
+            T_plot = cnv_calls[gene_name]["tsne"]["T"]
+        cluster_labels = ms.labels_
+        labels_unique = np.unique(cluster_labels)
+        colors = plt.cm.Spectral(np.linspace(0, 1, len(labels_unique)))
+        n_clusters_ = len(set(cluster_labels)) - (1 if -1 in cluster_labels else 0)
+        fig4 = plt.figure()
+        if cluster_method != "dbscan":
+            ax4 = fig4.add_subplot(2,1,2)
+            ax5 = fig4.add_subplot(2,1,1)
+            cluster_centers = ms.cluster_centers_
+            for k, col in zip(labels_unique, colors):
+                if k == -1:
+                    # Black used for noise.
+                    col = 'k'
+                my_members = cluster_labels == k
+                cluster_center = cluster_centers[k]
+                ax5.plot(T_plot[my_members, 0], T_plot[my_members, 1],
+                         'o', markerfacecolor=col,
+                     markeredgecolor='k', markersize=5)
+                ax5.plot(cluster_center[0], cluster_center[1], 'o', markerfacecolor="w",
+                         markeredgecolor='k', markersize=14)
+                ax5.annotate(str(k), xy = cluster_center, ha="center",
+                             va = "center", fontsize = 12)
+        else:
+            ax4 = fig4.add_subplot(1,1,1)
+        for k, col in zip(labels_unique, colors):
+            if k == -1:
+                # Black used for noise.
+                col = 'k'
+            my_members = cluster_labels == k
+            ax4.plot(Y_plot[my_members, 0], Y_plot[my_members, 1],
+                     'o', markerfacecolor=col,
+                     markeredgecolor='k', markersize=5)
+            ax4.plot(np.mean(Y_plot[my_members, 0]), np.mean(Y_plot[my_members, 1]),
+                     'o', markerfacecolor="w",
+                     markeredgecolor='k', markersize=14)
+            ax4.annotate(str(k), xy = (np.mean(Y_plot[my_members, 0]),
+                                       np.mean(Y_plot[my_members, 1])),
+                         ha="center",
+                         va = "center", fontsize = 12)
+        if cluster_method == "dbscan":
+            ax4.set_title(gene_name + " DBSCAN clusters")
+        else:
+            ax4.set_title(gene_name + " meanshift clusters")
+            ax5.set_title(gene_name + " tSNE clusters")
+        # save figures
+        fig1.tight_layout(pad = 1, w_pad = 1, h_pad = 10)
+        fig2.tight_layout(pad = 1, w_pad = 1, h_pad = 10)
+        fig3.tight_layout(pad = 1, w_pad = 1, h_pad = 10)
+        fig1.savefig(image_dir + gene_name, dpi = 96)
+        fig2.savefig(image_dir + gene_name + "_medians", dpi = 96)
+        fig3.savefig(image_dir + gene_name + "_collapsed", dpi = 96)
+        fig4.savefig(image_dir + gene_name + "_meanshift", dpi = 96)
+        plt.close("all")
+    return
+
+
+###############################################################################
+# END older analysis functions.
+###############################################################################
+
+
+###############################################################################
+# general use functions.
+###############################################################################
+
+def check_overlap(r1, r2, padding=0):
+    """ Check if two regions overlap. Regions are given as lists of chrom (str),
+    begin (int), end (int)."""
+    # check chromosome equivalency
+    o1 = r1[0] == r2[0]
+    # check interval overlap
+    merged = merge_overlap([r1[1:], r2[1:]], padding)
+    o2 = len(merged) == 1
+    return o1 & o2
+
+
+def make_region(chromosome, begin, end):
+    """ Create region string from coordinates.
+    takes 2 (1 for human 1-9) digit chromosome,
+    begin and end positions (1 indexed)"""
+    region = "chr" + str(chromosome) + ":" + str(begin) + "-" + str(end)
+    return region
+
+
+def create_region(chromosome, begin, end):
+    """ Create region string from coordinates.
+    chromosome string,
+    begin and end positions (1 indexed)"""
+    region = chromosome + ":" + str(begin) + "-" + str(end)
+    return region
+
+
+def get_coordinates(region):
+    """ Define coordinates chr, start pos and end positions
+    from region string chrX:start-end. Return coordinate list.
+    """
+    chromosome = region.split(":")[0]
+    coord = region.split(":")[1]
+    coord_list = coord.split("-")
+    begin = int(coord_list[0])
+    end = int(coord_list[1])
+    return [chromosome, begin, end]
+
+
+def get_fasta(region, species="pf", offset=1, header="na"):
+    """ Take a region string (chrX:begin-end (1 indexed)),
+    and species (human=hs, plasmodium= pf),Return fasta record.
+    """
+    if offset == 0:
+        region_coordinates = get_coordinates(region)
+        region = (region_coordinates[0] + ":" + str(region_coordinates[1] + 1)
+                  + "-" + str(region_coordinates[2]))
+    region = region.encode("utf-8")
+    file_locations = get_file_locations()
+    genome_fasta = file_locations[species]["fasta_genome"].encode("utf-8")
+    fasta = pysam.faidx(genome_fasta, region)
+    if header != "na":
+        fasta_seq = "\n".join(fasta.split("\n")[1:])
+        fasta = ">" + header + "\n" + fasta_seq
+    return fasta
+
+
+def get_fasta_list(regions, species):
+    """ Take a list of regions and return fasta sequences."""
+    if len(regions) == 0:
+        print("Region list is empty.")
+        return
+    file_locations = get_file_locations()
+    genome_fasta = file_locations[species]["fasta_genome"]
+    region_file = "/tmp/regions_" + id_generator(10) + ".txt"
+    with open(region_file, "w") as outfile:
+        for r in regions:
+            outfile.write(r + "\n")
+    fasta_dic = {}
+    command = ["samtools",  "faidx", "-r", region_file, genome_fasta]
+    out = subprocess.check_output(command).decode("UTF-8")
+    fasta_list = out.split(">")[1:]
+    for f in fasta_list:
+        fl = f.strip().split("\n")
+        fhead = fl[0]
+        fseq = "".join(fl[1:])
+        fasta_dic[fhead] = fseq
+    return fasta_dic
+
+
+def create_fasta_file(region, species, output_file):
+    if not os.path.exists(output_file):
+        os.makedirs(output_file)
+    with open(output_file, "a") as outfile:
+        outfile.write(get_fasta(region, species))
+
+
+def merge_overlap(intervals, spacer=0):
+    """ Merge overlapping intervals. Take a list of lists of 2 elements,
+    [start, stop], check if any [start, stop] pairs overlap and merge if any.
+    Return the merged [start, stop] list.
+    """
+    exons = copy.deepcopy(intervals)
+    exons = [e for e in exons if len(e) == 2]
+    for e in exons:
+        e.sort()
+    exons.sort()
+    if len(exons) < 2:
+        return exons
+    # reuse a piece of code from get_exons:
+    #######################################
+    overlapping = 1
+    while overlapping:
+        overlapping = 0
+        for i in range(len(exons)):
+            e = exons[i]
+            for j in range(len(exons)):
+                x = exons[j]
+                if i == j:
+                    continue
+                else:
+                    if e[1] >= x[1]:
+                        if (e[0] - x[1]) <= spacer:
+                            overlapping = 1
+                    elif x[1] >= e[1]:
+                        if (x[0] - e[1]) <= spacer:
+                            ovrelapping = 1
+                    if overlapping:
+                        # merge exons and add to the exon list
+                        exons.append([min(e[0], x[0]), max(e[1], x[1])])
+                        # remove the exons e and x
+                        exons.remove(e)
+                        exons.remove(x)
+                        # once an overlapping exon is found, break out of the for loop
+                        break
+            if overlapping:
+                # if an overlapping exon is found, stop this for loop and continue with the
+                # while loop with the updated exon list
+                break
+    exons.sort()
+    return exons
+
+
+def overlap(reg1, reg2, spacer=0):
+    """
+    Return overlap between two regions.
+    e.g. [10, 30], [20, 40] returns [20, 30]
+    """
+    regions = sorted([sorted(reg1), sorted(reg2)])
+    try:
+        if regions[0][1] - regions[1][0] >= spacer:
+            return[max([regions[0][0], regions[1][0]]),
+                   min([regions[0][1], regions[1][1]])]
+        else:
+            return []
+    except IndexError:
+        return []
+
+
+def remove_overlap(reg1, reg2, spacer = 0):
+    """
+    Remove overlap between two regions.
+    e.g. [10, 30], [20, 40] returns [10, 20], [30, 40]
+    """
+    regions = sorted([sorted(reg1), sorted(reg2)])
+    try:
+        if regions[0][1] - regions[1][0] >= spacer:
+            coords = sorted(reg1 + reg2)
+            return[[coords[0], coords[1]],
+                   [coords[2], coords[3]]]
+        else:
+            return regions
+    except IndexError:
+        return []
+
+
+def subtract_overlap (uncovered_regions, covered_regions, spacer=0):
+    """
+    Given two sets of regions in the form
+    [[start, end], [start, end]], return a set
+    of regions that is the second set subtracted from
+    the first.
+    """
+    uncovered_set = set()
+    for r in uncovered_regions:
+        try:
+            uncovered_set.update(list(range(r[0], r[1] + 1)))
+        except IndexError:
+            pass
+    covered_set = set()
+    for r in covered_regions:
+        try:
+            covered_set.update(list(range(r[0], r[1] + 1)))
+        except IndexError:
+            pass
+    uncovered_remaining = sorted(uncovered_set.difference(covered_set))
+    if len(uncovered_remaining) > 0:
+        uncovered = [[uncovered_remaining[i-1],
+                      uncovered_remaining[i]] for i in \
+                     range(1, len(uncovered_remaining))\
+                    if uncovered_remaining[i] - uncovered_remaining[i-1]\
+                     > 1]
+        unc = [uncovered_remaining[0]]
+        for u in uncovered:
+            unc.extend(u)
+        unc.append(uncovered_remaining[-1])
+        return [[unc[i], unc[i+1]]for i in range(0, len(unc), 2)               if unc[i+1] - unc[i] > spacer]
+    else:
+        return []
+
+
+def trim_overlap (region_list, low=0.1, high=0.9, spacer=0):
+    """
+    Given a set of regions in the form [[start, end], [start, end]],
+    return a set of regions with any overlapping parts trimmed
+    when overlap size / smaller region size ratio is lower than "low";
+    or flanking region outside of overlap is trimmed when the ratio
+    is higher than "high".
+    """
+    do_trim = True
+    while do_trim:
+        do_trim = False
+        break_for = False
+        region_list = [r for r in region_list if r != "remove"]
+        for i in range(len(region_list)):
+            if break_for:
+                break
+            else:
+                for j in range(len(region_list)):
+                    if i != j:
+                        reg_i = region_list[i]
+                        reg_j = region_list[j]
+                        if reg_i == reg_j:
+                            region_list[i] = "remove"
+                            break_for = True
+                            do_trim = True
+                            break
+                        else:
+                            overlapping_region = overlap(reg_i, reg_j, spacer)
+                            if len(overlapping_region) > 0:
+                                reg_sizes = sorted([reg_i[1] - reg_i[0] + 1,
+                                                    reg_j[1] - reg_j[0] + 1])
+                                overlap_size = float(overlapping_region[1]                                                     - overlapping_region[0])
+                                overlap_ratio = overlap_size/reg_sizes[0]
+                                if overlap_ratio <= low:
+                                    region_list[i] = "remove"
+                                    region_list[j] = "remove"
+                                    region_list.extend(remove_overlap(reg_i, reg_j, spacer))
+                                    break_for = True
+                                    do_trim = True
+                                    break
+                                elif overlap_ratio >= high:
+                                    region_list[i] = "remove"
+                                    region_list[j] = "remove"
+                                    region_list.append(overlapping_region)
+                                    break_for = True
+                                    do_trim = True
+                                    break
+                                else:
+                                    print((overlap_ratio, "is outside trim range for ",                                    reg_i, reg_j))
+
+    return region_list
+
+
+def fasta_parser(fasta):
+    """ Convert a fasta file with multiple sequences
+    to a dictionary with fasta headers as keys and sequences
+    as values."""
+    fasta_dic = {}
+    with open(fasta) as infile:
+        for line in infile:
+            # find the headers
+            if line.startswith(">"):
+                header = line[1:-1].split(" ")[0]
+                if header in fasta_dic:
+                    print(("%s occurs multiple times in fasta file" % header))
+                fasta_dic[header] = ""
+                continue
+            try:
+                fasta_dic[header] = fasta_dic[header] + line.strip()
+            except KeyError:
+                fasta_dic[header] = line.strip()
+    return fasta_dic
+
+
+def fasta_to_sequence(fasta):
+    """ Convert a fasta sequence to one line sequence"""
+    f = fasta.strip().split("\n")
+    if len(f) > 0:
+        return "".join(f[1:])
+    else:
+        return ""
+
+
+def get_sequence(region, species):
+    return fasta_to_sequence(get_fasta(region, species))
+
+
+def unmask_fasta(masked_fasta, unmasked_fasta):
+    """ Unmask lowercased masked fasta file, save """
+    with open(masked_fasta) as infile, open(unmasked_fasta, "w") as outfile:
+        for line in infile:
+            if not line.startswith((">", "#")):
+                outfile.write(line.upper())
+            else:
+                outfile.write(line)
+    return
+
+
+def fasta_to_fastq(fasta_file, fastq_file):
+    """ Create a fastq file from fasta file with dummy quality scores."""
+    fasta = fasta_parser(fasta_file)
+    fastq_list = []
+    for f in fasta:
+        fastq_list.append("@" + f)
+        fastq_list.append(fasta[f])
+        fastq_list.append("+")
+        fastq_list.append("H" * len(fasta[f]))
+    with open(fastq_file, "w") as outfile:
+        outfile.write("\n".join(fastq_list))
+    return
+
+
+def get_data(settings_file):
+    settings = get_analysis_settings(settings_file)
+    get_haplotypes(settings)
+    align_haplotypes(settings)
+    parse_aligned_haplotypes(settings)
+    update_aligned_haplotypes(settings)
+    update_unique_haplotypes(settings)
+    update_variation(settings)
+    get_raw_data(settings)
+    return
+
+
+def analyze_data(settings_file):
+    settings = get_analysis_settings(settings_file)
+    group_samples(settings)
+    update_raw_data(settings)
+    get_counts(settings)
+    return
+
+
+def process_data(wdir, run_ids):
+    for rid in run_ids:
+        settings_file = wdir + "settings_" + rid
+        get_data(settings_file)
+        analyze_data(settings_file)
+    return
+
+
 def combine_sample_data(gr):
     """ Combine data from multiple sequencing runs for the same sample.
 
@@ -10344,19 +9930,13 @@ def combine_info_files(wdir,
         run_meta.append(current_run_meta)
     run_meta = pd.concat(run_meta, ignore_index=True)
     if sample_sets is not None:
-        for s in sample_sets:
-            s.append("Temp")
         sps = pd.DataFrame(sample_sets, columns=["sample_set",
-                                                 "probe_set",
-                                                 "Temp"])
+                                                 "probe_set"])
     else:
         sps = run_meta.groupby(
             ["sample_set", "probe_set"]
         ).first().reset_index()[["sample_set", "probe_set"]]
-        sps["Temp"] = "Temp"
-    run_meta = run_meta.merge(sps, how="inner").drop(
-        "Temp", axis=1
-    )
+    run_meta = run_meta.merge(sps, how="inner")
     run_meta_collapsed = run_meta.groupby(
         ["sample_name", "capital_set", "replicate", "Library Prep"]
     ).first().reset_index()[["sample_name", "capital_set",
@@ -10441,6 +10021,9 @@ def combine_info_files(wdir,
     hap_ids = pd.concat(h_list, ignore_index=True)
     info = info.merge(hap_ids)
     info.to_csv(wdir + combined_file, index=False, sep="\t")
+    info.groupby(["gene_name", "mip_name", "haplotype_ID"])[
+        "haplotype_sequence"].first().reset_index().to_csv(
+            wdir + "unique_haplotypes.csv", index=False)
     run_meta = run_meta.groupby("Sample ID").first().reset_index()
     run_meta = run_meta.drop(["Sample ID",
                               "sample_set",
@@ -10464,6 +10047,8 @@ def update_probe_sets(mipset_table = "/opt/resources/mip_ids/mipsets.csv",
     with open(mipset_json, "w") as outfile:
         json.dump(mipset_dict, outfile, indent = 1)
     return
+
+
 def generate_mock_fastqs(settings_file):
     """
     Generate fastq files for each sample. These files will have stitched and
@@ -10613,6 +10198,8 @@ def get_ternary_genotype(gen):
     except ValueError:
         g = np.nan
     return g
+
+
 def variation_to_geno(settings, var_file, output_prefix):
     """
     Create PLINK files from variation table file.
@@ -10726,6 +10313,8 @@ def variation_to_geno(settings, var_file, output_prefix):
     write_list([["**", o] + genes[o] for o in ordered_genes],
                wdir + output_prefix + ".hlist")
     return
+
+
 def absence_presence(col, min_val = 1):
     """
     Given a numerical dataframe column, convert to binary values
@@ -10734,6 +10323,8 @@ def absence_presence(col, min_val = 1):
     """
     return pd.Series([0 if (c < min_val or np.isnan(c))
                       else 1 for c in col.tolist()])
+
+
 def plot_performance(barcode_counts,
                     tick_label_size = 8,
                     cbar_label_size = 5,
@@ -10788,35 +10379,35 @@ def plot_performance(barcode_counts,
     ax.set_ylabel("Samples")
     ax.set_xlabel("Probes")
     fig.suptitle("Performance",
-                verticalalignment="bottom")
+                 verticalalignment="bottom")
     fig.tight_layout()
-    cbar = fig.colorbar(heat, ticks = [0, 1],
-                            shrink = 0.2
-                       )
+    cbar = fig.colorbar(heat, ticks=[0, 1], shrink=0.2)
     cbar.ax.tick_params(labelsize=cbar_label_size)
     cbar.ax.set_yticklabels(["Absent", "Present"])
     fig.set_dpi(dpi)
     fig.tight_layout()
     if save:
         fig.savefig(wdir + "performance.png",
-                    dpi = dpi,
+                    dpi=dpi,
                    bbox_inches='tight')
         plt.close("all")
     else:
         return fig,ax
     return
+
+
 def plot_coverage(barcode_counts,
-                    tick_label_size = 8,
-                    cbar_label_size = 5,
-                    dpi = 300,
-                    log = None,
-                    save = False,
-                    wdir = None,
-                    ytick_freq = None,
-                    xtick_freq = None,
-                    xtick_rotation = 90,
-                    tick_genes = False,
-                    gene_name_index = None):
+                    tick_label_size=8,
+                    cbar_label_size=5,
+                    dpi=300,
+                    log=None,
+                    save=False,
+                    wdir=None,
+                    ytick_freq=None,
+                    xtick_freq=None,
+                    xtick_rotation=90,
+                    tick_genes=False,
+                    gene_name_index=None):
     """
     Plot presence/absence plot for a mip run.
     """
@@ -10887,6 +10478,8 @@ def plot_coverage(barcode_counts,
     else:
         return fig,ax
     return
+
+
 def split_aa(aa):
     try:
         return aa.split(";")[0].split(":")[4][2:]
@@ -10894,6 +10487,8 @@ def split_aa(aa):
         return "."
     except AttributeError:
         return np.nan
+
+
 def split_aa_pos(aa):
     try:
         return aa.split(";")[0].split(":")[4][2:-1]
@@ -10901,10 +10496,16 @@ def split_aa_pos(aa):
         return "."
     except AttributeError:
         return np.nan
+
+
 def get_mutation_counts(col):
     return col.apply(lambda gen: int(gen.split(":")[1]))
+
+
 def get_totals(col):
     return col.apply(lambda gen: int(gen.split(":")[2]))
+
+
 def get_coverage(row, sorted_counts):
     chrom = row["Chrom"]
     start = row["Start"]
@@ -10926,12 +10527,16 @@ def add_known(group, used_targets):
     group["POS"].fillna(group["Start"], inplace = True)
     group["Barcode Count"].fillna(0, inplace = True)
     return group
+
+
 def find_ref_total(group):
     nr = group.loc[~group["ExonicFunc"].isin(["synonymous SNV",
                                              "."]),
                                "Barcode Count"].sum()
     cov = group["POS Coverage"].max()
     return  cov - nr
+
+
 def get_genotype(row, cutoff):
     if row["Coverage"] > 0:
         if row["Filtered Barcode Fraction"] >= cutoff:
@@ -10943,6 +10548,8 @@ def get_genotype(row, cutoff):
             return "WT"
     else:
         return np.nan
+
+
 def get_aminotype(row, cutoff):
     if row["Coverage"] > 0:
         if row["Mutation Fraction"] >= cutoff:
@@ -10954,9 +10561,13 @@ def get_aminotype(row, cutoff):
             return "WT"
     else:
         return np.nan
+
+
 def rename_noncoding(row):
     return "-".join([row["Gene"],
                      row["VKEY"]])
+
+
 def call_microsats(settings, sim = None, freq_cutoff = 0.005,
                    min_bc_cutoff = 0,
                   use_filtered_mips = True,
@@ -11038,6 +10649,8 @@ def call_microsats(settings, sim = None, freq_cutoff = 0.005,
                                      how = "left")
     return {"ms_calls": merged_calls,
             "strain_freqs": strain_freqs}
+
+
 def get_copy_counts(count_table,
                    average_copy_count = 2,
                    norm_percentiles = [0.4, 0.6]):
@@ -11070,6 +10683,8 @@ def get_copy_counts(count_table,
     p_norm = s_norm.transform(
         lambda a: average_copy_count * a/(a.quantile(norm_percentiles).mean()))
     return p_norm
+
+
 def get_copy_average(r, ac):
     try:
         return ac.loc[r["Sample ID"],
@@ -11077,25 +10692,29 @@ def get_copy_average(r, ac):
                        r["Copy"])]
     except KeyError:
         return np.nan
+
+
 def normalize_copies(a):
     if a.isnull().all():
         a = a.fillna(1)
         return a/a.sum()
     else:
         return a.fillna(0)
+
+
 def repool(
     wdir,
     data_summary,
     high_barcode_threshold,
-    target_coverage_count = None,
-    target_coverage_fraction = 0.95,
-    target_coverage_key = "targets_with_10_barcodes",
-    barcode_coverage_threshold = 10,
-    barcode_count_threshold = 100,
-    low_coverage_action = "Repool",
-    assesment_key = "targets_with_1_barcodes",
-    good_coverage_quantile = 0.25,
-    output_file = "repool.csv"
+    target_coverage_count=None,
+    target_coverage_fraction=0.95,
+    target_coverage_key="targets_with_10_barcodes",
+    barcode_coverage_threshold=10,
+    barcode_count_threshold=100,
+    low_coverage_action="Repool",
+    assesment_key="targets_with_1_barcodes",
+    good_coverage_quantile=0.25,
+    output_file="repool.csv"
 ):
     """
     Analyze run statistics and determine repooling/recapturing
@@ -11256,6 +10875,8 @@ def repool(
         data_summary.loc[data_summary["Uneven Coverage"]
                           & (data_summary["Status"] == "Repool")].shape[0])))
     return
+
+
 def aa_to_coordinate(gene, species, aa_number, alias = False):
     """
     Given a gene name and its amino acid location,
@@ -11522,6 +11143,8 @@ def merge_snps(settings):
     # save the report
     write_list(outlist, wdir + "merge_snps_output.txt")
     return outlist
+
+
 def load_processed_data(settings):
     """
     Load the data after initial processing.
@@ -11550,6 +11173,8 @@ def load_processed_data(settings):
     return {"Barcode Counts": bc,
             "Data Summary": data_summary,
             "Meta Data": merged_meta}
+
+
 def vcf_to_df(vcf_file):
     """
     Convert a possibly compressed (.gz) vcf file to a Pandas DataFrame.
@@ -11703,6 +11328,8 @@ def vcf_to_df(vcf_file):
         print(("There are %d problematic alleles, see the output list for details"
                %len(problem_alts)))
     return var_df, problem_alts
+
+
 def collapse_vcf_df(filt_df):
     """
     Take a vcf which has been converted to a Pandas data frame,
@@ -11719,6 +11346,8 @@ def collapse_vcf_df(filt_df):
             agg[col] = np.max
     collapsed = filt_df.groupby(["CHROM", "POS"]).agg(agg).reset_index()
     return collapsed
+
+
 def vcf_to_table(collapsed, output_file):
     """
     Take a "per position" vcf dataframe, convert to UCSC genome browser
@@ -11923,7 +11552,7 @@ def save_fasta_dict(fasta_dict, fasta_file, linewidth=60):
     """ Save a fasta dictionary to file. """
     with open(fasta_file, "w") as outfile:
         for header in fasta_dict:
-            outfile.write(">" + header + "\n")
+            outfile.write(">" + str(header) + "\n")
             fasta_seq = fasta_dict[header]
             for i in range(0, len(fasta_seq), linewidth):
                 outfile.write(fasta_seq[i: i + linewidth] + "\n")
@@ -12012,7 +11641,7 @@ def generate_sample_sheet(sample_list_file,
     # create sample sheet
     sample_sheet = os.path.join(output_dir, "SampleSheet.csv")
     with open(sample_sheet_template) as infile, \
-         open(sample_sheet, "w") as outfile:
+            open(sample_sheet, "w") as outfile:
         outfile_list = infile.readlines()
         outfile_list = [o.strip() for o in outfile_list]
         for sample_id in sample_names:
@@ -12028,3 +11657,404 @@ def generate_sample_sheet(sample_list_file,
                        sample_info[sample_id]["i5"], "", ""]
             outfile_list.append(",".join(outlist))
         outfile.write("\n".join(outfile_list))
+
+
+def chromosome_converter(chrom, from_malariagen):
+    """ Convert plasmodium chromosome names from standard (chr1, etc) to
+    malariagen names (Pf3d7...) and vice versa.
+    """
+    standard_names = ["chr" + str(i) for i in range(1, 15)]
+    standard_names.extend(["chrM", "chrP"])
+    malariagen_names = ["Pf3D7_0" + str(i) + "_v3" for i in range(1, 10)]
+    malariagen_names = malariagen_names + [
+        "Pf3D7_" + str(i) + "_v3" for i in range(10, 15)]
+    malariagen_names.extend(["Pf_M76611", "Pf3D7_API_v3"])
+    if from_malariagen:
+        return dict(zip(malariagen_names, standard_names))[chrom]
+    else:
+        return dict(zip(standard_names, malariagen_names))[chrom]
+
+
+def write_list(alist, outfile_name):
+    """ Convert values of a list to strings and save to file."""
+    with open(outfile_name, "w") as outfile:
+        outfile.write("\n".join(["\t".join(map(str, l))
+                                for l in alist]) + "\n")
+    return
+
+
+##########################################################
+# Core/shared functions
+##########################################################
+
+
+def strip_fasta (sequence):
+    seq_list = sequence.split('\n')[1:]
+    seq_join = "".join(seq_list)
+    return seq_join
+
+
+def calculate_gc(sequence, fasta=0):
+    if fasta:
+        seq_list = sequence.split('\n')[1:]
+        seq_join = "".join(seq_list)
+        seq = seq_join.lower()
+
+    else:
+        seq = sequence.lower()
+    gc_count = seq.count('g') + seq.count('c')
+    at_count = seq.count('a') + seq.count('t')
+    percent = int(gc_count * 100 / (gc_count + at_count))
+    return percent
+
+
+def translate(sequence, three_letter=False):
+    gencode = {
+        'ATA': 'I', 'ATC': 'I', 'ATT': 'I', 'ATG': 'M',
+        'ACA': 'T', 'ACC': 'T', 'ACG': 'T', 'ACT': 'T',
+        'AAC': 'N', 'AAT': 'N', 'AAA': 'K', 'AAG': 'K',
+        'AGC': 'S', 'AGT': 'S', 'AGA': 'R', 'AGG': 'R',
+        'CTA': 'L', 'CTC': 'L', 'CTG': 'L', 'CTT': 'L',
+        'CCA': 'P', 'CCC': 'P', 'CCG': 'P', 'CCT': 'P',
+        'CAC': 'H', 'CAT': 'H', 'CAA': 'Q', 'CAG': 'Q',
+        'CGA': 'R', 'CGC': 'R', 'CGG': 'R', 'CGT': 'R',
+        'GTA': 'V', 'GTC': 'V', 'GTG': 'V', 'GTT': 'V',
+        'GCA': 'A', 'GCC': 'A', 'GCG': 'A', 'GCT': 'A',
+        'GAC': 'D', 'GAT': 'D', 'GAA': 'E', 'GAG': 'E',
+        'GGA': 'G', 'GGC': 'G', 'GGG': 'G', 'GGT': 'G',
+        'TCA': 'S', 'TCC': 'S', 'TCG': 'S', 'TCT': 'S',
+        'TTC': 'F', 'TTT': 'F', 'TTA': 'L', 'TTG': 'L',
+        'TAC': 'Y', 'TAT': 'Y', 'TAA': '*', 'TAG': '*',
+        'TGC': 'C', 'TGT': 'C', 'TGA': '*', 'TGG': 'W'}
+    gencode3 = {'A': 'Ala', 'C': 'Cys', 'D': 'Asp', 'E': 'Glu', 'F': 'Phe',
+                'G': 'Gly', 'H': 'His', 'I': 'Ile', 'K': 'Lys', 'L': 'Leu',
+                'M': 'Met', 'N': 'Asn', 'P': 'Pro', 'Q': 'Gln', 'R': 'Arg',
+                'S': 'Ser', 'T': 'Thr', 'V': 'Val', 'W': 'Trp', 'Y': 'Tyr'}
+    seq = sequence.upper()
+    # Return the translated protein from 'sequence' assuming +1 reading frame
+    if not three_letter:
+        return ''.join([gencode.get(seq[3*i:3*i+3], 'X')
+                        for i in range(len(sequence)//3)])
+    else:
+        return ''.join([gencode3.get(gencode.get(seq[3*i:3*i+3], 'X'), "X")
+                        for i in range(len(sequence)//3)])
+
+
+def aa_converter(aa_name):
+    """
+    Output 3 letter and 1 letter amino acid codes for a given
+    list of 3 letter or 1 letter amino acid code list.
+    """
+    gencode3 = {'A': 'Ala', 'C': 'Cys', 'D': 'Asp', 'E': 'Glu', 'F': 'Phe',
+                'G': 'Gly', 'H': 'His', 'I': 'Ile', 'K': 'Lys', 'L': 'Leu',
+                'M': 'Met', 'N': 'Asn', 'P': 'Pro', 'Q': 'Gln', 'R': 'Arg',
+                'S': 'Ser', 'T': 'Thr', 'V': 'Val', 'W': 'Trp', 'Y': 'Tyr'}
+    for a in list(gencode3.keys()):
+        gencode3[gencode3[a]] = a
+    try:
+        return gencode3[aa_name.capitalize()]
+    except KeyError:
+        return "%s is not a valid amino acid name" % a
+
+
+def ntthal(s1, s2, Na=25, Mg=10, conc=0.4, print_command=False,
+           td_path="/opt/resources/primer3_settings/primer3_config/"):
+    """ Return the melting temperature of two oligos at given conditions,
+    using ntthal from primer3 software.
+
+    Parameters
+    -----------
+    s1 : str, sequence of first oligo.
+    s2 : str, sequence of second oligo
+    Na : int, Sodium (or other monovalent cation) concentration in mM
+    Mg : int, Magnesium (or other divalent cation) concentration in mM
+    conc : float, concentration of the more concentrated oligo in nM
+    td_path : str, path to thermodynamic alignment parameters.
+    """
+    cmnd = ["ntthal", "-path", td_path, "-mv", str(Na), "-dv", str(Mg),
+            "-d", str(conc), "-s1", s1, "-s2", s2, "-r"]
+    if print_command:
+        return(" ".join(cmnd))
+    else:
+        ntt_res = subprocess.check_output(cmnd)
+        return float(ntt_res.decode("UTF-8").strip())
+
+
+def oligoTM(s, Na=25, Mg=10, conc=0.4,
+            thermodynamic_parameters=1, salt_correction=2):
+    """ Return the melting temperature an oligo at given conditions,
+    using oligotm from primer3 software.
+
+    Parameters
+    -----------
+    s : str, sequence of the oligo.
+    Na : int, Sodium (or other monovalent cation) concentration in mM
+    Mg : int, Magnesium (or other divalent cation) concentration in mM
+    conc : float, concentration of the more concentrated oligo in nM
+    tp : [0|1], Specifies the table of thermodynamic parameters and
+                the method of melting temperature calculation:
+                 0  Breslauer et al., 1986 and Rychlik et al., 1990
+                    (used by primer3 up to and including release 1.1.0).
+                    This is the default, but _not_ the recommended value.
+                 1  Use nearest neighbor parameters from SantaLucia 1998
+                    *THIS IS THE RECOMMENDED VALUE*
+    sc : [0..2], Specifies salt correction formula for the melting
+                 temperature calculation
+                  0  Schildkraut and Lifson 1965, used by primer3 up to
+                     and including release 1.1.0.
+                     This is the default but _not_ the recommended value.
+                  1  SantaLucia 1998
+                     *THIS IS THE RECOMMENDED VAULE*
+                  2  Owczarzy et al., 2004
+
+    """
+    ntt_res = subprocess.check_output(
+        ["oligotm", "-mv", str(Na), "-dv", str(Mg),
+         "-d", str(conc), "-tp", str(thermodynamic_parameters),
+         "-sc", str(salt_correction), s])
+    return float(ntt_res.decode("UTF-8").strip())
+
+
+def tm_calculator(sequence, conc, Na, Mg, dNTP_conc=0):
+    from math import log
+    from math import sqrt
+    monovalent_conc = Na/1000
+    divalent_conc = Mg/1000
+    oligo_conc = conc * pow(10, -9)
+    parameters = {}
+    parameters['AA'] = (-7900, -22.2, -1.0)
+    parameters['AT'] = (-7200, -20.4, -0.88)
+    parameters['AC'] = (-8400, -22.4, -1.44)
+    parameters['AG'] = (-7800, -21.0, -1.28)
+
+    parameters['TA'] = (-7200, -21.3, -0.58)
+    parameters['TT'] = (-7900, -22.2, -1.0)
+    parameters['TC'] = (-8200, -22.2, -1.3)
+    parameters['TG'] = (-8500, -22.7, -1.45)
+
+    parameters['CA'] = (-8500, -22.7, -1.45)
+    parameters['CT'] = (-7800, -21.0, -1.28)
+    parameters['CC'] = (-8000, -19.9, -1.84)
+    parameters['CG'] = (-10600, -27.2, -2.17)
+
+    parameters['GA'] = (-8200, -22.2, -1.3)
+    parameters['GT'] = (-8400, -22.4, -1.44)
+    parameters['GC'] = (-9800, -24.4, -2.24)
+    parameters['GG'] = (-8000, -19.9, -1.84)
+    params = parameters
+    # Normalize divalent_conc (Mg) for dNTP_conc
+    K_a = 30000
+    D = ((K_a * dNTP_conc - K_a * divalent_conc + 1) ** 2
+         + 4 * K_a * divalent_conc)
+    divalent_conc = (- (K_a * dNTP_conc - K_a * divalent_conc + 1)
+                     + sqrt(D)) / (2 * K_a)
+
+    # Define a, d, g coefficients used in salt adjustment
+    a_con = 3.92 * (
+        0.843 - 0.352 * sqrt(monovalent_conc) * log(monovalent_conc)
+    )
+    d_con = 1.42 * (
+        1.279 - 4.03 * pow(10, -3) * log(monovalent_conc)
+        - 8.03 * pow(10, -3) * ((log(monovalent_conc))**2)
+    )
+    g_con = 8.31 * (
+        0.486 - 0.258 * log(monovalent_conc)
+        + 5.25 * pow(10, -3) * ((log(monovalent_conc))**3)
+    )
+    dHsum = 0
+    dSsum = 0
+    sequence = sequence.upper()
+    # define duplex initiation values for T and G terminal nucleotides
+    if sequence[-1] == 'G' or sequence[-1] == 'C':
+        dHiTer = 100
+        dSiTer = -2.8
+    elif sequence[-1] == 'A' or sequence[-1] == 'T':
+        dHiTer = 2300
+        dSiTer = 4.1
+    if sequence[0] == 'G' or sequence[0] == 'C':
+        dHiIn = 100
+        dSiIn = -2.8
+    elif sequence[0] == 'A' or sequence[0] == 'T':
+        dHiIn = 2300
+        dSiIn = 4.1
+    dHi = dHiTer + dHiIn
+    dSi = dSiTer + dSiIn
+
+    R = 1.987  # ideal gas constant
+    for i in range(len(sequence)-1):
+        dinuc = sequence[i:(i+2)]
+        dinuc_params = params[dinuc]
+        dH = dinuc_params[0]
+        dS = dinuc_params[1]
+        dHsum += dH
+        dSsum += dS
+    # Tm w/o salt adjustment
+    Tm = (dHsum + dHi)/float(dSsum + dSi + (R*log(oligo_conc)))
+
+    # Salt adjustment
+    GC_frac = calculate_gc(sequence)/100
+    seq_length = len(sequence)
+    if sqrt(divalent_conc)/monovalent_conc < 0.22:
+        Tm = (Tm /
+              (pow(10, -5) * Tm * ((4.29 * GC_frac - 3.95)
+                                   * log(monovalent_conc)
+                                   + 0.94 * (log(monovalent_conc)**2))
+               + 1)
+              )
+
+    elif sqrt(divalent_conc)/monovalent_conc <= 6:
+        Tm = (Tm /
+              (Tm * (a_con
+                     - 0.911 * log(divalent_conc)
+                     + GC_frac * (6.26 + d_con * log(divalent_conc))
+                     + (1 / float(2 * (seq_length - 1))) *
+                     (-48.2 + 52.5 * log(divalent_conc) + g_con *
+                      (log(divalent_conc)) ** 2))
+               * pow(10, -5) + 1))
+    elif sqrt(divalent_conc)/monovalent_conc > 6:
+        a_con = 3.92
+        d_con = 1.42
+        g_con = 8.31
+        Tm = (Tm /
+              (Tm * (a_con
+                     - 0.911 * log(divalent_conc)
+                     + GC_frac * (6.26 + d_con * log(divalent_conc))
+                     + (1 / (2 * float(seq_length - 1))) *
+                     (-48.2 + 52.5 * log(divalent_conc) + g_con *
+                      (log(divalent_conc)) ** 2))
+               * pow(10, -5) + 1))
+    return Tm - 273.15
+
+
+def reverse_complement(sequence):
+    """ Return reverse complement of a sequence. """
+    complement_bases = {
+        'g': 'c', 'c': 'g', 'a': 't', 't': 'a', 'n': 'n',
+        'G': 'C', 'C': 'G', 'A': 'T', 'T': 'A', 'N': 'N', "-": "-",
+        "R": "Y", "Y": "R", "S": "W", "W": "S", "K": "M", "M": "K",
+        "B": "V", "V": "B", "D":  "H", "H":  "D",
+        "r": "y", "y": "r", "s": "w", "w": "s", "k": "m", "m": "k",
+        "b": "v", "v": "b", "d":  "h", "h":  "d"
+    }
+
+    bases = list(sequence)
+    bases.reverse()
+    revcomp = []
+    for base in bases:
+        try:
+            revcomp.append(complement_bases[base])
+        except KeyError:
+            print("Unexpected base encountered: ", base, " returned as X!!!")
+            revcomp.append("X")
+    return "".join(revcomp)
+
+
+def get_file_locations():
+    """ All static files such as fasta genomes, snp files, etc. must be listed
+    in a file in the working directory. File name is file_locations.
+    It is a tab separated text file. First tab has 2 letter species name, or
+    "all" for general files used for all species. Second tab is the file name
+    and third is the location of the file, either relative to script working
+    directory, or the absolute path."""
+    file_locations = {}
+    with open("/opt/resources/file_locations", "r") as infile:
+        for line in infile:
+            if not line.startswith("#"):
+                newline = line.strip().split("\t")
+                if newline[0] not in list(file_locations.keys()):
+                    file_locations[newline[0]] = {newline[1]: newline[2]}
+                else:
+                    file_locations[newline[0]][newline[1]] = newline[2]
+    return file_locations
+
+
+def id_generator(N):
+    """ Generate a random string of length N consisting of uppercase letters
+    and digits. Used for generating names for temporary files, etc.
+    """
+    return ''.join(random.SystemRandom().choice(
+        string.ascii_uppercase + string.digits) for _ in range(N))
+
+
+##########################################################
+# Possibly deprecated functions
+##########################################################
+
+
+def cnv_stats(hom_case, hom_control,
+              wt_case, wt_control):
+    """
+    Given case/control genotype numbers in the order:
+    1) number of homozygous cases,
+    2) homozygous controls,
+    3) heterozygous cases,
+    4) heterozygous controls
+    5) wildtype cases
+    6) wildtype controls
+    Returns a list of length 9:
+    1-3) Homozygous mutant vs wildtype
+    1) Odds ratio from Fisher's exact test
+    2) P value from Fisher's
+    3) P value from chi squared test
+    4-6) Heterozygous mutant vs wildtype
+    7-9) Mutants combined vs witdtype
+    Errors return "na" in place of values
+    """
+    ho_v_wt = [[hom_case, hom_control],
+               [wt_case, wt_control]]
+    output = []
+    tbl = ho_v_wt
+    try:
+        fish = fisher_exact(tbl)
+    except:
+        fish = ["na", "na"]
+    try:
+        chi = chi2_contingency(tbl)
+    except:
+        chi = ["na", "na", "na", "na"]
+    output.extend(fish)
+    output.append(chi[1])
+    return output
+
+
+def snp_stats(hom_case, hom_control,
+               het_case, het_control,
+              wt_case, wt_control):
+    """
+    Given case/control genotype numbers in the order:
+    1) number of homozygous cases,
+    2) homozygous controls,
+    3) heterozygous cases,
+    4) heterozygous controls
+    5) wildtype cases
+    6) wildtype controls
+    Returns a list of length 9:
+    1-3) Homozygous mutant vs wildtype
+    1) Odds ratio from Fisher's exact test
+    2) P value from Fisher's
+    3) P value from chi squared test
+    4-6) Heterozygous mutant vs wildtype
+    7-9) Mutants combined vs witdtype
+    Errors return "na" in place of values
+    """
+    mut_case = het_case + hom_case
+    mut_control = het_control + hom_control
+    ho_v_wt = [[hom_case, hom_control],
+               [wt_case, wt_control]]
+    het_v_wt = [[het_case, het_control],
+                [wt_case, wt_control]]
+    mut_v_wt = [[mut_case, mut_control],
+                [wt_case, wt_control]]
+    output = []
+    for tbl in [ho_v_wt, het_v_wt, mut_v_wt]:
+        try:
+            fish = fisher_exact(tbl)
+        except:
+            fish = ["na", "na"]
+        try:
+            chi = chi2_contingency(tbl)
+        except:
+            chi = ["na", "na", "na", "na"]
+        output.extend(fish)
+        output.append(chi[1])
+    return output

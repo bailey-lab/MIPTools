@@ -1,0 +1,339 @@
+Bootstrap: docker
+From: amd64/ubuntu:18.04
+
+%post
+    # set build environment
+    export DEBIAN_FRONTEND=noninteractive \
+        CONDA_DIR=/opt/conda \
+        SHELL=/bin/bash \
+        LANG=en_US.UTF-8 \
+        LANGUAGE=en_US.UTF-8 \
+        LC_ALL=en_US.UTF-8 \
+        MINICONDA_VERSION=4.5.4
+    export PATH=$CONDA_DIR/bin:$PATH
+
+    # install system packages
+    apt update \
+    && apt -yq dist-upgrade \
+    && apt install -yq --no-install-recommends \
+    wget \
+    bzip2 \
+    ca-certificates \
+    sudo \
+    locales \
+    fonts-liberation \
+    fonts-dejavu \
+    git \
+    build-essential \
+    gcc \
+    openssh-client \
+    nano \
+    libtbb-dev \
+    libz-dev \
+    libxrender1 \
+    cmake \
+    automake \
+    autoconf \
+    rsync \
+    pigz \
+    perl-tk \
+    less \
+    software-properties-common \
+    libxext6 \
+    libxrender1 \
+    ghostscript \
+    openjdk-11-jdk \
+    liblzma-dev \
+    libbz2-dev \
+    libssl-dev \
+    libcurl4-gnutls-dev
+
+    # set environment locale
+    echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
+    echo "LANG=en_US.UTF-8" > /etc/locale.conf
+    echo "LC_ALL=en_US.UTF-8" >> /etc/environment
+    echo "LANGUAGE=en_US.UTF-8" >> /etc/environment
+    locale-gen en_US.UTF-8
+    update-locale LANG=en_US.UTF-8
+
+    # install bcl2fastq
+    cd /opt/programs
+    dpkg -i bcl2fastq2_0v2.20.0.422-2_amd64.deb
+
+    # install msv2vcf
+    cd /opt/programs
+    git clone https://github.com/lindenb/jvarkit.git
+    cd jvarkit
+    ./gradlew msa2vcf
+
+    # install conda
+    cd /tmp && \
+        wget --quiet https://repo.continuum.io/miniconda/Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh && \
+        echo "a946ea1d0c4a642ddf0c3a26a18bb16d *Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh" | md5sum -c - && \
+        /bin/bash Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh -f -b -p $CONDA_DIR && \
+        rm Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh && \
+        $CONDA_DIR/bin/conda config --system --prepend channels conda-forge && \
+        $CONDA_DIR/bin/conda config --system --set auto_update_conda false && \
+        $CONDA_DIR/bin/conda config --system --set show_channel_urls true && \
+        $CONDA_DIR/bin/conda install --quiet --yes conda="${MINICONDA_VERSION%.*}.*" && \
+        $CONDA_DIR/bin/conda update --all --quiet --yes && \
+        conda clean -tipsy
+
+    # install conda packages
+    conda config --add channels bioconda
+    conda install -qy "notebook=5.7.0" \
+    "xlrd=1.1.0" \
+    "bcftools=1.9" \
+    "samtools=1.9" \
+    "bwa=0.7.17" \
+    "bowtie2=2.3.4.3" \
+    "primer3=2.4.0" \
+    "numpy=1.15" \
+    "scipy=1.1" \
+    "biopython=1.70" \
+    "pysam=0.15" \
+    "pandas=0.23" \
+    "matplotlib=3.0" \
+    "seaborn=0.9" \
+    "scikit-learn=0.20" \
+    "scandir=1.9.0"
+
+
+    # install R and epitools R library
+    conda install -qy -c r r rpy2
+    conda install -qy -c nnsrl r-epitools
+    #conda install -qy -c r rpy2
+    conda install -qy openpyxl bioconductor-decipher
+    conda clean -tipsy
+
+    # install primer3 python wrapper
+    pip install primer3-py==0.5.7
+    pip install simplegeneric
+
+    # install lastZ
+    cd /opt/programs/lastz/src
+    make lastz_32 && install lastz_32 /usr/bin/
+
+    # install MIPWrangler
+    cd /opt/programs
+    git clone https://github.com/bailey-lab/MIPWrangler
+    cd MIPWrangler
+    git checkout develop
+    ./upgradeDevelop.sh 20
+
+    # install elucidator
+    cd /opt/programs
+    git clone https://github.com/nickjhathaway/elucidator
+    cd elucidator
+    git checkout develop
+    ./install.sh 20
+
+    # add executable flag to executables
+    chmod -R +xr /usr/bin
+    chmod -R +xr /opt/bin
+
+
+    # create symlinks to executables in /usr/bin so everything will be in
+    # $PATH for users.
+    ln -sf /opt/programs/parasight_v7.6/parasight.pl /usr/bin/parasight76.pl
+    ln -sf /opt/programs/mpfold-3.6/bin/* /usr/bin
+    ln -s /opt/programs/mpfold-3.6/share /usr/bin
+    ln -sf /opt/programs/unafold-3.6/scripts/* /usr/bin
+    ln -sf /opt/programs/annovar-20180416/*.pl /usr/bin
+
+    # create work and resources directories in /opt
+    mkdir /opt/resources \
+        /opt/work \
+        /opt/project_resources \
+        /opt/species_resources \
+        /opt/data \
+        /opt/analysis \
+        /opt/extras
+
+
+%files
+    programs /opt
+    bin /opt
+    src /opt
+
+%environment
+    path=/opt/bin:/opt/conda/bin:/opt/programs/MIPWrangler/bin:
+    path=$path/opt/programs/elucidator/bin:/opt/programs/mpfold-3.6/bin:
+    path=$path$PATH
+    export PATH=$path
+    export XDG_RUNTIME_DIR=""
+    export DEBIAN_FRONTEND=noninteractive
+    export LANG=en_US.UTF-8
+    export LANGUAduGE="en_US.UTF-8"
+    export LC_ALL="en_US.UTF-8"
+
+%apprun jupyter
+    set -e
+    set -u
+    nb_port=$(shuf -i 8000-9999 -n 1)
+    server_ip=$(hostname -i)
+    server_user=$(whoami)@$(hostname -f)
+    nb_dir=/opt
+    while getopts p:d: OPT; do
+        case "$OPT" in
+            p)
+              nb_port="$OPTARG";;
+            d)
+              nb_dir="$OPTARG";;
+            *)
+              echo "Invalid option. Use -p to specify notebook port \
+                   -d to specify notebook directory."
+        esac
+    done
+    rsync /opt/resources/*.ipynb /opt/analysis --ignore-existing \
+        --ignore-missing-args
+    port_fw="Use the following command if you are running this notebook from "
+    port_fw=$port_fw"a remote server. Ignore if using a local computer."
+    echo $port_fw
+    port_fw="ssh -N -f -L localhost:$nb_port:$server_ip:$nb_port $server_user"
+    echo $port_fw
+    jupyter notebook --notebook-dir=$nb_dir --ip=$server_ip \
+            --port=$nb_port --no-browser
+
+%apprun wrangler
+    set -e
+    set -u
+    # set defaults
+    cluster_script="runMIPWranglerCurrent.sh"
+    server_number=1
+    cpu_count=1
+    stitch_options="none"
+    keep_files=""
+    while getopts p:l:e:s:w:n:c:x:k OPT; do
+        case "$OPT" in
+            e)
+              experiment_id="$OPTARG";;
+            l)
+              sample_list="$OPTARG";;
+            p)
+              probe_sets="$OPTARG";;
+            s)
+              sample_sets="$OPTARG";;
+            w)
+              cluster_script="$OPTARG";;
+            n)
+              server_number="$OPTARG";;
+            c)
+              cpu_count="$OPTARG";;
+            x)
+              stitch_options="$OPTARG";;
+            k)
+              keep_files="-k";;
+
+            *)
+              echo "Invalid option. Use 'wrangler \
+              -e experiment_id -l sample_list.file -p  probe_sets\
+              -s sample_sets -w cluster_script -n server_number \
+              -c  cpu_count -x additinal_stitch_options'  [-k]"
+        esac
+    done
+    python /opt/src/generate_wrangler_scripts.py \
+    -e $experiment_id -l /opt/analysis/$sample_list \
+    -p $probe_sets -s $sample_sets -w $cluster_script -n $server_number \
+    -c $cpu_count -x $stitch_options $keep_files
+    script_name=$sample_sets"_"$(echo $probe_sets|tr "," "_")".sh"
+    . /opt/analysis/$script_name
+
+%apprun download
+    set -e
+    set -u
+    while getopts r: opt; do
+        case $opt in
+            r)  run_id=$OPTARG;;
+            ?)  echo "Usage: singularity run --app download \\"
+                echo "           -B /path_to_output_dir:/opt/analysis \\"
+                echo "           -B /path_to_base_resources:/opt/resources \\"
+                echo "            mycontainer.sif -r my_Illumina_run_ID"
+                echo "An 'access_token.txt' file with a valid access token is "
+                echo "required. It must be present in base_resources directory."
+                echo "A data directory where the data will be downloaded to"
+                echo "must be mounted to /opt/data."
+                exit 1;;
+        esac
+    done
+    echo "Downloading NextSeq run $run_id from BaseSpace."
+    echo "Depending on the data size, this can take very long (up to 10 h)"
+    echo "It is recommended to run this app in a screen (GNU screen)."
+    echo "A message indicating the end of download will be printed when done."
+    echo "Check nohup.out file in your output directory for the download log."
+    cd /opt/analysis
+    nohup python /opt/bin/BaseSpaceRunDownloader_v2.py \
+     -r $run_id -a "$(cat /opt/resources/access_token.txt)"
+    echo "Download finished."
+
+%apprun demux
+    set -e
+    set -u
+    while getopts s:p: opt; do
+        case $opt in
+            s)  sample_list=$OPTARG;;
+            p)  platform=$OPTARG;;
+            ?)  echo "Usage: singularity run --app demux \\"
+                echo "           -B /path_to_run_dir:/opt/data \\"
+                echo "           -B /path_to_output_dir:/opt/analysis \\"
+                echo "           -B /path_to_base_resources:/opt/resources \\"
+                echo "            mycontainer.sif -s sample_list_file \\"
+                echo "            -p sequencing_platform (nextseq or miseq) \\"
+                echo "The sample list file must be present in the output"
+                echo "directory mounted to /opt/analysis."
+                exit 1;;
+        esac
+    done
+    # create a sample sheet for demultiplexing
+    cd /opt/src
+    template_dir="/opt/resources/templates/sample_sheet_templates/"
+    platform_template="$platform"_sample_sheet_template.csv
+    template="$template_dir$platform_template"
+    bc_dict="/opt/resources/barcode_dict.json"
+    output_dir="/opt/analysis"
+    sample_list="/opt/analysis/$sample_list"
+    python -c 'import mip_functions as mip; mip.generate_sample_sheet(
+        "'"$sample_list"'", "'"$bc_dict"'", "'"$template"'", "'"$platform"'",
+        "'"$output_dir"'")'
+    # cd to where bcl files are.
+    cd /opt/data
+    # create a fastq directory for saving fastqs
+    mkdir -p /opt/analysis/fastq
+    # increase limit of open number of files.
+    ulimit -n 9999
+    nohup bcl2fastq -o /opt/analysis/fastq \
+        --sample-sheet /opt/analysis/SampleSheet.csv \
+        --no-lane-splitting
+
+%apprun demux_qc
+    set -e
+    set -u
+    while getopts p: opt; do
+        case $opt in
+            p)  platform=$OPTARG;;
+            ?)  echo "Usage: singularity run --app demux_qc\\"
+                echo "           -B /path_to_base_resources:/opt/resources \\"
+                echo "           -B /path_to_fastq_dir:/opt/analysis "
+                echo "            mycontainer.sif -p sequencing_platform"
+                exit 1;;
+        esac
+    done
+    python /opt/src/demux_qc.py -p $platform
+
+# Create a few test apps to use in development
+%apprun test1
+        set -e
+        set -u
+        echo "Testing 1."
+
+
+%apprun test2
+        set -e
+        set -u
+        echo "Testing 2."
+
+
+%apprun test3
+        set -e
+        set -u
+        echo "Testing 3."
