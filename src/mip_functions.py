@@ -307,7 +307,7 @@ def get_target_coordinates(res_dir, species, capture_size,
             # update capture types of targets
             for g in region_coordinates:
                 if g not in capture_types:
-                    capture_types[g] = region_coordinates[g]["Capture Type"]
+                    capture_types[g] = region_coordinates[g]["CaptureType"]
         except IOError:
             print(("Target coordinates file {} could not be found.").format(
                 (coordinates_file)))
@@ -331,10 +331,10 @@ def get_target_coordinates(res_dir, species, capture_size,
             gene_coordinates = {}
             for g in genes:
                 try:
-                    if np.isnan(genes[g]["Gene ID"]):
+                    if np.isnan(genes[g]["GeneID"]):
                         try:
                             gene_id = alias[g]
-                            genes[g]["Gene ID"] = gene_id
+                            genes[g]["GeneID"] = gene_id
                         except KeyError:
                             print("""Alias for gene %s is not found.
                                 Either provide a gene ID or use an alias
@@ -348,9 +348,9 @@ def get_target_coordinates(res_dir, species, capture_size,
                             continue
                 except TypeError:
                     pass
-                gene_ids.append(genes[g]["Gene ID"])
-                gene_id_to_gene[genes[g]["Gene ID"]] = g
-                capture_types[g] = genes[g]["Capture Type"]
+                gene_ids.append(genes[g]["GeneID"])
+                gene_id_to_gene[genes[g]["GeneID"]] = g
+                capture_types[g] = genes[g]["CaptureType"]
             gene_id_coordinates = gene_to_target(gene_ids, species)
             for gid in gene_id_coordinates:
                 gene_coordinates[gene_id_to_gene[gid]] = gene_id_coordinates[
@@ -1800,10 +1800,11 @@ def get_gene(gene_name, refgene_file, chrom=None, alternative_chr=1):
     return alter
 
 
-def create_gene_fasta(gene_name_list, wdir, species = "hs", flank=150, multi_file=False):
+def create_gene_fasta(gene_name_list, wdir, species="hs", flank=150,
+                      multi_file=False):
     """ Get a list of genes, extract exonic sequence + flanking sequence.
-    Create fasta files in corresponding directory for each gene if multi_file is True,
-    create a single fasta file if False.
+    Create fasta files in corresponding directory for each gene if multi_file
+    is True, create a single fasta file if False.
     """
     region_list = []
     for gene_name in gene_name_list:
@@ -1812,21 +1813,25 @@ def create_gene_fasta(gene_name_list, wdir, species = "hs", flank=150, multi_fil
             query = make_region(coord[0], coord[1] - flank, coord[2] + flank)
         else:
             e = get_exons(
-                get_gene(gene_name, get_file_locations()[species]["refgene"], alternative_chr=1)
+                get_gene(gene_name, get_file_locations()[species]["refgene"],
+                         alternative_chr=1)
                 )
-            query = e["chrom"] + ":" + str(e["begin"] - flank) + "-" + str(e["end"] + flank)
+            query = e["chrom"] + ":" + str(e["begin"] - flank) + "-" + str(
+               e["end"] + flank)
         region_list.append(query)
     regions = get_fasta_list(region_list, species)
+    fasta_dict = {}
+    for i in range(len(region_list)):
+        r = region_list[i]
+        gene_name = gene_name_list[i]
+        fasta_dict[gene_name] = regions[r]
     if multi_file:
-        for i in range(len(region_list)):
-            r = region_list[i]
-            gene_name = gene_name_list[i]
+        for gene_name in fasta_dict:
+            save_dict = {gene_name: fasta_dict[gene_name]}
             filename = wdir + gene_name + ".fa"
-            with open(filename, "w") as outfile:
-                outfile.write("\n".join())
+            save_fasta_dict(save_dict, filename)
     else:
-        with open(wdir + "multi.fa", "w") as outfile:
-            outfile.write("\n".join(region_list))
+        save_fasta_dict(fasta_dict, wdir + "multi.fa")
 
 
 def get_region_exons(region, species):
@@ -2345,34 +2350,17 @@ def bowtie2_run(fasta_file, output_file, bowtie2_input_DIR,
         check_local = "--local"
     else:
         check_local = "--end-to-end"
-    dump = subprocess.check_output(["bowtie2",
-                                    "-p",
-                                    str(process_num),
-                                   "-D",
-                                    "20",
-                                    "-R",
-                                    "3",
-                                    "-N",
-                                    str(seed_MM),
-                                    "-L",
-                                    str(seed_len),
-                                    "-i",
-                                    "S,1,0.5",
-                                    "--gbar",
-                                    str(gbar),
-                                    mode,
-                                    check_local,
-                                   "-x",
-                                    genome,
-                                    "-f",
-                                    bowtie2_input_DIR + fasta_file,
-                                   "-S",
-                                    bowtie2_output_DIR + output_file])
+    subprocess.check_output(["bowtie2", "-p", str(process_num),  "-D", "20",
+                             "-R", "3", "-N", str(seed_MM), "-L",
+                             str(seed_len), "-i", "S,1,0.5", "--gbar",
+                             str(gbar), mode, check_local, "-x", genome, "-f",
+                             bowtie2_input_DIR + fasta_file, "-S",
+                             bowtie2_output_DIR + output_file])
     return 0
 
 
-def bowtie(fasta_file, output_file, bowtie2_input_DIR, bowtie2_output_DIR, options,
-           species,process_num=4, mode="-a", local=0, fastq = 0):
+def bowtie(fasta_file, output_file, bowtie2_input_DIR, bowtie2_output_DIR,
+           options, species, process_num=4, mode="-a", local=0, fastq=0):
     """ Extract primer sequences from the fasta file,
     check alignments for given species genome(s), create
     sam output file(s). Species must be a list!"""
@@ -2395,7 +2383,7 @@ def bowtie(fasta_file, output_file, bowtie2_input_DIR, bowtie2_output_DIR, optio
     else:
         com.append("-f " + bowtie2_input_DIR + fasta_file)
     com.append("-S " + bowtie2_output_DIR + output_file)
-    dump = subprocess.check_output(com)
+    subprocess.check_output(com)
     return 0
 
 
@@ -2405,9 +2393,9 @@ def bwa(fastq_file, output_file, output_type, input_dir,
     options should be a list that starts with the command (e.g. mem, aln etc).
     Additional options should be appended as strings of "option value",
     for example, "-t 30" to use 30 threads. Output type can be sam or bam.
-    Recommended options ["-t30", "-L500", "-T100"]. Here L500 penalizes clipping
-    severely so the alignment becomes end-to-end and T100 stops reporting secondary
-    alignments, assuming their score is below 100."""
+    Recommended options ["-t30", "-L500", "-T100"]. Here L500 penalizes
+    clipping severely so the alignment becomes end-to-end and T100 stops
+    reporting secondary alignments, assuming their score is below 100."""
     genome_file = get_file_locations()[species]["bwa_genome"]
     if output_type == "sam":
         com = ["bwa"]
@@ -2415,7 +2403,7 @@ def bwa(fastq_file, output_file, output_type, input_dir,
         com.append(genome_file)
         com.append(input_dir + fastq_file)
         with open(output_dir + output_file, "w") as outfile:
-            dump = subprocess.check_call(com, stdout=outfile)
+            subprocess.check_call(com, stdout=outfile)
     else:
         com = ["bwa"]
         com.extend(options)
@@ -2424,8 +2412,7 @@ def bwa(fastq_file, output_file, output_type, input_dir,
         sam = subprocess.Popen(com, stdout=subprocess.PIPE)
         bam_com = ["samtools", "view", "-b"]
         with open(output_dir + output_file, "w") as outfile:
-            bam = subprocess.Popen(bam_com, stdin=sam.stdout,
-                                   stdout=outfile)
+            subprocess.Popen(bam_com, stdin=sam.stdout, stdout=outfile)
 
 
 def parse_cigar(cigar):
@@ -2462,19 +2449,22 @@ def get_cigar_length(cigar):
     """ Get the length of the reference sequence that a read is aligned to,
     given their cigar string."""
     try:
-        # parse cigar string and find out how many insertions are in the alignment
+        # parse cigar string and find out how many insertions are in the
+        # alignment
         insertions = parse_cigar(cigar)["I"]
     except KeyError:
-        # the key "I" will not be present in the cigar string if there is no insertion
+        # the key "I" will not be present in the cigar string if there is no
+        # insertion
         insertions = 0
-    # all the values in the cigar dictionary represent a base in the reference seq,
+    # all the values in the cigar dictionary represent a base in the reference
+    # seq,
     # except the insertions, so they should be subtracted
     return sum(parse_cigar(cigar).values()) - insertions
 
 
 def parse_bowtie(primer_dict, bt_file, primer_out, primer3_output_DIR,
                  bowtie2_output_DIR, species, settings, outp=1):
-    """ Take a bowtie output file and filter top N hits per primer.
+    """ Take a bowtie output (sam) file and filter top N hits per primer.
     When a primer has more than "upper_hit_limit" bowtie hits,
     remove that primer.
     Add the bowtie hit information, including hit sequence to
@@ -3344,9 +3334,9 @@ def pick_paralog_primer_pairs(extension, ligation, output_file,
                                 "max_size"].sum()
                         else:
                             max_insertion_size = 0
-                        adjusted_max_size = max((max_size
-                                                 - max_insertion_size),
-                                                min_size)
+                        adjusted_max_size = max_size - max_insertion_size
+                        if adjusted_max_size < (min_size/2):
+                            continue
                         # we do not have to adsjust min_size unless the max
                         # size get too close to min_size, in which case
                         # we leave a 30 bp distance between min an max so
@@ -3375,9 +3365,9 @@ def pick_paralog_primer_pairs(extension, ligation, output_file,
                                     "max_size"].sum()
                             else:
                                 max_insertion_size = 0
-                            adjusted_max_size = max((max_size
-                                                     - max_insertion_size),
-                                                    min_size)
+                            adjusted_max_size = max_size - max_insertion_size
+                            if adjusted_max_size < (min_size/2):
+                                continue
                             if (adjusted_max_size
                                     >= pairs[p]["capture_size"] >= 0):
                                 captured_copies.append(p)
@@ -3501,9 +3491,10 @@ def pick_paralog_primer_pairs(extension, ligation, output_file,
                                         "max_size"].sum()
                                 else:
                                     max_insertion_size = 0
-                                adjusted_max_size = max((max_size
-                                                         - max_insertion_size),
-                                                        min_size)
+                                adjusted_max_size = (max_size
+                                                     - max_insertion_size)
+                                if adjusted_max_size < (min_size/2):
+                                    continue
                                 if (adjusted_max_size
                                         >= alts[a]["capture_size"] >= 0):
                                     captured_copies.append(a)
@@ -9631,14 +9622,15 @@ def get_fasta_list(regions, species):
 def create_fasta_file(region, species, output_file):
     if not os.path.exists(output_file):
         os.makedirs(output_file)
-    with open(output_file, "w") as outfile:
+    with open(output_file, "a") as outfile:
         outfile.write(get_fasta(region, species))
 
 
 def merge_overlap(intervals, spacer=0):
-    """ Merge overlapping intervals. Take a list of lists of 2 elements, [start, stop],
-    check if any [start, stop] pairs overlap and merge if any. Return the merged [start, stop]
-    list."""
+    """ Merge overlapping intervals. Take a list of lists of 2 elements,
+    [start, stop], check if any [start, stop] pairs overlap and merge if any.
+    Return the merged [start, stop] list.
+    """
     exons = copy.deepcopy(intervals)
     exons = [e for e in exons if len(e) == 2]
     for e in exons:
