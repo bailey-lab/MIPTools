@@ -1990,12 +1990,12 @@ def snp_masker(wdir,
     return
 
 
-def make_primers(input_file,  settings, primer3_input_DIR, primer3_output_DIR, output_file="input_file"):
+def make_primers(input_file,  settings, primer3_input_DIR, primer3_output_DIR,
+                 output_file="input_file"):
     """ make primers using boulder record file in primer3_input_DIR
     using settings file in primer3_settings_DIR and output as boulder
     record to primer3_output_DIR"""
-    file_locations = get_file_locations()
-    primer3_settings_DIR = file_locations["all"]["primer3_settings_DIR"]
+    primer3_settings_DIR = "/opt/analysis/"
     # if an output file is specified:
     if output_file != "input_file":
         primer3_out = output_file
@@ -2015,8 +2015,7 @@ def make_primers_worker(l):
     """ A worker function to make primers for multiple regions
     using separate processors. Read boulder record in given input
     directory and creates primer output files in output directory"""
-    file_locations = get_file_locations()
-    primer3_settings_DIR = file_locations["all"]["primer3_settings_DIR"]
+    primer3_settings_DIR = "/opt/analysis/"
     # function arguments should be given as a list due to single
     # iterable limitation of map_async function of multiprocessor.Pool
     # input boulder record name
@@ -5906,8 +5905,8 @@ def update_variation(settings):
                                cwd=wdir, stdout=outfile)
     dump = subprocess.call(["bcftools", "index", "-f", raw_vcf_file + ".gz"],
                            cwd=wdir)
-    unmasked_genome = get_file_locations()[species]["unmasked_fasta_genome"]
-    dump = subprocess.call(["bcftools", "norm", "-f", unmasked_genome,
+    genome_file = get_file_locations()[species]["fasta_genome"]
+    dump = subprocess.call(["bcftools", "norm", "-f", genome_file,
                             "-cw", "-w", "0",
                            "-o", norm_vcf_file, raw_vcf_file + ".gz"],
                            cwd=wdir)
@@ -11957,7 +11956,7 @@ def get_file_locations():
     and third is the location of the file, either relative to script working
     directory, or the absolute path."""
     file_locations = {}
-    with open("/opt/resources/file_locations", "r") as infile:
+    with open("/opt/species_resources/file_locations.tsv", "r") as infile:
         for line in infile:
             if not line.startswith("#"):
                 newline = line.strip().split("\t")

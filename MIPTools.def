@@ -46,7 +46,9 @@ From: amd64/ubuntu:18.04
     liblzma-dev \
     libbz2-dev \
     libssl-dev \
-    libcurl4-gnutls-dev
+    libcurl4-gnutls-dev \
+    alien \
+    unzip
 
     # set environment locale
     echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
@@ -58,9 +60,12 @@ From: amd64/ubuntu:18.04
 
     # install bcl2fastq
     cd /opt/programs
+    wget https://support.illumina.com/content/dam/illumina-support/documents/downloads/software/bcl2fastq/bcl2fastq2-v2-20-0-linux-x86-64.zip
+    unzip bcl2fastq2-v2-20-0-linux-x86-64.zip
+    alien bcl2fastq2-v2.20.0.422-Linux-x86_64.rpm
     dpkg -i bcl2fastq2_0v2.20.0.422-2_amd64.deb
 
-    # install msv2vcf
+    # install msa2vcf
     cd /opt/programs
     git clone https://github.com/lindenb/jvarkit.git
     cd jvarkit
@@ -99,13 +104,6 @@ From: amd64/ubuntu:18.04
     "scandir=1.9.0"
 
 
-    # install R and epitools R library
-    conda install -qy -c r r rpy2
-    conda install -qy -c nnsrl r-epitools
-    #conda install -qy -c r rpy2
-    conda install -qy openpyxl bioconductor-decipher
-    conda clean -tipsy
-
     # install primer3 python wrapper
     pip install primer3-py==0.5.7
     pip install simplegeneric
@@ -121,13 +119,6 @@ From: amd64/ubuntu:18.04
     git checkout develop
     ./upgradeDevelop.sh 20
 
-    # install elucidator
-    cd /opt/programs
-    git clone https://github.com/nickjhathaway/elucidator
-    cd elucidator
-    git checkout develop
-    ./install.sh 20
-
     # add executable flag to executables
     chmod -R +xr /usr/bin
     chmod -R +xr /opt/bin
@@ -136,9 +127,6 @@ From: amd64/ubuntu:18.04
     # create symlinks to executables in /usr/bin so everything will be in
     # $PATH for users.
     ln -sf /opt/programs/parasight_v7.6/parasight.pl /usr/bin/parasight76.pl
-    ln -sf /opt/programs/mpfold-3.6/bin/* /usr/bin
-    ln -s /opt/programs/mpfold-3.6/share /usr/bin
-    ln -sf /opt/programs/unafold-3.6/scripts/* /usr/bin
     ln -sf /opt/programs/annovar-20180416/*.pl /usr/bin
 
     # create work and resources directories in /opt
@@ -158,7 +146,7 @@ From: amd64/ubuntu:18.04
 
 %environment
     path=/opt/bin:/opt/conda/bin:/opt/programs/MIPWrangler/bin:
-    path=$path/opt/programs/elucidator/bin:/opt/programs/mpfold-3.6/bin:
+    path=$path/opt/programs/elucidator/bin:
     path=$path$PATH
     export PATH=$path
     export XDG_RUNTIME_DIR=""
