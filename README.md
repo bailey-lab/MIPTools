@@ -33,7 +33,7 @@ Path on the left side of the column specifies where on *your* computer the direc
 *  **base_resources:** Included in the GitHub repository. It contains common resources across projects. It should be bound to the container with `-B [path to base resources dir outside of the container]:/opt/resources`. This makes the base_resources directory available to the container and it would be reached at `/opt/resources` path within the container. `/opt/resources` part of this argument must not be altered. For example, if my base resources are located in my computer at `/home/base`, I would bind it to the container with `-B /home/base:/opt/resources`.
 *  **species_resources:** Contains resources shared by projects using the same target species (Pf, human, etc.). Bind this to `/opt/species_resources` in the container.  
 
-**  What should be in the species_resources?
+*      What should be in the species_resources?
 *  **project_resources:** Contains project specific files (probe sequences, sample information, etc.). Bind this to `/opt/project_resources`
 *  **data_dir:** Contains data to be analyzed. Typically, this nothing will be written to this directory. Bind this directory to `/opt/data`.
 *  **analysis_dir:** Where analysis will be carried out and all output files will be saved. Bind it to `/opt/analysis` This is the only directory that needs write permission as the output will be saved here.
