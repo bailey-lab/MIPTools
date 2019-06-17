@@ -3,6 +3,7 @@ import pickle
 import json
 import os
 import argparse
+import subprocess
 
 # Read input arguments
 parser = argparse.ArgumentParser(description=""" Run MIP design pipeline.""")
@@ -14,88 +15,88 @@ parser.add_argument("-s", "--species",
                     required=True)
 parser.add_argument("-o", "--host-species",
                     help="Host species name.",
-                    Default=None)
+                    default=None)
 parser.add_argument("-p", "--processor-number",
                     help="Number of available processors.",
                     type=int,
-                    Default=7)
+                    default=7)
 parser.add_argument("--parallel-processes",
                     help="Number of designs  carried out in parallel.",
                     type=int,
-                    Default=1)
+                    default=1)
 parser.add_argument("--flank",
                     help="Number of bases to flank target sites on each side.",
                     type=int,
-                    Default=250)
+                    default=250)
 parser.add_argument("--single-mip-threshold",
                     help=("Target regions smaller than this will have a "
                           "single MIP designed."),
                     type=int,
-                    Default=0)
+                    default=0)
 parser.add_argument("--min-target-size",
                     help="Length threshold to eliminate un-aligned targets.",
                     type=int,
-                    Default=150)
+                    default=150)
 parser.add_argument("--max-indel-size",
                     help=("Indel size limit between paralogs, allowing this"
-                          "size gapped alignment within paralogs."),
+                          " size gapped alignment within paralogs."),
                     type=int,
-                    Default=50)
+                    default=50)
 parser.add_argument("--coordinates-file",
                     help="Path to file containing target coordinates.",
-                    Default=None)
+                    default=None)
 parser.add_argument("--genes-file",
                     help="Path to file containing target genes.",
-                    Default=None)
+                    default=None)
 parser.add_argument("--snps-file",
                     help="Path to file containing SNP coordinates.",
-                    Default=None)
+                    default=None)
 parser.add_argument("--fasta-files",
                     help=("Path(s) to fasta file(s) containing target "
                           "sequences."),
                     nargs="*")
 parser.add_argument("--fasta-capture-type",
                     help="Capture type for targets specified in fasta files.",
-                    Default="whole")
+                    default="whole")
 parser.add_argument("--genome-coverage",
                     help="Minimum alignment length to reference genome.",
                     type=int,
-                    Default=None)
+                    default=1000)
 parser.add_argument("--genome-identity",
                     type=int,
                     help=("Minimum sequence identity (0-100) for genomic "
                           "alignments."),
-                    Default=100)
+                    default=100)
 parser.add_argument("--local-coverage",
                     type=int,
                     help="Minimum alignment length to reference paralog.",
-                    Default=None)
+                    default=100)
 parser.add_argument("--local-identity",
                     type=int,
                     help=("Minimum sequence identity (0-100) for paralog "
                           "alignments."),
-                    Default=100)
+                    default=100)
 parser.add_argument("--design-dir",
                     help="Path to location to output design files.",
-                    Default="/opt/analysis")
+                    default="/opt/analysis")
 parser.add_argument("--resource-dir",
                     help="Path to location to output prep files.",
-                    Default="/opt/project_resources")
+                    default="/opt/project_resources")
 parser.add_argument("--targets-rinfo-template",
                     help="Path to rinfo template for 'targets' capture type.",
-                    Default=("/opt/project_resources/rinfo_templates/"
-                             "targets_template.rinfo"))
+                    default=("/opt/resources/rinfo_templates/"
+                             "template_rinfo.txt"))
 parser.add_argument("--exons-rinfo-template",
                     help="Path to rinfo template for 'exons' capture type.",
-                    Default=("/opt/project_resources/rinfo_templates/"
-                             "exonic_template.rinfo"))
+                    default=("/opt/resources/rinfo_templates/"
+                             "template_rinfo.txt"))
 parser.add_argument("--whole-rinfo-template",
                     help="Path to rinfo template for 'whole' capture type.",
-                    Default=("/opt/project_resources/rinfo_templates/"
-                             "whole_template.rinfo"))
+                    default=("/opt/resources/rinfo_templates/"
+                             "template_rinfo.txt"))
 parser.add_argument("--output-file",
                     help="Base name to save region prep results.",
-                    Default=("/opt/project_resources/design_info"))
+                    default=("/opt/project_resources/design_info"))
 # parse arguments from command line
 args = vars(parser.parse_args())
 design_dir = args["design_dir"]
@@ -103,6 +104,8 @@ res_dir = args["resource_dir"]
 design_name = args["design_name"]
 species = args["species"]
 host_species = args["host_species"]
+if host_species is None:
+    host_species = "none"
 num_process = args["processor_number"]
 parallel_processes = args["parallel_processes"]
 processor_per_region = int(num_process/parallel_processes)
@@ -120,7 +123,7 @@ genome_identity = args["genome_identity"]
 intra_coverage = args["local_coverage"]
 intra_identity = args["local_identity"]
 targets_rinfo_template = args["targets_rinfo_template"]
-exonic_rinfo_template = args["exonic_rinfo_template"]
+exonic_rinfo_template = args["exons_rinfo_template"]
 whole_rinfo_template = args["whole_rinfo_template"]
 output_file = args["output_file"]
 # extract target coordinates from target files
@@ -252,12 +255,13 @@ for g in final_target_regions:
             single_mip = False
     cap_type = region_capture_types[g]
     rinfo_file = capture_rinfos[cap_type]
-    if not os.path.exists(design_dir + g + "/resources/"):
-        os.makedirs(design_dir + g + "/resources/")
-    with open(design_dir + g + "/resources/" + g + ".pkl", "wb") as outfile:
+    r_dir = os.path.join(design_dir, g, "resources")
+    if not os.path.exists(r_dir):
+        os.makedirs(r_dir)
+    with open(os.path.join(r_dir, g + ".pkl"), "wb") as outfile:
         pickle.dump(target_dict, outfile)
     with open(rinfo_file) as infile:
-        outfile = design_dir + g + "/resources/" + g + ".rinfo"
+        outfile = os.path.join(r_dir, g + ".rinfo")
         outfile_list = []
         for line in infile:
             newline = line.strip().split("\t")
@@ -273,10 +277,25 @@ for g in final_target_regions:
             elif line.startswith("HOST_SPECIES"):
                 newline[1] = host_species
                 outfile_list.append(newline)
+            elif (line.startswith("SELECTION")
+                  and (newline[1] == "chain")):
+                if cap_type == "targets":
+                    newline[2] = 0
+                else:
+                    newline[2] = 1
+                outfile_list.append(newline)
             elif (line.startswith("CAPTURE")
-                  and (newline[1] == "max_mips")
+                  and (newline[1] == "single_mip")
                   and single_mip):
                 newline[2] = 1
+                outfile_list.append(newline)
+            elif (line.startswith("CAPTURE")
+                  and (newline[1] == "flank")):
+                newline[2] = flank
+                outfile_list.append(newline)
+            elif (line.startswith("CAPTURE")
+                  and (newline[1] == "capture_type")):
+                newline[2] = cap_type
                 outfile_list.append(newline)
             elif (line.startswith("SETTINGS")
                   and (newline[1] == "processors")):
@@ -296,7 +315,14 @@ for g in final_target_regions:
         except KeyError:
             pass
         mip.write_list(outfile_list, outfile)
-
+    # copy primer settings files
+    primer_templates_dir = "/opt/resources/primer3_settings"
+    ext_primer_template = os.path.join(primer_templates_dir,
+                                       "extension_primer_settings.txt")
+    lig_primer_template = os.path.join(primer_templates_dir,
+                                       "ligation_primer_settings.txt")
+    res = subprocess.call(["rsync", ext_primer_template, lig_primer_template,
+                           r_dir])
 # save a dictionary containing all region prep data
 design_info = {}
 design_info = {"resource_dir": res_dir,
@@ -318,7 +344,8 @@ for g in final_target_regions:
                       "design_dir": design_dir,
                       "final_target_regions": final_target_regions[g],
                       "included_targets": included_targets[g],
-                      "region_capture_types": region_capture_types[g]}
+                      "region_capture_types": region_capture_types[g],
+                      "parallel_processes": parallel_processes}
 
 with open(output_file + ".json", "w") as outfile:
     json.dump(target_info, outfile, indent=1)

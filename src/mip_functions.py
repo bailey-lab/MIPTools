@@ -300,6 +300,7 @@ def get_target_coordinates(res_dir, species, capture_size,
         coordinates_file = os.path.join(res_dir, coordinates_file)
         try:
             coord_df = pd.read_table(coordinates_file, index_col=False)
+            coord_names = coord_df["Name"].tolist()
             coord_df.rename(columns={"Name": "name", "Chrom": "chrom",
                             "Start": "begin", "End": "end"}, inplace=True)
             region_coordinates = coord_df.set_index("name").to_dict(
@@ -312,6 +313,7 @@ def get_target_coordinates(res_dir, species, capture_size,
             print(("Target coordinates file {} could not be found.").format(
                 (coordinates_file)))
             region_coordinates = {}
+            coord_names = []
 
     # Get Gene target coordinates
     if genes_file is not None:
@@ -324,8 +326,8 @@ def get_target_coordinates(res_dir, species, capture_size,
         try:
             genes_file = os.path.join(res_dir, genes_file)
             genes_df = pd.read_table(genes_file, index_col=False)
+            gene_names = genes_df["Gene"].tolist()
             genes = genes_df.set_index("Gene").to_dict(orient="index")
-            gene_names = list(genes.keys())
             gene_id_to_gene = {}
             gene_ids = []
             gene_coordinates = {}
@@ -399,10 +401,14 @@ def get_target_coordinates(res_dir, species, capture_size,
             capture_types[newc] = capture_types.pop(c)
     target_regions, target_names = merge_coordinates(all_coordinates,
                                                      capture_size)
-    # prioritize gene names over snp or other names
+    # prioritize gene names ond  coordinate names  over snp or other names
     for t in list(target_names.keys()):
         for n in target_names[t]:
             if n in gene_names:
+                target_names[n] = target_names.pop(t)
+                target_regions[n] = target_regions.pop(t)
+                break
+            elif n in coord_names:
                 target_names[n] = target_names.pop(t)
                 target_regions[n] = target_regions.pop(t)
                 break
@@ -1601,7 +1607,9 @@ def get_snps(region, snp_file):
     return a list of snps which are lists of
     tab delimited information from the snp file. """
     # extract snps using tabix, in tab separated lines
-    snp_temp = subprocess.check_output(["tabix", snp_file, region])
+    snp_temp = subprocess.check_output(["tabix", snp_file, region]).decode(
+        "UTF-8"
+    )
     # split the lines (each SNP)
     snps_split = snp_temp.split("\n")
     # add each snp in the region to a list
@@ -1621,7 +1629,7 @@ def get_vcf_snps(region, snp_file):
     tab delimited information from the snp file. """
     # extract snps using tabix, in tab separated lines
     snp_temp = subprocess.check_output(["bcftools", "view", "-H", "-G", "-r",
-                                        region, snp_file])
+                                        region, snp_file]).decode("UTF-8")
     # split the lines (each SNP)
     snps_split = snp_temp.split("\n")[:-1]
     # add each snp in the region to a list
@@ -1897,17 +1905,15 @@ def get_cds(gene_name, species):
     return cds
 
 
-def make_boulder(fasta,
-                  primer3_input_DIR,
-                  exclude_list=[],
-                  output_file_name="",
-                  sequence_targets=[]):
-    """ create a boulder record file in primer3_input_DIR from a given fasta STRING.
-    SEQUENCE_ID is the fasta header, usually the genomic region (chrX:m-n)
-    exclude_list is [coordinate,length] of any regions primers cannot overlap.
+def make_boulder(fasta, primer3_input_DIR, exclude_list=[],
+                 output_file_name="", sequence_targets=[]):
+    """ Create a boulder record file in primer3_input_DIR from a given fasta
+    STRING. SEQUENCE_ID is the fasta header, usually the genomic region
+    (chrX:m-n) exclude_list is [coordinate,length] of any regions primers
+    cannot overlap.
     """
     # parse fasta string, get header and remove remaining nextlines.
-    fasta_list=fasta.split("\n")
+    fasta_list = fasta.split("\n")
     fasta_head = fasta_list[0][1:]
     seq_template = "".join(fasta_list[1:])
     # convert exclude list to strings
@@ -1920,11 +1926,12 @@ def make_boulder(fasta,
     if len(sequence_targets) == 0:
         sequence_target_string = ""
     else:
-        sequence_target_string = " ".join([",".join(map(str, s))                                         for s in sequence_targets])
+        sequence_target_string = " ".join([",".join(map(str, s))
+                                           for s in sequence_targets])
     boulder = ("SEQUENCE_ID=" + fasta_head + "\n" +
-                "SEQUENCE_TEMPLATE="+seq_template+"\n"+
-                "SEQUENCE_TARGET=" + sequence_target_string + "\n" +
-                "SEQUENCE_EXCLUDED_REGION="+exclude_region+"\n"+ "=")
+               "SEQUENCE_TEMPLATE=" + seq_template + "\n" +
+               "SEQUENCE_TARGET=" + sequence_target_string + "\n" +
+               "SEQUENCE_EXCLUDED_REGION=" + exclude_region + "\n" + "=")
     if output_file_name == "":
         outname = fasta_head
     else:
@@ -1934,88 +1941,10 @@ def make_boulder(fasta,
     return boulder
 
 
-def snp_masker(wdir,
-               output_name,
-               region_key,
-               species,
-               masking= 0,
-               maf=0.0001,
-               mac=10,
-               sequence_targets = []):
-    region_snps = get_snps(region_key,
-                           get_file_locations()[species]["snps"])
-    filtered_snps = snp_filter_hs(region_snps,
-                                  min_allele_freq = maf,
-                                  min_total_allele = mac)
-    begin = get_coordinates(region_key)[1]
-    region_fasta = get_fasta(region_key, species).upper()
-    fasta_list=region_fasta.split("\n")
-    fasta_head = fasta_list[0]
-    seq_template_temp = "".join(fasta_list[1:])
-    exclude = []
-    for d in filtered_snps:
-        snp_index_start = int(d[2]) - begin
-        snp_index_end = int(d[3]) - begin + 1
-        if not masking:
-            exclude.append([snp_index_start, snp_index_end - snp_index_start])
-        else:
-            for i in range(snp_index_start, snp_index_end):
-                seq_template_temp[i] = seq_template_temp[i].lower()
-            else:
-                exclude_ext.append([snp_index_start, snp_index_end - snp_index_start])
-    # sort excluded snps by their location
-    exclude.sort(key=itemgetter(0))
-    # merge snps that are close together to reduce excluded region number
-    #print exclude
-    for i in range(len(exclude)-1):
-        l_current = exclude[i]
-        l_next = exclude[i+1]
-        if 0 <= l_next[0] - sum(l_current) < 18:
-            l_new = [l_current[0], l_next[0] - l_current[0] + l_next[1]]
-            exclude[i+1] = l_new
-            exclude[i] = "delete"
-        elif (sum(l_next) - sum(l_current)) <= 0:
-            exclude[i+1] = exclude[i]
-            exclude[i] = "delete"
-        elif sum(l_next) > sum(l_current) > l_next[0]:
-            l_new = [l_current[0], l_next[0] - l_current[0] + l_next[1]]
-            exclude[i+1] = l_new
-            exclude[i] = "delete"
-    excluded = [x for x in exclude if x != "delete"]
-    # rebuild the fasta record from modified list
-    fasta_seq = "".join(seq_template_temp)
-    fasta_rec = fasta_head[1:] + "\n" + fasta_seq
-    make_boulder (fasta_rec, wdir,exclude_list=excluded,                      output_file_name=output_name,
-                      sequence_targets = sequence_targets)
-    return
-
-
-def make_primers(input_file,  settings, primer3_input_DIR, primer3_output_DIR,
-                 output_file="input_file"):
-    """ make primers using boulder record file in primer3_input_DIR
-    using settings file in primer3_settings_DIR and output as boulder
-    record to primer3_output_DIR"""
-    primer3_settings_DIR = "/opt/analysis/"
-    # if an output file is specified:
-    if output_file != "input_file":
-        primer3_out = output_file
-    # if no output file is specified, name of the file is the same as input file.
-    else:
-        primer3_out = input_file
-    # call primer3 program using the input and settings file
-    primer3_output = subprocess.check_output(["primer3_core", "-p3_settings_file="+primer3_settings_DIR+settings, primer3_input_DIR + input_file])
-    # write boulder record to file. Append the settings used to output file name.
-    outfile = open (primer3_output_DIR + primer3_out + "_" + settings, 'w')
-    outfile.write(primer3_output)
-    outfile.close()
-    return
-
-
 def make_primers_worker(l):
     """ A worker function to make primers for multiple regions
     using separate processors. Read boulder record in given input
     directory and creates primer output files in output directory"""
-    primer3_settings_DIR = "/opt/analysis/"
     # function arguments should be given as a list due to single
     # iterable limitation of map_async function of multiprocessor.Pool
     # input boulder record name
@@ -2027,14 +1956,17 @@ def make_primers_worker(l):
     # locations of input/output dirs
     primer3_input_DIR = l[3]
     primer3_output_DIR = l[4]
+    primer3_settings_DIR = l[5]
+    input_file = os.path.join(primer3_input_DIR, input_file)
+    output_file = os.path.join(primer3_output_DIR, output_file)
+    settings = os.path.join(primer3_settings_DIR, settings)
     # call primer3 program using the input and settings file
     primer3_output = subprocess.check_output(
         ["primer3_core",
-         "-p3_settings_file="+primer3_settings_DIR+settings,
-         primer3_input_DIR + input_file]
+         "-p3_settings_file=" + settings, input_file]
     )
     # write boulder record to file.
-    with open(primer3_output_DIR + output_file, 'w') as outfile:
+    with open(output_file, 'w') as outfile:
         outfile.write(primer3_output.decode("UTF-8"))
     return
 
@@ -3378,8 +3310,10 @@ def pick_paralog_primer_pairs(extension, ligation, output_file,
                                      + "_" + lig_name)
                         if ext_ori:
                             orientation = "forward"
+                            pair_name = pair_name + "_F"
                         else:
                             orientation = "reverse"
+                            pair_name = pair_name + "_R"
                         primer_pairs["pair_information"][pair_name] = {
                             "pairs": pairs,
                             "extension_primer_information": ext[e],
@@ -4044,21 +3978,23 @@ def compatible_chains(primer_file, primer3_output_DIR, primer_out, output_file,
                 for m in s1:
                     inc.update(scored_mips["pair_information"][m][
                         "incompatible"])
-                for s2 in mip_sets.difference(s1):
-                    s3 = s2.difference(inc).difference(s1)
-                    if len(s3) > 0:
-                        new_mip_sets.add(frozenset(s1.union(s3)))
-                        expanded_mipset = True
-            mip_sets = new_mip_sets
+                for s2 in mip_sets:
+                    if s1 != s2:
+                        s3 = s2.difference(inc).difference(s1)
+                        if len(s3) > 0:
+                            new_mip_sets.add(frozenset(s1.union(s3)))
+                            expanded_mipset = True
+            mip_sets = mip_sets.union(new_mip_sets)
             new_mip_sets = set()
             for s1 in mip_sets:
-                for s2 in mip_sets.difference(s1):
-                    if s1.issubset(s2):
+                for s2 in mip_sets:
+                    if (s1 != s2) and s1.issubset(s2):
                         break
                 else:
                     new_mip_sets.add(s1)
             mip_sets = new_mip_sets
             set_count = len(mip_sets)
+        print("Compatible run.")
         if outp:
             with open(primer3_output_DIR + output_file, "w") as outfile:
                 outfile.write("\n".join([",".join(s) for s in mip_sets])
@@ -4066,8 +4002,6 @@ def compatible_chains(primer_file, primer3_output_DIR, primer_out, output_file,
         with open(primer3_output_DIR + primer_out, "wb") as outfile:
             pickle.dump(scored_mips, outfile)
     return mip_sets
-
-
 
 
 def compatibility (scored_mips, primer3_output_DIR = "", primer_out = "",
@@ -4299,7 +4233,8 @@ def design_mips_worker(design_list):
     design_dir, g = design_list
     print(("Designing MIPs for ", g))
     try:
-        Par = mod.Paralog(design_dir + g + "/resources/" + g + ".rinfo")
+        rinfo_file = os.path.join(design_dir, g, "resources", g + ".rinfo")
+        Par = mod.Paralog(rinfo_file)
         Par.run_paralog()
         if Par.copies_captured:
             print(("All copies were captured for paralog ", Par.paralog_name))
@@ -4312,6 +4247,7 @@ def design_mips_worker(design_list):
             print(("MIPs are NOT chained for paralog ", Par.paralog_name))
     except Exception as e:
         print((g, str(e), " FAILED!!!"))
+        traceback.print_exc()
     return 0
 
 
@@ -4380,16 +4316,17 @@ def parasight(resource_dir,
             outfile.write("$opt{'filename'}='" + t
                           + "';&fitlongestline; &print_all (0,'"
                           + basename + "')")
-    with open(resource_dir + "backup_commands", "w") as outfile:
+    with open(os.path.join(resource_dir, "backup_commands"), "w") as outfile:
         outfile.write("\n".join(backup_list))
-    with open(resource_dir + "parasight_commands", "w") as outfile:
+    with open(
+            os.path.join(resource_dir, "parasight_commands"), "w") as outfile:
         outfile.write("\n".join(output_list))
-    with open(resource_dir + "gs_commands", "w") as outfile:
+    with open(os.path.join(resource_dir, "gs_commands"), "w") as outfile:
         outfile.write("\n".join(gs_list))
-    with open(resource_dir + "copy_commands", "w") as outfile:
+    with open(os.path.join(resource_dir, "copy_commands"), "w") as outfile:
         outfile.write("\n".join(pdf_list))
     pdf_merge_list.append(" ".join(pdf_convert_list))
-    with open(resource_dir + "convert_commands", "w") as outfile:
+    with open(os.path.join(resource_dir, "convert_commands"), "w") as outfile:
         outfile.write("\n".join(pdf_merge_list))
     visualization_list = ["#!/usr/bin/env bash"]
     visualization_list.append("chmod +x backup_commands")
@@ -4650,11 +4587,11 @@ def parasight_print(resource_dir, design_dir, design_info_file,
             if (designed_gene_list is None) or (g in designed_gene_list):
                 show_file = os.path.join(design_dir, g, g + ".show")
                 extras_file = os.path.join(design_dir, g, g + extra_extension)
-                line = ("parasight76.pl -showseq " + show_file
-                        + "-extra " + extras_file)
+                line = ["parasight76.pl", "-showseq", show_file,
+                        "-extra ", extras_file]
                 if print_out:
-                    print(line)
-                outfile.write(line + "\n")
+                    print(" ".join(line))
+                outfile.write(" ".join(line) + "\n")
 
 
 def rescue_mips(design_dir,
