@@ -14,24 +14,26 @@ Note: Snap package install is a rapid way to install the go language required by
 
 ### Build MIPTools from the definition file 
 This can take about 10-30 minutes, depending on number of cpu cores available.  
-User must have **sudo** privilege to _build_ the image. You do not need sudo to _use_ the image. So if you want to run the container on an environment without sudo, build the container on your own machine and copy the image file to the host machine. Note that Singularity program itself must have been installed with sudo.
+User must have **sudo** privilege to _build_ the image. You do not need sudo to _use_ the image. So if you want to run the container on an environment without sudo, build the container on your own machine and copy the image file to the computer without sudo. Note that Singularity program itself must have been installed with sudo.
 ```bash
 cd MIPTools
 sudo singularity build miptools.sif MIPTools.def
 ```
-miptools.sif is a single **portable** file which has all the programs needed for MIP data analysis and a lot more.  
+miptools.sif is a single **portable** file which has all the programs needed for MIP design, data analysis and a lot more.  
 More information about the extra programs and their uses will be added over time.
 
-Although miptools.sif contains all programs needed, it does not include the data to be analyzed or the resources to be used. Every time we run Singularity we will **bind** needed directories to the container. There are 3 resources directories are required for all operations. In addition to those, each app needs a data_dir and analysis_dir. **-B** option is used for each binding: 
+Although miptools.sif contains all programs needed, it does not include the data to be analyzed or the resources to be used. Every time we run Singularity we will **bind** needed directories to the container. There are 3 resources directories which are required for most operations. In addition to those, each app needs a data_dir and analysis_dir. **-B** option is used for each binding: 
 ```bash
 singularity -B path_on_host:path_on_container
 ```
-Path on the left side of the column specifies where on the host computer the directory is and the right side is the location in the container where the directory should be bound (mounted) to. Each binding is specified with a separate -B option. See below for examples.
+Path on the left side of the column specifies where on *your* computer the directory is and the right side is the location in the container where the directory should be bound (mounted) to. Each binding is specified with a separate -B option. See below for examples.
 
 ### Directory Structure
 3 resource directories are required for most operations. These live outside the container and must be **bound** to the container at run time with `-B` option.
 *  **base_resources:** Included in the GitHub repository. It contains common resources across projects. It should be bound to the container with `-B [path to base resources dir outside of the container]:/opt/resources`. This makes the base_resources directory available to the container and it would be reached at `/opt/resources` path within the container. `/opt/resources` part of this argument must not be altered. For example, if my base resources are located in my computer at `/home/base`, I would bind it to the container with `-B /home/base:/opt/resources`.
-*  **species_resources:** Contains resources shared by projects using the same target species (Pf, human, etc.). Bind this to `/opt/species_resources` in the container.
+*  **species_resources:** Contains resources shared by projects using the same target species (Pf, human, etc.). Bind this to `/opt/species_resources` in the container.  
+
+**  What should be in the species_resources?
 *  **project_resources:** Contains project specific files (probe sequences, sample information, etc.). Bind this to `/opt/project_resources`
 *  **data_dir:** Contains data to be analyzed. Typically, this nothing will be written to this directory. Bind this directory to `/opt/data`.
 *  **analysis_dir:** Where analysis will be carried out and all output files will be saved. Bind it to `/opt/analysis` This is the only directory that needs write permission as the output will be saved here.
