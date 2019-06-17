@@ -49,11 +49,32 @@ Usually, one app's analysis directory will be the next app's data directory in t
 
 ## Usage for MIP design
 ### Region Prep
-The first step in the probe design process is to create target regions. Targets can be provided in multiple ways.
-1) SNPs/Targets
-2) Region coordinates
-3) Gene names
-4) Fasta sequence
+The first step in the probe design process is to create target regions. Targets can be provided in four ways. All files explained below must be placed in the *project_resources* directory if they will be used. 
+**Important:** all target names must not include any specieal characters except "-" (dash). Letters, numbers and dashes are the only allowed characters, except for gene names, where the exact gene name  must be used. If any specieal character is used, these will be replaced with a dash. 
+1) SNPs/Targets can be specified in a tab separated text file with headers: *Chrom, Start, End, Name, InsertionLength*. All field names are case sensitive. First 3 fields describe the genomic location of the target. *Name* is a unique name given to the target. *InsertionLength* specifies the maximum length change for insertions relative to the reference genome. This information is used to shorten the MIP captured region to accomodate the largest insertion in the target region. For example, let's say we have a capture size limit of 10 bp (this limit depends on the sequencing platform used and will be discussed later) and a target specified as *chr1 10 13 test-target 0*. If a MIP captures the coordinates between 5 and 15 of chr1, that MIP is considered capturing this target. If we know that this target is in a tandem repeat region and known to have insertions up to 6 bases, we'd specify it as  *chr1 10 13 test-target 6*. Now the same MIP capturing chr1:5-15 will be discarded because the captured region may be 16 bp for samples carrying the 6 bp insertion and the size limit is reduced to 4 (10 - 6). Instead, another MIP capturing chr1:9-14 will be needed.
+2) Region coordinates can be specified in a tab separated text file with headers *Name, Chrom, Start, End, CaptureType*. These coordinates provide a target region for MIP design as opposed to specific targets for MIPs to capture. *CaptureType* must be one of "exons" or "whole". For example, *chr1 100 300 test-target whole* would use the chr1:100-300 sequence (flanked by a length of bases on each side specified later in the process), as template to design MIPs on. If CaptureType was specified as "exons", then only the exons overlapping chr1:100-300 would be used as template.
+3) Gene names can be specified in a tab separated text file with headers: *Gene, GeneID, CaptureType*. Gene field can be any name, but it makes sense to use actual gene names. GeneID must be the value that is present in the *name2* column of the refgene file. *CaptureType* must be one of "targets", "exons" or "whole". Specifying "targets" as the CaptureType here is useful to group the targets specifed in the other files under a more meaninful name. "exons" would use exons of the gene as template while "whole" would use introns as well.
+4) Fasta sequences can be provided in a single (possibly multi-sequence) fasta file or multiple fasta files. The sequences provided here are aligned to the reference genome and the coordinates from this alignment is used as template, not the actual sequence provided in the fasta file.
+
+"Shell" into the container using correct path bindings:
+```bash
+singularity shell \  
+    -B [path to base resources]:/opt/resources \  
+    -B [path to project resources]:/opt/project_resources \  
+    -B [path to species resources]:/opt/species_resources \  
+    -B [path to design directory]:/opt/analysis \  
+    [path to miptools.sif]
+```
+After the above command you should get a command prompt different from your usual one, similar to:
+```bash
+Singularity miptools:~>
+```
+This means you are working in the container and all paths must refer to those in the container. For example, the species_resources directory is always at /opt/species_resources, regardless of where it is in your computer.  
+If indexed genomes are not available (bowtie2, bwa), create them:
+```bash
+elucidator bioIndexGenome --genomeFnp [path to fasta file in the container] --verbose
+```
+If you created the indexed genomes now, update the bowtie_genome and bwa_genome entries in your `/opt/species_resources/file_locations.tsv` file.
 ### Usage for data analysis
 Each MIPtool is an **app** in the container. This is a typical Singularity command to run an app:  
 ```bash
