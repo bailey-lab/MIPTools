@@ -75,6 +75,42 @@ If indexed genomes are not available (bowtie2, bwa), create them:
 elucidator bioIndexGenome --genomeFnp [path to fasta file in the container] --verbose
 ```
 If you created the indexed genomes now, update the bowtie_genome and bwa_genome entries in your `/opt/species_resources/file_locations.tsv` file.
+
+```bash
+python /opt/extras/region_prep.py  OPTIONS
+```
+```
+-n A short name for the current design.
+-s Target species name.
+[-o ]: Host species name. Probes predicted to bind this genome will be discarded. default=None
+[-p ]: Number of available processors. default=7
+[--parallel-processes ]: Number of designs carried out in parallel. default=1
+[--flank ]: Number of bases to flank target sites on each side. default=150
+[--single-mip-threshold ]: Target regions smaller than this will have a single MIP designed. default=0
+[--min-target-size ]: Length threshold to eliminate un-aligned targets. default=150
+[--max-indel-size ]: Indel size limit between paralogs, allowing this size gapped alignment within paralogs. default=50
+
+[--coordinates-file ]: Path to file containing target coordinates.
+[--genes-file ]: Path to file containing target genes.
+[--snps-file ]: Path to file containing SNP coordinates.
+[--fasta-files]: Path(s) to fasta file(s) containing target sequences
+[--fasta-capture-type ]: Capture type for targets specified in fasta files. default="whole"
+[--genome-coverage ]: Minimum alignment length to reference genome. default=1000
+[--genome-identity ]: Minimum sequence identity (0-100) for genomic alignments. default=100
+[--local-coverage ]: Minimum alignment length to reference paralog. default=100
+[--local-identity ]: Minimum sequence identity (0-100) for paralog alignments. default=100
+[--design-dir ]: Path to location to output design files. default="/opt/analysis"
+[--resource-dir ]: Path to location to output prep files. default="/opt/project_resources"
+[--targets-rinfo-template ]: Path to rinfo template for 'targets' capture type.default= "/opt/resources/templates/rinfo_templates/template_rinfo.txt"
+[--exons-rinfo-template ]: Path to rinfo template for 'exons' capture type.default= "/opt/resources/templates/rinfo_templates/template_rinfo.txt"
+[--whole-rinfo-template ]: Path to rinfo template for 'whole' capture type.default= "/opt/resources/templates/rinfo_templates/template_rinfo.txt"
+[--output-file OUTPUT_FILE]: Base name to save region prep results. default="/opt/project_resources/design_info"
+```
+
+
+
+
+
 ### Usage for data analysis
 Each MIPtool is an **app** in the container. This is a typical Singularity command to run an app:  
 ```bash
