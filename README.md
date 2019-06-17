@@ -31,16 +31,30 @@ Path on the left side of the column specifies where on *your* computer the direc
 ### Directory Structure
 3 resource directories are required for most operations. These live outside the container and must be **bound** to the container at run time with `-B` option.
 * **base_resources:** Included in the GitHub repository. It contains common resources across projects. It should be bound to the container with `-B [path to base resources dir outside of the container]:/opt/resources`. This makes the base_resources directory available to the container and it would be reached at `/opt/resources` path within the container. `/opt/resources` part of this argument must not be altered. For example, if my base resources are located in my computer at `/home/base`, I would bind it to the container with `-B /home/base:/opt/resources`.
-* **species_resources:** Contains resources shared by projects using the same target species (Pf, human, etc.). Bind this to `/opt/species_resources` in the container.  
-   What should be in the species_resources?
-   * something
+* **species_resources:** Contains resources shared by projects using the same target species (Pf, human, etc.). Bind this to `/opt/species_resources` in the container. For example, if I am working with *Plasmodium falciparum* sequences and I have the necessary files in my computer at /home/pf3d/, then the binding parameter is -B /home/pf3d:/opt/species_resources.
+   species_resources contents:
+   * file_locations.tsv: a tab separated text file showing where each required file will be located in the container. Each line corresponds to one file. First field states the species for the file, second field states what kind of file it is and the last field is the absolute path to the file.  
+   For example, *'pf      fasta_genome    /opt/species_resources/genomes/genome.fa'* shows the fasta genome file for the species 'pf' will be found at '/opt/species_resources/genomes/genome.fa' within the container. This also means that there is a file at /home/pf3d/genomes/genome.fa in my computer, because I bound /home/pf3d to /opt/species_resources in the container.
+   * fasta file: Genome reference sequence in fasta format.
+   * bowtie2_genome: Reference genome indexed using bowtie2. If this is not available, it can be generated using MIPTools.
+   * bwa_genome: Reference genome indexed using bwa. If this is not available, it can be generated using MIPTools.
+   * snps: A vcf file containing genomic variation. Individual genotypes are not necessary. The only requirement is that either the INFO fields AC and AN are present for number of allele counts and total allele counts, respectively. Tese can be number of samples containing the allele and total number of samples, instead of allele  numbers. Because the information is used to get an idea about the population frequency of each allele, frequency of samples carrying an allele provides a good approximation. If these numbers are provided with different field names than AC and AN, the field names used must be specified in design settings file.
+   * refgene: RefGen/RefSeq style gene/gene prediction table. These are available ad http://genome.ucsc.edu under Tools/Table Browser for most species. The fields in the file are "bin, name, chrom, strand, txStart, txEnd, cdsStart, cdsEnd, exonCount, exonStarts, exonEnds, score, name2, cdsStartStat, cdsEndStat, exonFrames". 
+   * refgene_tabix: RefGen file, sorted and indexed using tabix.
 * **project_resources:** Contains project specific files (probe sequences, sample information, etc.). Bind this to `/opt/project_resources`
 * **data_dir:** Contains data to be analyzed. Typically, this nothing will be written to this directory. Bind this directory to `/opt/data`.
 * **analysis_dir:** Where analysis will be carried out and all output files will be saved. Bind it to `/opt/analysis` This is the only directory that needs write permission as the output will be saved here.
 
 Usually, one app's analysis directory will be the next app's data directory in the pipeline.
 
-### Usage
+## Usage for MIP design
+### Region Prep
+The first step in the probe design process is to create target regions. Targets can be provided in multiple ways.
+1) SNPs/Targets
+2) Region coordinates
+3) Gene names
+4) Fasta sequence
+### Usage for data analysis
 Each MIPtool is an **app** in the container. This is a typical Singularity command to run an app:  
 ```bash
 singularity run --app appName singularityOptions miptools.sif appOptions
