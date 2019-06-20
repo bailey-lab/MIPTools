@@ -4,6 +4,7 @@ import json
 import os
 import argparse
 import subprocess
+import pandas as pd
 
 # Read input arguments
 parser = argparse.ArgumentParser(description=""" Run MIP design pipeline.""")
@@ -27,7 +28,7 @@ parser.add_argument("--parallel-processes",
 parser.add_argument("--flank",
                     help="Number of bases to flank target sites on each side.",
                     type=int,
-                    default=250)
+                    default=150)
 parser.add_argument("--single-mip-threshold",
                     help=("Target regions smaller than this will have a "
                           "single MIP designed."),
@@ -84,7 +85,7 @@ parser.add_argument("--resource-dir",
                     default="/opt/project_resources")
 parser.add_argument("--targets-rinfo-template",
                     help="Path to rinfo template for 'targets' capture type.",
-                    default=("/opt/resources/rinfo_templates/"
+                    default=("/opt/resources/templates/rinfo_templates/"
                              "template_rinfo.txt"))
 parser.add_argument("--exons-rinfo-template",
                     help="Path to rinfo template for 'exons' capture type.",
@@ -349,3 +350,21 @@ for g in final_target_regions:
 
 with open(output_file + ".json", "w") as outfile:
     json.dump(target_info, outfile, indent=1)
+
+# create a table for visual evaluation
+tr_list = []
+for g in target_info:
+    tinfo = target_info[g]
+    inc = tinfo["included_targets"]
+    tr_regs = tinfo["final_target_regions"]
+    cap_type = tinfo["region_capture_types"]
+    for i in range(len(tr_regs)):
+        temp_list = [g]
+        temp_list.append("C" + str(i))
+        temp_list.extend(tr_regs[i][:3])
+        temp_list.append(",".join(inc))
+        temp_list.append(cap_type)
+        tr_list.append(temp_list)
+tr_df = pd.DataFrame(tr_list, columns=["Name", "Copy", "Chrom", "Start", "End",
+                                       "IncludedTargets", "CaptureType"])
+tr_df.to_csv(output_file + ".tsv", sep="\t", index=False)

@@ -469,6 +469,12 @@ class Locus:
         segment_dic = self.segment_dic["S0"]
         snps = {}
         try:
+            ac_name = self.rinfo["CAPTURE"]["S0"]["allele_count_name"]
+            an_name = self.rinfo["CAPTURE"]["S0"]["allele_total_name"]
+        except KeyError:
+            ac_name = "AC"
+            an_name = "AN"
+        try:
             snp_file = mip.get_file_locations()[self.species]["snps"]
         except KeyError:
             return {}
@@ -492,6 +498,8 @@ class Locus:
                         sdict[split_inf[0]] = split_inf[1].split(",")
                     except IndexError:
                         sdict[inf] = True
+                sdict["AN"] = sdict[an_name]
+                sdict["AC"] = sdict[ac_name]
                 d = {"copy_chrom": schr,
                      "copy_begin": spos,
                      "copy_base": sref,
@@ -1115,9 +1123,6 @@ class Paralog(Locus):
                 counter += 1
             seg.make_primers()
             seg.designed = True
-            subprocess.call(["mv", self.cwd + self.paralog_name,
-                             self.cwd + self.paralog_name + ".last"])
-
             with open(self.cwd + self.paralog_name, "wb") as savefile:
                 pickle.dump(self, savefile)
             return
@@ -1134,9 +1139,6 @@ class Paralog(Locus):
                 sub.pick_primer_pairs()
                 sub.make_mips()
 
-                subprocess.call(["mv", self.cwd + self.paralog_name,
-                                 self.cwd + self.paralog_name + ".last"])
-
                 with open(self.cwd + self.paralog_name, "wb") as savefile:
                     pickle.dump(self, savefile)
 
@@ -1145,9 +1147,6 @@ class Paralog(Locus):
                 sub.compatible()
                 sub.best_mipset()
                 sub.designed = True
-                subprocess.call(["mv", self.cwd + self.paralog_name,
-                                 self.cwd + self.paralog_name + ".last"])
-
                 with open(self.cwd + self.paralog_name, "wb") as savefile:
                     pickle.dump(self, savefile)
             except Exception as e:
@@ -1181,9 +1180,6 @@ class Paralog(Locus):
             self.sort_mips()
             self.order_mips()
             self.designed = True
-            subprocess.call(["mv", self.cwd + self.paralog_name,
-                             self.cwd + self.paralog_name + ".last"])
-
             with open(self.cwd + self.paralog_name, "wb") as savefile:
                     pickle.dump(self, savefile)
 
@@ -1699,8 +1695,6 @@ class Paralog(Locus):
         outfile = open(self.selected_mipfile, "w")
         outfile.write("\n".join(outfile_list))
         outfile.close()
-        subprocess.call(["mv", self.cwd + self.paralog_name,
-                         self.cwd + self.paralog_name + ".last"])
         with open(self.cwd + self.paralog_name, "wb") as savefile:
                 pickle.dump(self, savefile)
 
@@ -2474,7 +2468,7 @@ class Subregion(Locus):
         except KeyError:
             max_overlap_same = overlap_same
             max_overlap_opposite = overlap_opposite
-        intervals = self.intervals
+        intervals = [self.begin + self.flank, self.end - self.flank]
         subregion_size = intervals[1] - intervals[0] + 1
         best_set_chained = False
         chain_bonus = self.scoring["chain_bonus"]
@@ -2868,7 +2862,7 @@ class Mip():
         except KeyError:
             arms = "any"
         if arms not in ["extension",  "ligation",  "any", "both", "capture"]:
-            arms = "any"
+            arms = "capture"
         insertions = self.subregion.locus.insertions
         for target_type in targets:
             for copy_id in targets[target_type]:

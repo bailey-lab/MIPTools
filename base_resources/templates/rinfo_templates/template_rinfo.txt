@@ -8,7 +8,7 @@ DESIGN_DIR	TBD
 SELECTION	settings_for	compatibility
 SELECTION	low	400
 SELECTION	high	30000
-SELECTION	mip_limit	150
+SELECTION	mip_limit	100
 SELECTION	trim_size	2
 SELECTION	trim_increment	3
 SELECTION	trim_limit	50
@@ -54,7 +54,7 @@ SETTINGS	settings_file	extension_primer_settings.txt	ligation_primer_settings.tx
 SETTINGS	Na	0.025	0.025	0.025
 SETTINGS	Mg	0.01	0.01	0.01
 SETTINGS	oligo_conc	4.00E-10	4.00E-10	4.00E-10
-SETTINGS	primer_tm	52	57	none
+SETTINGS	primer_tm	none	none	none
 SETTINGS	filter_tm	47	47	none
 SETTINGS	hit_threshold	0	0	none
 SETTINGS	lower_filter_tm	42	42	none

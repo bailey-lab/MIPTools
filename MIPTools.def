@@ -2,6 +2,8 @@ Bootstrap: docker
 From: amd64/ubuntu:18.04
 
 %post
+    # set number of cpus to use in build
+    CPU_COUNT=20
     # set build environment
     export DEBIAN_FRONTEND=noninteractive \
         CONDA_DIR=/opt/conda \
@@ -118,7 +120,14 @@ From: amd64/ubuntu:18.04
     git clone https://github.com/bailey-lab/MIPWrangler
     cd MIPWrangler
     git checkout develop
-    ./upgradeDevelop.sh 20
+    ./upgradeDevelop.sh $CPU_COUNT
+
+    # install elucidator
+    cd /opt/programs
+    git clone https://github.com/nickjhathaway/elucidator
+    cd elucidator
+    git checkout develop
+    ./install.sh $CPU_COUNT
 
     # add executable flag to executables
     chmod -R +xr /usr/bin

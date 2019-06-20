@@ -9,7 +9,7 @@ from itertools import product
 
 # Read input arguments
 parser = argparse.ArgumentParser(
-    description=""" Order MIP probes.""")
+    description="""Order MIP probes.""")
 
 parser.add_argument("-d", "--design-info",
                     help=("Path to design info file created by the region "

@@ -166,7 +166,8 @@ def rsid_to_target(resource_dir, snp_file):
     # these locations in the genome.
     snp_locations = {}
     capture_types = {}
-    with io.open(resource_dir + snp_file, encoding="utf-8") as infile:
+    with io.open(os.path.join(resource_dir, snp_file),
+                 encoding="utf-8") as infile:
         for line in infile:
             newline = line.strip().split("\t")
             rsid = newline[5]
@@ -493,7 +494,7 @@ def create_target_fastas(res_dir, targets, species, flank):
         end = targets[t][2] + flank
         rk = chrom + ":" + str(begin) + "-" + str(end)
         try:
-            with open(res_dir + t + ".fa", "w") as outfile:
+            with open(os.path.join(res_dir, t + ".fa"), "w") as outfile:
                 outfile.write(get_fasta(rk, species, header=t))
         except Exception as e:
             print(("Fasta file for {} could not be created, "
@@ -525,7 +526,7 @@ def add_fasta_targets(res_dir, fasta_files, fasta_capture_type):
             fasta_sequences[newf] = fasta_sequences.pop(f)
         if newf not in capture_types:
             capture_types[newf] = fasta_capture_type
-        with open(res_dir + newf + ".fa", "w") as outfile:
+        with open(os.path.join(res_dir, newf + ".fa"), "w") as outfile:
             outfile.write(">" + newf + "\n" + fasta_sequences[newf] + "\n")
     return {"fasta_sequences": fasta_sequences, "capture_types": capture_types}
 
@@ -608,7 +609,7 @@ def align_region_worker(l):
     output_format = l[8]
     # additional options to pass to lastz
     options = l[9]
-    query_fasta = resource_dir + region_key
+    query_fasta = os.path.join(resource_dir, region_key)
     # create target actions text
     if len(target_actions) > 0:
         target_act = "[" + ",".join(target_actions) + "]"
@@ -623,7 +624,7 @@ def align_region_worker(l):
     comm = ["lastz_32",
             target_fasta + target_act,
             query_fasta + query_act,
-            "--output=" + resource_dir + output_file,
+            "--output=" + os.path.join(resource_dir, output_file),
             "--format=" + output_format,
             "--filter=identity:" + str(identity_cutoff),
             "--filter=coverage:" + str(coverage_cutoff)]
@@ -730,10 +731,11 @@ def merge_alignments(resource_dir, fasta_list, output_prefix="merged"):
     """
     # create a list for each alignment type (general and differences)
     als_out = []
-    with open(resource_dir + output_prefix + ".al", "w") as alignment_file:
+    with open(os.path.join(
+            resource_dir, output_prefix + ".al"), "w") as alignment_file:
         for f in fasta_list:
             fnum = 0
-            with open(resource_dir + f + ".al") as alignment:
+            with open(os.path.join(resource_dir, f + ".al")) as alignment:
                 linenum = 0
                 for line in alignment:
                     if linenum > 0:
@@ -766,10 +768,11 @@ def merge_alignment_diffs(resource_dir, fasta_list, output_prefix="merged"):
     """
     # create a list for each alignment type (general and differences)
     diffs_out = []
-    with open(resource_dir + output_prefix + ".differences", "w") as diff_file:
+    with open(os.path.join(
+            resource_dir, output_prefix + ".differences"), "w") as diff_file:
         for f in fasta_list:
             fnum = 0
-            with open(resource_dir + f + ".differences") as diffs:
+            with open(os.path.join(resource_dir, f + ".differences")) as diffs:
                 for d in diffs:
                     diffs_out.append(d.strip())
             fnum += 0
@@ -808,7 +811,7 @@ def alignment_parser(wdir, name, spacer=0, gene_names=[]):
     """
     alignment_dict = {}
     # open alignment files
-    with open(wdir + name + ".al") as infile:
+    with open(os.path.join(wdir, name + ".al")) as infile:
         # each line in the file is a separate alignment for which we'll
         # prepare a dictionary.
         for line in infile:
@@ -1091,11 +1094,12 @@ def intraparalog_aligner(resource_dir,
         target_keys = [tr[0] + ":" + str(tr[1] + 1)
                        + "-" + str(tr[2]) for tr in tar_regs]
         query_key = target_keys[0]
-        with open(resource_dir + t + ".query.fa", "w") as outfile:
+        with open(os.path.join(resource_dir, t + ".query.fa"), "w") as outfile:
             outfile.write(">" + t + "_ref\n")
             outfile.write(get_sequence(query_key, species))
         # create a fasta file that includes all target regions within a group.
-        with open(resource_dir + t + ".targets.fa", "w") as outfile:
+        with open(os.path.join(
+                resource_dir, t + ".targets.fa"), "w") as outfile:
             outfile_list = []
             for i in range(len(target_keys)):
                 k = target_keys[i]
@@ -1112,7 +1116,7 @@ def intraparalog_aligner(resource_dir,
                     o_count += 1
             outfile.write("\n".join(outfile_list))
         comm = [t + ".query.fa", resource_dir, t + ".aligned",
-                resource_dir + t + ".targets.fa",
+                os.path.join(resource_dir, t + ".targets.fa"),
                 ["multiple", "unmask", "nameparse=darkspace"],
                 ["unmask", "nameparse=darkspace"],
                 identity, coverage, gen_out,
@@ -1120,7 +1124,7 @@ def intraparalog_aligner(resource_dir,
         alignment_commands.append(comm)
         comm = [t + ".query.fa", resource_dir,
                 t + ".differences",
-                resource_dir + t + ".targets.fa",
+                os.path.join(resource_dir, t + ".targets.fa"),
                 ["multiple", "unmask", "nameparse=darkspace"],
                 ["unmask", "nameparse=darkspace"],
                 identity, coverage,
@@ -1137,7 +1141,7 @@ def intra_alignment_checker(family_name, res_dir, target_regions,
     """
     alignment_file = family_name + ".aligned"
     new_regions = {}
-    with open(res_dir + alignment_file, "r") as alignment:
+    with open(os.path.join(res_dir, alignment_file), "r") as alignment:
         for line in alignment:
             # extract the column names from the first line
             if line.startswith("#"):
@@ -1326,8 +1330,8 @@ def alignment_mapper(family_name, res_dir):
     """
     alignment_file = family_name + ".aligned"
     difference_file = family_name + ".differences"
-    with open(res_dir + alignment_file, "r") as alignment, open(
-            res_dir + difference_file, "r") as difference:
+    with open(os.path.join(res_dir, alignment_file), "r") as alignment, open(
+            os.path.join(res_dir, difference_file), "r") as difference:
         # create an alignment dictionary for each region that a query
         # aligns to these correspond to each line in the alignment file
         # and thus, are relative coordinates.
@@ -1522,7 +1526,6 @@ def alignment_mapper(family_name, res_dir):
     return alignment_dic
 
 
-
 ###############################################################
 # Design related functions
 ###############################################################
@@ -1578,7 +1581,7 @@ def order_mips(mip_info, design_name, res_dir):
         except KeyError:
             order_dict[pl_name] = [m]
     for o in order_dict:
-        with open(res_dir + o, "w") as outfile:
+        with open(os.path.join(res_dir, o), "w") as outfile:
             outfile_list = ["\t".join(["WellPosition", "Name", "Sequence"])]
             plate_mips = order_dict[o]
             for m in plate_mips:
@@ -1639,46 +1642,6 @@ def get_vcf_snps(region, snp_file):
         snp = line.split('\t')[:8]
         snps.append(snp)
     return snps
-
-
-def targets(must_file, diff_list):
-    """ Take a file with snps or regions that must be captured by mips and a list
-    of other variations of interest (created in ucsc table format) and return a target
-    dictionary"""
-    print(("Extracting target snps from file " + must_file))
-    # create a dict of positions that should be targeted
-    targets = {}
-    # top priority will be given to a must have list of rs numbers
-    # or genomic coordinates. Read from a tab separated file that has
-    # id, chr, beg, end (None if not specified). rs numbers are not used at this time.
-    # so, genomic coordinates must be provided
-    with open(must_file, "r") as infile:
-        for line in infile:
-            if not line.startswith("#"):
-                newline = line.strip().split("\t")
-                snp_name = newline[0]
-                snp_chr = newline[1]
-                snp_begin = newline[2]
-                snp_end = newline[3]
-                # from the coordinates provided, create the dict key
-                key = snp_chr + ":" + snp_begin + "-" + snp_end
-                # add snp to dictionary
-                targets[key] = {"chrom":snp_chr, "begin":snp_begin, "end":snp_end,                                 "name": snp_name, "diff": "na", "source": "must"}
-    # add snps from the diff_list
-    for diff in diff_list:
-        snp_name = diff[4]
-        snp_chr = diff[1]
-        snp_begin = diff[2]
-        snp_end = diff[3]
-        src = diff[15]
-        # from the coordinates, create the dict key
-        key = snp_chr + ":" + snp_begin + "-" + snp_end
-        # check if the key is already in the dict
-        if not key in list(targets.keys()):
-            # add snp to dictionary
-            targets[key] = {"chrom":snp_chr, "begin":snp_begin, "end":snp_end,                             "name": snp_name, "diff": "na", "source": src}
-    # return targets dictionary
-    return targets
 
 
 def get_exons(gene_list):
@@ -1776,14 +1739,17 @@ def get_gene_name(region, species):
 def get_gene(gene_name, refgene_file, chrom=None, alternative_chr=1):
     """ Return genomic coordinates of a gene extracted from the refseq genes file.
     Refgene fields are as follows:
-    0:bin, 1:name, 2:chrom, 3:strand, 4:txStart, 5:txEnd, 6:cdsStart, 7:cdsEnd, 8:exonCount,
-    9:exonStarts, 10:exonEnds, 11:score, 12:name2, 13:cdsStartStat, 14:cdsEndStat, 15:exonFrames.
+    0:bin, 1:name, 2:chrom, 3:strand, 4:txStart, 5:txEnd, 6:cdsStart, 7:cdsEnd,
+    8:exonCount, 9:exonStarts, 10:exonEnds, 11:score, 12:name2,
+    13:cdsStartStat, 14:cdsEndStat, 15:exonFrames.
     Field 12 will be used for name search."""
-    # all chromosomes must be included if chromosome of the gene is not provided
-    # therefore, chrom cannot be None when alternative_chr is set to 0
+    # all chromosomes must be included if chromosome of the gene is not
+    # provided therefore, chrom cannot be None when alternative_chr is set to 0
     if not (chrom or alternative_chr):
-        print("Chromosome of the gene %s must be specified or all chromosomes must be searched.")
-        print(("Specify a chromosome or set alternative chromosome to 1." %gene_name))
+        print(("Chromosome of the gene %s must be specified "
+               "or all chromosomes must be searched."))
+        print(("Specify a chromosome or set alternative chromosome to 1."
+               % gene_name))
         return 1
     with open(refgene_file, 'r') as infile:
         coord = []
@@ -1836,15 +1802,16 @@ def create_gene_fasta(gene_name_list, wdir, species="hs", flank=150,
     if multi_file:
         for gene_name in fasta_dict:
             save_dict = {gene_name: fasta_dict[gene_name]}
-            filename = wdir + gene_name + ".fa"
+            filename = os.path.join(wdir, gene_name + ".fa")
             save_fasta_dict(save_dict, filename)
     else:
-        save_fasta_dict(fasta_dict, wdir + "multi.fa")
+        save_fasta_dict(fasta_dict, os.path.join(wdir, "multi.fa"))
 
 
 def get_region_exons(region, species):
     try:
-        genes = get_snps(region, get_file_locations()[species]["refgene_tabix"])
+        genes = get_snps(region, get_file_locations()[species][
+            "refgene_tabix"])
     except KeyError:
         genes = []
     return get_exons(genes)
@@ -1855,8 +1822,10 @@ def get_cds(gene_name, species):
                          get_file_locations()[species]["refgene"],
                          alternative_chr=1)
     if len(gene_list) > 1:
-        print(("More than one refgene entry was found for the gene ", gene_name))
-        print("Exons from alternative transcripts will be merged and CDS will be generated from that.")
+        print(("More than one refgene entry was found for the gene ",
+               gene_name))
+        print(("Exons from alternative transcripts will be merged "
+               "and CDS will be generated from that."))
         print("This may lead to unreliable CDS sequence information.")
     if len(gene_list) == 0:
         return {}
@@ -1936,7 +1905,7 @@ def make_boulder(fasta, primer3_input_DIR, exclude_list=[],
         outname = fasta_head
     else:
         outname = output_file_name
-    with open(primer3_input_DIR + outname, 'w') as outfile:
+    with open(os.path.join(primer3_input_DIR, outname), 'w') as outfile:
         outfile.write(boulder)
     return boulder
 
@@ -2120,7 +2089,7 @@ def primer_parser3(input_file, primer3_output_DIR, bowtie2_input_DIR,
     # dump the dictionary to json file in primer3_output_DIR if outp parameter
     # is true
     if outp:
-        dict_file = open(primer3_output_DIR + parse_out, 'w')
+        dict_file = open(os.path.join(primer3_output_DIR, parse_out), 'w')
         json.dump(primer_dic, dict_file, indent=1)
         dict_file.close()
     # generate a simple fasta file with primer names
@@ -2261,7 +2230,7 @@ def paralog_primers_multi(primer_dict, copies, coordinate_converter, settings,
                         p_seq = reverse_complement(p_seq)
                     copy_dict["SEQUENCE"] = primer_sequences[p_key]
     if outp:
-        with open(primer3_output_DIR + outname, "w") as outf:
+        with open(os.path.join(primer3_output_DIR, outname), "w") as outf:
             json.dump(primer_dict, outf, indent=1)
     return primer_dict
 
@@ -2281,12 +2250,18 @@ def bowtie2_run(fasta_file, output_file, bowtie2_input_DIR,
         check_local = "--local"
     else:
         check_local = "--end-to-end"
-    subprocess.check_output(["bowtie2", "-p", str(process_num),  "-D", "20",
-                             "-R", "3", "-N", str(seed_MM), "-L",
-                             str(seed_len), "-i", "S,1,0.5", "--gbar",
-                             str(gbar), mode, check_local, "-x", genome, "-f",
-                             bowtie2_input_DIR + fasta_file, "-S",
-                             bowtie2_output_DIR + output_file])
+    res = subprocess.Popen(["bowtie2", "-p", str(process_num),  "-D", "20",
+                            "-R", "3", "-N", str(seed_MM), "-L",
+                            str(seed_len), "-i", "S,1,0.5", "--gbar",
+                            str(gbar), mode, check_local, "-x", genome, "-f",
+                            os.path.join(bowtie2_input_DIR, fasta_file), "-S",
+                            os.path.join(bowtie2_output_DIR, output_file)],
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    log_file = os.path.join(
+        bowtie2_output_DIR, "log_" + species + "_" + id_generator(6))
+    with open(log_file, "wb") as outfile:
+        outfile.write(res.communicate()[1])
+
     return 0
 
 
@@ -2310,10 +2285,10 @@ def bowtie(fasta_file, output_file, bowtie2_input_DIR, bowtie2_output_DIR,
     com.append(check_local)
     com.append("-x " + genome)
     if fastq:
-        com.append("-q " + bowtie2_input_DIR + fasta_file)
+        com.append("-q " + os.path.join(bowtie2_input_DIR, fasta_file))
     else:
-        com.append("-f " + bowtie2_input_DIR + fasta_file)
-    com.append("-S " + bowtie2_output_DIR + output_file)
+        com.append("-f " + os.path.join(bowtie2_input_DIR, fasta_file))
+    com.append("-S " + os.path.join(bowtie2_output_DIR, output_file))
     subprocess.check_output(com)
     return 0
 
@@ -2321,7 +2296,7 @@ def bowtie(fasta_file, output_file, bowtie2_input_DIR, bowtie2_output_DIR,
 def bwa(fastq_file, output_file, output_type, input_dir,
         output_dir, options, species):
     """ Run bwa alignment on given fastq file using the species bwa indexed genome.
-    options should be a list that starts with the command (e.g. mem, aln etc).
+    Options should be a list that starts with the command (e.g. mem, aln etc).
     Additional options should be appended as strings of "option value",
     for example, "-t 30" to use 30 threads. Output type can be sam or bam.
     Recommended options ["-t30", "-L500", "-T100"]. Here L500 penalizes
@@ -2332,17 +2307,17 @@ def bwa(fastq_file, output_file, output_type, input_dir,
         com = ["bwa"]
         com.extend(options)
         com.append(genome_file)
-        com.append(input_dir + fastq_file)
-        with open(output_dir + output_file, "w") as outfile:
+        com.append(os.path.join(input_dir, fastq_file))
+        with open(os.path.join(output_dir, output_file), "w") as outfile:
             subprocess.check_call(com, stdout=outfile)
     else:
         com = ["bwa"]
         com.extend(options)
         com.append(genome_file)
-        com.append(input_dir + fastq_file)
+        com.append(os.path.join(input_dir, fastq_file))
         sam = subprocess.Popen(com, stdout=subprocess.PIPE)
         bam_com = ["samtools", "view", "-b"]
-        with open(output_dir + output_file, "w") as outfile:
+        with open(os.path.join(output_dir, output_file), "w") as outfile:
             subprocess.Popen(bam_com, stdin=sam.stdout, stdout=outfile)
 
 
@@ -2407,7 +2382,7 @@ def parse_bowtie(primer_dict, bt_file, primer_out, primer3_output_DIR,
     # how many total bowtie hits gets a primer fired
     M = int(settings["upper_hit_limit"])
     # read in bowtie file
-    infile = open(bowtie2_output_DIR + bt_file, 'r')
+    infile = open(os.path.join(bowtie2_output_DIR, bt_file), 'r')
     primers = copy.deepcopy(primer_dict)
     # create a temp dic to count hits/primer
     counter_dic = {}
@@ -2536,7 +2511,8 @@ def parse_bowtie(primer_dict, bt_file, primer_out, primer3_output_DIR,
             primers["primer_information"][p][bowtie_key] = {}
     # save the updated primers file
     if outp:
-        with open(primer3_output_DIR + primer_out, 'w') as outfile:
+        with open(os.path.join(
+                primer3_output_DIR, primer_out), 'w') as outfile:
             json.dump(primers, outfile, indent=1)
     return primers
 
@@ -2783,7 +2759,8 @@ def process_bowtie(primers, primer_out, primer3_output_DIR,
                         else:
                             alt_candidates.pop(c)
     if outp:
-        with open(primer3_output_DIR + primer_out, 'w') as outfile:
+        with open(os.path.join(
+                primer3_output_DIR, primer_out), 'w') as outfile:
             json.dump(primers, outfile, indent=1)
     return primers
 
@@ -2828,7 +2805,7 @@ def filter_bowtie(primers, output_file, primer3_output_DIR, species, TM=46,
             continue
     if outp:
         # write dictionary to file in primer3_output_DIR
-        outfile = open(primer3_output_DIR + output_file, 'w')
+        outfile = open(os.path.join(primer3_output_DIR, output_file), 'w')
         json.dump(primers, outfile, indent=1)
         outfile.close()
     return primers
@@ -2874,7 +2851,8 @@ def alternative(primer_dic, output_file,
     except KeyError:
         pass
     if outp:
-        with open(primer3_output_DIR + output_file, "w") as outfile:
+        with open(os.path.join(
+                primer3_output_DIR, output_file), "w") as outfile:
             json.dump(primer_dic, outfile, indent=1)
     return primer_dic
 
@@ -3038,7 +3016,7 @@ def score_paralog_primers(primer_dict, output_file, primer3_output_DIR,
         primers[p]["all_scores"] = all_scores
     if outp:
         # write dictionary to json file
-        outfile = open(primer3_output_DIR + output_file, "w")
+        outfile = open(os.path.join(primer3_output_DIR, output_file), "w")
         json.dump(primer_dict, outfile, indent=1)
         outfile.close()
     return primer_dict
@@ -3113,7 +3091,8 @@ def filter_primers(primer_dict, output_file,
                 "primer_information"][primer_name]
     # write new dic to file
     if outp:
-        with open(primer3_output_DIR + output_file, "w") as outfile:
+        with open(os.path.join(
+                primer3_output_DIR, output_file), "w") as outfile:
             json.dump(best_primer_dict, outfile, indent=1)
     return best_primer_dict
 
@@ -3441,7 +3420,8 @@ def pick_paralog_primer_pairs(extension, ligation, output_file,
         return 1
     # write dict to file in primer_output_DIR
     if outp:
-        with open(primer3_output_DIR + output_file, 'w') as outfile:
+        with open(os.path.join(
+               primer3_output_DIR, output_file), 'w') as outfile:
             json.dump(primer_pairs, outfile, indent=1)
     return primer_pairs
 
@@ -3472,7 +3452,8 @@ def add_capture_sequence(primer_pairs, output_file, primer3_output_DIR,
                     capture_sequence_dic[pairs[p]["capture_key"]]
                 )
     if outp:
-        with open(primer3_output_DIR + output_file, "w") as outfile:
+        with open(os.path.join(
+                primer3_output_DIR, output_file), "w") as outfile:
             json.dump(primer_pairs, outfile, indent=1)
     return primer_pairs
 
@@ -3555,14 +3536,14 @@ def make_mips(pairs, output_file, primer3_output_DIR, mfold_input_DIR,
 
     # write mip sequences to a fasta file in mfold_input_DIR
     # to check hairpin formation
-    with open(mfold_input_DIR + output_file, "w") as outfile:
+    with open(os.path.join(mfold_input_DIR, output_file), "w") as outfile:
         for primers in pairs["pair_information"]:
             outline = (">" + primers + "\n" + pairs["pair_information"]
                        [primers]["mip_information"]["ref"]['SEQUENCE'] + "\n")
             outfile.write(outline)
     # write mip dictionary to file in primer3_output_DIR
     if outp:
-        outfile = open(primer3_output_DIR + output_file, 'w')
+        outfile = open(os.path.join(primer3_output_DIR, output_file), 'w')
         json.dump(pairs, outfile, indent=1)
         outfile.close()
     return pairs
@@ -3700,113 +3681,6 @@ def filter_mips(mip_dic, bin_size, mip_limit):
     return
 
 
-def remove_mips (mip_dic):
-    """ filter primers so that only top n scoring primers
-    ending within the same subregion (determined by bin_size)
-    remains."""
-    # load extension and ligation primers from file
-    shuffled = list(mip_dic.keys())
-    random.shuffle(shuffled)
-    for m in shuffled:
-        try:
-            found = 0
-            m_cap_start = mip_dic[m].mip["C0"]["capture_start"]
-            m_cap_end = mip_dic[m].mip["C0"]["capture_end"]
-            m_start = mip_dic[m].mip["C0"]["mip_start"]
-            m_end = mip_dic[m].mip["C0"]["mip_end"]
-            m_func = mip_dic[m].func_score
-            m_tech = mip_dic[m].tech_score
-            m_ori = mip_dic[m].mip["C0"]["orientation"]
-            m_score = m_func + m_tech
-            for n in shuffled:
-                try:
-                    if mip_dic[m].name != mip_dic[n].name:
-                        n_cap_start = mip_dic[n].mip["C0"]["capture_start"]
-                        n_cap_end = mip_dic[n].mip["C0"]["capture_end"]
-                        n_start = mip_dic[n].mip["C0"]["mip_start"]
-                        n_end = mip_dic[n].mip["C0"]["mip_end"]
-                        n_func = mip_dic[n].func_score
-                        n_tech = mip_dic[n].tech_score
-                        n_ori = mip_dic[n].mip["C0"]["orientation"]
-                        n_score = n_func + n_tech
-                        remove = False
-                        if (m_start <= n_start <= m_end) or                             (n_start <= m_start <= n_end):
-                            if m_ori == n_ori:
-                                remove = True
-                            elif ((n_start < m_start) and                                 (n_cap_start < m_start) and                                 (m_cap_start < n_cap_end) and                                 (n_end < m_cap_end)) or                                 ((m_start < n_start) and                                 (m_cap_start < n_start) and                                 (n_cap_start < m_cap_end) and                                 (m_end < n_cap_end)):
-                                remove = False
-                            else:
-                                remove = True
-                        if remove:
-                            if m_score >= n_score:
-                                mip_dic.pop(n)
-                            else:
-                                mip_dic.pop(m)
-                                break
-                except KeyError:
-                    continue
-        except KeyError:
-            continue
-    return
-
-
-def add_captures (mip_dic, target_dic):
-    for mip in list(mip_dic["pair_information"].keys()):
-        d = mip_dic["pair_information"][mip]
-        # find which diffs are captured by mip
-        # extract mip's coortinates
-        ext_start = d["extension_primer_information"]["GENOMIC_START"]
-        ext_end = d["extension_primer_information"]["GENOMIC_END"]
-        lig_start = d["ligation_primer_information"]["GENOMIC_START"]
-        lig_end = d["ligation_primer_information"]["GENOMIC_END"]
-        coord = [ext_start, ext_end, lig_start, lig_end].sort()
-        mip_start = coord[1]
-        mip_end = coord[2]
-        # create a dictionary for the targets the mip captures
-        captured_snps = {}
-        for snp in target_snps:
-            if mip_end >= target_snps[snp]["begin"] >= mip_start:
-                captured_snps[snp] = target_snps[snp]
-        # add captured diffs information to mip dictionary
-        d["mip_information"]["captured_diffs"] = captured_snps
-    return mip_dic
-
-
-def add_paralog_info(mip_dic, num_para):
-    for mip in list(mip_dic["pair_information"].keys()):
-        # extract the captured diffs from the mip_dic
-        caps = mip_dic["pair_information"][mip]["mip_information"]["captured_diffs"]
-        # create a dic for how many paralogs a mip captures
-        mip_caps = {}
-        # populate the dic with 0 for each paralog key
-        for i in range(num_para):
-            mip_caps[i] = 0
-        # find the diffs captured that identify a paralog
-        for diff in caps:
-            # paralog specific mip sources are exonic and filtered diffs only
-            if (caps[diff]["source"] == "exonic_diffs") or                (caps[diff]["source"] == "filtered_diffs"):
-                # the diff is in the form a:1067:CTA:0,1,2 and we want to
-                # analyze the last part of it for paralogs identified
-                mip_diff = (caps[diff]["diff"].split(":")[-1]).split(",")
-                # add the paralogs identified to mip_set paralog caps
-                for j in mip_diff:
-                    mip_caps[int(j)] += 1
-        # calculate how many paralogs identified by the mip
-        mip_para = 0
-        # for each paralog
-        for k in mip_caps:
-            # if at least one of the diffs identifies the paralog
-            if mip_caps[k] > 0:
-                # increment captured paralog number by 1
-                mip_para += 1
-        # add this information to mip dic
-        mip_dic["pair_information"][mip]["mip_information"]["captured_paralog_number"] = mip_para
-    return mip_dic
-
-
-
-
-
 def compatible_mip_check(m1, m2, overlap_same, overlap_opposite):
     d = m1.mip_dic
     ext_start = d["extension_primer_information"]["GENOMIC_START"]
@@ -3840,7 +3714,8 @@ def compatible_mip_check(m1, m2, overlap_same, overlap_opposite):
 def compatible_chains(primer_file, primer3_output_DIR, primer_out, output_file,
                       overlap_same=0, overlap_opposite=0, outp=1):
     try:
-        with open(primer3_output_DIR + primer_file, "r") as infile:
+        with open(os.path.join(
+                primer3_output_DIR, primer_file), "r") as infile:
             scored_mips = json.load(infile)
     except IOError:
         print("Primer file does not exist.")
@@ -3996,224 +3871,21 @@ def compatible_chains(primer_file, primer3_output_DIR, primer_out, output_file,
             set_count = len(mip_sets)
         print("Compatible run.")
         if outp:
-            with open(primer3_output_DIR + output_file, "w") as outfile:
+            with open(os.path.join(
+                    primer3_output_DIR, output_file), "w") as outfile:
                 outfile.write("\n".join([",".join(s) for s in mip_sets])
                               + "\n")
-        with open(primer3_output_DIR + primer_out, "wb") as outfile:
+        with open(os.path.join(
+                primer3_output_DIR, primer_out), "wb") as outfile:
             pickle.dump(scored_mips, outfile)
     return mip_sets
-
-
-def compatibility (scored_mips, primer3_output_DIR = "", primer_out = "",
-                      overlap_same = 0, overlap_opposite = 0):
-    # create in/compatibility lists for each mip
-    for k in list(scored_mips["pair_information"].keys()):
-        # get coordinates of mip arms
-        d = scored_mips["pair_information"][k]
-        es = ext_start = d["extension_primer_information"]["GENOMIC_START"]
-        ee = ext_end = d["extension_primer_information"]["GENOMIC_END"]
-        ls = lig_start = d["ligation_primer_information"]["GENOMIC_START"]
-        le = lig_end = d["ligation_primer_information"]["GENOMIC_END"]
-        # get mip orientation
-        ori = d["orientation"]
-        #print k, es, ee, ls, le, ori
-        # create an incompatibility list
-        incompatible = []
-        compatible = []
-        for mip in list(scored_mips["pair_information"].keys()):
-            m = scored_mips["pair_information"][mip]
-            nes = next_ext_start = m["extension_primer_information"]            ["GENOMIC_START"]
-            nee = next_ext_end = m["extension_primer_information"]            ["GENOMIC_END"]
-            nls = next_lig_start = m["ligation_primer_information"]            ["GENOMIC_START"]
-            nle = next_lig_end = m["ligation_primer_information"]            ["GENOMIC_END"]
-            # get mip orientation
-            next_ori = m["orientation"]
-            compat = 0
-            next_compat = 0
-            # check if the two mips are compatible in terms of
-            # orientation and coordinates
-            if ori == next_ori == "forward":
-                if ((ls < nls) and (ls < nes + overlap_same)) or                  ((ls > nls) and (es + overlap_same> nls)):
-                    compat = 1
-            elif ori == next_ori == "reverse":
-                if ((ls < nls) and (es < nls + overlap_same)) or                   ((ls > nls) and (ls + overlap_same> nes)):
-                    compat = 1
-            elif (ori == "forward") and (next_ori == "reverse"):
-                if (ls < nls + overlap_opposite) or                 (es  + overlap_opposite> nes):
-                    compat = 1
-                elif (es < nls) and (ee < nls + overlap_opposite) and                     (le  + overlap_opposite> nle) and                     (ls < nee + overlap_opposite):
-                    compat = 1
-                    next_compat = 1
-                elif (es > nls) and (es  + overlap_opposite> nle) and                      (ee < nee + overlap_opposite) and                     (le + overlap_opposite > nes):
-                    compat = 1
-            elif (ori == "reverse") and (next_ori == "forward"):
-                if (ls + overlap_opposite > nls) or                 (es < nes + overlap_opposite):
-                    compat = 1
-                elif (ls > nes) and (ls + overlap_opposite > nee) and                     (le < nle + overlap_opposite) and                     (ee + overlap_opposite>nls):
-                    compat = 1
-                elif (ls < nes) and (le < nes + overlap_opposite) and                      (ee + overlap_opposite > nee) and                     (es < nle + overlap_opposite):
-                    compat = 1
-                    next_compat = 1
-            if not compat:
-                incompatible.append(mip)
-            if next_compat:
-                compatible.append(mip)
-        d["incompatible"] = incompatible
-        d["compatible"] = compatible
-    """
-    with open(primer3_output_DIR + primer_out, "w") as outfile:
-        json.dump(scored_mips, outfile, indent=1)
-    """
-
-    return scored_mips
-
-
-def best_mip_set (compatible_mip_sets, compatible_mip_dic, num_para, diff_score_dic, outfile):
-    # open file containing compatible mip lists
-    with open(primer3_output_DIR + compatible_mip_sets, "r") as infile:
-        mip_sets = json.load(infile)
-    # load dict file that has the compatibility information and mip information
-    with open(primer3_output_DIR + compatible_mip_dic, "r") as infile:
-        mip_dic = json.load(infile)
-        # if there is any sets in the list
-        if len(mip_sets) > 0:
-            best_set = []
-            best_score = 0
-            # create a number to mip name look up dictionary
-            # because mip list has only numbers that correspond to a mips place in dict
-            num_lookup = {}
-            for mip in list(mip_dic["pair_information"].keys()):
-                d = mip_dic["pair_information"][mip]
-                place = d["place"]
-                num_lookup[place] = mip
-            # find which diffs each mip set captures
-            for mip_set in mip_sets:
-                if mip_set != None:
-                    # create a dic for diffs captured cumulatively by all mips in the set
-                    merged_caps = {}
-                    # create a list for mip scores based on mip sequence and not the captured diffs
-                    mip_scores = []
-                    # create a variable for mip scores based on the diffs captured
-                    diff_scores = 0
-                    for m in mip_set:
-                        # extract the mip name
-                        mip_key = num_lookup[m]
-                        # extract the captured diffs from the mip_dic and append to capture list
-                        caps = mip_dic["pair_information"][mip_key]["mip_information"]["captured_diffs"]
-                        # get the diff name (e.g. chr1:1000-1001), use it as key for merged caps
-                        # using a dict ensures nonredundancy
-                        for diff in caps:
-                            merged_caps[diff] = caps[diff]
-                        # find out how many paralogs the mip identifies
-                        mip_para = ["pair_information"][mip_key]["mip_information"]                                   ["captured_paralog_number"]
-                        # extract mip score and append to mip_scores
-                        ms = mip_dic["pair_information"][mip_key]                                    ["mip_information"]["mip_score"]
-                        # add a bonus for mips identifying multiple paralogs
-                        cap_bonus = mip_para * cap_coefficient
-                        ms += cap_bonus
-                        # add total mip score to mip scores
-                        mip_scores.append(ms)
-                    # to get more evenly (and well) scoring mips rather than having
-                    # the top scoring set, create another bonus score
-                    bonus_score = 0
-                    # get total number of mips in the set
-                    mip_count = len(mip_scores)
-                    # define a counter for mips scoring above a certain score
-                    ms_count = 0
-                    for ms in mip_scores:
-                        if ms >= lowest_mip_score:
-                            ms_count += 1
-                    # ideally we want mip_count == ms_count for all mips to be good
-                    # but this does not work well for large sets because there is a good
-                    # chance one or two will not score well and bonus will always be zero.
-                    if (mip_count - ms_count) <= max_poor_mips:
-                        bonus_score = uniformity_bonus
-                    # create a dict that has how many paralogs are captured by the mip set
-                    paralog_caps = {}
-                    # populate dict with paralog numbers and an initial value of 0
-                    for i in range(num_para):
-                        paralog_caps[i] = 0
-                    for d in merged_caps:
-                        # find out which paralogs the diff uniquely identifies
-                        # this information is only relevant for diffs from pdiffs file
-                        # and exonic diffs and filtered diffs are the only ones from pdiffs in targets
-                        if (merged_caps[d]["source"] == "exonic_diffs") or                            (merged_caps[d]["source"] == "filtered_diffs"):
-                            # the diff is in the form a:1067:CTA:0,1,2 and we want to
-                            # analyze the last part of it for paralogs identified
-                            difference = (merged_caps[d]["diff"].split(":")[-1]).split(",")
-                            # add the paralogs identified to mip_set paralog caps
-                            for j in difference:
-                                paralog_caps[int(j)] += 1
-                        # extract the score of the type of difference and increment diff_scores
-                        diff_scores += diff_score_dic[merged_caps[d]["source"]]
-                    # calculate how many paralogs identified by the set
-                    cap_para = 0
-                    for k in paralog_caps:
-                        if paralog_caps[k] > 0:
-                            cap_para += 1
-                    # calculate total score of mip set
-                    total_score = bonus_score + sum(mip_scores) + (cap_para**2) * paralog_score +                                   diff_scores
-                    if total_score > best_score:
-                        best_score = total_score
-                        best_set = mip_set
-            # print the gene name and best set of mips together with total score
-            #print gene[0]
-            #print best_set, best_score
-            temp_dic = {}
-            # print scores and diffs captured by each mip in the best set
-            for mip in best_set:
-                mip_key = num_lookup[mip]
-                temp_dic[mip_key] = mip_dic["pair_information"][mip_key]
-                #print mip_dic["pair_information"][mip_key]["mip_information"]["mip_score"]
-                for diff in mip_dic["pair_information"][mip_key]["mip_information"]["captured_diffs"]:
-                    di = mip_dic["pair_information"][mip_key]["mip_information"]["captured_diffs"][diff]
-                    #print diff, di["source"], di["diff"]
-
-            with open(primer3_output_DIR + best_mip_sets, "w")  as outfile:
-                json.dump(temp_dic, outfile, indent=1)
-        # if there are no compatible mipsets, then find the best mip
-        elif (len(mip_sets) == 0) and (len(list(mip_dic["pair_information"].keys())) > 0):
-            best_score = 0
-            best_mip = ""
-            for mip_key in list(mip_dic["pair_information"].keys()):
-                # extract the captured diffs from the mip_dic and append to capture list
-                caps = mip_dic["pair_information"][mip_key]["mip_information"]["captured_diffs"]
-                # score diffs captured
-                diff_scores = 0
-                # find diff scores from diff source using diff score dict
-                for diff in caps:
-                    # extract the score of the type of difference and increment diff_scores
-                    diff_scores += diff_score_dic[caps[diff]["source"]]
-                # extract mip score
-                mip_scores = mip_dic["pair_information"][mip_key]["mip_information"]["mip_score"]
-                # find how many paralogs uniquely identified by the mip
-                cap_para = mip_dic["pair_information"][mip_key]["mip_information"]                                   ["captured_paralog_number"]
-                cap_bonus = cap_para * cap_coefficient
-                # calculate total score of mip set
-                total_score = mip_scores + (cap_para**2) * paralog_score + diff_scores + cap_bonus
-                if total_score > best_score:
-                    best_score = total_score
-                    best_mip = mip_key
-            temp_dic = {}
-            temp_dic[best_mip] = mip_dic["pair_information"][best_mip]
-            #print gene[0]
-            #print [mip_dic["pair_information"][best_mip]["place"]]
-            #print best_score
-            #print mip_dic["pair_information"][best_mip]["mip_information"]["mip_score"]
-            dics = mip_dic["pair_information"][best_mip]["mip_information"]["captured_diffs"]
-            #for diff in dics:
-                #print dics[diff]["source"], dics[diff]["diff"]
-            with open(primer3_output_DIR + scored + "_best_set", "w")  as outfile:
-                json.dump(temp_dic, outfile, indent=1)
-        else:
-            print(("No mips available for target region ", gene[0]))
-        return
 
 
 def design_mips(design_dir, g):
     print(("Designing MIPs for ", g))
     try:
-        Par = mod.Paralog(design_dir + g + "/resources/" + g + ".rinfo")
+        Par = mod.Paralog(os.path.join(design_dir, g, "resources",
+                                       g + ".rinfo"))
         Par.run_paralog()
         if Par.copies_captured:
             print(("All copies were captured for paralog ", Par.paralog_name))
@@ -4339,235 +4011,7 @@ def parasight(resource_dir,
     visualization_list.append("./copy_commands")
     visualization_list.append("chmod +x convert_commands")
     visualization_list.append("./convert_commands")
-    with open(resource_dir + "visualize.sh", "w") as outfile:
-        outfile.write("\n".join(visualization_list))
-    return
-
-
-def parasight_mod(resource_dir,  design_info_file, species,
-                  designed_gene_list=None, extra_extension=".extra",
-                  maf=0.1, height=200):
-    with open(design_info_file, "rb") as infile:
-        design_info = pickle.load(infile)
-    output_list = ["#!/usr/bin/env bash"]
-    pdf_dir = os.path.join(resource_dir, "mod_pdfs")
-    backup_list = ["#!/usr/bin/env bash"]
-    gs_list = ["#!/usr/bin/env bash"]
-    pdf_list = ["#!/usr/bin/env bash"]
-    pdf_merge_list = ["#!/usr/bin/env bash", "cd " + pdf_dir]
-    pdf_convert_list = ["gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite "
-                        + "-dPDFSETTINGS=/prepress -dAutoRotatePages=/All "
-                        "-sOutputFile=merged.pdf"]
-    if not os.path.exists(pdf_dir):
-        os.makedirs(pdf_dir)
-    for t in design_info:
-        basename = os.path.join(design_info[t]["design_dir"], t, t)
-        showname = basename + ".show"
-        try:
-            with open(showname) as infile:
-                sln = infile.readlines()[-1].strip().split("\t")
-                show_region = sln[0] + ":" + sln[2] + "-" + sln[3]
-        except IOError:
-            continue
-        reg_snps = get_snps(show_region,
-                            get_file_locations()[species]["snps"])
-        indels_low = []
-        indels_high = []
-        snvs_low = []
-        snvs_high = []
-        for rsnp in reg_snps:
-            acs = [a for a in rsnp[23].split(",") if a != ""]
-            allele_count = list(map(int, list(map(float, acs))))
-            # allele with max count
-            max_all = max(allele_count)
-            # total alleles
-            tot_all = sum(allele_count)
-            # minor allele freq
-            min_af = (tot_all - max_all)/float(tot_all)
-            if "-" in rsnp[22].split(","):
-                if min_af >= maf:
-                    indels_high.append(rsnp)
-                else:
-                    indels_low.append(rsnp)
-            elif min_af >= maf:
-                snvs_high.append(rsnp)
-            else:
-                snvs_low.append(rsnp)
-        backup_name = basename + ".extra"
-        try:
-            with open(backup_name) as infile, open(backup_name + ".mod", "w") as outfile:
-                thirds = 0
-                rd_range = list(range(height))
-                for line in infile:
-                    newline = line.split("\t")
-                    if newline[3] in ["all_targets", "target"]:
-                        newline[5] = "-10"
-                        newline[6] = "4"
-                        outfile.write("\t".join(newline))
-                    elif newline[3] in ["capture", "extension", "ligation"]:
-                        if (thirds % 3)== 0:
-                            rd = random.choice(rd_range)
-                        thirds += 1
-                        newline[5] = str(-30 - rd)
-                        outfile.write("\t".join(newline))
-                    elif newline[3] == "snp":
-                        pass
-                    else:
-                        outfile.write(line)
-                outfile.write("\n")
-                for col, snp_list, snp_type, ofs in zip(["pink", "red",
-                                     "light green", "dark green"],
-                                   [indels_low, indels_high,
-                                   snvs_low, snvs_high],
-                                                  ["low frequency indel",
-                                                   "high frequency indel",
-                                                  "low frequency SNP",
-                                                  "high frequency SNP"],
-                                                       ["-27", "-27",
-                                                       "-26", "-26"]):
-                    for snp in snp_list:
-                        ol = snp[1:4]
-                        ol.extend([snp_type, col, ofs, "4",
-                                  ""])
-                        outfile.write("\t".join(ol) + "\n")
-        except IOError:
-            continue
-        psname = basename + ".01.01.ps"
-        pdfname = basename + ".mod.pdf"
-        gs_command = "gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite " +             "-dPDFSETTINGS=/prepress -dAutoRotatePages=/All -sOutputFile="            + pdfname + " " + psname
-        if designed_gene_list != None:
-            if t in designed_gene_list:
-                pdf_convert_list.append(t + ".mod.pdf")
-        else:
-            pdf_convert_list.append(t + ".mod.pdf")
-        gs_list.append(gs_command)
-        pdf_list.append("cp " + basename + ".mod.pdf " +                            pdf_dir + t + ".mod.pdf")
-        outlist = ["parasight76.pl",
-                   "-showseq",
-                   basename + ".show",
-                   "-extra",
-                   basename + extra_extension + ".mod",
-                   "-template",
-                   script_dir + "resources/nolabel.pst",
-                   "-precode file:" + basename + ".precode" ,
-                   "-die"]
-        output_list.append(" ".join(outlist))
-        with open(basename + ".precode" , "w") as outfile:
-            outfile.write("$opt{'filename'}='" + t +                          "';&fitlongestline; &print_all (0,'" + basename + "')")
-    with open(resource_dir + "backup_commands", "w") as outfile:
-        outfile.write("\n".join(backup_list))
-    with open(resource_dir + "parasight_commands", "w") as outfile:
-        outfile.write("\n".join(output_list))
-    with open(resource_dir + "gs_commands", "w") as outfile:
-        outfile.write("\n".join(gs_list))
-    with open(resource_dir + "copy_commands", "w") as outfile:
-        outfile.write("\n".join(pdf_list))
-    pdf_merge_list.append(" ".join(pdf_convert_list))
-    with open(resource_dir + "convert_commands", "w") as outfile:
-        outfile.write("\n".join(pdf_merge_list))
-    visualization_list = ["#!/usr/bin/env bash"]
-    visualization_list.append("chmod +x backup_commands")
-    visualization_list.append("./backup_commands")
-    visualization_list.append("chmod +x parasight_commands")
-    visualization_list.append("./parasight_commands")
-    visualization_list.append("chmod +x gs_commands")
-    visualization_list.append("./gs_commands")
-    visualization_list.append("chmod +x copy_commands")
-    visualization_list.append("./copy_commands")
-    visualization_list.append("chmod +x convert_commands")
-    visualization_list.append("./convert_commands")
-    with open(resource_dir + "visualize_mod.sh", "w") as outfile:
-        outfile.write("\n".join(visualization_list))
-    return
-
-
-def parasight_shift(resource_dir, design_info_file, species,
-                    designed_gene_list=None, extra_extension=".extra",
-                    height=200):
-    with open(design_info_file, "rb") as infile:
-        design_info = pickle.load(infile)
-    output_list = ["#!/usr/bin/env bash"]
-    pdf_dir = os.path.join(resource_dir, "mod_pdfs")
-    backup_list = ["#!/usr/bin/env bash"]
-    gs_list = ["#!/usr/bin/env bash"]
-    pdf_list = ["#!/usr/bin/env bash"]
-    pdf_merge_list = ["#!/usr/bin/env bash", "cd " + pdf_dir]
-    pdf_convert_list = ["gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite "
-                        + "-dPDFSETTINGS=/prepress -dAutoRotatePages=/All "
-                        "-sOutputFile=merged.pdf"]
-    if not os.path.exists(pdf_dir):
-        os.makedirs(pdf_dir)
-    for t in design_info:
-        basename = os.path.join(design_info[t]["design_dir"], t, t)
-        backup_name = basename + ".extra"
-        try:
-            with open(backup_name) as infile, open(
-                    backup_name + ".mod", "w") as outfile:
-                thirds = 0
-                rd_range = list(range(height))
-                for line in infile:
-                    newline = line.split("\t")
-                    if newline[3] in ["all_targets", "target"]:
-                        newline[5] = "-10"
-                        newline[6] = "4"
-                        outfile.write("\t".join(newline))
-                    elif newline[3] in ["capture", "extension", "ligation"]:
-                        if (thirds % 3) == 0:
-                            rd = random.choice(rd_range)
-                        thirds += 1
-                        newline[5] = str(-30 - rd)
-                        outfile.write("\t".join(newline))
-                    else:
-                        outfile.write(line)
-                outfile.write("\n")
-        except IOError:
-            continue
-        psname = basename + ".01.01.ps"
-        pdfname = basename + ".mod.pdf"
-        gs_command = ("gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite "
-                      + "-dPDFSETTINGS=/prepress -dAutoRotatePages=/All "
-                      "-sOutputFile=" + pdfname + " " + psname)
-        if designed_gene_list is not None:
-            if t in designed_gene_list:
-                pdf_convert_list.append(t + ".mod.pdf")
-        else:
-            pdf_convert_list.append(t + ".mod.pdf")
-        gs_list.append(gs_command)
-        pdf_list.append("cp " + basename + ".mod.pdf "
-                        + pdf_dir + t + ".mod.pdf")
-        outlist = ["parasight76.pl",
-                   "-showseq", basename + ".show",
-                   "-extra", basename + extra_extension + ".mod",
-                   "-template", "/opt/resources/nolabel.pst",
-                   "-precode file:" + basename + ".precode", "-die"]
-        output_list.append(" ".join(outlist))
-        with open(basename + ".precode", "w") as outfile:
-            outfile.write("$opt{'filename'}='" + t
-                          + "';&fitlongestline; &print_all (0,'"
-                          + basename + "')")
-    with open(resource_dir + "backup_commands", "w") as outfile:
-        outfile.write("\n".join(backup_list))
-    with open(resource_dir + "parasight_commands", "w") as outfile:
-        outfile.write("\n".join(output_list))
-    with open(resource_dir + "gs_commands", "w") as outfile:
-        outfile.write("\n".join(gs_list))
-    with open(resource_dir + "copy_commands", "w") as outfile:
-        outfile.write("\n".join(pdf_list))
-    pdf_merge_list.append(" ".join(pdf_convert_list))
-    with open(resource_dir + "convert_commands", "w") as outfile:
-        outfile.write("\n".join(pdf_merge_list))
-    visualization_list = ["#!/usr/bin/env bash"]
-    visualization_list.append("chmod +x backup_commands")
-    visualization_list.append("./backup_commands")
-    visualization_list.append("chmod +x parasight_commands")
-    visualization_list.append("./parasight_commands")
-    visualization_list.append("chmod +x gs_commands")
-    visualization_list.append("./gs_commands")
-    visualization_list.append("chmod +x copy_commands")
-    visualization_list.append("./copy_commands")
-    visualization_list.append("chmod +x convert_commands")
-    visualization_list.append("./convert_commands")
-    with open(resource_dir + "visualize_mod.sh", "w") as outfile:
+    with open(os.path.join(resource_dir, "visualize.sh"), "w") as outfile:
         outfile.write("\n".join(visualization_list))
     return
 
@@ -4592,197 +4036,6 @@ def parasight_print(resource_dir, design_dir, design_info_file,
                 if print_out:
                     print(" ".join(line))
                 outfile.write(" ".join(line) + "\n")
-
-
-def rescue_mips(design_dir,
-                paralog_name,
-                redesign_list,
-               same_strand_overlap,
-               opposite_strand_overlap,
-               low,
-               high,
-                mip_limit,
-               chain,
-               incomp_score):
-    print(("Redesigning MIPs for ", paralog_name))
-    paralog_file = design_dir + paralog_name + "/" + paralog_name
-    with open(paralog_file, "rb") as infile:
-        par = pickle.load(infile)
-    subprocess.call(["scp",
-                     paralog_file,
-                     paralog_file + ".last"])
-    par.extra_mips = {}
-    redesign_pairs = []
-    for segment_name in par.segments:
-        seg = par.segments[segment_name]
-        """
-        seg.rinfo["SELECTION"]["compatibility"]\
-        ["low"] = low
-        seg.rinfo["SELECTION"]["compatibility"]\
-        ["high"] = high
-        seg.rinfo["SELECTION"]["compatibility"]\
-        ["chain"] = chain
-
-        """
-
-        seg.rinfo["SELECTION"]["compatibility"]        ["low"] = low
-        seg.rinfo["SELECTION"]["compatibility"]        ["high"] = high
-        seg.rinfo["SELECTION"]["compatibility"]        ["mip_limit"] = mip_limit
-        for subregion_name in seg.subregions:
-            sub = seg.subregions[subregion_name]
-            sub.score_mips()
-            temp_scored = copy.deepcopy(sub.primers["hairpin"]["dictionary"])
-            best_mipset = sub.mips["best_mipset"]["dictionary"]["mips"]
-            scored = list(sub.mips["scored_filtered"]["dictionary"]                            ["pair_information"].keys())
-            keep_keys = scored + list(best_mipset.keys())
-            for m in list(temp_scored['pair_information'].keys()):
-                if m not in keep_keys:
-                    temp_scored['pair_information'].pop(m)
-            compatible = compatibility(temp_scored,
-                                       overlap_same = same_strand_overlap,
-                                    overlap_opposite = opposite_strand_overlap)
-            alt = sub.mips["best_mipset"]["dictionary"]["alternatives"] = {}
-            hairpin = sub.mips["hairpin"]
-            compat_info = compatible["pair_information"]
-            for m in best_mipset:
-                if best_mipset[m].fullname in redesign_list:
-                    if m not in redesign_pairs:
-                        redesign_pairs.append(m)
-                    capture_start = sub.mips["best_mipset"]["dictionary"]                    ["mips"][m].mip["C0"]["capture_start"]
-                    capture_end = sub.mips["best_mipset"]["dictionary"]                    ["mips"][m].mip["C0"]["capture_end"]
-                    capture_target = [capture_start, capture_end]
-                    alt_count = 0
-                    alt[m] = {}
-                    for p1 in scored:
-                        if p1 != m and p1 not in redesign_list:
-                            #print p1
-                            start1 = hairpin[p1].mip["C0"]["capture_start"]
-                            end1 = hairpin[p1].mip["C0"]["capture_end"]
-                            capture1 = [start1, end1]
-                            if len(overlap(capture_target, capture1)) > 0:
-                                remaining_target = subtract_overlap(
-                                    [capture_target],
-                                    [capture1])
-                                if len(remaining_target) == 1:
-                                    for p2 in scored:
-                                        if p2 != p1 and p2 != m and                                        p1 not in redesign_list and                                        (p2 not in compat_info[p1]["incompatible"]):
-                                            start2 = hairpin[p2].mip["C0"]                                            ["capture_start"]
-                                            end2 = hairpin[p2].mip["C0"]                                            ["capture_end"]
-                                            capture2 = [start2, end2]
-                                            if len(subtract_overlap(
-                                                [capture_target],
-                                                [capture2])) == 1 and\
-                                               len(overlap(remaining_target[0],
-                                                               capture2)) > 0:
-                                                uncovered = subtract_overlap(
-                                                    remaining_target,
-                                                    [capture2])
-                                                if len(uncovered) == 0:
-                                                    alt[m][str(alt_count)] = [p1,p2]
-                                                    alt_count += 1
-
-            new_set = list(best_mipset.keys())
-            for m in best_mipset:
-                if best_mipset[m].fullname in redesign_list:
-                    print(("Rescue MIPs for ", best_mipset[m].fullname))
-                    coverage_needed = [hairpin[m].mip["C0"]                                            ["capture_start"],
-                                             hairpin[m].mip["C0"]\
-                                            ["capture_end"]]
-                    print(("Region to cover is ", coverage_needed))
-                    best_rescue = []
-                    best_score = -50000
-                    for p in alt[m]:
-                        p1, p2 = alt[m][p]
-                        incomp = len(set(compat_info[p1]["incompatible"] +                                      compat_info[p2]["incompatible"])                        .intersection(new_set))
-                        score = 0
-                        score += hairpin[p1].tech_score
-                        score += hairpin[p2].tech_score
-                        score += incomp_score * incomp
-                        if score > best_score:
-                            best_score = score
-                            best_rescue = [p1, p2]
-                            if p1 in best_mipset:
-                                best_rescue = [p2]
-                            if p2 in best_mipset:
-                                best_rescue = [p1]
-                    resc_capture = []
-                    for resc in best_rescue:
-                        resc_capture.append([hairpin[resc].mip["C0"]                                            ["capture_start"],
-                                             hairpin[resc].mip["C0"]\
-                                            ["capture_end"]])
-                    print(("Rescue mip coverage is ", merge_overlap(resc_capture)))
-                    print(("Rescue score is ", best_score))
-                    new_set.extend(best_rescue)
-            sub.extra_mips = extra_mips = {}
-            for t in new_set:
-                if t not in best_mipset:
-                    extra_mips[t] = hairpin[t]
-            par.extra_mips.update(sub.extra_mips)
-    locus_info = par.locus_info
-    selected_mips = par.selected_mips
-    mip_names_ordered = sorted(selected_mips,
-                               key=lambda mip_key: selected_mips[mip_key].\
-                                                    mip["C0"]["mip_start"])
-    name_counter = int(selected_mips[mip_names_ordered[-1]]                       .fullname.split("_")[-1][3:]) + 1
-    extra_names_ordered = sorted(extra_mips,
-                               key=lambda mip_key: extra_mips[mip_key].\
-                                                    mip["C0"]["mip_start"])
-    outfile_list = []
-    for mip_name in extra_names_ordered:
-        m = extra_mips[mip_name]
-        fullname_subregion = m.subregion.fullname
-        fullname_mip = fullname_subregion + "_mip" + str(name_counter)
-        m.fullname = fullname_mip
-        # get coordinate information of the mip
-        # reference copy information will be used
-        m.mip_start = m.mip["C0"]["mip_start"]
-        m.mip_end = m.mip["C0"]["mip_end"]
-        m.capture_start = m.mip["C0"]["capture_start"]
-        m.capture_end = m.mip["C0"]["capture_end"]
-        m.orientation = m.mip["C0"]["orientation"]
-        m.chromosome = m.mip["C0"]["chrom"]
-        for key in m.mip_dic["mip_information"]:
-            if key == "ref":
-                fullname_extension = "_ref"
-            elif key.startswith("alt"):
-                fullname_extension = "_" + key
-            else:
-                continue
-            # ["#pair_name", "mip_name", "chrom", "mip_start", "capture_start",
-            # "capture_end", "mip_end", "orientation", "tech_score", "func_score","mip_sequence",
-            # "unique_captures", "must_captured", "captured_copies"]
-            outlist = [m.name, m.fullname + fullname_extension,
-                       m.chromosome, m.mip_start,
-                       m.capture_start, m.capture_end,
-                       m.mip_end, m.orientation,
-                        m.tech_score, m.func_score,
-                        m.mip_dic["mip_information"][key]["SEQUENCE"]]
-            locus_info["mips"].append(outlist)
-            outfile_list.append(outlist)
-        name_counter += 1
-    for mipname in redesign_pairs:
-        m = selected_mips[mipname]
-        for key in m.mip_dic["mip_information"]:
-            if key == "ref":
-                fullname_extension = "_ref"
-            elif key.startswith("alt"):
-                fullname_extension = "_" + key
-            else:
-                continue
-            outlist = ["#" + m.name, m.fullname + fullname_extension,
-                       m.chromosome, m.mip_start,
-                           m.capture_start, m.capture_end,
-                       m.mip_end, m.orientation,
-                            m.tech_score, m.func_score,
-                            m.mip_dic["mip_information"][key]["SEQUENCE"]]
-            outfile_list.append(outlist)
-    par.print_info()
-    with open(paralog_file + ".rescued", "wb") as outfile:
-        pickle.dump(par, outfile)
-    with open(design_dir + paralog_name + "/" + paralog_name +              "_rescue.mips", "w") as outfile:
-        outfile.write("\n".join(["\t".join(map(str, outlist)) for                                 outlist in outfile_list]))
-    return
-
 
 
 ###############################################################
@@ -4837,9 +4090,9 @@ def get_haplotypes(settings):
         Mapping haplotypes to specific targets/copies is not accomplished here
         """
     wdir = settings["workingDir"]
-    mipster_file = wdir + settings["mipsterFile"]
-    haplotypes_fq_file = wdir + settings["haplotypesFastqFile"]
-    haplotypes_sam_file = wdir + settings["haplotypesSamFile"]
+    mipster_file = os.path.join(wdir, settings["mipsterFile"])
+    haplotypes_fq_file = os.path.join(wdir, settings["haplotypesFastqFile"])
+    haplotypes_sam_file = os.path.join(wdir, settings["haplotypesSamFile"])
     bwa_options = settings["bwaOptions"]
     sequence_to_haplotype_file = (wdir
                                   + settings["sequenceToHaplotypeDictionary"])
@@ -5064,7 +4317,8 @@ def get_haplotypes(settings):
         secondary_haplotypes = secondary_haplotypes.merge(
             gene_df[["gene", "copy", "copyname", "mip_number", "sub_number"]]
         )
-        secondary_haplotypes.to_csv(wdir + "secondary_haplotypes.csv")
+        secondary_haplotypes.to_csv(os.path.join(wdir,
+                                                 "secondary_haplotypes.csv"))
 
     for m in list(haplotypes.keys()):
         for h in list(haplotypes[m].keys()):
@@ -5082,8 +4336,8 @@ def get_haplotypes(settings):
                 off_target_haplotypes[h] = haplotypes[m].pop(h)
         if len(haplotypes[m]) == 0:
             haplotypes.pop(m)
-    hap_file = wdir + settings["tempHaplotypesFile"]
-    off_file = wdir + settings["tempOffTargetsFile"]
+    hap_file = os.path.join(wdir, settings["tempHaplotypesFile"])
+    off_file = os.path.join(wdir, settings["tempOffTargetsFile"])
     with open(hap_file, "w") as out1, open(off_file, "w") as out2:
         json.dump(haplotypes, out1, indent=1)
         json.dump(off_target_haplotypes, out2, indent=1)
@@ -5103,7 +4357,7 @@ def align_haplotypes(
     with open(haplotypes_file) as infile:
         haplotypes = json.load(infile)
     species = settings["species"]
-    alignment_dir = wdir + settings["alignmentDir"]
+    alignment_dir = os.path.join(wdir, settings["alignmentDir"])
     num_processor = int(settings["processorNumber"])
     command_list = []
     with open(settings["callInfoDictionary"]) as infile:
@@ -5114,7 +4368,7 @@ def align_haplotypes(
     for m in haplotypes:
         # create a fasta file for each mip that contains all haplotype
         # sequences for that mip
-        haplotype_fasta = alignment_dir + m + ".haps"
+        haplotype_fasta = os.path.join(alignment_dir, m + ".haps")
         with open(haplotype_fasta, "w") as outfile:
             outfile_list = []
             for h in haplotypes[m]:
@@ -5124,7 +4378,7 @@ def align_haplotypes(
         haplotype_fasta = m + ".haps"
         # create a reference file for each mip that contains reference
         # sequences for each paralog copy for that mip
-        reference_fasta = alignment_dir + m + ".refs"
+        reference_fasta = os.path.join(alignment_dir, m + ".refs")
         with open(reference_fasta, "w") as outfile:
             outfile_list = []
             gene_name = m.split("_")[0]
@@ -5147,7 +4401,7 @@ def align_haplotypes(
         command_list.append(command)
     # run the alignment
     alignment = align_region_multi(command_list, num_processor)
-    alignment_out_file = wdir + settings["tempAlignmentStdOut"]
+    alignment_out_file = os.path.join(wdir, settings["tempAlignmentStdOut"])
     with open(alignment_out_file, "w") as outfile:
         json.dump(alignment, outfile)
     return
@@ -5476,7 +4730,8 @@ def parse_aligned_haplotypes(settings):
                             indel_length = len(indels)
                             indel_end = genomic_pos - 1
                             indel_seq = "".join(indels)
-                            buffer_seq = "".join(["-" for idl in range(indel_length)])
+                            buffer_seq = "".join(
+                                ["-" for idl in range(indel_length)])
                             if indel_type == "del":
                                 indel_begin = genomic_pos - indel_length
                                 ref_base = indel_seq
@@ -5486,7 +4741,8 @@ def parse_aligned_haplotypes(settings):
                                 indel_begin = genomic_pos - 1
                                 ref_base = buffer_seq
                                 hap_base = indel_seq
-                                h_index = [hap_index - indel_length, hap_index - 1]
+                                h_index = [hap_index - indel_length,
+                                           hap_index - 1]
                         differences.append({"begin": indel_begin,
                                             "end": indel_end,
                                             "type": indel_type,
@@ -5514,7 +4770,9 @@ def parse_aligned_haplotypes(settings):
                             if d_prior_index >= 0:
                                 prior_base = ref_seq[d_prior_index]
                             else:
-                                prior_base = get_sequence(d_chrom + ":" + str(d_pos)                                                        + "-" + str(d_pos), species).upper()
+                                prior_base = get_sequence(
+                                    d_chrom + ":" + str(d_pos)
+                                    + "-" + str(d_pos), species).upper()
                             vcf_ref = prior_base + ref_base
                             vcf_hap = prior_base + hap_base
                             vcf_ref = "".join([b for b in vcf_ref if b != "-"])
@@ -5522,7 +4780,8 @@ def parse_aligned_haplotypes(settings):
                         else:
                             vcf_ref = ref_base
                             vcf_hap = hap_base
-                        vcf_key = d_chrom + ":" + str(d_pos) + ":.:" + vcf_ref + ":" + vcf_hap
+                        vcf_key = (d_chrom + ":" + str(d_pos) + ":.:"
+                                   + vcf_ref + ":" + vcf_hap)
                         d["vcf_raw"] = vcf_key
                     # all differences in between the ref and hap has been found
                     # loop through differences and assign values for
@@ -5575,8 +4834,9 @@ def parse_aligned_haplotypes(settings):
             except KeyError:
                 cleaned_alignments[h] = {c: best_al}
     alignments = cleaned_alignments
-    # check if problem alignments and inverted alignments have a better alignment in
-    # alignment dictionary. Remove from list if better is found elsewhere.
+    # check if problem alignments and inverted alignments have a better
+    # alignment in the  alignment dictionary. Remove from list if better is
+    # found elsewhere.
     problem_dicts = [problem_alignments, inverted_alignments]
     for i in range(len(problem_dicts)):
         probs = problem_dicts[i]
@@ -5605,20 +4865,16 @@ def parse_aligned_haplotypes(settings):
         problem_dicts[i] = temp_dict
         if len(temp_dict) > 0:
             print(("%d alignments may have problems, please check %s"
-                    %(len(temp_dict),
-                      settings["tempAlignmentsFile"])
-                  ))
+                   % (len(temp_dict), settings["tempAlignmentsFile"])))
     if len(problem_snps) > 0:
         print(("%d SNPs may have problems, please check please check %s"
-            %(len(problem_snps),
-              settings["tempAlignmentsFile"])
-              ))
+               % (len(problem_snps), settings["tempAlignmentsFile"])))
 
-    result =  {"alignments": alignments,
-            "inverted_alignments": problem_dicts[1],
-            "problem_alignments": problem_dicts[0],
-            "problem_snps": problem_snps}
-    alignment_file = wdir + settings["tempAlignmentsFile"]
+    result = {"alignments": alignments,
+              "inverted_alignments": problem_dicts[1],
+              "problem_alignments": problem_dicts[0],
+              "problem_snps": problem_snps}
+    alignment_file = os.path.join(wdir, settings["tempAlignmentsFile"])
     with open(alignment_file, "w") as outfile:
         json.dump(result, outfile)
     return
@@ -5631,12 +4887,12 @@ def update_aligned_haplotypes(settings):
     scores from lastZ.
     """
     wdir = settings["workingDir"]
-    temp_haplotype_file = wdir + settings["tempHaplotypesFile"]
+    temp_haplotype_file = os.path.join(wdir, settings["tempHaplotypesFile"])
     with open(temp_haplotype_file) as infile:
         haplotypes = json.load(infile)
     with open(settings["callInfoDictionary"]) as infile:
         call_info = json.load(infile)
-    temp_alignment_file = wdir + settings["tempAlignmentsFile"]
+    temp_alignment_file = os.path.join(wdir, settings["tempAlignmentsFile"])
     with open(temp_alignment_file) as infile:
         parsed_alignments = json.load(infile)
     # all alignments from the parsed alignments dict
@@ -5705,7 +4961,8 @@ def update_aligned_haplotypes(settings):
                 mapped_copy_names.append("_".join([temp_dic[k]["copy_name"],
                                                    k]))
             haplotypes[m][h]["copy_name"] = "_".join(mapped_copy_names)
-    temp_mapped_haps_file = wdir + settings["tempMappedHaplotypesFile"]
+    temp_mapped_haps_file = os.path.join(wdir,
+                                         settings["tempMappedHaplotypesFile"])
     with open(temp_mapped_haps_file, "w") as outfile:
         json.dump(haplotypes, outfile, indent=1)
     return
@@ -5717,8 +4974,9 @@ def update_unique_haplotypes(settings):
     Update sequence_to_haplotype dict with the new haplotypes.
     """
     wdir = settings["workingDir"]
-    unique_haplotype_file = wdir + settings["haplotypeDictionary"]
-    sequence_to_haplotype_file = wdir + settings["sequenceToHaplotypeDictionary"]
+    unique_haplotype_file = os.path.join(wdir, settings["haplotypeDictionary"])
+    sequence_to_haplotype_file = os.path.join(
+        wdir, settings["sequenceToHaplotypeDictionary"])
     try:
         with open(unique_haplotype_file) as infile:
             unique_haplotypes = json.load(infile)
@@ -5729,10 +4987,11 @@ def update_unique_haplotypes(settings):
             sequence_to_haplotype = json.load(infile)
     except IOError:
         sequence_to_haplotype = {}
-    temp_mapped_hap_file = wdir + settings["tempMappedHaplotypesFile"]
+    temp_mapped_hap_file = os.path.join(
+        wdir, settings["tempMappedHaplotypesFile"])
     with open(temp_mapped_hap_file) as infile:
         haplotypes = json.load(infile)
-    temp_off_file = wdir + settings["tempOffTargetsFile"]
+    temp_off_file = os.path.join(wdir, settings["tempOffTargetsFile"])
     with open(temp_off_file) as infile:
         off_target_haplotypes = json.load(infile)
     # update unique_haplotypes with on target haplotypes
@@ -5785,9 +5044,10 @@ def update_variation(settings):
     """
     wdir = settings["workingDir"]
     species = settings["species"]
-    unique_haplotype_file = wdir + settings["haplotypeDictionary"]
-    variation_file = wdir + settings["variationDictionary"]
-    var_key_to_uniq_file = wdir + settings["variationKeyToUniqueKey"]
+    unique_haplotype_file = os.path.join(wdir, settings["haplotypeDictionary"])
+    variation_file = os.path.join(wdir, settings["variationDictionary"])
+    var_key_to_uniq_file = os.path.join(
+        wdir, settings["variationKeyToUniqueKey"])
     with open(unique_haplotype_file) as infile:
         haplotypes = json.load(infile)
     try:
@@ -5795,7 +5055,8 @@ def update_variation(settings):
             variation = json.load(infile)
     except IOError:
         variation = {}
-    var_key_to_uniq_file = wdir + settings["variationKeyToUniqueKey"]
+    var_key_to_uniq_file = os.path.join(
+        wdir, settings["variationKeyToUniqueKey"])
     try:
         with open(var_key_to_uniq_file) as infile:
             var_key_to_uniq = json.load(infile)
@@ -5835,9 +5096,9 @@ def update_variation(settings):
     raw_vcf_file = settings["rawVcfFile"]
     zipped_vcf = raw_vcf_file + ".gz"
     norm_vcf_file = settings["normalizedVcfFile"]
-    with open(wdir + raw_vcf_file, "w") as outfile:
+    with open(os.path.join(wdir, raw_vcf_file), "w") as outfile:
         outfile.write("\n".join(outfile_list))
-    with open(wdir + zipped_vcf, "w") as outfile:
+    with open(os.path.join(wdir, zipped_vcf), "w") as outfile:
         dump = subprocess.call(["bgzip", "-c", "-f", raw_vcf_file],
                                cwd=wdir, stdout=outfile)
     dump = subprocess.call(["bcftools", "index", "-f", raw_vcf_file + ".gz"],
@@ -5868,7 +5129,7 @@ def update_variation(settings):
                    "-out", ann_out]
     dump = subprocess.check_call(ann_command, cwd=wdir)
     normalized_variation_keys = []
-    with open(wdir + norm_vcf_file) as infile:
+    with open(os.path.join(wdir, norm_vcf_file)) as infile:
         line_num = 0
         for line in infile:
             if not line.startswith("#"):
@@ -5880,7 +5141,7 @@ def update_variation(settings):
                 line_num += 1
     #
     annotation_table_file = ann_out + "." + ann_build + "_multianno.txt"
-    with open(wdir + annotation_table_file) as infile:
+    with open(os.path.join(wdir, annotation_table_file)) as infile:
         line_num = -1
         for line in infile:
             newline = line.strip().split("\t")
@@ -6191,26 +5452,26 @@ def make_snp_vcf(variant_file, haplotype_file, call_info_file,
 
 def make_chrom_vcf(wdir, header_count, min_cov=1, min_count=1, min_freq=0):
     variant_counts = pd.read_csv(
-        wdir + "variant_table.csv",
+        os.path.join(wdir, "variant_table.csv"),
         header=list(range(header_count)), index_col=0
     )
     gb = variant_counts.groupby(level="CHROM", axis=1)
     for chrom in gb.groups.keys():
         gb.get_group(chrom).to_csv(os.path.join(wdir, chrom + ".var.csv"))
     variant_coverage = pd.read_csv(
-        wdir + "variant_coverage_table.csv",
+        os.path.join(wdir, "variant_coverage_table.csv"),
         header=list(range(header_count)), index_col=0
     )
     gb = variant_coverage.groupby(level="CHROM", axis=1)
     for chrom in gb.groups.keys():
         gb.get_group(chrom).to_csv(os.path.join(wdir, chrom + ".cov.csv"))
 
-    with open(wdir + "unique_haplotype.dic") as infile:
+    with open(os.path.join(wdir, "unique_haplotype.dic")) as infile:
         haplotypes = json.load(infile)
 
     with open("/opt/project_resources/mip_ids/call_info.json") as infile:
         call_info = json.load(infile)
-    hap_counts = pd.read_csv(wdir + "haplotype_counts.csv")
+    hap_counts = pd.read_csv(os.path.join(wdir, "haplotype_counts.csv"))
 
     chrom_haplotypes = {}
     for m in haplotypes:
@@ -6257,14 +5518,14 @@ def make_chrom_vcf(wdir, header_count, min_cov=1, min_count=1, min_freq=0):
     call_info_file = "/opt/project_resources/mip_ids/call_info.json"
     chromosomes = set(haplotype_counts["CHROM"])
     for chrom in sorted(chromosomes):
-        haplotype_file = wdir + "/" + chrom + ".haps.json"
-        variant_file = wdir + "/" + chrom + ".var.csv"
-        haplotype_counts_file = wdir + "/" + chrom + ".hap_counts.txt"
-        haplotype_file = wdir + "/" + chrom + ".haps.json"
+        haplotype_file = os.path.join(wdir, chrom + ".haps.json")
+        variant_file = os.path.join(wdir, chrom + ".var.csv")
+        haplotype_counts_file = os.path.join(wdir, chrom + ".hap_counts.txt")
+        haplotype_file = os.path.join(wdir, chrom + ".haps.json")
         vcf_chrom = chrom
-        barcode_count_file = wdir + "barcode_counts.csv"
-        vcf_file = wdir + chrom + ".vcf"
-        settings_file = wdir + "settings.txt"
+        barcode_count_file = os.path.join(wdir, "barcode_counts.csv")
+        vcf_file = os.path.join(wdir, chrom + ".vcf")
+        settings_file = os.path.join(wdir, "settings.txt")
         try:
             make_snp_vcf(vcf_file=vcf_file,
                          haplotype_file=haplotype_file,
@@ -6293,17 +5554,15 @@ def process_haplotypes(settings_file):
     return
 
 
-
-
 def process_results(wdir,
                     settings_file,
                     sample_sheets=None,
                     meta_files=[],
                     targets_file=None,
                     target_join="union"):
-    settings = get_analysis_settings(wdir + settings_file)
+    settings = get_analysis_settings(os.path.join(wdir, settings_file))
     if sample_sheets is None:
-        sample_sheets = [wdir + "samples.tsv"]
+        sample_sheets = [os.path.join(wdir, "samples.tsv")]
     ##########################################################
     ##########################################################
     # Process 1: use sample sheets, sample sets and meta files
@@ -6338,7 +5597,7 @@ def process_results(wdir,
     run_meta = run_meta.groupby(
         ["Sample ID", "Library Prep"]
     ).first().reset_index()
-    run_meta.to_csv(wdir + "run_meta.csv")
+    run_meta.to_csv(os.path.join(wdir, "run_meta.csv"))
     # load meta data for samples, if given. Use a mock field if not given.
     try:
         sample_meta = pd.concat(
@@ -6359,7 +5618,7 @@ def process_results(wdir,
     merged_meta = pd.merge(run_meta, sample_meta,
                            on="Sample Name",
                            how="inner")
-    merged_meta.to_csv(wdir + "merged_meta.csv")
+    merged_meta.to_csv(os.path.join(wdir, "merged_meta.csv"))
     print(("{} out of {} samples has meta information and"
            " will be used for analysis.").format(
         merged_meta.shape[0], run_meta.shape[0]
@@ -6376,7 +5635,7 @@ def process_results(wdir,
     # get all haplotypes and variants observed in the data
     # from the haplotype dictionary
     hap_file = settings["haplotypeDictionary"]
-    with open(wdir + hap_file) as infile:
+    with open(os.path.join(wdir, hap_file)) as infile:
         haplotypes = json.load(infile)
     # keep all variant in all haplotypes in a list
     variation_list = []
@@ -6502,7 +5761,7 @@ def process_results(wdir,
     ##########################################################
     ##########################################################
     # get the MIPWrangler Output
-    raw_results = pd.read_table(wdir + settings["mipsterFile"])
+    raw_results = pd.read_table(os.path.join(wdir, settings["mipsterFile"]))
     raw_results["Haplotype ID"] = raw_results["haplotype_ID"] + "-0"
     # limit the results to the samples intended for this analysis
     raw_results = raw_results.loc[
@@ -7379,7 +6638,7 @@ def process_results(wdir,
     mutant_freq_table = (
         mutant_aa_table/coverage_aa_table
     ).replace(np.inf, np.nan)
-    mutant_freq_table.to_csv(wdir + "mutation_frequencies.csv")
+    mutant_freq_table.to_csv(os.path.join(wdir, "mutation_frequencies.csv"))
     genotypes = mutant_freq_table.applymap(
         lambda x: 2 if x >= (1 - min_mutation_fraction)
         else 1 if x >= min_mutation_fraction else np.nan if np.isnan(x) else 0
@@ -7456,8 +6715,8 @@ def get_vcf_haplotypes(settings):
         Mapping haplotypes to specific targets/copies is not accomplished here
         """
     wdir = settings["workingDir"]
-    haplotypes_fq_file = wdir + settings["haplotypesFastqFile"]
-    haplotypes_sam_file = wdir + settings["haplotypesSamFile"]
+    haplotypes_fq_file = os.path.join(wdir, settings["haplotypesFastqFile"])
+    haplotypes_sam_file = os.path.join(wdir, settings["haplotypesSamFile"])
     bwa_options = settings["bwaOptions"]
     call_info_file = settings["callInfoDictionary"]
     species = settings["species"]
@@ -7470,9 +6729,10 @@ def get_vcf_haplotypes(settings):
     # in the recent versions of the pipeline but will be missing in older
     # data. If missing, we'll generate it.
     try:
-        hap_df = pd.read_csv(wdir + "unique_haplotypes.csv")
+        hap_df = pd.read_csv(os.path.join(wdir, "unique_haplotypes.csv"))
     except IOError:
-        raw_results = pd.read_table(wdir + settings["mipsterFile"])
+        raw_results = pd.read_table(os.path.join(wdir,
+                                                 settings["mipsterFile"]))
         hap_df = raw_results.groupby(
             ["gene_name", "mip_name", "haplotype_ID"])[
             "haplotype_sequence"].first().reset_index()
@@ -7588,11 +6848,14 @@ def get_vcf_haplotypes(settings):
     mapped_haplotypes["mapped_copy_number"] = mapped_haplotypes.groupby(
         ["haplotype_ID"])["haplotype_ID"].transform(len)
 
-    mapped_haplotypes.to_csv(wdir + "mapped_haplotypes.csv", index=False)
-    off_target_haplotypes.to_csv(wdir + "offtarget_haplotypes.csv",
-                                 index=False)
-    haplotypes.to_csv(wdir + "aligned_haplotypes.csv", index=False)
-    haplotype_maps.to_csv(wdir + "all_haplotypes.csv", index=False)
+    mapped_haplotypes.to_csv(os.path.join(
+        wdir, "mapped_haplotypes.csv"), index=False)
+    off_target_haplotypes.to_csv(os.path.join(
+        wdir, "offtarget_haplotypes.csv"), index=False)
+    haplotypes.to_csv(os.path.join(
+        wdir, "aligned_haplotypes.csv"), index=False)
+    haplotype_maps.to_csv(os.path.join(
+        wdir, "all_haplotypes.csv"), index=False)
     num_hap = len(set(haplotype_maps["haplotype_ID"]))
     num_off = len(set(off_target_haplotypes["haplotype_ID"]))
     print(("{} of {} haplotypes were off-target, either not mapping to "
@@ -7633,7 +6896,7 @@ def get_haplotype_counts(settings):
     run_meta = run_meta.groupby(
         ["Sample ID", "Library Prep"]
     ).first().reset_index()
-    run_meta.to_csv(wdir + "run_meta.csv")
+    run_meta.to_csv(os.path.join(wdir, "run_meta.csv"))
     # get used sample ids
     sample_ids = run_meta["Sample ID"].unique().tolist()
     ##########################################################
@@ -7657,7 +6920,7 @@ def get_haplotype_counts(settings):
     ##########################################################
     ##########################################################
     # get the MIPWrangler Output
-    raw_results = pd.read_table(wdir + settings["mipsterFile"])
+    raw_results = pd.read_table(os.path.join(wdir, settings["mipsterFile"]))
     # limit the results to the samples intended for this analysis
     raw_results = raw_results.loc[
         raw_results["sample_name"].isin(sample_ids)
@@ -8455,1022 +7718,6 @@ def process_contig(contig_dict):
         raise e
 
 
-
-###############################################################################
-# older analysis functions.
-###############################################################################
-
-
-def get_raw_data (settings):
-    """ Extract raw data from filtered_data file. If there is data from a previous run,
-    new data can be added to old data. If this sample set is new, or being analyzed
-    separately, than existing data should be "na".
-    Return a list of data point dictionaries. One dict for each haplotype/sample.
-    Write this list to disk."""
-    wdir = settings["workingDir"]
-    unique_haplotype_file = wdir + settings["haplotypeDictionary"]
-    sequence_to_haplotype_file = wdir + settings["sequenceToHaplotypeDictionary"]
-    with open(unique_haplotype_file) as infile:
-        unique_haplotypes = json.load(infile)
-    with open(sequence_to_haplotype_file) as infile:
-        sequence_to_haplotype = json.load(infile)
-    problem_data = []
-    existing_data_file = wdir + settings["existingData"]
-    try:
-        with open(existing_data_file) as infile:
-            raw_data = json.load(infile)
-    except IOError:
-        raw_data = []
-    mipster_file = wdir + settings["mipsterFile"]
-    colnames = dict(list(zip(settings["colNames"],
-                        settings["givenNames"])))
-    with open(mipster_file) as infile:
-        ## filteredData only contains relevant fields for this analysis
-        # the field names are given in the settings dict and
-        # kept in given_names list
-        run_ID = settings["runID"]
-        line_number = 0
-        for line in infile:
-            newline = line.strip().split("\t")
-            if not line_number == 0:
-                line_number += 1
-                col_indexes = {}
-                try:
-                    for ck in list(colnames.keys()):
-                        col_indexes[
-                            newline.index(ck)
-                        ] = {"name": colnames[ck]}
-                        if ck == 'c_barcodeCnt':
-                            bc_index = newline.index(ck)
-                        elif ck == 'c_readCnt':
-                            rc_index = newline.index(ck)
-                except ValueError:
-                    for ck in list(colnames.values()):
-                        col_indexes[
-                        newline.index(ck)
-                        ] = {"name" : ck}
-                        if ck == 'barcode_count':
-                            bc_index = newline.index(ck)
-                        elif ck == 'read_count':
-                            rc_index = newline.index(ck)
-                # each data point will be a dict
-                data_dic = {}
-                for i in list(col_indexes.keys()):
-                    # check data type and convert data appropriately
-                    if i in [bc_index, rc_index]:
-                        data_point = int(newline[i])
-                    else:
-                        data_point = newline[i]
-                    data_dic[col_indexes[i]["name"]] = data_point
-                data_dic["run_ID"] = run_ID
-                # once data dict is created, check the haplotype sequence
-                # in the sequence to haplotype dict and update the data dict
-                # with values in the haplotype dict
-                seq = data_dic.pop("haplotype_sequence")
-                try:
-                    uniq_id = sequence_to_haplotype[seq]
-                    data_dic.pop("haplotype_quality_scores")
-                    data_dic["haplotype_ID"] = uniq_id
-                    if unique_haplotypes[data_dic["mip_name"]][uniq_id]["mapped"]:
-                        raw_data.append(data_dic)
-                except KeyError:
-                    problem_data.append(data_dic)
-                    continue
-    # dump the raw_data list to a json file
-    raw_data_file = wdir + settings["rawDataFile"]
-    with open(raw_data_file, "w") as outfile:
-        json.dump(raw_data, outfile)
-    problem_data_file = wdir + settings["rawProblemData"]
-    with open(problem_data_file, "w") as outfile:
-        json.dump(problem_data, outfile, indent=1)
-    return
-
-
-def filter_data (data_file, filter_field, comparison, criteria, output_file):
-    """
-    Data fields to filter: sample_name, gene_name, mip_name, barcode_count etc.
-    Comparison: for numeric values: gt (greater than), lt, gte (greater than or equal to), lte
-    criteria must be numeric as well.
-    for string values: in, nin (not in), criteria must be a list to include or exclude.
-    for string equality assessments, a list with single value can be used.
-    """
-    filtered_data = []
-    with open(data_file) as infile:
-        data = json.load(infile)
-    for d in data:
-        field_value = d[filter_field]
-        if comparison == "gt":
-            if field_value > criteria:
-                filtered_data.append(d)
-        elif comparison == "gte":
-            if field_value >= criteria:
-                filtered_data.append(d)
-        elif comparison == "lt":
-            if field_value < criteria:
-                filtered_data.append(d)
-        elif comparison == "lte":
-            if field_value <= criteria:
-                filtered_data.append(d)
-        elif comparison == "in":
-            if field_value in criteria:
-                filtered_data.append(d)
-        elif comparison == "nin":
-            if field_value not in criteria:
-                filtered_data.append(d)
-    with open(output_file, "w") as outfile:
-        json.dump(filtered_data, outfile, indent = 1)
-
-
-def group_samples (settings):
-    wdir = settings["workingDir"]
-    raw_data_file = wdir  + settings["rawDataFile"]
-    with open(raw_data_file) as infile:
-        raw_data = json.load(infile)
-    samples = {}
-    problem_samples = {}
-    mip_names = {}
-    #diploid_mipnames = []
-    #all_mipnames = []
-    copy_stable_genes = settings["copyStableGenes"]
-    for c in raw_data:
-        gene_name = c["gene_name"]
-        sample_name = c["sample_name"]
-        mip_name = c["mip_name"]
-        if (copy_stable_genes == "na") or (gene_name in copy_stable_genes):
-            try:
-                samples[sample_name]["diploid_barcode_count"] += c["barcode_count"]
-                samples[sample_name]["diploid_read_count"] += c["read_count"]
-                samples[sample_name]["diploid_mip_names"].append(mip_name)
-                #diploid_mipnames.append(mip_name)
-                """
-                except KeyError:
-                    try:
-                        samples[sample_name]["diploid_barcode_count"] = c["barcode_count"]
-                        samples[sample_name]["diploid_read_count"] = c["read_count"]
-                        samples[sample_name]["diploid_mip_names"] = [mip_name]
-                        diploid_mipnames.append(mip_name)
-                """
-            except KeyError:
-                samples[sample_name] = {"diploid_barcode_count": c["barcode_count"],
-                                        "diploid_read_count": c["read_count"],
-                                        "diploid_mip_names": [mip_name],
-                                        "total_barcode_count": c["barcode_count"],
-                                        "total_read_count": c["read_count"],
-                                        "all_mip_names": [mip_name]
-                                        }
-                #diploid_mipnames.append(mip_name)
-        try:
-            samples[sample_name]["total_barcode_count"] += c["barcode_count"]
-            samples[sample_name]["total_read_count"] += c["read_count"]
-            samples[sample_name]["all_mip_names"].append(mip_name)
-            #all_mipnames.append(mip_name)
-            """
-            except KeyError:
-                try:
-                    samples[sample_name]["total_barcode_count"] = c["barcode_count"]
-                    samples[sample_name]["total_read_count"] = c["read_count"]
-                    samples[sample_name]["all_mip_names"] = [mip_name]
-                    all_mipnames.append(mip_name)
-            """
-        except KeyError:
-            samples[sample_name] = {"diploid_barcode_count": 0,
-                                        "diploid_read_count": 0,
-                                        "diploid_mip_names": [],
-                                        "total_barcode_count": c["barcode_count"],
-                                        "total_read_count": c["read_count"],
-                                        "all_mip_names": [mip_name]
-                                        }
-            #all_mipnames.append(mip_name)
-
-
-    for s in list(samples.keys()):
-        try:
-            samples[s]["diploid_mip_names"] = list(set((samples[s]["diploid_mip_names"])))
-            samples[s]["diploid_mip_number"] = len(samples[s]["diploid_mip_names"])
-            samples[s]["all_mip_names"] = list(set((samples[s]["all_mip_names"])))
-            samples[s]["total_mip_number"] = len(samples[s]["all_mip_names"])
-            mip_names[s] = {}
-            mip_names[s]["diploid_mip_names"] = samples[s].pop("diploid_mip_names")
-            mip_names[s]["all_mip_names"] = samples[s].pop("all_mip_names")
-            try:
-                samples[s]["average_diploid_barcode_count"] = round(
-                samples[s]['diploid_barcode_count']
-                 /samples[s]['diploid_mip_number'], 2)
-                samples[s]["sample_normalizer"] = round(
-                100/(samples[s]["average_diploid_barcode_count"]), 2)
-            except ZeroDivisionError:
-                problem_samples[s] = samples.pop(s)
-        except KeyError:
-            problem_samples[s] = samples.pop(s)
-
-    results =  {"samples": samples,
-            "problem_samples": problem_samples,
-            "mip_names": mip_names}
-    sample_info_file = wdir + settings["sampleInfoFile"]
-    with open(sample_info_file, "w") as outfile:
-        json.dump(results,outfile, indent=1)
-    return
-
-
-def update_raw_data (settings):
-    wdir = settings["workingDir"]
-    raw_data_file = wdir  + settings["rawDataFile"]
-    with open(raw_data_file) as infile:
-        raw_data = json.load(infile)
-    unique_haplotype_file = wdir + settings["haplotypeDictionary"]
-    with open(unique_haplotype_file) as infile:
-        unique_haplotypes = json.load(infile)
-    sample_info_file = wdir + settings["sampleInfoFile"]
-    with open(sample_info_file) as infile:
-        samples = json.load(infile)["samples"]
-    normalized_data = []
-    problem_data = []
-    for r in raw_data:
-        try:
-            sample_name = r["sample_name"]
-            r["sample_normalizer"] = samples[sample_name]["sample_normalizer"]
-            r["sample_normalized_barcode_count"] = r["sample_normalizer"] * r["barcode_count"]
-            hid = r["haplotype_ID"]
-            mid = r["mip_name"]
-            r["copy_name"] = unique_haplotypes[mid][hid]["copy_name"]
-            normalized_data.append(r)
-        except KeyError:
-            problem_data.append(r)
-    normalized_data_file = wdir + settings["normalizedDataFile"]
-    with open(normalized_data_file, "w") as outfile:
-        json.dump(normalized_data, outfile)
-    problem_data_file = wdir + settings["normalizedProblemData"]
-    with open(problem_data_file, "w") as outfile:
-        json.dump(problem_data, outfile, indent=1)
-    return
-
-
-def get_counts (settings):
-    wdir = settings["workingDir"]
-    data_file = wdir + settings["normalizedDataFile"]
-    with open(data_file) as infile:
-        data = json.load(infile)
-    min_barcode_count = int(settings["minBarcodeCount"])
-    min_barcode_fraction = float(settings["minBarcodeFraction"])
-    counts = {}
-    samples = {}
-    # get sample data across probes
-    for t in data:
-        g = t["gene_name"]
-        m = t["mip_name"]
-        c = t["copy_name"]
-        s = t["sample_name"]
-        try:
-            samples[s][g][m][c]["raw_data"].append(t)
-        except KeyError:
-            try:
-                samples[s][g][m][c] = {"raw_data": [t]}
-            except KeyError:
-                try:
-                    samples[s][g][m] = {c: {"raw_data": [t]}}
-                except KeyError:
-                    try:
-                        samples[s][g] = {m: {c: {"raw_data": [t]}}}
-                    except KeyError:
-                        samples[s] = {g: {m: {c: {"raw_data": [t]}}}}
-    # filter/merge individual data points for each sample/paralog copy
-    # data for the same haplotype, possibly from separate runs will be merged
-    # data that does not pass a low barcode threshold will be filtered
-    merge_keys = ["sample_normalized_barcode_count",
-                  "barcode_count",
-                  "read_count"]
-    for s in samples:
-        for g in samples[s]:
-            for m in samples[s][g]:
-                for c in samples[s][g][m]:
-                    data_points = samples[s][g][m][c]["raw_data"]
-                    grouped_data = samples[s][g][m][c]["grouped_data"] = []
-                    merged_data = samples[s][g][m][c]["merged_data"] = []
-                    filtered_data = samples[s][g][m][c]["filtered_data"] = []
-                    cumulative_data = samples[s][g][m][c]["cumulative_data"] = {                            "sample_normalized_barcode_count": 0,
-                            "barcode_count": 0,
-                            "read_count": 0,
-                            "haplotypes": []}
-                    temp_data_points = copy.deepcopy(data_points)
-                    # group data points with same haplotype_ID together
-                    for i in range(len(temp_data_points)):
-                        di = temp_data_points[i]
-                        if di != "remove":
-                            same_haps = [di]
-                            for j in range(len(temp_data_points)):
-                                if i != j:
-                                    dj = temp_data_points[j]
-                                    if dj != "remove" and (di["haplotype_ID"] ==                                                            dj["haplotype_ID"]):
-                                        same_haps.append(dj)
-                                        temp_data_points[j] = "remove"
-                            grouped_data.append(same_haps)
-                    for dl in grouped_data:
-                        # find data point with most barcodes
-                        temp_barcode_count = 0
-                        best_data_index = 0
-                        for i in range(len(dl)):
-                            b = dl[i]["barcode_count"]
-                            if b > temp_barcode_count:
-                                temp_barcode_count = b
-                                best_data_index = i
-                        # use data point with more barcodes as base
-                        dm = copy.deepcopy(dl[best_data_index])
-                        for i in range(len(dl)):
-                            if i != best_data_index:
-                                dt = dl[i]
-                                for k in merge_keys:
-                                    dm[k] += dt[k]
-                        merged_data.append(dm)
-                    # filter haplotypes with insufficient count/frequency
-                    temp_barcode_counts = []
-                    for d in merged_data:
-                        temp_barcode_counts.append(d["barcode_count"])
-                    frac_threshold = min_barcode_fraction * sum(temp_barcode_counts)
-                    for d in merged_data:
-                        if d["barcode_count"] >= frac_threshold and                           d["barcode_count"] >= min_barcode_count:
-                            filtered_data.append(d)
-                    for d in filtered_data:
-                        for k in merge_keys:
-                            cumulative_data[k] += d[k]
-                        cumulative_data["haplotypes"].append(d["haplotype_ID"])
-    # get probe information across samples
-    template_dict = {"sample_normalized_barcode_count": [],
-                     "barcode_count": [],
-                     "read_count" : [],
-                     "haplotypes": [],
-                     "sample_names": []}
-    for s in samples:
-        for g in samples[s]:
-            for m in samples[s][g]:
-                for c in samples[s][g][m]:
-                    filtered_data = samples[s][g][m][c]["filtered_data"]
-                    cumulative_data = samples[s][g][m][c]["cumulative_data"]
-                    try:
-                        norm_counts = counts[g][m][c]["sample_normalized_barcode_count"]
-                    except KeyError:
-                        try:
-                            counts[g][m][c] = copy.deepcopy(template_dict)
-                        except KeyError:
-                            try:
-                                counts[g][m] = {c: copy.deepcopy(template_dict)}
-                            except KeyError:
-                                counts[g] = {m: {c: copy.deepcopy(template_dict)}}
-                    for k in merge_keys:
-                        counts[g][m][c][k].append(cumulative_data[k])
-                    counts[g][m][c]["sample_names"].append(s)
-                    counts[g][m][c]["haplotypes"].append(filtered_data)
-    sample_results_file = wdir + settings["perSampleResults"]
-    with open(sample_results_file, "w") as outfile:
-        json.dump(samples, outfile, indent=1)
-    probe_results_file = wdir + settings["perProbeResults"]
-    with open(probe_results_file, "w") as outfile:
-        json.dump(counts, outfile, indent=1)
-    return
-
-
-def get_unique_probes(settings):
-    wdir = settings["workingDir"]
-    unique_haplotype_file = wdir + settings["haplotypeDictionary"]
-    with open(unique_haplotype_file) as infile:
-        unique_haplotypes = json.load(infile)
-    with open(settings["callInfoDictionary"]) as infile:
-        call_info = json.load(infile)
-    # keep which copies a mip can be mapped to in copy_names dictionary
-    copy_names = {}
-    problem_copy_names = []
-    gene_names = []
-    for m in unique_haplotypes:
-        g = m.split("_")[0]
-        gene_names.append(g)
-        for h in unique_haplotypes[m]:
-            if unique_haplotypes[m][h]["mapped"]:
-                try:
-                    cn = unique_haplotypes[m][h]["copy_name"]
-                except KeyError:
-                    problem_copy_names.append(h)
-                try:
-                    copy_names[g][m].append(cn)
-                except KeyError:
-                    try:
-                        copy_names[g][m] = [cn]
-                    except KeyError:
-                        copy_names[g] = {m: [cn]}
-    for g in copy_names:
-        for m in copy_names[g]:
-            copy_names[g][m] = sorted(list(set(copy_names[g][m])))
-    # keep all copy names that have been observed for a gene in all_copies dict
-    all_copy_names = {}
-    all_copy_names_list = []
-    for g in copy_names:
-        cn = []
-        for m in copy_names[g]:
-            cn.extend(copy_names[g][m])
-        cn = sorted(list(set(cn)))
-        all_copy_names[g] = cn
-        all_copy_names_list.extend(cn)
-
-    # keep probe names that always maps to specific paralog copies in unique_keys
-    # uniq_keys[g][m1] = ["HBA1_C0", "HBA2_C1"]
-    uniq_keys = {}
-    # keep probe names that never maps to specific paralog copies in non_uniq_keys
-    # non_uniq_keys[g][m2] = ["HBA1_C0_HBA2_C1"]
-    non_uniq_keys = {}
-    # keep probe names that maps to specific paralog copies for some copies only
-    # in semi_uniq_keys [g][m3] = ["HBA1_C0"] (only maps C0 specifically)
-    #semi_uniq_keys = {}
-    # if a mip does not map to any target copy (always off target or never works)
-    no_copy_keys = {}
-    for g in all_copy_names:
-        copies = all_copy_names[g]
-        keys = sorted(list(call_info[g].keys()),
-                      key= lambda a: call_info[g][a]["copies"]["C0"]["capture_start"])
-        for k in keys:
-            try:
-                key_copies = copy_names[g][k]
-                nucopies = []
-                toss_copies = []
-                try:
-                    for c in key_copies:
-                        split_copies = c.split("_")
-                        nucopies.append([split_copies[i+1]                                              for i in range(0, len(split_copies), 2)])
-                except IndexError:
-                    print(split_copies)
-                    break
-                for i in range(len(nucopies)):
-                    query_list = nucopies[i]
-                    for j in range(len(nucopies)):
-                        target_list = nucopies[j]
-                        if i != j:
-                            for c in query_list:
-                                if c in target_list:
-                                    toss_copies.append(i)
-                toss_copies = list(set(toss_copies))
-                uniq_copies = [key_copies[i]                                for i in range(len(key_copies)) if i not in toss_copies]
-                non_uniq_copies = [key_copies[i]                                for i in range(len(key_copies)) if i in toss_copies]
-                if len(uniq_copies) > 0:
-                    try:
-                        uniq_keys[g][k] = uniq_copies
-                    except KeyError:
-                        uniq_keys[g] = {k: uniq_copies}
-                if len(non_uniq_copies) > 0:
-                    try:
-                        non_uniq_keys[g][k] = non_uniq_copies
-                    except KeyError:
-                        non_uniq_keys[g] = {k: non_uniq_copies}
-            except KeyError:
-                try:
-                    no_copy_keys[g].append(k)
-                except KeyError:
-                    no_copy_keys[g] = [k]
-    gene_names = sorted(gene_names)
-    result =  {"copy_names": copy_names,
-            "all_copy_names": all_copy_names,
-            "problem_copy_names": problem_copy_names,
-            "gene_names": gene_names,
-            "unique_probes": uniq_keys,
-            "non_unique_probes": non_uniq_keys,
-            "no_copy_probes": no_copy_keys}
-    uniq_file = wdir + settings["uniqueProbeFile"]
-    with open(uniq_file, "w") as outfile:
-        json.dump(result, outfile, indent = 1)
-    return
-
-
-def create_data_table (settings):
-    wdir = settings["workingDir"]
-    with open(settings["callInfoDictionary"]) as infile:
-        call_info = json.load(infile)
-    uniq_file = wdir + settings["uniqueProbeFile"]
-    with open(uniq_file) as infile:
-        uniq_dict = json.load(infile)
-    sample_results_file = wdir + settings["perSampleResults"]
-    with open(sample_results_file) as infile:
-        counts = json.load(infile)
-    sample_names = list(counts.keys())
-    big_table = []
-    all_tables = {}
-    for gene in call_info:
-        gene_info = call_info[gene]
-        try:
-            all_probes = uniq_dict["unique_probes"][gene]
-        except KeyError:
-            all_probes = {}
-        table = []
-        for p in all_probes:
-            for c in all_probes[p]:
-                split_copies = c.split("_")
-                if len(split_copies) == 2:
-                    c_id = c.split("_")[-1]
-                    probe_info = gene_info[p]["copies"][c_id]
-                    try:
-                        chrom = int(probe_info["chrom"][3:])
-                    except ValueError:
-                        chrom = 23
-                    start = probe_info["capture_start"]
-                    end = probe_info["capture_end"]
-                    ori = probe_info["orientation"]
-                    gc_frac = calculate_gc(probe_info["capture_sequence"])
-                elif len(split_copies) > 2:
-                    gc_list = []
-                    for i in range(0, len(split_copies), 2):
-                        c_id = split_copies[i+1]
-                        probe_info = gene_info[p]["copies"][c_id]
-                        gc_list.append(calculate_gc(probe_info["capture_sequence"]))
-                    gc_frac = np.mean(gc_list)
-                    start = "na"
-                    end = "na"
-                    ori = "na"
-                    chrom = 99
-                s_counts = []
-                for s in sample_names:
-                    try:
-                        bc = counts[s][gene][p][c]["cumulative_data"]                             ["sample_normalized_barcode_count"]
-                    except KeyError:
-                        bc = 0
-
-                    s_counts.append(bc)
-                p_counts = [gene, p, c, chrom, start, end, gc_frac, ori]
-                p_counts.extend(s_counts)
-                table.append(p_counts)
-                big_table.append(p_counts)
-        table = sorted(table, key = itemgetter(3, 4, 5))
-        all_tables[gene] = table
-    big_table = sorted(big_table, key = itemgetter(3, 4, 5))
-    result = {"tables": all_tables,
-            "big_table" : big_table,
-            "sample_names": sample_names}
-    tables_file = wdir + settings["tablesFile"]
-    with open(tables_file, "w") as outfile:
-        json.dump(result, outfile)
-    return
-
-
-def filter_tables (settings):
-    wdir = settings["workingDir"]
-    tables_file = wdir + settings["tablesFile"]
-    with open(tables_file) as infile:
-        tables_dic = json.load(infile)
-    tables = copy.deepcopy(tables_dic["tables"])
-    sample_info_file = wdir + settings["sampleInfoFile"]
-    with open(sample_info_file) as infile:
-        sample_info = json.load(infile)["samples"]
-    min_probe_median = int(settings["minimumProbeMedian"])
-    min_sample_median = int(settings["minimumSampleMedian"])
-    filtered_tables = {}
-    #normalized_tables = {}
-    #barcode_tables = {}
-    sample_names = copy.deepcopy(tables_dic["sample_names"])
-    sample_normalizers = np.asarray([sample_info[s]["sample_normalizer"] for s in sample_names])
-    sample_array = np.asarray(sample_names)
-    #filtered_samples = sample_array[sample_filter]
-    for g in tables:
-        t_array = np.asarray(tables[g])
-        split_array = np.hsplit(t_array, [8])
-        t_info = split_array[0]
-        t_data = np.array(split_array[1], float)
-        #s_filtered = t_data[:, sample_filter]
-        barcode_table = np.transpose(t_data)/sample_normalizers[:, np.newaxis]
-        try:
-            probe_filter = np.median(t_data, axis = 1) >= min_probe_median
-        except IndexError:
-            continue
-        sample_filter = np.median(barcode_table, axis = 1) >= min_sample_median
-        info_filtered = t_info[probe_filter, :]
-        data_filtered = t_data[:, sample_filter]
-        data_filtered = data_filtered[probe_filter, :]
-        median_normalized = 2*(data_filtered / np.median(data_filtered, axis = 1)[:,np.newaxis])
-        barcode_filtered = np.transpose(barcode_table)[:, sample_filter]
-        barcode_filtered = barcode_filtered[probe_filter, :]
-        #filtered_data = np.hstack((info_filtered, data_filtered))
-        #normalized_data = np.hstack((info_filtered, median_normalized))
-        #barcode_data = np.hstack((info_filtered, barcode_filtered))
-        filtered_tables[g] = {"probe_information":info_filtered,
-                              "barcode_counts": barcode_filtered,
-                              "sample_normalized_barcode_counts": data_filtered,
-                              "median_normalized_copy_counts": median_normalized,
-                              "sample_names": sample_array[sample_filter]}
-        #normalized_tables[g] = normalized_data
-        #barcode_tables [g] = barcode_data
-    filtered_tables_file = wdir + settings["filteredTablesFile"]
-    with open(filtered_tables_file, "wb") as outfile:
-        pickle.dump(filtered_tables, outfile)
-    return
-
-
-def generate_clusters(settings):
-    cluster_output = {}
-    problem_clusters = []
-    wdir = settings["workingDir"]
-    filtered_tables_file = wdir + settings["filteredTablesFile"]
-    with open(filtered_tables_file, 'rb') as infile:
-        tables = pickle.load(infile)
-    case_file = wdir + settings["caseFile"]
-    case_status = {}
-    try:
-        with open(case_file) as infile:
-            for line in infile:
-                newline = line.strip().split("\t")
-                case_status[newline[0]] = newline[1]
-    except IOError:
-        pass
-    for g in tables:
-        try:
-            probes = list(tables[g]["probe_information"][:, 1])
-            uniq_probes = []
-            for p in probes:
-                if p not in uniq_probes:
-                    uniq_probes.append(p)
-            sample_names = tables[g]["sample_names"]
-            labels = []
-            for s in sample_names:
-                try:
-                    labels.append(case_status[s])
-                except KeyError:
-                    labels.append("na")
-            copy_counts = tables[g]["median_normalized_copy_counts"]
-            barcode_counts = np.transpose(tables[g]["sample_normalized_barcode_counts"])
-            collapsed_counts = np.zeros((len(uniq_probes), len(sample_names)))
-            for i in range(len(uniq_probes)):
-                u = uniq_probes[i]
-                for j in range(len(probes)):
-                    p = probes[j]
-                    if u == p:
-                        collapsed_counts[i] += copy_counts[j]
-            repeat_counts = []
-            for u in uniq_probes:
-                repeat_counts.append(probes.count(u))
-            upper_limit = np.asarray(repeat_counts)*2 + 0.5
-            lower_limit = np.asarray(repeat_counts)*2 - 0.5
-            copy_counts = np.transpose(copy_counts)
-            collapsed_counts = np.transpose(collapsed_counts)
-            ts = TSNE(n_components=2, init = "pca", random_state=0, perplexity=100)
-            #ts = TSNE(n_components=2, init = "pca", random_state=0, perplexity=30)
-            #Y  = ts.fit_transform(copy_counts)
-            Y  = ts.fit_transform(barcode_counts)
-            ts = TSNE(n_components=2, init = "pca", random_state=0, perplexity=50)
-            V  = ts.fit_transform(Y)
-            U  = ts.fit_transform(V)
-            T  = ts.fit_transform(U)
-            tsne_keys = {"Y": Y, "V": V, "U": U, "T": T}
-            ms = MeanShift(bandwidth = 5, cluster_all = True)
-            ms.fit(tsne_keys[settings["tsneKey"]])
-            cluster_labels = ms.labels_
-            cluster_centers = ms.cluster_centers_
-            labels_unique = np.unique(cluster_labels)
-            n_clusters_ = len(labels_unique)
-            cluster_dict = {"cluster_labels" : cluster_labels,
-                            "unique_probes": uniq_probes,
-                           "all_probes": probes,
-                           "plotting": {"upper_limit": upper_limit,
-                                        "lower_limit": lower_limit},
-                           "mean_shift": ms,
-                           "tsne": {"median": copy_counts,
-                                    "collapsed_median": collapsed_counts,
-                                    "T": T,
-                                    "U": U,
-                                    "V": V,
-                                    "Y": Y},
-                           "clusters": {}}
-            for k in range(n_clusters_):
-                my_members = cluster_labels == k
-                cluster_center = cluster_centers[k]
-                cluster_case_count = list(np.asarray(labels)[my_members]).count("case")
-                cluster_control_count = list(np.asarray(labels)[my_members]).count("control")
-                other_case_count = labels.count("case") - cluster_case_count
-                other_control_count = labels.count("control") - cluster_control_count
-                cluster_table = [[cluster_case_count, cluster_control_count],
-                                 [other_case_count, other_control_count]]
-                try:
-                    cluster_fish = fisher_exact(cluster_table)
-                except:
-                    cluster_fish = ["na", "na"]
-                try:
-                    cluster_chi = chi2_contingency(cluster_table)
-                except:
-                    cluster_chi = ["na", "na", "na", "na"]
-                cluster_dict["clusters"][k] = {"cluster_table": cluster_table,
-                           "cluster_stats": {"fisher": {"OR": cluster_fish[0],
-                                                        "pvalue": cluster_fish[1]},
-                                             "chi": {"pvalue": cluster_chi[1],
-                                                     "expected": cluster_chi[3]}},
-                           "cluster_data": copy_counts[my_members],
-                           "cluster_medians": np.median(copy_counts[my_members], axis=0),
-                           "cluster_samples": sample_names[my_members],
-                           "cluster_members": my_members,
-                           "collapsed_data": collapsed_counts[my_members],
-                           "collapsed_medians": np.median(collapsed_counts[my_members], axis=0)
-                           }
-            cluster_output[g] = cluster_dict
-        except Exception:
-            problem_clusters.append([g, e])
-    cluster_output_file = wdir + settings["clusterOutputFile"]
-    with open(cluster_output_file, "wb") as outfile:
-        pickle.dump(cluster_output, outfile)
-    return problem_clusters
-
-
-def dbscan_clusters(settings):
-    cluster_output = {}
-    problem_clusters = []
-    wdir = settings["workingDir"]
-    cluster_output_file = wdir + settings["clusterOutputFile"]
-    with open(cluster_output_file, "rb") as infile:
-        cnv_calls = pickle.load(infile)
-    filtered_tables_file = wdir + settings["filteredTablesFile"]
-    with open(filtered_tables_file, "rb") as infile:
-        tables = pickle.load(infile)
-    case_file = wdir + settings["caseFile"]
-    case_status = {}
-    try:
-        with open(case_file) as infile:
-            for line in infile:
-                newline = line.strip().split("\t")
-                case_status[newline[0]] = newline[1]
-    except IOError:
-        pass
-    tsne_key = settings["tsneKey"]
-    tsne_plot_key = settings["tsnePlotKey"]
-    min_samples = int(settings["minClusterSamples"])
-    max_unclustered_frac = float(settings["maxUnclusteredFrac"])
-    max_cluster_count = int(settings["maxClusterCount"])
-    #tsne_keys = {"Y": Y, "V": V, "U": U, "T": T}
-    for g in tables:
-        try:
-            probes = list(tables[g]["probe_information"][:, 1])
-            uniq_probes = []
-            for p in probes:
-                if p not in uniq_probes:
-                    uniq_probes.append(p)
-            sample_names = tables[g]["sample_names"]
-            labels = []
-            for s in sample_names:
-                try:
-                    labels.append(case_status[s])
-                except KeyError:
-                    labels.append("na")
-            copy_counts = tables[g]["median_normalized_copy_counts"]
-            collapsed_counts = np.zeros((len(uniq_probes), len(sample_names)))
-            for i in range(len(uniq_probes)):
-                u = uniq_probes[i]
-                for j in range(len(probes)):
-                    p = probes[j]
-                    if u == p:
-                        collapsed_counts[i] += copy_counts[j]
-            repeat_counts = []
-            for u in uniq_probes:
-                repeat_counts.append(probes.count(u))
-            upper_limit = np.asarray(repeat_counts)*2 + 0.5
-            lower_limit = np.asarray(repeat_counts)*2 - 0.5
-            copy_counts = np.transpose(copy_counts)
-            collapsed_counts = np.transpose(collapsed_counts)
-            Y = cnv_calls[g]["tsne"][tsne_key]
-            P = cnv_calls[g]["tsne"][tsne_plot_key]
-            cluster_count = []
-            eps_range = np.arange(2., 11.)/2
-            for eps in eps_range:
-                db = DBSCAN( eps = eps, min_samples = min_samples).fit(Y)
-                cluster_labels = db.labels_
-                unclustered = float(list(cluster_labels).count(-1))/len(cluster_labels)
-                # Number of clusters in labels, ignoring noise if present.
-                n_clusters_ = len(set(cluster_labels)) - (1 if -1 in cluster_labels else 0)
-                cluster_count.append([n_clusters_, unclustered])
-            # find the best clustering
-            indexes_PF = []
-            for i in range(len(cluster_count)):
-                cc = cluster_count[i][0]
-                un = cluster_count[i][1]
-                if cc <= max_cluster_count and un <= max_unclustered_frac :
-                    indexes_PF.append(i)
-            if len(indexes_PF) == 0:
-                problem_clusters.append([g, "no clusters found!"])
-                continue
-            else:
-                if len(indexes_PF) == 1:
-                    best_index = indexes_PF[0]
-                else:
-                    best_index = indexes_PF[0]
-                    for i in indexes_PF[1:]:
-                        cc = cluster_count[i][0]
-                        best_cc = cluster_count[best_index][0]
-                        if best_cc == cc:
-                            best_index = i
-                db = DBSCAN( eps = eps_range[best_index], min_samples = min_samples).fit(Y)
-                cluster_labels = db.labels_
-                unclustered = float(list(cluster_labels).count(-1))/len(cluster_labels)
-                # Number of clusters in labels, ignoring noise if present.
-                n_clusters_ = len(set(cluster_labels)) - (1 if -1 in cluster_labels else 0)
-            #cluster_labels = ms.labels_
-            #cluster_centers = ms.cluster_centers_
-            labels_unique = np.unique(cluster_labels)
-            cluster_dict = {"cluster_labels" : cluster_labels,
-                            "unique_probes": uniq_probes,
-                           "all_probes": probes,
-                           "plotting": {"upper_limit": upper_limit,
-                                        "lower_limit": lower_limit},
-                           "mean_shift": cnv_calls[g]["mean_shift"],
-                           "dbscan": db,
-                           "tsne": cnv_calls[g]["tsne"],
-                           "clusters": {}}
-            for k in range(n_clusters_):
-                my_members = cluster_labels == k
-                #cluster_center = cluster_centers[k]
-                cluster_case_count = list(np.asarray(labels)[my_members]).count("case")
-                cluster_control_count = list(np.asarray(labels)[my_members]).count("control")
-                other_case_count = labels.count("case") - cluster_case_count
-                other_control_count = labels.count("control") - cluster_control_count
-                cluster_table = [[cluster_case_count, cluster_control_count],
-                                 [other_case_count, other_control_count]]
-                try:
-                    cluster_fish = fisher_exact(cluster_table)
-                except:
-                    cluster_fish = ["na", "na"]
-                try:
-                    cluster_chi = chi2_contingency(cluster_table)
-                except:
-                    cluster_chi = ["na", "na", "na", "na"]
-                cluster_dict["clusters"][k] = {"cluster_table": cluster_table,
-                           "cluster_stats": {"fisher": {"OR": cluster_fish[0],
-                                                        "pvalue": cluster_fish[1]},
-                                             "chi": {"pvalue": cluster_chi[1],
-                                                     "expected": cluster_chi[3]}},
-                           "cluster_data": copy_counts[my_members],
-                           "cluster_medians": np.median(copy_counts[my_members], axis=0),
-                           "cluster_samples": sample_names[my_members],
-                           "cluster_members": my_members,
-                           "collapsed_data": collapsed_counts[my_members],
-                           "collapsed_medians": np.median(collapsed_counts[my_members], axis=0)
-                           }
-                cluster_output[g] = cluster_dict
-        except Exception as e:
-            problem_clusters.append([g, e])
-    db_output_file = wdir + settings["dbScanOutputFile"]
-    with open(db_output_file, "wb") as outfile:
-        pickle.dump(cluster_output, outfile)
-    return problem_clusters
-
-
-def plot_clusters(settings, cluster_method="dbscan"):
-    wdir = settings["workingDir"]
-    if cluster_method == "dbscan":
-        cluster_output_file = wdir + settings["dbScanOutputFile"]
-    else :
-        cluster_output_file = wdir + settings["clusterOutputFile"]
-    with open(cluster_output_file, "rb") as infile:
-        cnv_calls = pickle.load(infile)
-    filtered_tables_file = wdir + settings["filteredTablesFile"]
-    with open(filtered_tables_file, "rb") as infile:
-        all_tables = pickle.load(infile)
-    figsize = tuple(map(int, settings["figsize"]))
-    ymax = int(settings["ymax"])
-    if cluster_method == "dbscan":
-        image_dir = wdir + "dbscan_images/"
-    else:
-        image_dir = wdir + "cluster_images/"
-    if not os.path.exists(image_dir):
-        os.makedirs(image_dir)
-    for gene_name in cnv_calls:
-        clusters = cnv_calls[gene_name]["clusters"]
-        tables = all_tables[gene_name]
-        probe_table = tables["probe_information"]
-        copies = [probe_table[0,2]]
-        locations = [0]
-        for i in range(len(probe_table) -1):
-            current_copy = probe_table[i+1, 2]
-            if current_copy != copies[-1]:
-                copies.append(current_copy)
-                locations.extend([i, i+1])
-        locations.append(len(probe_table))
-        locations = [[locations[i], locations[i+1]] for i in range(0, len(locations), 2)]
-        upper_limit = cnv_calls[gene_name]["plotting"]["upper_limit"]
-        lower_limit = cnv_calls[gene_name]["plotting"]["lower_limit"]
-        fig1 = plt.figure(figsize=figsize)
-        fig2 = plt.figure(figsize=figsize)
-        fig3 = plt.figure(figsize=figsize)
-        for c in range(len(clusters)):
-            ax1 = fig1.add_subplot(len(clusters), 1, c)
-            ax2 = fig2.add_subplot(len(clusters), 1, c)
-            ax3 = fig3.add_subplot(len(clusters), 1, c)
-            #ax1 = axarray[c]
-            #fig, ax1 = plt.subplots()
-            plot_data = clusters[c]["cluster_data"]
-            median_data = clusters[c]["cluster_medians"]
-            collapsed_median = clusters[c]["collapsed_medians"]
-            odds = clusters[c]["cluster_stats"]["fisher"]["OR"]
-            fish_p = clusters[c]["cluster_stats"]["fisher"]["pvalue"]
-            chi_p = clusters[c]["cluster_stats"]["chi"]["pvalue"]
-            cluster_size = len(clusters[c]["cluster_samples"])
-            cluster_summary_list = ["cluster size " + str(cluster_size),
-                                    "odds ratio " + str(odds),
-                                    "fisher's exact pvalue " + str(fish_p),
-                                    "chi squared pvalue " + str(chi_p)]
-            cluster_summary = "\n".join(cluster_summary_list)
-            for d in plot_data:
-                ax1.plot(d, lw = 0.2)
-            ax1.axhline(1.5, lw = 2, c = "r")
-            ax1.axhline(2.5, lw = 2, c = "g")
-            ax2.plot(median_data, lw = 1, c = "k")
-            ax2.axhline(1.5, lw = 2, c = "r")
-            ax2.axhline(2.5, lw = 2, c = "g")
-            ax3.plot(collapsed_median, lw = 1, c = "k")
-            ax3.plot(upper_limit, lw = 2, c = "g")
-            ax3.plot(lower_limit, lw = 2, c = "r")
-            colors = ["y", "k"]
-            for i in range(len(copies)):
-                copyname = copies[i]
-                loc = locations[i]
-                ax1.plot(np.arange(loc[0]-1, loc[1]+1), np.zeros(loc[1]- loc[0]+2),
-                         lw = 8, c = colors[i%2])
-                ax1.text(x = np.mean(loc), y = - 0.5, s = copyname, fontsize = 10,
-                         horizontalalignment = "right", rotation = "vertical")
-                ax2.plot(np.arange(loc[0]-1, loc[1]+1), np.zeros(loc[1]- loc[0]+2),
-                         lw = 2, c = colors[i%2])
-                ax2.plot(np.arange(loc[0]-1, loc[1]+1), np.zeros(loc[1]- loc[0]+2),
-                         lw = 8, c = colors[i%2])
-                ax2.text(x = np.mean(loc), y = - 0.5, s = copyname, fontsize = 10,
-                         horizontalalignment = "right", rotation = "vertical")
-            ax1.legend(cluster_summary_list, loc= "upper right", fontsize=8)
-            ax1.set_title("Gene " + gene_name + " cluster " + str(c))
-            ax1.set_ylim([0,ymax])
-            ax2.legend(cluster_summary_list, loc= "upper right", fontsize=8)
-            #ax1.annotate(cluster_summary, xy=(-12, -12), xycoords='axes points',
-            #    size=10, ha='right', va='top',bbox=dict(boxstyle='round', fc='w'))
-            #ax2.annotate(cluster_summary, xy=(-12, -12), xycoords='axes points',
-            #    size=8, ha='right', va='top',bbox=dict(boxstyle='round', fc='w'))
-            ax2.set_title("Gene " + gene_name + " cluster " + str(c))
-            ax2.set_ylim([0,ymax])
-            ax3.legend(cluster_summary_list, loc= "upper right", fontsize=8)
-            ax3.set_title("Gene " + gene_name + " cluster " + str(c))
-            ax3.set_ylim([0,2*ymax])
-        # plot clusters
-        if cluster_method == "dbscan":
-            ms = cnv_calls[gene_name]["dbscan"]
-            Y_plot = cnv_calls[gene_name]["tsne"]["Y"]
-            T_plot = cnv_calls[gene_name]["tsne"]["V"]
-        else:
-            ms = cnv_calls[gene_name]["mean_shift"]
-            Y_plot = cnv_calls[gene_name]["tsne"]["Y"]
-            T_plot = cnv_calls[gene_name]["tsne"]["T"]
-        cluster_labels = ms.labels_
-        labels_unique = np.unique(cluster_labels)
-        colors = plt.cm.Spectral(np.linspace(0, 1, len(labels_unique)))
-        n_clusters_ = len(set(cluster_labels)) - (1 if -1 in cluster_labels else 0)
-        fig4 = plt.figure()
-        if cluster_method != "dbscan":
-            ax4 = fig4.add_subplot(2,1,2)
-            ax5 = fig4.add_subplot(2,1,1)
-            cluster_centers = ms.cluster_centers_
-            for k, col in zip(labels_unique, colors):
-                if k == -1:
-                    # Black used for noise.
-                    col = 'k'
-                my_members = cluster_labels == k
-                cluster_center = cluster_centers[k]
-                ax5.plot(T_plot[my_members, 0], T_plot[my_members, 1],
-                         'o', markerfacecolor=col,
-                     markeredgecolor='k', markersize=5)
-                ax5.plot(cluster_center[0], cluster_center[1], 'o', markerfacecolor="w",
-                         markeredgecolor='k', markersize=14)
-                ax5.annotate(str(k), xy = cluster_center, ha="center",
-                             va = "center", fontsize = 12)
-        else:
-            ax4 = fig4.add_subplot(1,1,1)
-        for k, col in zip(labels_unique, colors):
-            if k == -1:
-                # Black used for noise.
-                col = 'k'
-            my_members = cluster_labels == k
-            ax4.plot(Y_plot[my_members, 0], Y_plot[my_members, 1],
-                     'o', markerfacecolor=col,
-                     markeredgecolor='k', markersize=5)
-            ax4.plot(np.mean(Y_plot[my_members, 0]), np.mean(Y_plot[my_members, 1]),
-                     'o', markerfacecolor="w",
-                     markeredgecolor='k', markersize=14)
-            ax4.annotate(str(k), xy = (np.mean(Y_plot[my_members, 0]),
-                                       np.mean(Y_plot[my_members, 1])),
-                         ha="center",
-                         va = "center", fontsize = 12)
-        if cluster_method == "dbscan":
-            ax4.set_title(gene_name + " DBSCAN clusters")
-        else:
-            ax4.set_title(gene_name + " meanshift clusters")
-            ax5.set_title(gene_name + " tSNE clusters")
-        # save figures
-        fig1.tight_layout(pad = 1, w_pad = 1, h_pad = 10)
-        fig2.tight_layout(pad = 1, w_pad = 1, h_pad = 10)
-        fig3.tight_layout(pad = 1, w_pad = 1, h_pad = 10)
-        fig1.savefig(image_dir + gene_name, dpi = 96)
-        fig2.savefig(image_dir + gene_name + "_medians", dpi = 96)
-        fig3.savefig(image_dir + gene_name + "_collapsed", dpi = 96)
-        fig4.savefig(image_dir + gene_name + "_meanshift", dpi = 96)
-        plt.close("all")
-    return
-
-
-###############################################################################
-# END older analysis functions.
-###############################################################################
-
-
 ###############################################################################
 # general use functions.
 ###############################################################################
@@ -9567,6 +7814,8 @@ def merge_overlap(intervals, spacer=0):
     [start, stop], check if any [start, stop] pairs overlap and merge if any.
     Return the merged [start, stop] list.
     """
+    # reuse a piece of code from get_exons:
+    #######################################
     exons = copy.deepcopy(intervals)
     exons = [e for e in exons if len(e) == 2]
     for e in exons:
@@ -9574,8 +7823,6 @@ def merge_overlap(intervals, spacer=0):
     exons.sort()
     if len(exons) < 2:
         return exons
-    # reuse a piece of code from get_exons:
-    #######################################
     overlapping = 1
     while overlapping:
         overlapping = 0
@@ -9591,17 +7838,18 @@ def merge_overlap(intervals, spacer=0):
                             overlapping = 1
                     elif x[1] >= e[1]:
                         if (x[0] - e[1]) <= spacer:
-                            ovrelapping = 1
+                            overlapping = 1
                     if overlapping:
                         # merge exons and add to the exon list
                         exons.append([min(e[0], x[0]), max(e[1], x[1])])
                         # remove the exons e and x
                         exons.remove(e)
                         exons.remove(x)
-                        # once an overlapping exon is found, break out of the for loop
+                        # break once an overlapping exon is found
                         break
             if overlapping:
-                # if an overlapping exon is found, stop this for loop and continue with the
+                # if an overlapping exon is found,
+                # stop this for loop and continue with the
                 # while loop with the updated exon list
                 break
     exons.sort()
@@ -9624,7 +7872,7 @@ def overlap(reg1, reg2, spacer=0):
         return []
 
 
-def remove_overlap(reg1, reg2, spacer = 0):
+def remove_overlap(reg1, reg2, spacer=0):
     """
     Remove overlap between two regions.
     e.g. [10, 30], [20, 40] returns [10, 20], [30, 40]
@@ -9641,12 +7889,10 @@ def remove_overlap(reg1, reg2, spacer = 0):
         return []
 
 
-def subtract_overlap (uncovered_regions, covered_regions, spacer=0):
+def subtract_overlap(uncovered_regions, covered_regions, spacer=0):
     """
-    Given two sets of regions in the form
-    [[start, end], [start, end]], return a set
-    of regions that is the second set subtracted from
-    the first.
+    Given two sets of regions in the form [[start, end], [start, end]],
+    return a set of regions that is the second set subtracted from the first.
     """
     uncovered_set = set()
     for r in uncovered_regions:
@@ -9662,21 +7908,20 @@ def subtract_overlap (uncovered_regions, covered_regions, spacer=0):
             pass
     uncovered_remaining = sorted(uncovered_set.difference(covered_set))
     if len(uncovered_remaining) > 0:
-        uncovered = [[uncovered_remaining[i-1],
-                      uncovered_remaining[i]] for i in \
-                     range(1, len(uncovered_remaining))\
-                    if uncovered_remaining[i] - uncovered_remaining[i-1]\
-                     > 1]
+        uncovered = [[uncovered_remaining[i-1], uncovered_remaining[i]]
+                     for i in range(1, len(uncovered_remaining))
+                     if uncovered_remaining[i] - uncovered_remaining[i-1] > 1]
         unc = [uncovered_remaining[0]]
         for u in uncovered:
             unc.extend(u)
         unc.append(uncovered_remaining[-1])
-        return [[unc[i], unc[i+1]]for i in range(0, len(unc), 2)               if unc[i+1] - unc[i] > spacer]
+        return [[unc[i], unc[i+1]]for i in range(0, len(unc), 2)
+                if unc[i+1] - unc[i] > spacer]
     else:
         return []
 
 
-def trim_overlap (region_list, low=0.1, high=0.9, spacer=0):
+def trim_overlap(region_list, low=0.1, high=0.9, spacer=0):
     """
     Given a set of regions in the form [[start, end], [start, end]],
     return a set of regions with any overlapping parts trimmed
@@ -9707,12 +7952,14 @@ def trim_overlap (region_list, low=0.1, high=0.9, spacer=0):
                             if len(overlapping_region) > 0:
                                 reg_sizes = sorted([reg_i[1] - reg_i[0] + 1,
                                                     reg_j[1] - reg_j[0] + 1])
-                                overlap_size = float(overlapping_region[1]                                                     - overlapping_region[0])
+                                overlap_size = float(overlapping_region[1]
+                                                     - overlapping_region[0])
                                 overlap_ratio = overlap_size/reg_sizes[0]
                                 if overlap_ratio <= low:
                                     region_list[i] = "remove"
                                     region_list[j] = "remove"
-                                    region_list.extend(remove_overlap(reg_i, reg_j, spacer))
+                                    region_list.extend(remove_overlap(
+                                        reg_i, reg_j, spacer))
                                     break_for = True
                                     do_trim = True
                                     break
@@ -9724,15 +7971,17 @@ def trim_overlap (region_list, low=0.1, high=0.9, spacer=0):
                                     do_trim = True
                                     break
                                 else:
-                                    print((overlap_ratio, "is outside trim range for ",                                    reg_i, reg_j))
+                                    print(overlap_ratio,
+                                          "is outside trim range for ",
+                                          reg_i, reg_j)
 
     return region_list
 
 
 def fasta_parser(fasta):
-    """ Convert a fasta file with multiple sequences
-    to a dictionary with fasta headers as keys and sequences
-    as values."""
+    """ Convert a fasta file with multiple sequences to a dictionary with fasta
+    headers as keys and sequences as values.
+    """
     fasta_dic = {}
     with open(fasta) as infile:
         for line in infile:
@@ -9751,7 +8000,7 @@ def fasta_parser(fasta):
 
 
 def fasta_to_sequence(fasta):
-    """ Convert a fasta sequence to one line sequence"""
+    """ Convert a multiline fasta sequence to one line sequence"""
     f = fasta.strip().split("\n")
     if len(f) > 0:
         return "".join(f[1:])
@@ -9788,34 +8037,6 @@ def fasta_to_fastq(fasta_file, fastq_file):
     return
 
 
-def get_data(settings_file):
-    settings = get_analysis_settings(settings_file)
-    get_haplotypes(settings)
-    align_haplotypes(settings)
-    parse_aligned_haplotypes(settings)
-    update_aligned_haplotypes(settings)
-    update_unique_haplotypes(settings)
-    update_variation(settings)
-    get_raw_data(settings)
-    return
-
-
-def analyze_data(settings_file):
-    settings = get_analysis_settings(settings_file)
-    group_samples(settings)
-    update_raw_data(settings)
-    get_counts(settings)
-    return
-
-
-def process_data(wdir, run_ids):
-    for rid in run_ids:
-        settings_file = wdir + "settings_" + rid
-        get_data(settings_file)
-        analyze_data(settings_file)
-    return
-
-
 def combine_sample_data(gr):
     """ Combine data from multiple sequencing runs for the same sample.
 
@@ -9845,7 +8066,7 @@ def combine_info_files(wdir,
                        sample_sheets,
                        combined_file,
                        sample_sets=None):
-    settings = get_analysis_settings(wdir + settings_file)
+    settings = get_analysis_settings(os.path.join(wdir, settings_file))
     colnames = dict(list(zip(settings["colNames"],
                          settings["givenNames"])))
     c_keys = list(colnames.keys())
@@ -9956,10 +8177,10 @@ def combine_info_files(wdir,
         h_list.append(md[["haplotype_sequence", "haplotype_ID"]])
     hap_ids = pd.concat(h_list, ignore_index=True)
     info = info.merge(hap_ids)
-    info.to_csv(wdir + combined_file, index=False, sep="\t")
+    info.to_csv(os.path.join(wdir, combined_file), index=False, sep="\t")
     info.groupby(["gene_name", "mip_name", "haplotype_ID"])[
         "haplotype_sequence"].first().reset_index().to_csv(
-            wdir + "unique_haplotypes.csv", index=False)
+            os.path.join(wdir, "unique_haplotypes.csv"), index=False)
     run_meta = run_meta.groupby("Sample ID").first().reset_index()
     run_meta = run_meta.drop(["Sample ID",
                               "sample_set",
@@ -9969,11 +8190,11 @@ def combine_info_files(wdir,
         columns={"capital_set": "sample_set",
                  "new_replicate": "replicate"}
     )
-    run_meta.to_csv(wdir + "samples.tsv", sep="\t", index=False)
+    run_meta.to_csv(os.path.join(wdir, "samples.tsv"), sep="\t", index=False)
 
 
-def update_probe_sets(mipset_table = "/opt/resources/mip_ids/mipsets.csv",
-                     mipset_json = "/opt/resources/mip_ids/probe_sets.json"):
+def update_probe_sets(mipset_table="/opt/resources/mip_ids/mipsets.csv",
+                      mipset_json="/opt/resources/mip_ids/probe_sets.json"):
     mipsets = pd.read_csv(mipset_table)
     mipset_list = mipsets.to_dict(orient="list")
     mipset_dict = {}
@@ -9981,7 +8202,7 @@ def update_probe_sets(mipset_table = "/opt/resources/mip_ids/mipsets.csv",
         mlist = mipset_list[mipset]
         mipset_dict[mipset] = [m for m in mlist if not pd.isnull(m)]
     with open(mipset_json, "w") as outfile:
-        json.dump(mipset_dict, outfile, indent = 1)
+        json.dump(mipset_dict, outfile, indent=1)
     return
 
 
@@ -9994,19 +8215,21 @@ def generate_mock_fastqs(settings_file):
     wdir = settings["workingDir"]
     sample_results_file = settings["perSampleResults"]
     haplotype_file = settings["haplotypeDictionary"]
-    fastq_dir = wdir + "fastq/"
+    fastq_dir = os.path.join(wdir, "fastq")
     if not os.path.exists(fastq_dir):
         os.makedirs(fastq_dir)
-    with open(wdir + sample_results_file) as infile:
+    with open(os.path.join(wdir, sample_results_file)) as infile:
         sample_results = json.load(infile)
-    with open(wdir + haplotype_file) as infile:
+    with open(os.path.join(wdir, haplotype_file)) as infile:
         haplotypes = json.load(infile)
     for sample in sample_results:
-        with gzip.open(fastq_dir + sample + ".fq.gz", "w") as outfile:
+        with gzip.open(os.path.join(
+                fastq_dir, sample + ".fq.gz"), "w") as outfile:
             for g in sample_results[sample]:
                 for m in sample_results[sample][g]:
                     for c in sample_results[sample][g][m]:
-                        filtered_data = sample_results[sample][g][m][c]["filtered_data"]
+                        filtered_data = sample_results[sample][g][m][c][
+                            "filtered_data"]
                         for fd in filtered_data:
                             bc = fd["barcode_count"]
                             hid = fd["haplotype_ID"]
@@ -10014,8 +8237,10 @@ def generate_mock_fastqs(settings_file):
                             seq = haplotypes[m][hid]["sequence"]
                             counter = 0
                             for i in range(bc):
-                                read_name = "_".join(["@", sample, m, c, str(i)])
-                                fastq_lines = "\n".join([read_name, seq, "+", qual]) + "\n"
+                                read_name = "_".join(
+                                    ["@", sample, m, c, str(i)])
+                                fastq_lines = "\n".join(
+                                    [read_name, seq, "+", qual]) + "\n"
                                 outfile.write(fastq_lines)
     return
 
@@ -10025,10 +8250,10 @@ def generate_fastqs(wdir, mipster_files, min_bc_count, min_bc_frac):
     Generate fastq files for each sample. These files will have stitched and
     barcode corrected reads.
     """
-    fastq_dir = wdir + "fastq/"
+    fastq_dir = os.path.join(wdir, "fastq")
     if not os.path.exists(fastq_dir):
         os.makedirs(fastq_dir)
-    mipster_dfs = pd.concat([pd.read_table(wdir + mfile,
+    mipster_dfs = pd.concat([pd.read_table(os.path.join(wdir, mfile),
                                            usecols=[
                                               "s_Sample",
                                               'h_popUID',
@@ -10142,11 +8367,11 @@ def variation_to_geno(settings, var_file, output_prefix):
     """
     wdir = settings["workingDir"]
     case = {}
-    with open(wdir + "case_file") as infile:
+    with open(os.path.join(wdir, "case_file")) as infile:
         for line in infile:
             newline = line.strip().split("\t")
             case[newline[0]] = newline[1]
-    with open (wdir + var_file) as infile:
+    with open(os.path.join(wdir, var_file)) as infile:
         linenum = 0
         map_snp_ids = []
         geno_snp_ids = []
@@ -10175,20 +8400,15 @@ def variation_to_geno(settings, var_file, output_prefix):
                             affected = "2"
                         elif affected == "control":
                             affected = "1"
-                        ped_sample_info.append(["0",
-                                                 sam_name,
-                                                 "0",
-                                                 "0",
-                                                 "0",
+                        ped_sample_info.append(["0", sam_name, "0", "0", "0",
+                                                affected])
+                        geno_sample_info.append(["0", sam_name, sam_name,
                                                  affected])
-                        geno_sample_info.append(["0",
-                                             sam_name,
-                                             sam_name,
-                                             affected])
                         samples_used.append(s)
                     except KeyError:
                         continue
-                used_sample_mask = np.array([s in samples_used for s in sample_ids])
+                used_sample_mask = np.array([s in samples_used
+                                             for s in sample_ids])
             else:
                 chrom = newline[0]
                 pos = newline[1]
@@ -10207,7 +8427,8 @@ def variation_to_geno(settings, var_file, output_prefix):
                 except KeyError:
                     genes[gene_name] = [rsid]
                     ordered_genes.append(gene_name)
-                genotypes = np.array(newline[sample_start_index:])[used_sample_mask]
+                genotypes = np.array(newline[sample_start_index:])[
+                    used_sample_mask]
                 geno_bases_1 = []
                 geno_bases_2 = []
                 geno_numbers = []
@@ -10239,42 +8460,41 @@ def variation_to_geno(settings, var_file, output_prefix):
         for i in range(len(geno_sample_info)):
             geno_sample_info[i].extend(all_geno_numbers[i])
     write_list(ped_sample_info,
-                   wdir + output_prefix + ".ped")
+               os.path.join(wdir, output_prefix + ".ped"))
     write_list(map_snp_ids,
-                   wdir + output_prefix + ".map")
+               os.path.join(wdir, output_prefix + ".map"))
     header = ["FAMILY_ID", "INDIVIDUAL_ID", "SAMPLE_ID", "AFFECTION"]
     header.extend([s[1] for s in geno_snp_ids])
     geno_sample_info = [header] + geno_sample_info
-    write_list(geno_sample_info, wdir + output_prefix + ".geno")
+    write_list(geno_sample_info, os.path.join(wdir, output_prefix + ".geno"))
     write_list([["**", o] + genes[o] for o in ordered_genes],
-               wdir + output_prefix + ".hlist")
+               os.path.join(wdir, output_prefix + ".hlist"))
     return
 
 
-def absence_presence(col, min_val = 1):
+def absence_presence(col, min_val=1):
     """
-    Given a numerical dataframe column, convert to binary values
-    for a minimum threshold.
-    This should be used by pandas transform or apply.
+    Given a numerical dataframe column, convert to binary values for a minimum
+    threshold. This should be used by pandas transform or apply.
     """
     return pd.Series([0 if (c < min_val or np.isnan(c))
                       else 1 for c in col.tolist()])
 
 
 def plot_performance(barcode_counts,
-                    tick_label_size = 8,
-                    cbar_label_size = 5,
-                    dpi = 300,
-                     barcode_threshold = 1,
-                    absent_color = "black",
-                    present_color = "green",
-                    save = False,
-                    wdir = None,
-                    ytick_freq = None,
-                    xtick_freq = None,
-                    xtick_rotation = 90,
-                    tick_genes = False,
-                    gene_name_index = None):
+                     tick_label_size=8,
+                     cbar_label_size=5,
+                     dpi=300,
+                     barcode_threshold=1,
+                     absent_color="black",
+                     present_color="green",
+                     save=False,
+                     wdir=None,
+                     ytick_freq=None,
+                     xtick_freq=None,
+                     xtick_rotation=90,
+                     tick_genes=False,
+                     gene_name_index=None):
     """
     Plot presence/absence plot for a mip run.
     """
@@ -10305,9 +8525,7 @@ def plot_performance(barcode_counts,
         bc_cols = [c[gene_name_index] for c in bc_cols]
         xlabs = bc_cols[::xtick_freq]
         gene_locs = np.arange(1, len(bc_cols) + 1, xtick_freq) - 0.5
-        plt.xticks(gene_locs, xlabs,
-                   rotation = xtick_rotation,
-                  ha = "right")
+        plt.xticks(gene_locs, xlabs, rotation=xtick_rotation, ha="right")
     for ticklabel in ax.get_xticklabels():
         ticklabel.set_fontsize(tick_label_size)
     for ticklabel in ax.get_yticklabels():
@@ -10323,27 +8541,26 @@ def plot_performance(barcode_counts,
     fig.set_dpi(dpi)
     fig.tight_layout()
     if save:
-        fig.savefig(wdir + "performance.png",
-                    dpi=dpi,
-                   bbox_inches='tight')
+        fig.savefig(os.path.join(wdir, "performance.png"), dpi=dpi,
+                    bbox_inches='tight')
         plt.close("all")
     else:
-        return fig,ax
+        return fig, ax
     return
 
 
 def plot_coverage(barcode_counts,
-                    tick_label_size=8,
-                    cbar_label_size=5,
-                    dpi=300,
-                    log=None,
-                    save=False,
-                    wdir=None,
-                    ytick_freq=None,
-                    xtick_freq=None,
-                    xtick_rotation=90,
-                    tick_genes=False,
-                    gene_name_index=None):
+                  tick_label_size=8,
+                  cbar_label_size=5,
+                  dpi=300,
+                  log=None,
+                  save=False,
+                  wdir=None,
+                  ytick_freq=None,
+                  xtick_freq=None,
+                  xtick_rotation=90,
+                  tick_genes=False,
+                  gene_name_index=None):
     """
     Plot presence/absence plot for a mip run.
     """
@@ -10386,33 +8603,30 @@ def plot_coverage(barcode_counts,
         xlabs = bc_cols[::xtick_freq]
         gene_locs = np.arange(1, len(bc_cols) + 1, xtick_freq) - 0.5
         plt.xticks(gene_locs, xlabs,
-                   rotation = xtick_rotation,
-                  ha = "right")
+                   rotation=xtick_rotation,
+                   ha="right")
     for ticklabel in ax.get_xticklabels():
         ticklabel.set_fontsize(tick_label_size)
     for ticklabel in ax.get_yticklabels():
         ticklabel.set_fontsize(tick_label_size)
     ax.set_ylabel("Samples")
     ax.set_xlabel("Probes")
-    fig.suptitle("Coverage",
-                verticalalignment="bottom")
+    fig.suptitle("Coverage", verticalalignment="bottom")
     fig.tight_layout()
-    cbar = fig.colorbar(heat,
-                            shrink = 0.5
-                       )
+    cbar = fig.colorbar(heat, shrink=0.5)
     cbar.ax.tick_params(labelsize=cbar_label_size)
     cbar.ax.set_ylabel(cbar_title,
-                       fontsize = cbar_label_size,
-                      rotation = 90)
+                       fontsize=cbar_label_size,
+                       rotation=90)
     fig.set_dpi(dpi)
     fig.tight_layout()
     if save:
-        fig.savefig(wdir + "coverage.png",
-                    dpi = dpi,
-                   bbox_inches='tight')
+        fig.savefig(os.path.join(wdir, "coverage.png"),
+                    dpi=dpi,
+                    bbox_inches='tight')
         plt.close("all")
     else:
-        return fig,ax
+        return fig, ax
     return
 
 
@@ -10448,29 +8662,27 @@ def get_coverage(row, sorted_counts):
     end = row["End"]
     sid = row["Sample ID"]
     idx = pd.IndexSlice
-    return sorted_counts.loc[sid, idx[:,:,:, :, chrom,
-                                      :start,
-                                      end:]].sum()
+    return sorted_counts.loc[sid, idx[:, :, :, :, chrom, :start, end:]].sum()
+
+
 def add_known(group, used_targets):
-    group = group.merge(used_targets,
-                       how = "outer")
-    group["Sample ID"].fillna(method = "ffill", inplace = True)
-    group["Sample ID"].fillna(method = "bfill", inplace = True)
-    group["Chrom"].fillna(group["CHROM"], inplace = True)
-    group["Start"].fillna(group["POS"], inplace = True)
-    group["End"].fillna(group["POS"], inplace = True)
-    group["CHROM"].fillna(group["Chrom"], inplace = True)
-    group["POS"].fillna(group["Start"], inplace = True)
-    group["Barcode Count"].fillna(0, inplace = True)
+    group = group.merge(used_targets, how="outer")
+    group["Sample ID"].fillna(method="ffill", inplace=True)
+    group["Sample ID"].fillna(method="bfill", inplace=True)
+    group["Chrom"].fillna(group["CHROM"], inplace=True)
+    group["Start"].fillna(group["POS"], inplace=True)
+    group["End"].fillna(group["POS"], inplace=True)
+    group["CHROM"].fillna(group["Chrom"], inplace=True)
+    group["POS"].fillna(group["Start"], inplace=True)
+    group["Barcode Count"].fillna(0, inplace=True)
     return group
 
 
 def find_ref_total(group):
-    nr = group.loc[~group["ExonicFunc"].isin(["synonymous SNV",
-                                             "."]),
-                               "Barcode Count"].sum()
+    nr = group.loc[~group["ExonicFunc"].isin(
+        ["synonymous SNV", "."]), "Barcode Count"].sum()
     cov = group["POS Coverage"].max()
-    return  cov - nr
+    return cov - nr
 
 
 def get_genotype(row, cutoff):
@@ -10504,17 +8716,15 @@ def rename_noncoding(row):
                      row["VKEY"]])
 
 
-def call_microsats(settings, sim = None, freq_cutoff = 0.005,
-                   min_bc_cutoff = 0,
-                  use_filtered_mips = True,
-                  ref_genome = "Pf3d7"):
+def call_microsats(settings, sim=None, freq_cutoff=0.005, min_bc_cutoff=0,
+                   use_filtered_mips=True, ref_genome="Pf3d7"):
     wdir = settings["workingDir"]
-    with open(wdir + settings["perSampleResults"]) as infile:
+    with open(os.path.join(wdir, settings["perSampleResults"])) as infile:
         sample_results = json.load(infile)
-    with open(wdir + settings["haplotypeDictionary"]) as infile:
+    with open(os.path.join(wdir, settings["haplotypeDictionary"])) as infile:
         hap_dict = json.load(infile)
     if sim is None:
-        sim = pd.read_csv("resources/pf_MS/simulation.tsv", sep = "\t")
+        sim = pd.read_csv("resources/pf_MS/simulation.tsv", sep="\t")
     ref_sim = sim.loc[sim["genome"] == ref_genome]
     strain_freqs = {}
     for sample_name in sample_results:
@@ -10523,11 +8733,12 @@ def call_microsats(settings, sim = None, freq_cutoff = 0.005,
         for g in sam_res:
             for m in sam_res[g]:
                 if use_filtered_mips and (ref_sim.loc[
-                    ref_sim["MIP"] == m,
-                    "Clean MS MIP"].values[0] == False):
+                        ref_sim["MIP"] == m,
+                        "Clean MS MIP"].values[0] is False):
                     continue
                 for c in sam_res[g][m]:
-                    total_bcs = float(sam_res[g][m][c]["cumulative_data"]["barcode_count"])
+                    total_bcs = float(sam_res[g][m][c]["cumulative_data"][
+                        "barcode_count"])
                     if total_bcs >= min_bc_cutoff:
                         filtered_data = sam_res[g][m][c]["filtered_data"]
                         ms_types = {}
@@ -10535,8 +8746,8 @@ def call_microsats(settings, sim = None, freq_cutoff = 0.005,
                             bcc = hd["barcode_count"]
                             h = hd["haplotype_ID"]
                             h_len = len(hap_dict[m][h]["sequence"])
-                            ms_len = int(h_len - ref_sim.loc[ref_sim["MIP"] == m,
-                                                         "MS size adjustment"])
+                            ms_len = int(h_len - ref_sim.loc[ref_sim["MIP"]
+                                         == m, "MS size adjustment"])
                             try:
                                 ms_types[ms_len] += bcc
                             except KeyError:
@@ -10548,9 +8759,9 @@ def call_microsats(settings, sim = None, freq_cutoff = 0.005,
                             sam_freq[g][m][c] = ms_types
                         except KeyError:
                             try:
-                                sam_freq[g][m] = {c : ms_types}
+                                sam_freq[g][m] = {c: ms_types}
                             except KeyError:
-                                sam_freq[g] = {m : {c : ms_types}}
+                                sam_freq[g] = {m: {c: ms_types}}
         strain_freqs[sample_name] = sam_freq
     ms_calls = []
     for s in strain_freqs:
@@ -10560,36 +8771,25 @@ def call_microsats(settings, sim = None, freq_cutoff = 0.005,
                     for l in strain_freqs[s][g][m][c]:
                         ms_calls.append([s, g, m, c, l, g + "-" + str(int(l)),
                                         strain_freqs[s][g][m][c][l]])
-    ms_call_df = pd.DataFrame(ms_calls,
-                columns = ["Sample ID",
-                          "region",
-                          "MIP",
-                          "Copy",
-                          "length",
-                           "haplotype name",
-                          "count"]).drop("Copy",
-                                        axis = 1)
-    merged_calls = pd.DataFrame(ms_call_df.groupby(["Sample ID",
-                    "region",
-                    "haplotype name",
-                    "length",
-                    ])["count"].sum())
-    merged_calls.reset_index(inplace = True)
-    merged_calls["frequency"] = merged_calls.groupby(["Sample ID",
-                      "region"])["count"].transform(lambda a: a/a.sum())
-    merged_calls.rename(columns = {"length": "MS Length"},
-                   inplace = True)
+    ms_call_df = pd.DataFrame(
+        ms_calls, columns=["Sample ID", "region", "MIP", "Copy", "length",
+                           "haplotype name", "count"]).drop("Copy", axis=1)
+    merged_calls = pd.DataFrame(ms_call_df.groupby(["Sample ID", "region",
+                                                    "haplotype name", "length",
+                                                    ])["count"].sum())
+    merged_calls.reset_index(inplace=True)
+    merged_calls["frequency"] = merged_calls.groupby(
+        ["Sample ID", "region"])["count"].transform(lambda a: a/a.sum())
+    merged_calls.rename(columns={"length": "MS Length"}, inplace=True)
     merged_calls = merged_calls.merge(sim.groupby(
-        ["region", "MS Length", "Unique Strain"],
-        as_index = False).first()[["region", "MS Length", "Unique Strain"]],
-                                     how = "left")
+        ["region", "MS Length", "Unique Strain"], as_index=False).first()[
+        ["region", "MS Length", "Unique Strain"]], how="left")
     return {"ms_calls": merged_calls,
             "strain_freqs": strain_freqs}
 
 
-def get_copy_counts(count_table,
-                   average_copy_count = 2,
-                   norm_percentiles = [0.4, 0.6]):
+def get_copy_counts(count_table, average_copy_count=2,
+                    norm_percentiles=[0.4, 0.6]):
     """
     Given a table of barcode counts with samples on rows
     and probes on columns, transform the table to return
@@ -10609,7 +8809,7 @@ def get_copy_counts(count_table,
     """
     # Normalize samples (across columns)
     s_norm = count_table.transform(
-        lambda a: a/a.sum(), axis = 1)
+        lambda a: a/a.sum(), axis=1)
     # Normalize across samples. This achieves estimating
     # the copy number, assuming the average normalized
     # barcode value (at specified percentile) is the value
@@ -10623,9 +8823,7 @@ def get_copy_counts(count_table,
 
 def get_copy_average(r, ac):
     try:
-        return ac.loc[r["Sample ID"],
-                       (r["Gene"],
-                       r["Copy"])]
+        return ac.loc[r["Sample ID"], (r["Gene"], r["Copy"])]
     except KeyError:
         return np.nan
 
@@ -10638,20 +8836,18 @@ def normalize_copies(a):
         return a.fillna(0)
 
 
-def repool(
-    wdir,
-    data_summary,
-    high_barcode_threshold,
-    target_coverage_count=None,
-    target_coverage_fraction=0.95,
-    target_coverage_key="targets_with_10_barcodes",
-    barcode_coverage_threshold=10,
-    barcode_count_threshold=100,
-    low_coverage_action="Repool",
-    assesment_key="targets_with_1_barcodes",
-    good_coverage_quantile=0.25,
-    output_file="repool.csv"
-):
+def repool(wdir,
+           data_summary,
+           high_barcode_threshold,
+           target_coverage_count=None,
+           target_coverage_fraction=0.95,
+           target_coverage_key="targets_with_10_barcodes",
+           barcode_coverage_threshold=10,
+           barcode_count_threshold=100,
+           low_coverage_action="Repool",
+           assesment_key="targets_with_1_barcodes",
+           good_coverage_quantile=0.25,
+           output_file="repool.csv"):
     """
     Analyze run statistics and determine repooling/recapturing
     strategy for following runs.
@@ -10716,9 +8912,8 @@ def repool(
     # mark samples with low coverage
     data_summary.loc[
         (data_summary["Status"].isnull())
-        &(data_summary["total_barcode_count"] < barcode_count_threshold),
-        "Status"
-    ] = low_coverage_action
+        & (data_summary["total_barcode_count"] < barcode_count_threshold),
+        "Status"] = low_coverage_action
     # mark samples with too high barcode coverage
     # these samples will have been sequenced to a high depth but
     # low barcode numbers, so sequencing these more would not make sense.
@@ -10728,18 +8923,16 @@ def repool(
     except KeyError:
         data_summary["Barcode Coverage"] = (
             data_summary["total_read_count"]
-            /data_summary["total_barcode_count"]
-        ).fillna(0)
+            / data_summary["total_barcode_count"]).fillna(0)
     data_summary.loc[
         (data_summary["Status"].isnull())
-        &(data_summary["Barcode Coverage"] >= barcode_coverage_threshold),
-        "Status"
-    ] = "Recapture"
+        & (data_summary["Barcode Coverage"] >= barcode_coverage_threshold),
+        "Status"] = "Recapture"
     # Zero barcode coverage is presumably due to poor sequencing
     # So low coverage action should be taken.
     data_summary.loc[
         (data_summary["Status"].isnull())
-        &(data_summary["Barcode Coverage"] == 0),
+        & (data_summary["Barcode Coverage"] == 0),
         "Status"
     ] = low_coverage_action
     # All remaining samples will be repooled
@@ -10747,18 +8940,16 @@ def repool(
         (data_summary["Status"].isnull()),
         "Status"
     ] = "Repool"
-    data_summary["Library to Completion"] = ((high_barcode_threshold -
-                                              data_summary["total_barcode_count"])
-                                             /data_summary["total_barcode_count"])
+    data_summary["Library to Completion"] = (
+        (high_barcode_threshold - data_summary["total_barcode_count"])
+        / data_summary["total_barcode_count"])
     # replace inf values with max
     lc_max = data_summary.loc[
         data_summary["Library to Completion"] < np.inf,
-        "Library to Completion"
-    ].max()
+        "Library to Completion"].max()
     data_summary.loc[
         data_summary["Library to Completion"] == np.inf,
-        "Library to Completion"
-    ] = lc_max
+        "Library to Completion"] = lc_max
     # Determine samples with good barcode counts but poor target coverage
     # These should be investigated to decide what is the reason behind it
     # and how to proceed.
@@ -10766,11 +8957,11 @@ def repool(
     # Determine the average barcode count per target covered
     # for all samples where there is targets covered
     data_summary.loc[data_summary[target_coverage_key] > 0,
-                    "Barcodes Per Target Covered"] = (
+                     "Barcodes Per Target Covered"] = (
         data_summary.loc[data_summary[target_coverage_key] > 0,
-                    "total_barcode_count"]
-        /data_summary.loc[data_summary[target_coverage_key] > 0,
-                    target_coverage_key]
+                         "total_barcode_count"]
+        / data_summary.loc[data_summary[target_coverage_key] > 0,
+                           target_coverage_key]
     )
     # Get the lower quartile of barcodes per target for good data
     # This number will be used to determine if poor coverage samples
@@ -10781,39 +8972,41 @@ def repool(
     # Determine samples where barcode coverage is high but target coverage
     # is low
     data_summary.loc[
-        (data_summary["Barcodes Per Target Covered"]
-          > good_coverage_threshold)
-        &(data_summary[assesment_key] < target_coverage_count),
-        "Uneven Coverage"
-    ] = True
+        (data_summary["Barcodes Per Target Covered"] > good_coverage_threshold)
+        & (data_summary[assesment_key] < target_coverage_count),
+        "Uneven Coverage"] = True
     data_summary.loc[data_summary["Uneven Coverage"].isnull(),
                      "Uneven Coverage"] = False
     try:
-        data_summary.to_csv(wdir + output_file,
-                           index = False)
+        data_summary.to_csv(os.path.join(wdir, output_file), index=False)
     except TypeError:
         # in an older version of this function, settings dict
         # was passed instead of wdir, for backwards compatibility
         # we'll catch that error and use wdir from the settings dict
-        data_summary.to_csv(wdir["workingDir"] + output_file,
-                           index = False)
-    print(("Out of %d samples %d are completed, %d will be recaptured and %d repooled" %(
-        data_summary.shape[0],
-        data_summary.loc[data_summary["Status"] == "Complete"].shape[0],
-        data_summary.loc[data_summary["Status"] == "Recapture"].shape[0],
-        data_summary.loc[data_summary["Status"] == "Repool"].shape[0])))
-    print(("%d samples showed uneven coverage, %d complete, %d to be recaptured, %d repooled"%(
-        data_summary.loc[data_summary["Uneven Coverage"]].shape[0],
-        data_summary.loc[data_summary["Uneven Coverage"]
-                          & (data_summary["Status"] == "Complete")].shape[0],
-        data_summary.loc[data_summary["Uneven Coverage"]
-                          & (data_summary["Status"] == "Recapture")].shape[0],
-        data_summary.loc[data_summary["Uneven Coverage"]
-                          & (data_summary["Status"] == "Repool")].shape[0])))
+        data_summary.to_csv(wdir["workingDir"] + output_file, index=False)
+    print(("Out of %d samples %d are completed,"
+           " %d will be recaptured and %d repooled" % (
+               data_summary.shape[0],
+               data_summary.loc[data_summary["Status"] == "Complete"].shape[0],
+               data_summary.loc[data_summary["Status"]
+                                == "Recapture"].shape[0],
+               data_summary.loc[data_summary["Status"] == "Repool"].shape[0])))
+    print(("%d samples showed uneven coverage, %d complete,"
+           " %d to be recaptured, %d repooled" % (
+                data_summary.loc[data_summary["Uneven Coverage"]].shape[0],
+                data_summary.loc[data_summary["Uneven Coverage"] &
+                                 (data_summary["Status"]
+                                  == "Complete")].shape[0],
+                data_summary.loc[data_summary["Uneven Coverage"]
+                                 & (data_summary["Status"]
+                                 == "Recapture")].shape[0],
+                data_summary.loc[data_summary["Uneven Coverage"]
+                                 & (data_summary["Status"]
+                                 == "Repool")].shape[0])))
     return
 
 
-def aa_to_coordinate(gene, species, aa_number, alias = False):
+def aa_to_coordinate(gene, species, aa_number, alias=False):
     """
     Given a gene name and its amino acid location,
     return the genomic coordinates of the aa.
@@ -10870,7 +9063,7 @@ def merge_snps(settings):
     wdir = settings["workingDir"]
     species = settings["species"]
     # load haplotype dictionary, save a backup.
-    unique_haplotype_file = wdir + settings["haplotypeDictionary"]
+    unique_haplotype_file = os.path.join(wdir, settings["haplotypeDictionary"])
     with open(unique_haplotype_file) as infile:
         haplotypes = json.load(infile)
     # create output information list to report all changes
@@ -10916,7 +9109,8 @@ def merge_snps(settings):
                     # affecting single aminoacid
                     all_merges = []
                     for c in aa_changes:
-                        if (len(aa_changes[c]) > 1) and (c not in multi_indels):
+                        if (len(aa_changes[c]) > 1) and (
+                                 c not in multi_indels):
                             # break out of loop if indels found
                             mindel = False
                             # merge multiple snps affecting the same aa
@@ -10930,15 +9124,15 @@ def merge_snps(settings):
                             # keep genomic positions of changes in a list
                             g_positions = []
                             # keep the difference between the cDNA and genomic
-                            # positions in a list. This will be used to determine
-                            # the gene's orientation on the genome.
+                            # positions in a list. This will be used to
+                            # determine the gene's orientation on the genome.
                             c_offsets = []
                             changes_to_cdna = []
                             changes_to_aa = []
                             for i in indexes:
                                 d = diffs[i]
                                 # for each diff get the annotation
-                                # e.g. 'mal_mito_3:mal_mito_3:exon1:c.G673A:p.V225I'
+                                # e.g. 'HBB:HBB:exon1:c.G673A:p.V225I'
                                 ano = d["annotation"]["AAChangeClean"]
                                 aa = ano.split(":")[-1].split(".")[-1]
                                 changes_to_aa.append(aa)
@@ -10966,7 +9160,6 @@ def merge_snps(settings):
                                 # get the difference between the genomic and
                                 # cDNA position of the change, to be used
                                 # in determining the gene's orientation
-                                pos_diff = diff_start - cdna_pos
                                 c_positions.append(cdna_pos)
                                 h_indexes.extend(d["hap_index"])
                                 g_positions.append(diff_start)
@@ -10978,7 +9171,8 @@ def merge_snps(settings):
                             g_positions = sorted(g_positions)
                             # if the offset between the cDNA and genomic
                             # positions of the changes are always the same,
-                            # the gene is on the plus strand, else it is reverse.
+                            # the gene is on the plus strand, else it is
+                            # reverse.
                             if len(set(c_offsets)) > 1:
                                 gene_ori = False
                             else:
@@ -10995,23 +9189,22 @@ def merge_snps(settings):
                                 hap_codon = hap_seq[h_start_index:h_end_index]
                                 codon = hap_codon
                             else:
-                                # if the haplotype is in the opposite orientation
-                                # as the cDNA
+                                # if the haplotype is in the opposite
+                                # orientation as the cDNA
                                 h_end_index = h_indexes[-1] + codon_offset + 1
                                 h_start_index = h_end_index - 3
                                 hap_codon = hap_seq[h_start_index:h_end_index]
                                 codon = reverse_complement(hap_codon)
-                            # get the genomic position and sequence of the codon
+                            # get genomic position and sequence of the codon
                             if gene_ori:
                                 g_start = g_positions[0] - codon_offset
                                 g_end = g_start + 2
                             else:
                                 g_end = g_positions[-1] + codon_offset
-                                g_start = g_end -2
+                                g_start = g_end - 2
                             # extract the reference codon sequence
-                            Ref = get_sequence(create_region(d["chrom"],
-                                                                        g_start,
-                                                                        g_end), species)
+                            Ref = get_sequence(create_region(
+                                d["chrom"], g_start, g_end), species)
                             if gene_ori:
                                 g_codon = Ref
                                 Alt = codon
@@ -11023,8 +9216,10 @@ def merge_snps(settings):
                             # recreate the annotation string for the merge
                             aa_change_base = ano.split(":")[:-2]
                             protein_change = "p." + aa_ref + str(c) + merged_aa
-                            coding_change = "c." + g_codon + str(codon_pos) + codon
-                            aa_change_base.extend([coding_change, protein_change])
+                            coding_change = ("c." + g_codon + str(codon_pos)
+                                             + codon)
+                            aa_change_base.extend([coding_change,
+                                                   protein_change])
                             AAChange = ":".join(aa_change_base)
                             # determine if the merged change is synonymous
                             if aa_ref == merged_aa:
@@ -11039,45 +9234,48 @@ def merge_snps(settings):
                                 'ExonicFunc': ExonicFunc,
                                 'Func.refGene': 'exonic',
                                 'GeneID': d["annotation"]['GeneID'],
-                                'GeneDetail.refGene': d["annotation"]['GeneDetail.refGene'],
+                                'GeneDetail.refGene': d["annotation"][
+                                    'GeneDetail.refGene'],
                                 'Otherinfo': d["annotation"]["Otherinfo"],
                                 'Ref': Ref,
-                                'Start': g_start
-                            },
+                                'Start': g_start},
                                            'begin': g_start,
-                                            'chrom': d["chrom"],
-                                            'end': g_end,
-                                            'hap_base': hap_codon,
-                                            'hap_index': [h_start_index, h_end_index - 1],
-                                            'ref_base': Ref,
-                                            'type': 'snp',
-                                            'vcf_normalized': ":".join(
-                                              [d["chrom"], str(g_start), ".", Ref, Alt]
-                                            ),
-                                            'vcf_raw': ":".join(
-                                              [d["chrom"], str(g_start), ".", Ref, Alt]
+                                           'chrom': d["chrom"],
+                                           'end': g_end,
+                                           'hap_base': hap_codon,
+                                           'hap_index': [h_start_index,
+                                                         h_end_index - 1],
+                                           'ref_base': Ref,
+                                           'type': 'snp',
+                                           'vcf_normalized': ":".join(
+                                                [d["chrom"], str(g_start), ".",
+                                                 Ref, Alt]),
+                                           'vcf_raw': ":".join(
+                                              [d["chrom"], str(g_start), ".",
+                                               Ref, Alt]
                                             ),
                                            "gene_ori": gene_ori,
-                                           "ori": ori
-                                          }
+                                           "ori": ori}
                             all_merges.append(merged_dict)
                             outlist.append([h, c, merged_aa, aa_ref,
                                            ",".join(changes_to_cdna),
                                             codon, g_codon,
-                                           ",".join(changes_to_aa)])
+                                            ",".join(changes_to_aa)])
                     # Remove SNPs that were merged, add the merged SNP
                     for c in aa_changes:
-                        if (len(aa_changes[c]) > 1) and (c not in multi_indels):
+                        if ((len(aa_changes[c]) > 1)
+                                and (c not in multi_indels)):
                             indexes = aa_changes[c]
                             for i in indexes:
                                 diffs[i] = "remove"
                     diffs.extend(all_merges)
                     diffs = [d for d in diffs if d != "remove"]
-                    haplotypes[m][h]["mapped_copies"][cp]["differences"] = diffs
+                    haplotypes[m][h]["mapped_copies"][cp][
+                        "differences"] = diffs
     with open(unique_haplotype_file, "w") as outfile:
-        json.dump(haplotypes, outfile, indent = 1)
+        json.dump(haplotypes, outfile, indent=1)
     # save the report
-    write_list(outlist, wdir + "merge_snps_output.txt")
+    write_list(outlist, os.path.join(wdir, "merge_snps_output.txt"))
     return outlist
 
 
@@ -11095,16 +9293,15 @@ def load_processed_data(settings):
     # interpret multi index column names as integers but
     # it does so for multi index index names. begin and
     # end multi index columns should have names as int.
-    bc = pd.read_csv(wdir + "barcode_counts.csv",
-                header = [0,1,2,3,4,5,6],
-                index_col = 0)
-    bc.T.to_csv(wdir + "barcode_counts.T.csv")
-    bc = pd.read_csv(wdir + "barcode_counts.T.csv",
-                    index_col = [0,1,2,3,4,5,6]).T
-    data_summary = pd.read_csv(wdir + "data_summary.csv",
-                          index_col = None)
-    merged_meta = pd.read_csv(wdir + "meta_data.csv",
-                         index_col = None)
+    bc = pd.read_csv(os.path.join(wdir, "barcode_counts.csv"),
+                     header=[0, 1, 2, 3, 4, 5, 6], index_col=0)
+    bc.T.to_csv(os.path.join(wdir, "barcode_counts.T.csv"))
+    bc = pd.read_csv(os.path.join(wdir, "barcode_counts.T.csv"),
+                     index_col=[0, 1, 2, 3, 4, 5, 6]).T
+    data_summary = pd.read_csv(os.path.join(wdir, "data_summary.csv"),
+                               index_col=None)
+    merged_meta = pd.read_csv(os.path.join(wdir, "meta_data.csv"),
+                              index_col=None)
     bc.index.name = "Sample ID"
     return {"Barcode Counts": bc,
             "Data Summary": data_summary,
@@ -11170,9 +9367,6 @@ def vcf_to_df(vcf_file):
                     # if field is a flag
                     except IndexError:
                         info_dict[split_info[0]] = [True]
-                # sum of all allele counts will be used as allele count
-                ac = info_dict["AC"]
-                an = info_dict["AN"][0]
                 alt_bases = alt.split(",")
                 alt_len = len(alt_bases[0])
                 # since all the indels have their own line on this vcf file
@@ -11190,7 +9384,7 @@ def vcf_to_df(vcf_file):
                         break
                     for i in range(len(alt_bases)):
                         outlist = [chrom, pos, var_id, ref, alt_bases[i],
-                                  qual, filt]
+                                   qual, filt]
                         var_info = []
                         for col in info_cols:
                             try:
@@ -11202,15 +9396,16 @@ def vcf_to_df(vcf_file):
                         outlist = outlist + var_info
                         outfile_list.append(outlist)
                 # if not a SNP, must be indel
-                # indels must have their own line, hence only 1 indel in alt bases
+                # indels must have their own line, hence only 1 indel in alt
+                # bases
                 elif len(alt_bases) > 1:
                     problem_alts.append(newline)
                     break
                 # if conforming indel:
                 else:
                     alt_base = alt_bases[0]
-                    # vcf files have the  indels together with the preceding base
-                    # such as REF: TA, ALT: T
+                    # vcf files have the  indels together with the preceding
+                    # base such as REF: TA, ALT: T
                     # the same information is encoded as REF: A, ALT:- in table
                     if ref[0] != alt_base[0]:
                         problem_alts.append(newline)
@@ -11222,10 +9417,9 @@ def vcf_to_df(vcf_file):
                         # check if insertion
                         if ref_base == "":
                             ref_base = "-"
-                            for i in range (2):
+                            for i in range(2):
                                 outlist = [chrom, pos + i, var_id,
-                                           "-", alt_bases,
-                                          qual, filt]
+                                           "-", alt_bases, qual, filt]
                                 var_info = []
                                 for col in info_cols:
                                     try:
@@ -11241,8 +9435,7 @@ def vcf_to_df(vcf_file):
                             pos += 1
                             for i in range(len(ref_base)):
                                 outlist = [chrom, pos + i, var_id,
-                                           ref_base[i], "-",
-                                          qual, filt]
+                                           ref_base[i], "-", qual, filt]
                                 var_info = []
                                 for col in info_cols:
                                     try:
@@ -11251,18 +9444,13 @@ def vcf_to_df(vcf_file):
                                         var_info.append(np.nan)
                                 outlist = outlist + var_info
                                 outfile_list.append(outlist)
-        var_df = pd.DataFrame(outfile_list, columns = ["CHROM",
-                                              "POS",
-                                              "ID",
-                                              "REF",
-                                              "ALT",
-                                              "QUAL",
-                                              "FILTER"]
-                     + info_cols)
+        var_df = pd.DataFrame(
+            outfile_list, columns=["CHROM", "POS", "ID", "REF", "ALT",
+                                   "QUAL", "FILTER"] + info_cols)
     var_df = var_df.astype({"AN": int, "AC": int})
     if len(problem_alts) > 0:
-        print(("There are %d problematic alleles, see the output list for details"
-               %len(problem_alts)))
+        print(("There are %d problematic alleles, see the output list for "
+               "details" % len(problem_alts)))
     return var_df, problem_alts
 
 
@@ -11292,13 +9480,15 @@ def vcf_to_table(collapsed, output_file):
     # Alleles and allele counts are represented as A,T, and 2,20, in
     # the UCSC table. We'll create those strings with the following
     # functions
+
     def get_allele_strings(row):
         return row["REF"] + "," + row["ALT"] + ","
+
     def get_count_strings(row):
-        ref_count = row["AN"] - row ["AC"]
+        ref_count = row["AN"] - row["AC"]
         return str(ref_count) + "," + str(row["AC"]) + ","
-    collapsed["AS"] = collapsed.apply(get_allele_strings, axis = 1)
-    collapsed["CS"] = collapsed.apply(get_count_strings, axis = 1)
+    collapsed["AS"] = collapsed.apply(get_allele_strings, axis=1)
+    collapsed["CS"] = collapsed.apply(get_count_strings, axis=1)
     collapsed["0-offset"] = collapsed["POS"] - 1
     collapsed["BIN"] = 0
     table = collapsed[["BIN", "CHROM", "0-offset", "POS", "AS", "CS"]]
@@ -11310,14 +9500,11 @@ def vcf_to_table(collapsed, output_file):
         table[i] = ""
         tc_1.append(i)
     table = table[tc_1 + tc_2]
-    table.to_csv(output_file,
-                 sep = "\t",
-                 index = False,
-                 header = False)
-    subprocess.call(["bgzip", "-c", output_file],
-                         stdout = open(output_file + ".gz", "w"))
-    subprocess.call(["tabix", "-0", "-s 2",
-                         "-b 3", "-e 3", output_file + ".gz"])
+    table.to_csv(output_file, sep="\t", index=False, header=False)
+    subprocess.call(["bgzip", "-c", output_file], stdout=open(
+        output_file + ".gz", "w"))
+    subprocess.call(["tabix", "-0", "-s 2", "-b 3", "-e 3",
+                     output_file + ".gz"])
     return table
 
 
@@ -11624,7 +9811,7 @@ def write_list(alist, outfile_name):
 ##########################################################
 
 
-def strip_fasta (sequence):
+def strip_fasta(sequence):
     seq_list = sequence.split('\n')[1:]
     seq_join = "".join(seq_list)
     return seq_join
@@ -11910,87 +10097,3 @@ def id_generator(N):
     """
     return ''.join(random.SystemRandom().choice(
         string.ascii_uppercase + string.digits) for _ in range(N))
-
-
-##########################################################
-# Possibly deprecated functions
-##########################################################
-
-
-def cnv_stats(hom_case, hom_control,
-              wt_case, wt_control):
-    """
-    Given case/control genotype numbers in the order:
-    1) number of homozygous cases,
-    2) homozygous controls,
-    3) heterozygous cases,
-    4) heterozygous controls
-    5) wildtype cases
-    6) wildtype controls
-    Returns a list of length 9:
-    1-3) Homozygous mutant vs wildtype
-    1) Odds ratio from Fisher's exact test
-    2) P value from Fisher's
-    3) P value from chi squared test
-    4-6) Heterozygous mutant vs wildtype
-    7-9) Mutants combined vs witdtype
-    Errors return "na" in place of values
-    """
-    ho_v_wt = [[hom_case, hom_control],
-               [wt_case, wt_control]]
-    output = []
-    tbl = ho_v_wt
-    try:
-        fish = fisher_exact(tbl)
-    except:
-        fish = ["na", "na"]
-    try:
-        chi = chi2_contingency(tbl)
-    except:
-        chi = ["na", "na", "na", "na"]
-    output.extend(fish)
-    output.append(chi[1])
-    return output
-
-
-def snp_stats(hom_case, hom_control,
-               het_case, het_control,
-              wt_case, wt_control):
-    """
-    Given case/control genotype numbers in the order:
-    1) number of homozygous cases,
-    2) homozygous controls,
-    3) heterozygous cases,
-    4) heterozygous controls
-    5) wildtype cases
-    6) wildtype controls
-    Returns a list of length 9:
-    1-3) Homozygous mutant vs wildtype
-    1) Odds ratio from Fisher's exact test
-    2) P value from Fisher's
-    3) P value from chi squared test
-    4-6) Heterozygous mutant vs wildtype
-    7-9) Mutants combined vs witdtype
-    Errors return "na" in place of values
-    """
-    mut_case = het_case + hom_case
-    mut_control = het_control + hom_control
-    ho_v_wt = [[hom_case, hom_control],
-               [wt_case, wt_control]]
-    het_v_wt = [[het_case, het_control],
-                [wt_case, wt_control]]
-    mut_v_wt = [[mut_case, mut_control],
-                [wt_case, wt_control]]
-    output = []
-    for tbl in [ho_v_wt, het_v_wt, mut_v_wt]:
-        try:
-            fish = fisher_exact(tbl)
-        except:
-            fish = ["na", "na"]
-        try:
-            chi = chi2_contingency(tbl)
-        except:
-            chi = ["na", "na", "na", "na"]
-        output.extend(fish)
-        output.append(chi[1])
-    return output
