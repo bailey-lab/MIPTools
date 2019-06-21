@@ -3869,7 +3869,6 @@ def compatible_chains(primer_file, primer3_output_DIR, primer_out, output_file,
                     new_mip_sets.add(s1)
             mip_sets = new_mip_sets
             set_count = len(mip_sets)
-        print("Compatible run.")
         if outp:
             with open(os.path.join(
                     primer3_output_DIR, output_file), "w") as outfile:
