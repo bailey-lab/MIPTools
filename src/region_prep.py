@@ -89,11 +89,11 @@ parser.add_argument("--targets-rinfo-template",
                              "template_rinfo.txt"))
 parser.add_argument("--exons-rinfo-template",
                     help="Path to rinfo template for 'exons' capture type.",
-                    default=("/opt/resources/rinfo_templates/"
+                    default=("/opt/resources/templates/rinfo_templates/"
                              "template_rinfo.txt"))
 parser.add_argument("--whole-rinfo-template",
                     help="Path to rinfo template for 'whole' capture type.",
-                    default=("/opt/resources/rinfo_templates/"
+                    default=("/opt/resources/templates/rinfo_templates/"
                              "template_rinfo.txt"))
 parser.add_argument("--output-file",
                     help="Base name to save region prep results.",
