@@ -17,8 +17,14 @@ A current version of MIPTools container, built and ready to use, can be download
 MIPTools can also be built from scratch using the definition file provided in this repository.
 This can take about 10-30 minutes, depending on number of cpu cores available.  
 User must have **sudo** priviledge to _build_ the image. You do not need sudo to _use_ the image. So if you want to run the container on an environment without sudo, build the container on your own machine and copy the image file to the computer without sudo. Note that Singularity program itself must have been installed with sudo.
+
+Clone the repository with:
 ```bash
 git clone git@github.com:bailey-lab/MIPTools.git
+```
+Build the container. If the computer used for building the container has less then 20 cpu cores available, change the "CPU_COUNT=20" value at the top of the MIPTools.def file to a suitable number before running the following code.
+
+```bash
 cd MIPTools
 sudo singularity build miptools.sif MIPTools.def
 ```
