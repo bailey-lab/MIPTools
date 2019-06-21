@@ -11,7 +11,7 @@ Singularity is available for most Linux systems. It is also possible to install 
 Note: Snap package install is a rapid way to install the go language required by Singularity (e.g. on Ubuntu/Debian: `sudo snap install go --classic`)
 
 ### Download built container 
-A current version of MIPTools container, built and ready to use, can be downloaded [here](resources/miptools.sif).
+A current version of MIPTools container, built and ready to use, can be downloaded [here](http://baileylab.brown.edu/MIPTools/resources/miptools.sif).
 
 ### Build MIPTools from the definition file 
 MIPTools can also be built from scratch using the definition file provided in this repository.
