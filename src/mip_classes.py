@@ -7,7 +7,7 @@ Created on Tue Apr 29 16:50:42 2014
 import json
 import pickle
 import os
-import subprocess
+import random
 from operator import itemgetter
 import mip_functions as mip
 import copy
@@ -1376,12 +1376,12 @@ class Paralog(Locus):
         info = {"exons": {"color": "steel blue", "offset": -15, "width": 4},
                 "copies": {"color": ["dark slate blue", "slate blue"],
                            "offset": [-10, 1.5], "width": 2},
-                "extension": {"color": ["cyan4"], "offset": [-35, -10, -30],
+                "extension": {"color": ["cyan4"], "offset": [-45, -10, -30],
                               "width": 4},
-                "ligation": {"color": ["maroon"], "offset": [-35, -10, -30],
+                "ligation": {"color": ["maroon"], "offset": [-45, -10, -30],
                              "width": 4},
                 "capture": {"color": ["black", "gray"],
-                            "offset": [-35, -10, -30], "width": 2},
+                            "offset": [-45, -10, -30], "width": 2},
                 "subregions": {"color": "rosy brown", "offset": -21,
                                "width": 4},
                 "targets": {"color": "gold", "offset": -26, "width": 8},
@@ -1461,6 +1461,7 @@ class Paralog(Locus):
             except ValueError:
                 mip_number = -1
             mip_number += 1
+            jitter = random.choice(list(range(10)))
             if i[7] == "forward":
                 this_arm = "extension"
                 next_arm = "capture"
@@ -1481,7 +1482,8 @@ class Paralog(Locus):
                 prt.append(armtype)
                 prt.append(info[armtype]["color"][color_index])
                 prt.append(info[armtype]["offset"][offset_index]
-                           + info[armtype]["offset"][1] * mip_number)
+                           + info[armtype]["offset"][1] * mip_number
+                           - jitter)
                 prt.append(info[armtype]["width"])
                 prt.append(i[1])
                 if armtype == "capture":
@@ -1566,7 +1568,7 @@ class Paralog(Locus):
         self.selected_mipfile = self.mipfile
         return
 
-    def sort_mips(self, filter_type="keep"):
+    def sort_mips(self, filter_type="remove"):
         purple = "#a0462009f0e4"  # purple in parasight
         blue = "#00830000ffff"
         colors = [blue, purple, "blue", "purple"]
@@ -1585,7 +1587,6 @@ class Paralog(Locus):
             select = set()
         else:
             select = set([self.mips[m].fullname for m in self.mips])
-        outlist = []
         for i in para_list:
             fields = i.strip().split("\t")
             label_name = fields[7]
@@ -1595,13 +1596,17 @@ class Paralog(Locus):
                 if filter_type == "keep":
                     if fields[3] in colors:
                         select.add(mip_name)
-                        outlist.append(i)
                 elif filter_type == "remove":
                     if fields[3] in colors:
                         select.remove(mip_name)
-                    else:
-                        outlist.append(i)
-                else:
+        outlist = []
+        for i in para_list:
+            fields = i.strip().split("\t")
+            label_name = fields[7]
+            # check if line describes a mip
+            if label_name in ["extension", "ligation", "capture"]:
+                mip_name = "_".join(fields[8].split("_")[:-1])
+                if mip_name in select:
                     outlist.append(i)
             else:
                 outlist.append(i)
@@ -1698,7 +1703,7 @@ class Paralog(Locus):
         with open(self.cwd + self.paralog_name, "wb") as savefile:
                 pickle.dump(self, savefile)
 
-    def order_mips(self, filter_type="keep"):
+    def order_mips(self, filter_type="remove"):
         mip_info = {"mips": {}, "paralog_info": {},
                     "mip_names": {"mip_to_pair": {}, "pair_to_mip": {}}}
         # use sort_mips function to remove any filtered MIPs, sort MIPs

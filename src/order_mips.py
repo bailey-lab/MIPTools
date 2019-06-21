@@ -5,6 +5,7 @@ import os
 import probe_summary_generator
 import pandas as pd
 from itertools import product
+import mip_functions as mip
 
 
 # Read input arguments
@@ -23,8 +24,8 @@ parser.add_argument("-r", "--resource-dir",
 parser.add_argument("-f", "--filter-type",
                     help=(("If a selected MIP file is provided, how should "
                            "the listed MIPs be handled.")),
-                    default=None,
-                    choices=["remove", "keep", None])
+                    default="remove",
+                    choices=["remove", "keep"])
 
 parser.add_argument("-n", "--design-name",
                     help=("A name given this MIP design project."),
@@ -116,3 +117,12 @@ for gname in gb.groups:
     gr = gb.get_group(gname)
     gr.to_excel("/opt/project_resources/probe_order.xlsx",
                 sheet_name=gname, index=False)
+
+mip.parasight(resource_dir, design_info_file,
+              designed_gene_list=None, extra_extension=".extra",
+              use_json=True)
+random_key = list(design_info.keys())[0]
+design_dir = design_info[random_key]["design_dir"]
+mip.parasight_print(resource_dir, design_dir, design_info_file,
+                    designed_gene_list=None, extra_extension=".extra",
+                    use_json=True, print_out=False)
