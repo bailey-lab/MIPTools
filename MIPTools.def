@@ -50,7 +50,8 @@ From: amd64/ubuntu:18.04
     libssl-dev \
     libcurl4-gnutls-dev \
     alien \
-    unzip
+    unzip \
+    tree
 
     # set environment locale
     echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
