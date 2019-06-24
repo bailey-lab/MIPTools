@@ -297,7 +297,10 @@ def get_target_coordinates(res_dir, species, capture_size,
     """ Extract MIP target coordinates from provided files. """
     capture_types = {}
     # Get target coordinates specified as genomic coordinates
-    if coordinates_file is not None:
+    if coordinates_file is None:
+        region_coordinates = {}
+        coord_names = []
+    else:
         coordinates_file = os.path.join(res_dir, coordinates_file)
         try:
             coord_df = pd.read_table(coordinates_file, index_col=False)
@@ -317,7 +320,10 @@ def get_target_coordinates(res_dir, species, capture_size,
             coord_names = []
 
     # Get Gene target coordinates
-    if genes_file is not None:
+    if genes_file is None:
+        gene_coordinates = {}
+        gene_names = []
+    else:
         # get the alias file (gene name to gene id mapping) if available
         try:
             with open(get_file_locations()[species]["alias"]) as infile:
@@ -364,22 +370,25 @@ def get_target_coordinates(res_dir, species, capture_size,
             gene_coordinates = {}
             gene_names = []
 
-    # Get SNP target coordinates
-    try:
-        snps_file = os.path.join(res_dir, snps_file)
-        snp_df = pd.read_table(snps_file, index_col=False,
-                               dtype={"Start": int, "End": int})
-        snp_df.rename(columns={"Name": "name", "Chrom": "chrom",
-                               "Start": "begin", "End": "end"},
-                      inplace=True)
-        snp_coordinates = snp_df.set_index("name").to_dict(orient="index")
-        for g in snp_coordinates:
-            if g not in capture_types:
-                capture_types[g] = "targets"
-    except IOError:
-        print(("Target SNPs file {} could not be found.").format(
-            (snps_file)))
+    if snps_file is None:
         snp_coordinates = {}
+    else:
+        # Get SNP target coordinates
+        try:
+            snps_file = os.path.join(res_dir, snps_file)
+            snp_df = pd.read_table(snps_file, index_col=False,
+                                   dtype={"Start": int, "End": int})
+            snp_df.rename(columns={"Name": "name", "Chrom": "chrom",
+                                   "Start": "begin", "End": "end"},
+                          inplace=True)
+            snp_coordinates = snp_df.set_index("name").to_dict(orient="index")
+            for g in snp_coordinates:
+                if g not in capture_types:
+                    capture_types[g] = "targets"
+        except IOError:
+            print(("Target SNPs file {} could not be found.").format(
+                (snps_file)))
+            snp_coordinates = {}
 
     # merge coordinates dictionaries
     all_coordinates = {}
@@ -1266,11 +1275,14 @@ def align_targets(res_dir, target_regions, species, flank, fasta_files,
     # create fasta files for each target coordinate
     create_target_fastas(res_dir, target_regions, species, flank)
 
-    # add target sequences provided by fasta files
-    fasta_targets = add_fasta_targets(res_dir, fasta_files,
-                                      fasta_capture_type=fasta_capture_type)
-    fasta_sequences = fasta_targets["fasta_sequences"]
-    fasta_capture_types = fasta_targets["capture_types"]
+    if fasta_files is None:
+        fasta_sequences = fasta_capture_types = {}
+    else:
+        # add target sequences provided by fasta files
+        fasta_targets = add_fasta_targets(
+            res_dir, fasta_files, fasta_capture_type=fasta_capture_type)
+        fasta_sequences = fasta_targets["fasta_sequences"]
+        fasta_capture_types = fasta_targets["capture_types"]
     capture_types.update(fasta_capture_types)
 
     # create a list of target names from all sources
