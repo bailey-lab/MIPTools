@@ -45,6 +45,7 @@ CAPTURE	mask_snps_ext	0
 CAPTURE	arms	capture
 CAPTURE	output_level	0
 CAPTURE	allele_frequency_name	AF
+CAPTURE	af_start_index	0
 #########################################################
 ############### PIPELINE SETTINGS ######################
 #########################################################

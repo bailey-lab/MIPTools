@@ -597,6 +597,9 @@ class Locus:
                         alleles = snp["alleles"]
                         try:
                             allele_freqs = list(map(float, snp["info"]["AF"]))
+                            af_start_index = int(self.rinfo["CAPTURE"]["S0"][
+                                "af_start_index"])
+                            allele_freqs = allele_freqs[af_start_index:]
                         except KeyError:
                             allele_freqs = [1 for i in range(len(alleles))]
                         for allele_index in range(len(alleles)):
