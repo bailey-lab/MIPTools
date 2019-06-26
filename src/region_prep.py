@@ -29,6 +29,13 @@ parser.add_argument("--flank",
                     help="Number of bases to flank target sites on each side.",
                     type=int,
                     default=150)
+parser.add_argument("--merge-distance",
+                    help=("Targets closer than this will be placed in the "
+                          "same target region. Same distance will be used "
+                          "for merging aligned targets. If no argument is "
+                          "given, it will default to 'flank' value."),
+                    type=int,
+                    default=None)
 parser.add_argument("--single-mip-threshold",
                     help=("Target regions smaller than this will have a "
                           "single MIP designed."),
@@ -111,6 +118,9 @@ num_process = args["processor_number"]
 parallel_processes = args["parallel_processes"]
 processor_per_region = int(num_process/parallel_processes)
 flank = args["flank"]  # set flank to 150 for maximum capture size of 170
+merge_distance = args["merge_distance"]
+if merge_distance is None:
+    merge_distance = flank
 single_mip_threshold = args["single_mip_threshold"]
 genes_file = args["genes_file"]
 snps_file = args["snps_file"]
@@ -129,8 +139,9 @@ whole_rinfo_template = args["whole_rinfo_template"]
 output_file = args["output_file"]
 # extract target coordinates from target files
 target_coordinates = mip.get_target_coordinates(
-    res_dir, species, capture_size=flank, coordinates_file=coordinates_file,
-    snps_file=snps_file, genes_file=genes_file)
+    res_dir, species, capture_size=merge_distance,
+    coordinates_file=coordinates_file, snps_file=snps_file,
+    genes_file=genes_file)
 target_regions = target_coordinates["target_regions"]
 capture_types = target_coordinates["capture_types"]
 gene_names = target_coordinates["gene_names"]
@@ -141,7 +152,7 @@ target_alignments = mip.align_targets(
     res_dir, target_regions, species, flank, fasta_files, fasta_capture_type,
     genome_identity, genome_coverage, num_process, gene_names,
     max_allowed_indel_size, intra_identity, intra_coverage, capture_types,
-    min_target_size)
+    min_target_size, merge_distance)
 
 # get alignment results. Run alignments again in case there are remaining
 # unaligned targets.
@@ -156,7 +167,7 @@ extra_target_alignments = mip.align_targets(
     res_dir, target_regions, species, flank, [], fasta_capture_type,
     genome_identity, genome_coverage, num_process, gene_names,
     max_allowed_indel_size, intra_identity, intra_coverage, capture_types,
-    min_target_size)
+    min_target_size, merge_distance)
 
 # update initial alignment results with the new alignment results
 final_target_regions.update(target_alignments["target_regions"])

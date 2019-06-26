@@ -1033,6 +1033,9 @@ class Paralog(Locus):
         self.host = self.rinfo["HOST_SPECIES"]
         # get the design directory relative to root
         self.design_dir = self.rinfo["DESIGN_DIR"]
+        # check if chained overlapping MIPs are desired
+        self.chain_mips = int(
+            self.rinfo["SELECTION"]["compatibility"]["chain"])
         # get file location dictionary for locations of static files
         # such as genome fasta files, snp files etc.
         self.file_locations = mip.get_file_locations()
@@ -1088,12 +1091,15 @@ class Paralog(Locus):
     def check_chained(self):
         """ Check if all mips for this paralog are chained"""
         seg = self.segments["S0"]
+        self.chained_mips = True
         for subregion in seg.subregions:
-            if not seg.subregions[subregion].chained_mips:
+            try:
+                if not seg.subregions[subregion].chained_mips:
+                    self.chained_mips = False
+                    return
+            except AttributeError:
                 self.chained_mips = False
-                break
-        else:
-            self.chained_mips = True
+                return
 
     def check_copies(self):
         """ Check if all MIPs are capturing all copies in the paralog."""
@@ -1136,7 +1142,10 @@ class Paralog(Locus):
                 sub.parse_primers()
                 sub.bowtie2_run()
                 sub.score_primers()
-                sub.pick_primer_pairs()
+                picked_pairs = sub.pick_primer_pairs()
+                if picked_pairs == 1:
+                    print(sub.fullname, " has no primer pairs.")
+                    return
                 sub.make_mips()
 
                 with open(self.cwd + self.paralog_name, "wb") as savefile:
@@ -1358,12 +1367,13 @@ class Paralog(Locus):
                   % self.paralog_name))
         else:
             self.must_captured = False
-        if self.chained_mips:
-            line = "All mips chained"
-        else:
-            line = "Mips not chained"
-        outfile_list.append("#" + line + "\n")
-        print(line, "for", self.paralog_name)
+        if self.chain_mips:
+            if self.chained_mips:
+                line = "All mips chained"
+            else:
+                line = "Mips not chained"
+            outfile_list.append("#" + line + "\n")
+            print(line, "for", self.paralog_name)
         outfile.write("\n".join(outfile_list))
         outfile.close()
         self.locus_info = locus_info
@@ -1942,11 +1952,11 @@ class Subregion(Locus):
         mask_snps_lig = int(self.capture["mask_snps_lig"])
         mask_snps_ext = int(self.capture["mask_snps_ext"])
         # get region sequence
-        region_fasta = mip.get_fasta(self.region_key, self.species).upper()
+        region_fasta = mip.get_fasta(self.region_key, self.species)
         # convert fasta record to one line string without the fasta identifier
         fasta_list = region_fasta.split("\n")
         fasta_head = fasta_list[0]
-        seq_template_temp = "".join(fasta_list[1:])
+        seq_template_temp = "".join(fasta_list[1:]).upper()
         # convert fasta string to list of characters
         seq_template_list_lig = list(seq_template_temp)
         seq_template_list_ext = list(seq_template_temp)
@@ -2334,13 +2344,15 @@ class Subregion(Locus):
             self.subregion_name,
             outp=int(self.locus.rinfo["CAPTURE"]["S0"]["output_level"])
         )
+        if paired == 1:
+            return 1
         pairs = mip.add_capture_sequence(
             paired,
             self.primers["pairs"]["filename"],
             self.primer3_output_DIR,
             self.species)
         self.primers["pairs"]["dictionary"] = pairs
-        return
+        return 0
 
     def make_mips(self):
         self.mips = {"original": {}}

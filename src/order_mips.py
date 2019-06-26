@@ -113,10 +113,11 @@ probe_df.index = ind
 probe_df = probe_df.reset_index()
 probe_df["Name"] = probe_df["MIP"] + "_" + probe_df["probe_id"]
 gb = probe_df[["Plate", "WellPosition", "Name", "Sequence"]].groupby("Plate")
-for gname in gb.groups:
-    gr = gb.get_group(gname)
-    gr.to_excel("/opt/project_resources/probe_order.xlsx",
-                sheet_name=gname, index=False)
+
+with pd.ExcelWriter("/opt/project_resources/probe_order.xlsx") as outfile:
+    for gname in gb.groups:
+        gr = gb.get_group(gname)
+        gr.to_excel(outfile, sheet_name=gname, index=False)
 
 mip.parasight(resource_dir, design_info_file,
               designed_gene_list=None, extra_extension=".extra",

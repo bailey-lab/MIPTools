@@ -22,10 +22,19 @@ def get_probe_info(probe_set_keys=None, output_file=None,
         for m in mip_info[g]["mips"]:
             if (probe_set_keys is None) or (m in used_probes):
                 minfo = mip_info[g]["mips"][m]["mip_dic"]["mip_information"]
+                try:
+                    cap_info = mip_info[g]["mips"][m]["capture_info"][
+                        "captured_targets"]["must"]
+                except KeyError:
+                    cap_info = {}
                 for probe in minfo:
                     for c in minfo[probe]["captures"]:
+                        captured = []
+                        if c in cap_info:
+                            for cpt in cap_info[c]:
+                                captured.append(cpt)
                         mip_list.append([g, m, probe, c, minfo[probe][
-                            "SEQUENCE"]])
+                            "SEQUENCE"], "".join(captured)])
                 minfo = mip_info[g]["mips"][m]["mip_info"]
                 for c in minfo:
                     copy_dict = minfo[c]
@@ -40,7 +49,8 @@ def get_probe_info(probe_set_keys=None, output_file=None,
                     copy_dict["Copy"] = c
                     info_list.append(pd.DataFrame(copy_dict, index=[0]))
     mip_list = pd.DataFrame(mip_list)
-    mip_list.columns = ["Gene", "MIP", "probe_id", "Copy", "Probe Sequence"]
+    mip_list.columns = ["Gene", "MIP", "probe_id", "Copy", "Probe Sequence",
+                        "Targets"]
     info_df = pd.concat(info_list, ignore_index=True)
     info_df = info_df.merge(mip_list)
     if output_file is not None:

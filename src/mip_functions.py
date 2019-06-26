@@ -1271,7 +1271,7 @@ def align_targets(res_dir, target_regions, species, flank, fasta_files,
                   fasta_capture_type, genome_identity, genome_coverage,
                   num_process, gene_names, max_allowed_indel_size,
                   intra_identity, intra_coverage, capture_types,
-                  min_target_size):
+                  min_target_size, merge_distance):
     # create fasta files for each target coordinate
     create_target_fastas(res_dir, target_regions, species, flank)
 
@@ -1303,7 +1303,10 @@ def align_targets(res_dir, target_regions, species, flank, fasta_files,
     merge_alignments(res_dir, targets_list, output_prefix="merged")
 
     # parse genome alignment file
-    genome_alignment = alignment_parser(res_dir, "merged", spacer=0,
+    if merge_distance > 0:
+        merge_distance = 0
+    genome_alignment = alignment_parser(res_dir, "merged",
+                                        spacer=merge_distance,
                                         gene_names=gene_names)
     target_regions = copy.deepcopy(genome_alignment[0])
     region_names = copy.deepcopy(genome_alignment[1])
@@ -3428,7 +3431,7 @@ def pick_paralog_primer_pairs(extension, ligation, output_file,
                             "alt_copies"] = captured_copies
     # return if no pairs found
     if len(primer_pairs["pair_information"]) == 0:
-        print("No primer pairs found.")
+        # No primer pairs found.
         return 1
     # write dict to file in primer_output_DIR
     if outp:
@@ -3839,17 +3842,38 @@ def compatible_chains(primer_file, primer3_output_DIR, primer_out, output_file,
             else:
                 mip_sets.add(frozenset(l))
 
-        keys = list(scored_mips["pair_information"].keys())
+        keys = sorted(scored_mips["pair_information"],
+                      key=lambda a: scored_mips["pair_information"][a]
+                      ["pairs"]["C0"]["capture_start"])
         for k in keys:
             comp_list = scored_mips["pair_information"][k]["compatible"]
             if len(comp_list) > 0:
                 # for each of the mips in the compatibility list,
                 for m in comp_list:
-                    # create an initial result list to be used by the
-                    # compatible_recurse function
-                    compatible_recurse([k, m])
+                    # check if these two mips are present in other mip sets
+                    # if they are, then no need to pursue this branch anymore
+                    # as the same branch will be in the other mip set as well
+                    test_set = frozenset([k, m])
+                    for p_set in mip_sets:
+                        if test_set.issubset(p_set):
+                            break
+                    else:
+                        # create an initial result list to be used by the
+                        # compatible_recurse function
+                        compatible_recurse([k, m])
             else:
                 mip_sets.add(frozenset([k]))
+
+        # remove mip sets that are subsets of other mep sets
+        new_mip_sets = set()
+        for s1 in mip_sets:
+            for s2 in mip_sets:
+                if (s1 != s2) and s1.issubset(s2):
+                    break
+            else:
+                new_mip_sets.add(s1)
+        mip_sets = new_mip_sets
+
         # the initial mip sets only contain mip chains. We can expand each
         # such set by merging with other sets after removing incompatible
         # mips from the second set.
@@ -3857,29 +3881,26 @@ def compatible_chains(primer_file, primer3_output_DIR, primer_out, output_file,
         counter = 0
         expanded_mipset = True
         while((set_count < 10000) and (counter <= 20) and expanded_mipset):
+            mip_set_list = list(mip_sets)
+            random.shuffle(mip_set_list)
+
             counter += 1
             new_mip_sets = set()
             expanded_mipset = False
-            for s1 in mip_sets:
+            for s1 in mip_set_list:
                 inc = set()
                 for m in s1:
                     inc.update(scored_mips["pair_information"][m][
                         "incompatible"])
-                for s2 in mip_sets:
+                for s2 in mip_set_list:
                     if s1 != s2:
                         s3 = s2.difference(inc).difference(s1)
                         if len(s3) > 0:
                             new_mip_sets.add(frozenset(s1.union(s3)))
                             expanded_mipset = True
-            mip_sets = mip_sets.union(new_mip_sets)
-            new_mip_sets = set()
-            for s1 in mip_sets:
-                for s2 in mip_sets:
-                    if (s1 != s2) and s1.issubset(s2):
-                        break
-                else:
-                    new_mip_sets.add(s1)
-            mip_sets = new_mip_sets
+                            mip_sets.discard(s1)
+
+            mip_sets = new_mip_sets.union(mip_sets)
             set_count = len(mip_sets)
         if outp:
             with open(os.path.join(
@@ -3903,10 +3924,11 @@ def design_mips(design_dir, g):
         else:
             print(("Some copies were NOT captured for paralog ",
                    Par.paralog_name))
-        if Par.chained_mips:
-            print(("All MIPs are chained for paralog ", Par.paralog_name))
-        else:
-            print(("MIPs are NOT chained for paralog ", Par.paralog_name))
+        if Par.chain_mips:
+            if Par.chained_mips:
+                print(("All MIPs are chained for paralog ", Par.paralog_name))
+            else:
+                print(("MIPs are NOT chained for paralog ", Par.paralog_name))
     except Exception as e:
         print((g, str(e), " FAILED!!!"))
     return
@@ -3924,10 +3946,11 @@ def design_mips_worker(design_list):
         else:
             print(("Some copies were NOT captured for paralog ",
                    Par.paralog_name))
-        if Par.chained_mips:
-            print(("All MIPs are chained for paralog ", Par.paralog_name))
-        else:
-            print(("MIPs are NOT chained for paralog ", Par.paralog_name))
+        if Par.chain_mips:
+            if Par.chained_mips:
+                print(("All MIPs are chained for paralog ", Par.paralog_name))
+            else:
+                print(("MIPs are NOT chained for paralog ", Par.paralog_name))
     except Exception as e:
         print((g, str(e), " FAILED!!!"))
         traceback.print_exc()
@@ -7793,8 +7816,7 @@ def get_fasta(region, species="pf", offset=1, header="na"):
 def get_fasta_list(regions, species):
     """ Take a list of regions and return fasta sequences."""
     if len(regions) == 0:
-        print("Region list is empty.")
-        return
+        return {}
     file_locations = get_file_locations()
     genome_fasta = file_locations[species]["fasta_genome"]
     region_file = "/tmp/regions_" + id_generator(10) + ".txt"
