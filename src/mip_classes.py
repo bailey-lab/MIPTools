@@ -469,11 +469,9 @@ class Locus:
         segment_dic = self.segment_dic["S0"]
         snps = {}
         try:
-            ac_name = self.rinfo["CAPTURE"]["S0"]["allele_count_name"]
-            an_name = self.rinfo["CAPTURE"]["S0"]["allele_total_name"]
+            af_name = self.rinfo["CAPTURE"]["S0"]["allele_frequency_name"]
         except KeyError:
-            ac_name = "AC"
-            an_name = "AN"
+            af_name = "AF"
         try:
             snp_file = mip.get_file_locations()[self.species]["snps"]
         except KeyError:
@@ -498,8 +496,10 @@ class Locus:
                         sdict[split_inf[0]] = split_inf[1].split(",")
                     except IndexError:
                         sdict[inf] = True
-                sdict["AN"] = sdict[an_name]
-                sdict["AC"] = sdict[ac_name]
+                try:
+                    sdict["AF"] = sdict[af_name].replace(".", "0")
+                except KeyError:
+                    pass
                 d = {"copy_chrom": schr,
                      "copy_begin": spos,
                      "copy_base": sref,
@@ -567,7 +567,7 @@ class Locus:
         columns = ["chrom", "begin", "end", "base",
                    "copy_chrom", "copy_begin", "copy_end", "copy_base",
                    "size_difference", "orientation",
-                   "AN", "AC", "type", "variant_type", "copy_id"]
+                   "AF", "type", "variant_type", "copy_id"]
         coordinate_converter = self.pcoordinates
         chrom = coordinate_converter["C0"]["chromosomes"]["C0"]
         variant_dicts = {"pdiffs": self.pdiffs,
@@ -595,14 +595,15 @@ class Locus:
                         copy_base = snp["copy_base"]
                         copy_begin = snp["copy_begin"]
                         alleles = snp["alleles"]
-                        allele_counts = list(map(int, snp["info"]["AC"]))
-                        a_total = max(list(map(
-                            int, snp["info"]["AN"])))
+                        try:
+                            allele_freqs = list(map(float, snp["info"]["AF"]))
+                        except KeyError:
+                            allele_freqs = [1 for i in range(len(alleles))]
                         for allele_index in range(len(alleles)):
                             split_snp = {"copy_chrom": copy_chrom,
                                          "chrom": chrom}
                             a = alleles[allele_index]
-                            a_count = allele_counts[allele_index]
+                            a_freq = allele_freqs[allele_index]
                             # check if allele is insertion/deletion or snp
                             a_len = len(a) - len(copy_base)
                             if a_len == 0:  # snv allele
@@ -624,8 +625,7 @@ class Locus:
                                 split_snp["end"] = end
                                 split_snp["base"] = a
                                 split_snp["size_difference"] = 0
-                                split_snp["AC"] = a_count
-                                split_snp["AN"] = a_total
+                                split_snp["AF"] = a_freq
                                 split_snp["type"] = "SNV"
                             elif a_len < 0:  # deletion allele
                                 # deletions in vcf are represented so:
@@ -660,8 +660,7 @@ class Locus:
                                 split_snp["end"] = deletion_end - 1
                                 split_snp["base"] = -a_len * "-"
                                 split_snp["size_difference"] = a_len
-                                split_snp["AC"] = a_count
-                                split_snp["AN"] = a_total
+                                split_snp["AF"] = a_freq
                                 split_snp["type"] = "deletion"
                             elif a_len > 0:  # insertion allele
                                 # insertions are represented so: 100 AAA AAATT
@@ -690,8 +689,7 @@ class Locus:
                                 split_snp["end"] = insertion_begin
                                 split_snp["base"] = a[-a_len - 1:]
                                 split_snp["size_difference"] = a_len
-                                split_snp["AC"] = a_count
-                                split_snp["AN"] = a_total
+                                split_snp["AF"] = a_freq
                                 split_snp["type"] = "insertion"
                             var = []
                             for col in columns[:-2]:
@@ -703,8 +701,6 @@ class Locus:
                             var.append(copy_id)
                             all_variants.append(var)
         self.all_variants = pd.DataFrame(all_variants, columns=columns)
-        self.all_variants["AF"] = self.all_variants["AC"]/self.all_variants[
-            "AN"]
         snp_df = self.all_variants.loc[self.all_variants["variant_type"]
                                        == "snps"]
         # we need per position variants for masking purposes.
@@ -715,14 +711,11 @@ class Locus:
             r_chrom = r["chrom"]
             r_begin = r["begin"]
             r_end = r["end"]
-            an = r["AN"]
-            ac = r["AC"]
+            af = r["AF"]
             res = []
             for i in range(r_begin, r_end + 1):
-                res.append([r_chrom, i, ac, an])
-            return pd.DataFrame(res, columns=["chrom",
-                                              "position",
-                                              "AC", "AN"])
+                res.append([r_chrom, i, af])
+            return pd.DataFrame(res, columns=["chrom", "position", "AF"])
         split_result_list = []
         for i in snp_df.index:
             split_result_list.append(
@@ -732,13 +725,12 @@ class Locus:
             split = pd.concat(split_result_list, ignore_index=True)
         except ValueError:
             split = pd.DataFrame(split_result_list,
-                                 columns=["chrom", "position", "AC", "AN"])
+                                 columns=["chrom", "position", "AF"])
         # if there are no snps, skip groupby
         # to avoid losing chrom and position columns
         if not split.empty:
             split = split.groupby(["chrom", "position"]).aggregate(
-                {"AC": sum, "AN": max}).reset_index()
-        split["AF"] = split["AC"]/split["AN"]
+                {"AF": sum}).reset_index()
         maf_filter = float(self.rinfo["CAPTURE"]["S0"]["maf_for_arm_design"])
         split = split.loc[split["AF"] >= maf_filter]
         self.split_snps = split
@@ -784,11 +776,9 @@ class Locus:
             # Collapse on position and select the largest insertion
             collapsed_insertions = insertion_df.groupby(["copy_chrom",
                                                          "copy_begin"]).agg(
-                {"copy_end": "first", "AC": sum, "AN": max, "max_size": max}
+                {"copy_end": "first", "AF": sum, "max_size": max}
             ).reset_index()
             # filter for maf
-            collapsed_insertions["AF"] = (collapsed_insertions["AC"]
-                                          / collapsed_insertions["AN"])
             filt_insertions = collapsed_insertions.loc[collapsed_insertions[
                 "AF"] >= maf_filter]
         self.insertions = filt_insertions
