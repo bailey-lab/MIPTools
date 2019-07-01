@@ -39,6 +39,7 @@ filter_type = args["filter_type"]
 mip_info = {}
 call_info = {}
 finished_genes = []
+no_mip_genes = []
 unfinished_genes = []
 
 
@@ -49,9 +50,12 @@ for gene_name in design_info:
         with open(par_file, "rb") as infile:
             Par = pickle.load(infile)
         res = Par.order_mips(filter_type=filter_type)
-        mip_info[gene_name] = res["mip_info"]
-        call_info[gene_name] = res["call_info"]
-        finished_genes.append(gene_name)
+        if len(res["call_info"]) > 0:
+            call_info[gene_name] = res["call_info"]
+            mip_info[gene_name] = res["mip_info"]
+            finished_genes.append(gene_name)
+        else:
+            no_mip_genes.append(gene_name)
     except Exception as e:
         unfinished_genes.append([gene_name, e])
 
@@ -68,7 +72,7 @@ call_info_file = os.path.join(mip_ids_dir, "call_info.json")
 with open(call_info_file, "w") as outfile:
     json.dump(call_info, outfile, indent=1)
 
-unf_file = os.path.join(resource_dir, "failed_targets.json")
+unf_file = os.path.join(resource_dir, "failed_pipeline.json")
 with open(unf_file, "w") as outfile:
     json.dump(unfinished_genes, outfile, indent=1)
 
@@ -76,11 +80,19 @@ fin_file = os.path.join(resource_dir, "completed_targets.json")
 with open(fin_file, "w") as outfile:
     json.dump(finished_genes, outfile, indent=1)
 
-print(("{} target designs were succesfully finished."
+no_mip_file = os.path.join(resource_dir, "failed_designs.json")
+with open(no_mip_file, "w") as outfile:
+    json.dump(no_mip_genes, outfile, indent=1)
+
+print(("{} target designs were succesfully finished, with at least one MIP."
        " See {} for a list of completed targets.").format(
            len(finished_genes), fin_file))
 
-print(("{} target designs were failed."
+print(("{} target designs went through the pipeline without errors, but "
+       "did not yield any MIPs See {} for a list of these targets.").format(
+           len(no_mip_genes), no_mip_file))
+
+print(("{} target designs failed to go through the pipeline."
        " See {} for a list of failed targets.").format(
            len(unfinished_genes), unf_file))
 
