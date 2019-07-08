@@ -11,7 +11,7 @@ From: amd64/ubuntu:18.04
         LANG=en_US.UTF-8 \
         LANGUAGE=en_US.UTF-8 \
         LC_ALL=en_US.UTF-8 \
-        MINICONDA_VERSION=4.5.4
+        MINICONDA_VERSION=4.6.14
     export PATH=$CONDA_DIR/bin:$PATH
 
     # install system packages
@@ -77,10 +77,10 @@ From: amd64/ubuntu:18.04
     # install conda
     cd /tmp && \
         wget --quiet https://repo.continuum.io/miniconda/Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh && \
-        echo "a946ea1d0c4a642ddf0c3a26a18bb16d *Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh" | md5sum -c - && \
+        echo "718259965f234088d785cad1fbd7de03 *Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh" | md5sum -c - && \
         /bin/bash Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh -f -b -p $CONDA_DIR && \
         rm Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh && \
-        $CONDA_DIR/bin/conda config --system --prepend channels conda-forge && \
+        $CONDA_DIR/bin/conda config --system --append channels conda-forge && \
         $CONDA_DIR/bin/conda config --system --set auto_update_conda false && \
         $CONDA_DIR/bin/conda config --system --set show_channel_urls true && \
         $CONDA_DIR/bin/conda install --quiet --yes conda="${MINICONDA_VERSION%.*}.*" && \
@@ -89,7 +89,9 @@ From: amd64/ubuntu:18.04
 
     # install conda packages
     conda config --add channels bioconda
-    conda install -qy "notebook=5.7.0" \
+    conda install -qy \
+    "python=3.6.8" \
+    "notebook=5.7.0" \
     "xlrd=1.1.0" \
     "bcftools=1.9" \
     "samtools=1.9" \
@@ -105,12 +107,12 @@ From: amd64/ubuntu:18.04
     "seaborn=0.9" \
     "scikit-learn=0.20" \
     "scandir=1.9.0" \
-    "openpyxl=2.6.1"
+    "openpyxl=2.6.1" \
+    "simplegeneric=0.8.1"
 
 
     # install primer3 python wrapper
     pip install primer3-py==0.5.7
-    pip install simplegeneric
 
     # install lastZ
     cd /opt/programs/lastz/src

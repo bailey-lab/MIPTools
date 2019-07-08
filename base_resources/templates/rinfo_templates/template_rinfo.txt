@@ -8,7 +8,7 @@ DESIGN_DIR	TBD
 SELECTION	settings_for	compatibility
 SELECTION	low	400
 SELECTION	high	30000
-SELECTION	mip_limit	100
+SELECTION	mip_limit	50
 SELECTION	trim_size	2
 SELECTION	trim_increment	3
 SELECTION	trim_limit	50
