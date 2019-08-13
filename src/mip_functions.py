@@ -5406,15 +5406,15 @@ def make_snp_vcf(variant_file, haplotype_file, call_info_file,
         dataframe which has the allele counts as a comma separated string
         for each  allele in a given position."""
         gv = g.columns.get_level_values
-        ref = gv("REF")[0]
         alts = ",".join(gv("ALT"))
-        idx = pd.MultiIndex.from_tuples([(".", ref, alts)],
-                                        names=["ID", "REF", "ALT"])
+        idx = pd.MultiIndex.from_tuples([(alts, )],
+                                        names=["ALT"])
         vals = [",".join(map(str, map(int, v))) for v in g.values]
         return pd.DataFrame(vals, columns=idx)
+
     # group variants on the position to merge multiallelic loci
-    collapsed_vars = variant_counts.groupby(level=["CHROM", "POS"],
-                                            axis=1).apply(collapse_snps)
+    collapsed_vars = variant_counts.groupby(
+        level=["CHROM", "POS", "ID", "REF"], axis=1).apply(collapse_snps)
     # group coverage and reference counts for multiallelic loci
     collapsed_refs = reference_counts.groupby(
         level=["CHROM", "POS", "ID", "REF"], axis=1

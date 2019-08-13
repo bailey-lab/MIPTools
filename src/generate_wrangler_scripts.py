@@ -140,10 +140,10 @@ mip_arms_list = []
 pset_names = pr_set.split(",")
 for p_name in pset_names:
     try:
-        probes.update(all_probes[p_name])
+        temp_probes = all_probes[p_name]
     except KeyError:
         print(("Probe set name {} is not present in the mipsets "
-               "file.").format(p_name))
+               "file. This probe set will be ignored.").format(p_name))
         continue
     arm_file = os.path.join(project_resource_dir,
                             "mip_ids",
@@ -151,9 +151,11 @@ for p_name in pset_names:
     try:
         with open(arm_file) as infile:
             mip_arms_list.append(pd.read_table(infile))
+            probes.update(temp_probes)
     except IOError:
         print(("MIP arm file {} is required but missing for "
-              "the probe set {}").format(arm_file, p_name))
+              "the probe set {}. Probe set will be ignored.").format(
+                  arm_file, p_name))
 if len(mip_arms_list) == 0:
     print(("No MIP arms file were found for the probe sets {}"
            " scripts will not be generated for them. Make sure "

@@ -12,7 +12,7 @@ def main(capture_384, sample_plates, sheets_96, output_file,
     quad = pd.read_csv(quadrants)
     forward_plates = pd.read_csv(forward_plates)
     reverse_plates = pd.read_csv(reverse_plates)
-    if len(capture_384) > 0:
+    if capture_384 is not None:
         capture_384 = [os.path.join(wdir, p) for p in capture_384]
         capture_384 = [pd.read_table(p) for p in capture_384]
         capture_384 = pd.concat(capture_384, ignore_index=True, axis=0)
@@ -41,7 +41,7 @@ def main(capture_384, sample_plates, sheets_96, output_file,
         captures = captures.merge(quad)
         captures = captures.drop_duplicates()
 
-    if len(sheets_96) > 0:
+    if sheets_96 is not None:
         sheets_96 = [os.path.join(wdir, p) for p in sheets_96]
         sheets_96 = [pd.read_table(p) for p in sheets_96]
         sheets_96 = pd.concat(sheets_96, ignore_index=True, axis=0)
@@ -53,16 +53,20 @@ def main(capture_384, sample_plates, sheets_96, output_file,
                        "capture_plate_row", "capture_plate_column",
                        "quadrant", "FW_plate", "REV_plate", "384 Column"]
 
-    if (len(capture_384) > 0) and (len(sheets_96) > 0):
+    if (capture_384 is not None) and (sheets_96 is not None):
         com = pd.concat([captures, sheets_96], axis=0, ignore_index=True,
                         sort=False)
         com = com.loc[:, capture_columns]
-    elif len(capture_384) > 0:
+    elif capture_384 is not None:
+        # "replicate" column is only available in 96 well format
+        # this will need to be set to NaN value if no 96 well sample sheet
+        # was used.
+        captures["replicate"] = np.nan
         com = captures.loc[:, capture_columns]
-    elif len(sheets_96) > 0:
+    elif sheets_96 is not None:
         com = sheets_96
     else:
-        print("At least one sample sheet needs to be provided.")
+        print("At least one sample sheet must be provided.")
         return
 
     com = com.drop_duplicates()
@@ -92,8 +96,15 @@ def main(capture_384, sample_plates, sheets_96, output_file,
     com.rename(columns={"Replicate": "replicate"}, inplace=True)
 
     if com.shape[0] != (com.groupby(["fw", "rev"]).first().shape[0]):
-        print("There are repeating forward/reverse primer pairs.\n"
-              "Sample sheet will be split based on the probe sets used.")
+        size_file = os.path.join(wdir, "repeating_primers.csv")
+        print(("There are repeating forward/reverse primer pairs.\n"
+               "Sample sheet will be split based on the probe sets used.\n"
+               "Inspect {} for repeating primer information.").format(
+                   size_file))
+        c_size = com.groupby(["fw", "rev"]).size().sort_values(
+            ascending=False)
+        c_size = c_size.loc[c_size > 1].reset_index()
+        com.merge(c_size).to_csv(size_file, index=False)
         gb = com.groupby("probe_set")
         for group_key in gb.groups:
             g = gb.get_group(group_key)
