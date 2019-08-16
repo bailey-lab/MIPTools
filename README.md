@@ -3,26 +3,31 @@ MIPTools
 MIPTools is a suit of computational tools that are used for molecular inversion probe design, data processing and analysis.
 ## Installation
 ### Dependencies
-Requires a working copy of Singularity: https://www.sylabs.io/docs/  
-Singularity is best installed with **sudo**. While it is said to be possible to install with unprivilidged user with some features missing, MIPTools hasn't been tested on such an installation.
-
+A working copy of Singularity is required: https://www.sylabs.io/docs/  
+Singularity is best installed with **sudo**. While it is said to be possible to install with unpriveledged user with some features missing, MIPTools hasn't been tested on such an installation.
 Singularity is available for most Linux systems. It is also possible to install and use on Mac OS using virtual machines with a little bit of extra work.
 
 Note: Snap package install is a rapid way to install the go language required by Singularity (e.g. on Ubuntu/Debian: `sudo snap install go --classic`)
 
-### Download built container 
-A current version of MIPTools container, built and ready to use, can be downloaded [here](http://baileylab.brown.edu/MIPTools/resources/miptools.sif).
+### Obtaining MIPTools program
 
-### Build MIPTools from the definition file 
-MIPTools can also be built from scratch using the definition file provided in this repository.
-This can take about 10-30 minutes, depending on number of cpu cores available.  
-User must have **sudo** priviledge to _build_ the image. You do not need sudo to _use_ the image. So if you want to run the container on an environment without sudo, build the container on your own machine and copy the image file to the computer without sudo. Note that Singularity program itself must have been installed with sudo.
+#### Download container 
+A recent version of MIPTools container, built and ready to use, can be downloaded [here](http://baileylab.brown.edu/MIPTools/resources/miptools.sif).
+
+#### Alternatively, build MIPTools from the definition file
+MIPTools can also be built from scratch using the definition file provided in this GitHub repository.
+
+This method of creating the MIPTools container would give you the latest version. It can take about 10-30 minutes to build, depending on number of cpu cores available.  
+
+By default, build process is going to use 6 CPU cores. This should pose no problem with most modern computers, but if the computer used for building the container has less then 6 cpu cores available, change the "CPU_COUNT=6" value at the top of the MIPTools.def file to a suitable number before running the following code. On the other hand, if you have access to more CPU power, by all means, use them by setting the same parameter to a higher value.
+
+User must have **sudo** privelege to _build_ the image. You do not need sudo to _use_ the image. So if you want to run the container on an environment without sudo, build the container on your own machine and copy the image file to the computer without sudo. Note that Singularity program itself must have been installed with sudo.  
 
 Clone the repository with:
 ```bash
 git clone git@github.com:bailey-lab/MIPTools.git
 ```
-Build the container. If the computer used for building the container has less then 20 cpu cores available, change the "CPU_COUNT=20" value at the top of the MIPTools.def file to a suitable number before running the following code.
+Build the container.  
 
 ```bash
 cd MIPTools

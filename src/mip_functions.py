@@ -9039,7 +9039,7 @@ def repool(wdir,
     return
 
 
-def aa_to_coordinate(gene, species, aa_number, alias=False):
+def aa_to_coordinate(gene, species, aa_start, aa_end=None, alias=False):
     """
     Given a gene name and its amino acid location,
     return the genomic coordinates of the aa.
@@ -9061,14 +9061,16 @@ def aa_to_coordinate(gene, species, aa_number, alias=False):
     ori = cds["orientation"]
     coord = cds["coordinates"]
     chrom = cds["chrom"]
+    if aa_end is None:
+        aa_end = aa_start
     if ori == "+":
-        aa_end = aa_number*3 - 1
-        aa_start = aa_number*3 - 3
+        c_end = aa_end * 3 - 1
+        c_start = aa_start * 3 - 3
     else:
-        aa_start = aa_number*3 - 1
-        aa_end = aa_number*3 - 3
-    cds_start = coord[aa_start]
-    cds_end = coord[aa_end]
+        c_start = aa_end * 3 - 1
+        c_end = aa_start * 3 - 3
+    cds_start = coord[c_start]
+    cds_end = coord[c_end]
     if ori == "+":
         codon = get_sequence(
             create_region(
