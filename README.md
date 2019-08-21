@@ -12,7 +12,9 @@ Note: Snap package install is a rapid way to install the go language required by
 ### Obtaining MIPTools program
 
 #### Download container 
-A recent version of MIPTools container, built and ready to use, can be downloaded [here](http://baileylab.brown.edu/MIPTools/resources/miptools.sif).
+A recent version of MIPTools container, built and ready to use, can be downloaded [here](http://baileylab.brown.edu/MIPTools/resources/miptools_20190708.sif).  
+
+The *how to*s provided below assume you have a file named miptools.sif, so be sure to rename the downloaded file to that, or change the commands to fit your file name.
 
 #### Alternatively, build MIPTools from the definition file
 MIPTools can also be built from scratch using the definition file provided in this GitHub repository.
