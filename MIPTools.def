@@ -3,7 +3,7 @@ From: amd64/ubuntu:18.04
 
 %post
     # set number of cpus to use in build
-    CPU_COUNT=20
+    CPU_COUNT=6
     # set build environment
     export DEBIAN_FRONTEND=noninteractive \
         CONDA_DIR=/opt/conda \
@@ -108,7 +108,10 @@ From: amd64/ubuntu:18.04
     "scikit-learn=0.20" \
     "scandir=1.9.0" \
     "openpyxl=2.6.1" \
-    "simplegeneric=0.8.1"
+    "simplegeneric=0.8.1" \
+    "ucsc-gff3togenepred=377" \
+    "ucsc-gtftogenepred=377"
+
 
 
     # install primer3 python wrapper
