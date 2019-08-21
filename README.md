@@ -92,8 +92,8 @@ data_dir and analysis_dir will have different content for different apps/operati
 ## Usage for MIP design
 A detailed explanation of how to use the design pipeline can be found on the [Bailey Lab website](http://baileylab.brown.edu/MIPTools/Running_MIP_Design.html). A test design is also provided [here](http://baileylab.brown.edu/MIPTools/Running_MIP_Design_Test.html). Please read the "how to" first and run the test design on your compute environment to make sure everything is working as expected before attempting a novel design.
 
-### Resource requirements
-Resources required vary widely depending on the project. You can expect at least 8-10 GB RAM usage. Designs can be parallelized, so the more cpus you have the better. Plenty of storage is also  recommended. For large target regions, files can take up 10 GB or more.
-
-### Usage for data analysis
+## Usage for data analysis
 MIPTools usage for data analysis is detailed on the [Bailey Lab website](http://http://baileylab.brown.edu/MIPTools/MIP_analysis_pipeline.html). A test data set with insturctions is also included. Please run the test in your compute environment before attempting the first real data analysis.
+
+## Resource requirements
+Resources required vary widely depending on the project. You can expect at least 8-10 GB RAM usage. Both designs can be parallelized, so the more cpus you have the better. Plenty of storage is also  recommended. For designs on large target regions, files can take up 10 GB or more per region. For a typical MIP data analysis involving ~1000 MIPs and ~1000 samples, consider using at least 20 cpus, 20 GB RAM to get the analysis done within 10-12 h. You should expect ~200 GB disk space used for such an analysis as well, although most files can be removed after processing steps to reduce long term disk usage.
