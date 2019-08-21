@@ -29,6 +29,13 @@ Clone the repository with:
 ```bash
 git clone git@github.com:bailey-lab/MIPTools.git
 ```
+
+Some computers, such as servers/clusters managet by IT departmens, may have restrictions on ports which may lead to a permission error for the above command. **If the above command fails**, try the command below.
+
+```bash
+git clone https://github.com/bailey-lab/MIPTools.git
+```
+
 Build the container.  
 
 ```bash
