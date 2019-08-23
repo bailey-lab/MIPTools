@@ -497,7 +497,9 @@ class Locus:
                     except IndexError:
                         sdict[inf] = True
                 try:
-                    sdict["AF"] = sdict[af_name].replace(".", "0")
+                    sdict["AF"] = ["0" if sdict[af_name][af] == "."
+                                   else sdict[af_name][af]
+                                   for af in sdict[af_name]]
                 except KeyError:
                     pass
                 d = {"copy_chrom": schr,
