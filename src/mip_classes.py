@@ -497,8 +497,7 @@ class Locus:
                     except IndexError:
                         sdict[inf] = True
                 try:
-                    sdict["AF"] = ["0" if sdict[af_name][af] == "."
-                                   else sdict[af_name][af]
+                    sdict["AF"] = ["0" if af == "." else af
                                    for af in sdict[af_name]]
                 except KeyError:
                     pass

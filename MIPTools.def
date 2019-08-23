@@ -95,6 +95,7 @@ From: amd64/ubuntu:18.04
     "xlrd=1.1.0" \
     "bcftools=1.9" \
     "samtools=1.9" \
+    "htslib=1.9" \
     "bwa=0.7.17" \
     "bowtie2=2.3.4.3" \
     "primer3=2.4.0" \
@@ -108,9 +109,7 @@ From: amd64/ubuntu:18.04
     "scikit-learn=0.20" \
     "scandir=1.9.0" \
     "openpyxl=2.6.1" \
-    "simplegeneric=0.8.1" \
-    "ucsc-gff3togenepred=377" \
-    "ucsc-gtftogenepred=377"
+    "simplegeneric=0.8.1"
 
 
 
