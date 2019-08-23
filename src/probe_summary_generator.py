@@ -34,7 +34,7 @@ def get_probe_info(probe_set_keys=None, output_file=None,
                             for cpt in cap_info[c]:
                                 captured.append(cpt)
                         mip_list.append([g, m, probe, c, minfo[probe][
-                            "SEQUENCE"], "".join(captured)])
+                            "SEQUENCE"], ",".join(captured)])
                 minfo = mip_info[g]["mips"][m]["mip_info"]
                 for c in minfo:
                     copy_dict = minfo[c]
