@@ -397,7 +397,7 @@ def get_target_coordinates(res_dir, species, capture_size,
     all_coordinates.update(region_coordinates)
 
     # Fix names that has unwanted characters
-    for c in all_coordinates.keys():
+    for c in list(all_coordinates.keys()):
         clist = []
         for ch in c:
             if ch.isalnum():
@@ -522,7 +522,7 @@ def add_fasta_targets(res_dir, fasta_files, fasta_capture_type):
             fasta_sequences.update(fasta_parser(f_file))
         except IOError:
             print(("Fasta file {} could not be found.").format(f_file))
-    for f in fasta_sequences.keys():
+    for f in list(fasta_sequences.keys()):
         flist = []
         for fch in f:
             if fch.isalnum():
@@ -1303,6 +1303,11 @@ def align_targets(res_dir, target_regions, species, flank, fasta_files,
     merge_alignments(res_dir, targets_list, output_prefix="merged")
 
     # parse genome alignment file
+    # negative merge_distance values keep the target regions separate
+    # even if they overlap. Positive values lead to merging targets.
+    # However, the alignments are already carried out with flanking
+    # sequence so increasing that merge distance is avoided by setting the
+    # merge_distance 0 here for negative values.
     if merge_distance > 0:
         merge_distance = 0
     genome_alignment = alignment_parser(res_dir, "merged",
@@ -3594,12 +3599,12 @@ def check_hairpin(pairs, output_file, settings, output_dir, outp=1):
     # we will calculate hairpins by looking at TMs between arm sequences
     # and backbone sequences since the whole MIP sequence is too long
     # for nearest neighbor calculations (at least for primer3 implementation).
-    for p in pairs["pair_information"].keys():
+    for p in list(pairs["pair_information"].keys()):
         pair_dict = pairs["pair_information"][p]
         mip_dict = pair_dict["mip_information"]
         # for each primer pair we can have a number of mips due to paralog
         # copies having alternative mips. We'll go through each mip.
-        for m in mip_dict.keys():
+        for m in list(mip_dict.keys()):
             mip_seq = mip_dict[m]["SEQUENCE"]
             # extract arm and backbone sequences from the mip sequence
             lig = mip_seq[:mip_seq.index(backbone)]
@@ -5206,7 +5211,7 @@ def update_variation(settings):
                             d["annotation"] = variation[uniq_var_key]
                             d["vcf_normalized"] = uniq_var_key
                             annotation_dict = d["annotation"]
-                            for ak in annotation_dict.keys():
+                            for ak in list(annotation_dict.keys()):
                                 if ak.startswith("AAChange."):
                                     annotation_dict["AAChangeClean"] = (
                                         annotation_dict.pop(ak)
