@@ -3703,32 +3703,45 @@ def filter_mips(mip_dic, bin_size, mip_limit):
 
 def compatible_mip_check(m1, m2, overlap_same, overlap_opposite):
     d = m1.mip_dic
+    # get m1 coordinates
     ext_start = d["extension_primer_information"]["GENOMIC_START"]
     ext_end = d["extension_primer_information"]["GENOMIC_END"]
     lig_start = d["ligation_primer_information"]["GENOMIC_START"]
     lig_end = d["ligation_primer_information"]["GENOMIC_END"]
-    # get mip orientation
+    # get mip1 orientation
     ori = d["orientation"]
-    m1_set = set(list(range(min([ext_start, ext_end]),
-                            max([ext_start, ext_end]) + 1))
-                 + list(range(min([lig_start, lig_end]),
-                              max([lig_start, lig_end]) + 1)))
+
+    # get m2 coordinates
     m = m2.mip_dic
     next_ext_start = m["extension_primer_information"]["GENOMIC_START"]
     next_ext_end = m["extension_primer_information"]["GENOMIC_END"]
     next_lig_start = m["ligation_primer_information"]["GENOMIC_START"]
     next_lig_end = m["ligation_primer_information"]["GENOMIC_END"]
-    # get mip orientation
+    # get mip2 orientation
     next_ori = m["orientation"]
-    m2_set = set(list(range(min([next_ext_start, next_ext_end]),
-                            max([next_ext_start, next_ext_end]) + 1))
-                 + list(range(min([next_lig_start, next_lig_end]),
-                              max([next_lig_start, next_lig_end]) + 1)))
-    overlap = len(m1_set.intersection(m2_set))
+
     if ori == next_ori:
-        return overlap <= overlap_same
+        m1_start = min([ext_start, ext_end, lig_start, lig_end])
+        m1_end = max([ext_start, ext_end, lig_start, lig_end])
+        m2_start = min([next_ext_start, next_ext_end, next_lig_start,
+                       next_lig_end])
+        m2_end = max([next_ext_start, next_ext_end, next_lig_start,
+                      next_lig_end])
+        ol = overlap([m1_start, m1_end], [m2_start, m2_end],
+                     overlap_same + 1)
+        return len(ol) > 0
     else:
-        return overlap <= overlap_opposite
+        m1_set = set(list(range(min([ext_start, ext_end]),
+                                max([ext_start, ext_end]) + 1))
+                     + list(range(min([lig_start, lig_end]),
+                                  max([lig_start, lig_end]) + 1)))
+
+        m2_set = set(list(range(min([next_ext_start, next_ext_end]),
+                                max([next_ext_start, next_ext_end]) + 1))
+                     + list(range(min([next_lig_start, next_lig_end]),
+                                  max([next_lig_start, next_lig_end]) + 1)))
+        ol = len(m1_set.intersection(m2_set))
+        return ol <= overlap_opposite
 
 
 def compatible_chains(primer_file, mip_dict, primer3_output_DIR,
