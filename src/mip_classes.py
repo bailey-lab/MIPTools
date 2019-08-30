@@ -2451,6 +2451,7 @@ class Subregion(Locus):
         if not self.skip_compatibility:
             compatible_sets = mip.compatible_chains(
                 self.mips["scored_filtered"]["filename"],
+                self.mips["hairpin"],
                 self.primer3_output_DIR,
                 self.primers["compatible"]["filename"],
                 self.primers["compatible"]["listname"],
@@ -2573,7 +2574,7 @@ class Subregion(Locus):
                 new_mip_found = False
                 while (self.chain_mips
                        and not best_set_chained
-                       and cover_attempt <= 100):
+                       and cover_attempt <= 500):
                     # check coverage of best set found
                     capture_coordinates = []
                     for mip_key in best_set:
