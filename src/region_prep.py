@@ -121,6 +121,8 @@ flank = args["flank"]  # set flank to 150 for maximum capture size of 170
 merge_distance = args["merge_distance"]
 if merge_distance is None:
     merge_distance = flank
+else:
+    merge_distance = int(merge_distance/2)
 single_mip_threshold = args["single_mip_threshold"]
 genes_file = args["genes_file"]
 snps_file = args["snps_file"]

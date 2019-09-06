@@ -1866,7 +1866,7 @@ class Subregion(Locus):
         self.segment_begin = self.locus.begin
         self.segment_end = self.locus.end
         if (self.intervals[0] - self.segment_begin) >= self.flank:
-                self.begin = self.intervals[0] - self.flank
+            self.begin = self.intervals[0] - self.flank
         else:
             self.begin = self.segment_begin
         if (self.segment_end - self.intervals[1]) >= self.flank:
@@ -2390,8 +2390,6 @@ class Subregion(Locus):
             self.mips["hairpin"][m].add_capture_info()
         for m in list(self.mips["hairpin"].keys()):
             self.mips["hairpin"][m].score_mip_object()
-        selection_low = int(self.locus.rinfo["SELECTION"]["compatibility"][
-            "low"])
         try:
             selection_skip = int(self.locus.rinfo["SELECTION"][
                 "compatibility"]["skip"])
@@ -2401,29 +2399,11 @@ class Subregion(Locus):
             self.skip_compatibility = True
         else:
             self.skip_compatibility = False
-        temp_dic = copy.deepcopy(self.mips["hairpin"])
-        if (self.end - self.begin) > selection_low:
-            trim_size = int(self.locus.rinfo["SELECTION"]["compatibility"][
-                "trim_size"])
-            trim_increment = int(self.locus.rinfo["SELECTION"][
-                "compatibility"]["trim_increment"])
-            trim_limit = int(self.locus.rinfo["SELECTION"]["compatibility"][
-                "trim_limit"])
-            mip_limit = int(self.locus.rinfo["SELECTION"]["compatibility"][
-                "mip_limit"])
-            while (len(temp_dic) > mip_limit) and (trim_size <= trim_limit):
-                mip.filter_mips(temp_dic, trim_size, mip_limit)
-                trim_size += trim_increment
         temp_scored = copy.deepcopy(self.primers["hairpin"]["dictionary"])
         self.mips["scored_filtered"] = {"dictionary": temp_scored,
                                         "filename": self.fullname
                                         + "_scored_filtered"}
 
-        for m in list(self.mips["scored_filtered"]["dictionary"][
-                "pair_information"].keys()):
-            if m not in list(temp_dic.keys()):
-                self.mips["scored_filtered"]["dictionary"][
-                    "pair_information"].pop(m)
         with open(self.primer3_output_DIR + self.mips["scored_filtered"][
                 "filename"], "w") as infile:
             json.dump(self.mips["scored_filtered"]["dictionary"], infile,
@@ -2449,16 +2429,27 @@ class Subregion(Locus):
             "listname": self.fullname + "_compatibles"
         }
         if not self.skip_compatibility:
+            bin_size = int(self.locus.rinfo["SELECTION"]["compatibility"][
+                "bin_size"])
+            trim_increment = int(self.locus.rinfo["SELECTION"][
+                "compatibility"]["trim_increment"])
+            trim_limit = int(self.locus.rinfo["SELECTION"]["compatibility"][
+                "trim_limit"])
+            mip_limit = int(self.locus.rinfo["SELECTION"]["compatibility"][
+                "mip_limit"])
             compatible_sets = mip.compatible_chains(
                 self.mips["scored_filtered"]["filename"],
                 self.mips["hairpin"],
                 self.primer3_output_DIR,
                 self.primers["compatible"]["filename"],
                 self.primers["compatible"]["listname"],
-                overlap_same=overlap_same,
-                overlap_opposite=overlap_opposite,
-                outp=int(self.locus.rinfo["CAPTURE"]["S0"]["output_level"])
-            )
+                int(self.scoring["must_bonus"]),
+                int(self.scoring["set_copy_bonus"]),
+                overlap_same,
+                overlap_opposite,
+                int(self.locus.rinfo["CAPTURE"]["S0"]["output_level"]),
+                bin_size, trim_increment, trim_limit, mip_limit,
+                self.chain_mips, self.intervals)
             self.primers["compatible"]["list"] = compatible_sets
         return
 

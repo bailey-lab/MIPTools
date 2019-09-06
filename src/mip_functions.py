@@ -24,6 +24,7 @@ import gzip
 from primer3 import calcHeterodimerTm
 import traceback
 from msa_to_vcf import msa_to_vcf as msa_to_vcf
+import itertools
 
 print("functions reloading")
 # backbone dictionary
@@ -1242,7 +1243,7 @@ def get_missed_targets(original_target_regions, target_regions,
         for uc in uncovered_chroms:
             unc_regs = uncovered_chroms[uc]
             for ur in unc_regs:
-                if overlap(main_region[1:3], ur):
+                if len(overlap(main_region[1:3], ur)) > 0:
                     not_aligned_coordinates[
                         ar + "-extra-" + str(extra_count)
                     ] = {"chrom": uc,
@@ -3687,7 +3688,7 @@ def filter_mips(mip_dic, bin_size, mip_limit):
                         n_tech = mip_dic[n].tech_score
                         n_ori = mip_dic[n].mip["C0"]["orientation"]
                         if (((abs(n_start - m_start) <= bin_size)
-                             or (abs(n_end - m_end) <= bin_size))
+                             and (abs(n_end - m_end) <= bin_size))
                                 and (m_ori == n_ori)):
                             if (m_tech + m_func) >= (n_tech + n_func):
                                 mip_dic.pop(n)
@@ -3727,9 +3728,11 @@ def compatible_mip_check(m1, m2, overlap_same, overlap_opposite):
                        next_lig_end])
         m2_end = max([next_ext_start, next_ext_end, next_lig_start,
                       next_lig_end])
-        ol = overlap([m1_start, m1_end], [m2_start, m2_end],
-                     overlap_same + 1)
-        return len(ol) > 0
+        ol = overlap([m1_start, m1_end], [m2_start, m2_end])
+        if len(ol) == 0:
+            return True
+        else:
+            return (ol[1] - ol[0] + 1) <= overlap_same
     else:
         m1_set = set(list(range(min([ext_start, ext_end]),
                                 max([ext_start, ext_end]) + 1))
@@ -3745,8 +3748,10 @@ def compatible_mip_check(m1, m2, overlap_same, overlap_opposite):
 
 
 def compatible_chains(primer_file, mip_dict, primer3_output_DIR,
-                      primer_out, output_file, overlap_same=0,
-                      overlap_opposite=0, outp=1):
+                      primer_out, output_file, must_bonus, set_copy_bonus,
+                      overlap_same, overlap_opposite, outp, bin_size,
+                      trim_increment, trim_limit, set_size, chain_mips,
+                      intervals):
     try:
         with open(os.path.join(
                 primer3_output_DIR, primer_file), "r") as infile:
@@ -3755,7 +3760,37 @@ def compatible_chains(primer_file, mip_dict, primer3_output_DIR,
         print("Primer file does not exist.")
         return 1
     else:
-        # create in/compatibility lists for each mip
+        # make a copy of the original mip dict to use in filtering
+        temp_dict = copy.deepcopy(mip_dict)
+        # create small subregions for binning MIPs and creating compatible
+        # mip sets for smaller regions
+        begin = intervals[0]
+        end = intervals[1]
+        bins = list(range(begin, end, bin_size))
+        if bins[-1] != end:
+            bins.append(end)
+        num_bins = len(bins) - 1
+        # group MIPs into bins. Bins can share MIPs.
+        binned = {}
+        for i in range(num_bins):
+            binned[i] = {}
+            bin_start = bins[i]
+            bin_end = bins[i + 1]
+            for k in temp_dict:
+                cp = temp_dict[k].mip["C0"]
+                cs = cp["capture_start"]
+                ce = cp["capture_end"]
+                if ((bin_start <= cs) and (bin_end >= cs)) or (
+                        (bin_start <= ce) and (bin_end >= ce)):
+                    binned[i][k] = temp_dict[k]
+        # remove MIPs covering similar regions until we have only
+        # "set_size" number of MIPs per bin.
+        for i in binned:
+            trim_size = 1
+            while (trim_size <= trim_limit) and (len(binned[i]) > set_size):
+                filter_mips(binned[i], trim_size, set_size)
+                trim_size += trim_increment
+        # create (in)compatibility lists for each MIP
         for k in list(scored_mips["pair_information"].keys()):
             # get coordinates of mip arms
             d = scored_mips["pair_information"][k]
@@ -3849,7 +3884,7 @@ def compatible_chains(primer_file, mip_dict, primer3_output_DIR,
             # create a set of mips that can be the "next" mip that can be
             # added to the mip list
             comp = scored_mips["pair_information"][l[-1]][
-                "compatible"].difference(incomp)
+                "compatible"].difference(incomp).intersection(subset)
             # if there are mips that can be added, call compatible_recurse
             # function for each of those mips
             if len(comp) > 0:
@@ -3859,33 +3894,38 @@ def compatible_chains(primer_file, mip_dict, primer3_output_DIR,
             else:
                 mip_sets.append((l))
 
-        mip_sets = []
         keys = sorted(scored_mips["pair_information"],
                       key=lambda a: scored_mips["pair_information"][a]
                       ["pairs"]["C0"]["capture_start"])
-        for k in keys:
-            comp_list = scored_mips["pair_information"][k]["compatible"]
-            if len(comp_list) > 0:
-                # for each of the mips in the compatibility list,
-                for m in comp_list:
-                    # check if these two mips are present in other mip sets
-                    # if they are, then no need to pursue this branch anymore
-                    # as the same branch will be in the other mip set as well
-                    test_set = frozenset([k, m])
-                    for p_set in mip_sets:
-                        if test_set.issubset(set(p_set)):
-                            break
+        ms_dict = {}
+        for i in binned:
+            subset = binned[i]
+            mip_sets = []
+            for k in keys:
+                if k in subset:
+                    comp_list = scored_mips["pair_information"][k][
+                        "compatible"].intersection(subset)
+                    if len(comp_list) > 0:
+                        # for each of the mips in the compatibility list,
+                        for m in comp_list:
+                            # check if these two mips are present in other sets
+                            # if they are, then no need to pursue this branch
+                            # anymore as the same branch will be in the other
+                            # mip set as well
+                            test_set = frozenset([k, m])
+                            for p_set in mip_sets:
+                                if test_set.issubset(set(p_set)):
+                                    break
+                            else:
+                                # create an initial result list to be used by
+                                # the compatible_recurse function
+                                compatible_recurse([k, m])
                     else:
-                        # create an initial result list to be used by the
-                        # compatible_recurse function
-                        compatible_recurse([k, m])
-            else:
-                mip_sets.append(([k]))
+                        mip_sets.append(([k]))
+            ms_dict[i] = mip_sets
 
         # define a funtcion for getting the mipset score and coverage
         def score_mipset(mip_set):
-            set_copy_bonus = 1000
-            must_bonus = 2000
             # create a dic for diffs captured cumulatively by all
             # mips in the set
             merged_caps = []
@@ -3932,85 +3972,152 @@ def compatible_chains(primer_file, mip_dict, primer3_output_DIR,
             must_set = list(set(must_captured))
             mb = len(must_set) * must_bonus
             total_score = mb + scp + sum(mip_scores)
-            return total_score, merged_capture_coordinates[0]
+            return total_score, merged_capture_coordinates
 
-        # score each mip set
+        # create a dictionary to hold mip sets and their scores
         mip_set_dict = {}
-        for i in range(len(mip_sets)):
-            ms = mip_sets[i]
-            sc = score_mipset(ms)
-            mip_set_dict[i] = {"mip_list": ms, "score": sc[0],
-                               "coordinates": sc[1]}
-
-        # Remove chains that significantly overlap with other chains but have
-        # lower scores
-        iter_keys = list(mip_set_dict.keys())
-        for i in iter_keys:
-            counter = 0
-            if i not in mip_set_dict:
-                continue
-            s1 = mip_set_dict[i]["mip_list"]
-            sc1 = mip_set_dict[i]["score"]
-            crd1 = mip_set_dict[i]["coordinates"]
-            for j in iter_keys:
-                if j not in mip_set_dict:
-                    continue
-                if i != j:
-                    s2 = mip_set_dict[j]["mip_list"]
-                    sc2 = mip_set_dict[j]["score"]
-                    crd2 = mip_set_dict[j]["coordinates"]
-                    extra = remove_overlap(crd1, crd2)
-                    e2 = sum([e[1] - e[0] for e in extra])
-                    # if all but 50 bp are overlapping between the two sets
-                    # one with the lower score will be removed
-                    if e2 < 50:
-                        if sc2 > sc1:
-                            mip_set_dict.pop(i)
-                            break
-                        else:
-                            mip_set_dict.pop(j)
-
-        # create a new set of remaining mip sets
-        mip_sets = set()
+        for i in ms_dict:
+            mip_set_dict[i] = {}
+            bin_co = bins[i: i + 2]
+            bin_size = bin_co[1] - bin_co[0] + 1
+            for j in range(len(ms_dict[i])):
+                ms = ms_dict[i][j]
+                sc = score_mipset(ms)
+                coverage = overlap(sc[1][0], bin_co)
+                coverage = (coverage[1] - coverage[0] + 1) / bin_size
+                mip_set_dict[i][j] = {"mip_list": ms, "score": sc[0],
+                                      "coordinates": sc[1][0],
+                                      "coverage": coverage}
         for i in mip_set_dict:
-            mip_sets.add(frozenset(mip_set_dict[i]["mip_list"]))
+            iter_keys = list(mip_set_dict[i].keys())
+            for j in iter_keys:
+                try:
+                    s1 = mip_set_dict[i][j]["mip_list"]
+                    sc1 = mip_set_dict[i][j]["score"]
+                    crd1 = mip_set_dict[i][j]["coordinates"]
+                    cov1 = mip_set_dict[i][j]["coverage"]
+                    for k in iter_keys:
+                        if k == j:
+                            continue
+                        try:
+                            s2 = mip_set_dict[i][k]["mip_list"]
+                            sc2 = mip_set_dict[i][k]["score"]
+                            crd2 = mip_set_dict[i][k]["coordinates"]
+                            cov2 = mip_set_dict[i][k]["coverage"]
+                            if check_redundant_region(crd1, crd2, spacer=0):
+                                # if one set is to be removed pick the one
+                                # with full coverage of the target region
+                                # in case there is one
+                                if chain_mips:
+                                    if (cov1 == 1) and (cov2 < 1):
+                                        mip_set_dict[i].pop(k)
+                                    elif (cov2 == 1) and (cov1 < 1):
+                                        mip_set_dict[i].pop(j)
+                                        break
+                                    # if both are covering the target
+                                    # or if both are failing to cover
+                                    # then pick the set with better score
+                                    elif sc2 > sc1:
+                                        mip_set_dict[i].pop(j)
+                                        break
+                                    else:
+                                        mip_set_dict[i].pop(k)
+                                # if chaining mip is not required
+                                # pick the better scoring set
+                                elif sc2 > sc1:
+                                    mip_set_dict[i].pop(j)
+                                    break
+                                else:
+                                    mip_set_dict[i].pop(k)
+                        except KeyError:
+                            continue
+                except KeyError:
+                    continue
 
-        # these mip sets only contain mip chains. We can expand each
-        # such set by merging with other sets after removing incompatible
-        # mips from the second set.
-        counter = 0
-        set_size = len(mip_sets)
-        while((counter < pow(10, 6)) and (set_size < pow(10, 6))):
-            mip_set_list = list(mip_sets)
-            if len(mip_set_list) < 2:
-                break
-            rd = sorted(random.sample(mip_set_list, 2), key=lambda a: len(a),
-                        reverse=True)
-            counter += 1
-            inc = set()
-            s1 = set(rd[0])
-            for m in s1:
-                inc.update(scored_mips["pair_information"][m][
-                    "incompatible"])
-            for s2 in rd[1:]:
-                s3 = s2.difference(inc).difference(s1)
-                if len(s3) > 0:
-                    s1.update(s3)
+        # merge compatible chains within each bin (to some extent)
+        merged_sets = {}
+        for i in mip_set_dict:
+            mip_sets = set()
+            for j in mip_set_dict[i]:
+                mip_sets.add(frozenset(mip_set_dict[i][j]["mip_list"]))
+
+            # these mip sets only contain mip chains. We can expand each
+            # such set by merging with other sets after removing incompatible
+            # mips from the second set.
+            counter = 0
+            for counter in range(5):
+                new_mip_sets = set()
+                for s1 in mip_sets:
+                    inc = set()
                     for m in s1:
                         inc.update(scored_mips["pair_information"][m][
                             "incompatible"])
-            mip_sets.add(frozenset(s1))
-            set_size = len(mip_sets)
+                    new_set = set(s1)
+                    for s2 in mip_sets:
+                        counter += 1
+                        s3 = s2.difference(inc).difference(new_set)
+                        if len(s3) > 0:
+                            new_set.update(s3)
+                            for m in new_set:
+                                inc.update(scored_mips["pair_information"][m][
+                                    "incompatible"])
+                    new_mip_sets.add(frozenset(new_set))
+                mip_sets = new_mip_sets
+            merged_sets[i] = mip_sets
+
+        # combine mip sets in different bins
+        # first, calculate how many combinations there will be
+        combo_length = 1
+        for i in merged_sets:
+            combo_length *= len(merged_sets[i])
+        # if too many combinations, reduce by picking the top 5 scoring
+        # sets for each bin
+        if combo_length > pow(10, 7):
+            for i in list(merged_sets.keys()):
+                top_sets = set(sorted(merged_sets[i],
+                                      key=lambda a: score_mipset(a)[0],
+                                      reverse=True)[:5])
+                merged_sets[i] = top_sets
+            combo_length = 1
+            for i in merged_sets:
+                combo_length *= len(merged_sets[i])
+            # if still too many combinations, take the top set for each bin
+            if combo_length > pow(10, 7):
+                for i in list(merged_sets.keys()):
+                    top_sets = set(sorted(merged_sets[i],
+                                          key=lambda a: score_mipset(a)[0],
+                                          reverse=True)[:1])
+                    merged_sets[i] = top_sets
+
+        # combine mip sets in different bins
+        combined_sets = set()
+        combo_list = list(itertools.product(
+            *[merged_sets[i] for i in range(len(merged_sets))]))
+        for l in combo_list:
+            if len(l) == 1:
+                m_set = set(l[0])
+            else:
+                m_set = set()
+                for i in range(len(l) - 1):
+                    s1 = l[i]
+                    s2 = l[i + 1]
+                    inc = set()
+                    for m in s1:
+                        inc.update(scored_mips["pair_information"][m][
+                            "incompatible"])
+                    s3 = s2.difference(inc)
+                    m_set.update(s1.union(s3))
+            combined_sets.add(frozenset(m_set))
 
         if outp:
             with open(os.path.join(
                     primer3_output_DIR, output_file), "w") as outfile:
-                outfile.write("\n".join([",".join(s) for s in mip_sets])
+                outfile.write("\n".join([",".join(s) for s in combined_sets])
                               + "\n")
         with open(os.path.join(
                 primer3_output_DIR, primer_out), "wb") as outfile:
             pickle.dump(scored_mips, outfile)
-    return mip_sets
+    return combined_sets
 
 
 def design_mips(design_dir, g):
@@ -7989,18 +8096,16 @@ def merge_overlap(intervals, spacer=0):
     return exons
 
 
-def overlap(reg1, reg2, spacer=0):
+def overlap(reg1, reg2):
     """
     Return overlap between two regions.
     e.g. [10, 30], [20, 40] returns [20, 30]
     """
-    regions = sorted([sorted(reg1), sorted(reg2)])
     try:
-        if regions[0][1] - regions[1][0] >= spacer:
-            return[max([regions[0][0], regions[1][0]]),
-                   min([regions[0][1], regions[1][1]])]
-        else:
-            return []
+        intersect = set(range(reg1[0], reg1[1] + 1)).intersection(
+            set(range(reg2[0], reg2[1] + 1)))
+        intersect = sorted(intersect)
+        return [intersect[0]] + [intersect[-1]]
     except IndexError:
         return []
 
@@ -8014,12 +8119,50 @@ def remove_overlap(reg1, reg2, spacer=0):
     try:
         if regions[0][1] - regions[1][0] >= spacer:
             coords = sorted(reg1 + reg2)
-            return[[coords[0], coords[1]],
-                   [coords[2], coords[3]]]
+            return[[coords[0], coords[1] - 1],
+                   [coords[2] + 1, coords[3]]]
         else:
             return regions
     except IndexError:
         return []
+
+
+def complete_overlap(reg1, reg2):
+    """
+    Return whether one of the two given regions contain the other.
+    e.g. [10, 40], [20, 30] returns True.
+    """
+    regions = sorted([sorted(reg1), sorted(reg2)])
+    try:
+        return (((regions[0][0] == regions[1][0])
+                 and (regions[0][1] <= regions[1][1]))
+                or ((regions[0][0] < regions[1][0])
+                    and (regions[0][1] >= regions[1][1])))
+    except IndexError:
+        return False
+
+
+def check_redundant_region(reg1, reg2, spacer=0):
+    """
+    Return whether one of the two given regions is redundant.
+    i.e. one contains the other or there is less than 'spacer'
+    non-overlap between them.
+    """
+    regions = sorted([sorted(reg1), sorted(reg2)])
+    try:
+        if complete_overlap(*regions):
+            return True
+        else:
+            non_overlap = remove_overlap(*regions)
+            if len(non_overlap) == 0:
+                return False
+            extra = sum([r[1] - r[0] + 1 for r in non_overlap])
+            if extra <= spacer:
+                return True
+            else:
+                return False
+    except IndexError:
+        return False
 
 
 def subtract_overlap(uncovered_regions, covered_regions, spacer=0):
@@ -8081,7 +8224,7 @@ def trim_overlap(region_list, low=0.1, high=0.9, spacer=0):
                             do_trim = True
                             break
                         else:
-                            overlapping_region = overlap(reg_i, reg_j, spacer)
+                            overlapping_region = overlap(reg_i, reg_j)
                             if len(overlapping_region) > 0:
                                 reg_sizes = sorted([reg_i[1] - reg_i[0] + 1,
                                                     reg_j[1] - reg_j[0] + 1])
