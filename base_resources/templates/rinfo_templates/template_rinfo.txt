@@ -6,16 +6,14 @@ DESIGN_DIR	TBD
 #########################################################
 ############### SELECTION CRITERIA ######################
 SELECTION	settings_for	compatibility
-SELECTION	low	400
-SELECTION	high	30000
-SELECTION	mip_limit	50
-SELECTION	trim_size	2
-SELECTION	trim_increment	3
-SELECTION	trim_limit	50
+SELECTION	bin_size	2000
+SELECTION	mip_limit	150
+SELECTION	trim_increment	1
+SELECTION	trim_limit	20
 SELECTION	same_strand_overlap	10
 SELECTION	opposite_strand_overlap	0
-SELECTION	max_same_strand_overlap	30
-SELECTION	max_opposite_strand_overlap	20
+SELECTION	max_same_strand_overlap	200
+SELECTION	max_opposite_strand_overlap	40
 SELECTION	chain	TBD
 SELECTION	skip	0
 #########################################################
@@ -60,7 +58,7 @@ SETTINGS	hit_threshold	0	0	none
 SETTINGS	lower_filter_tm	42	42	none
 SETTINGS	lower_hit_threshold	20	20	none
 SETTINGS	tm_diff	2	2	none
-SETTINGS	bin_size	1	1	none
+SETTINGS	bin_size	3	3	none
 SETTINGS	pick_size	1	1	none
 SETTINGS	hairpin_tm	47	47	47
 SETTINGS	mipset_size	none	none	200
