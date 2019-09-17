@@ -2315,7 +2315,7 @@ def bowtie(fasta_file, output_file, bowtie2_input_DIR, bowtie2_output_DIR,
 
 
 def bwa(fastq_file, output_file, output_type, input_dir,
-        output_dir, options, species):
+        output_dir, options, species, base_name):
     """ Run bwa alignment on given fastq file using the species bwa indexed genome.
     Options should be a list that starts with the command (e.g. mem, aln etc).
     Additional options should be appended as strings of "option value",
@@ -2324,13 +2324,16 @@ def bwa(fastq_file, output_file, output_type, input_dir,
     clipping severely so the alignment becomes end-to-end and T100 stops
     reporting secondary alignments, assuming their score is below 100."""
     genome_file = get_file_locations()[species]["bwa_genome"]
+    read_group = ("@RG\\tID:" + base_name + "\\tSM:" + base_name + "\\tLB:"
+                  + base_name + "\\tPL:ILLUMINA")
+    options.append("-R" + read_group)
     if output_type == "sam":
         com = ["bwa"]
         com.extend(options)
         com.append(genome_file)
         com.append(os.path.join(input_dir, fastq_file))
         with open(os.path.join(output_dir, output_file), "w") as outfile:
-            subprocess.check_call(com, stdout=outfile)
+            subprocess.check_call(com, stdout=outfile, stderr=outfile)
     else:
         com = ["bwa"]
         com.extend(options)
@@ -2338,8 +2341,44 @@ def bwa(fastq_file, output_file, output_type, input_dir,
         com.append(os.path.join(input_dir, fastq_file))
         sam = subprocess.Popen(com, stdout=subprocess.PIPE)
         bam_com = ["samtools", "view", "-b"]
+        bam = subprocess.Popen(bam_com, stdin=sam.stdout,
+                               stdout=subprocess.PIPE)
+        sort_com = ["samtools", "sort", "-T /tmp/" + output_file]
         with open(os.path.join(output_dir, output_file), "w") as outfile:
-            subprocess.Popen(bam_com, stdin=sam.stdout, stdout=outfile)
+            subprocess.Popen(sort_com, stdin=bam.stdout, stdout=outfile,
+                             stderr=outfile)
+
+
+def bwa_multi(fastq_files, output_type, fastq_dir, bam_dir, options, species,
+              processor_number, parallel_processes):
+    if len(fastq_files) == 0:
+        fastq_files = [f.name for f in os.scandir(fastq_dir)]
+    if output_type == "sam":
+        extension = ".sam"
+    elif output_type == "bam":
+        extension = ".srt.bam"
+    else:
+        print(("Output type must be bam or sam, {} was given").format(
+            output_type))
+        return
+    if parallel_processes == 1:
+        for f in fastq_files:
+            # get base file name
+            base_name = f.split(".")[0]
+            bam_name = base_name + extension
+            options.extend("-t" + str(processor_number))
+            bwa(f, bam_name, "bam", fastq_dir, bam_dir, options, species)
+    else:
+        processor_per_process = processor_number // parallel_processes
+        p = NoDaemonProcessPool(parallel_processes)
+        options = options + ["-t " + str(processor_per_process)]
+        for f in fastq_files:
+            base_name = f.split(".")[0]
+            bam_name = base_name + extension
+            p.apply_async(bwa, (f, bam_name, output_type, fastq_dir, bam_dir,
+                                options, species, base_name))
+        p.close()
+        p.join()
 
 
 def parse_cigar(cigar):
@@ -3808,8 +3847,8 @@ def compatible_chains(primer_file, mip_dict, primer3_output_DIR,
             incompatible = set()
             compatible = set()
             # loop through all mips to populate compatibility lists
-            for mip in list(scored_mips["pair_information"].keys()):
-                m = scored_mips["pair_information"][mip]
+            for mk in list(scored_mips["pair_information"].keys()):
+                m = scored_mips["pair_information"][mk]
                 # next MIP's extension arm start position
                 nes = m["extension_primer_information"]["GENOMIC_START"]
                 # next MIP's extension arm end position
@@ -3859,9 +3898,9 @@ def compatible_chains(primer_file, mip_dict, primer3_output_DIR,
                         compat = 1
                         next_compat = 1
                 if not compat:
-                    incompatible.add(mip)
+                    incompatible.add(mk)
                 if next_compat:
-                    compatible.add(mip)
+                    compatible.add(mk)
             d["incompatible"] = incompatible
             d["compatible"] = compatible
 
@@ -4063,7 +4102,8 @@ def compatible_chains(primer_file, mip_dict, primer3_output_DIR,
                                     "incompatible"])
                     new_mip_sets.add(frozenset(new_set))
                 mip_sets = new_mip_sets
-            merged_sets[i] = mip_sets
+            if len(mip_sets) > 0:
+                merged_sets[i] = mip_sets
 
         # combine mip sets in different bins
         # first, calculate how many combinations there will be
@@ -4092,7 +4132,7 @@ def compatible_chains(primer_file, mip_dict, primer3_output_DIR,
         # combine mip sets in different bins
         combined_sets = set()
         combo_list = list(itertools.product(
-            *[merged_sets[i] for i in range(len(merged_sets))]))
+            *[merged_sets[i] for i in sorted(merged_sets)]))
         for l in combo_list:
             if len(l) == 1:
                 m_set = set(l[0])
@@ -8598,6 +8638,36 @@ def generate_processed_fastqs(fastq_dir, mipster_file,
                               'sequence_quality',
                               'barcode_count'
                             ])
+    mipster = mipster.loc[mipster["barcode_count"] >= min_bc_count].groupby(
+        "sample_name"
+    ).apply(lambda x: pd.DataFrame.to_dict(x, orient="index")).to_dict()
+    p = Pool(pro)
+    for sample in mipster:
+        fastq_file = os.path.join(fastq_dir, sample + ".fq.gz")
+        sample_mipster = mipster[sample]
+        p.apply_async(generate_processed_fastqs_worker, (fastq_file,
+                                                         sample_mipster))
+    p.close()
+    p.join()
+    return
+
+
+def generate_unprocessed_fastqs(fastq_dir, mipster_file, min_bc_count=1,
+                                pro=8):
+    """
+    Generate fastq files for each sample. These files will have stitched and
+    barcode corrected reads.
+    """
+    if not os.path.exists(fastq_dir):
+        os.makedirs(fastq_dir)
+    mipster = pd.read_table(mipster_file, usecols=["s_Sample", 'h_popUID',
+                                                   "h_seq", 'c_qual',
+                                                   'c_barcodeCnt'])
+    mipster = mipster.rename(columns={"s_Sample": "sample_name",
+                                      "h_popUID": "haplotype_ID",
+                                      "h_seq": "haplotype_sequence",
+                                      "c_qual": "sequence_quality",
+                                      "c_barcodeCnt": "barcode_count"})
     mipster = mipster.loc[mipster["barcode_count"] >= min_bc_count].groupby(
         "sample_name"
     ).apply(lambda x: pd.DataFrame.to_dict(x, orient="index")).to_dict()

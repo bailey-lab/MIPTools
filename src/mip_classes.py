@@ -878,7 +878,7 @@ class Locus:
         if "extra_snps" in target_diffs:
             capture_targets["extra_snps"] = extra_snps
         if capture_type == "whole":
-            subregions = [[self.begin, self.end]]
+            subregions = [[self.begin + flank, self.end - flank]]
         elif capture_type == "exons":
             exons = copy.deepcopy(self.exons)
             exonic_subregions = mip.merge_overlap(exons, 2*flank)
@@ -1285,6 +1285,8 @@ class Paralog(Locus):
         locus_info["mips"] = []
         # rename mips showing their place on the genome
         name_counter = 0
+        # are there any targets
+        targets_present = False
         for mip_name in mip_names_ordered:
             m = self.mips[mip_name]
             fullname_subregion = m.subregion.fullname
@@ -1303,6 +1305,8 @@ class Paralog(Locus):
             ms = []
             for c in self.must:
                 for t in self.must[c]:
+                    # set targets_present to True if there are any targets
+                    targets_present = True
                     try:
                         if t in caps:
                             line = ("Target " + self.must[c][t]["name"]
@@ -1353,7 +1357,7 @@ class Paralog(Locus):
                     print(("Target %s of %s is NOT captured."
                            % (self.must[c][t]["name"],
                               self.paralog_name)))
-        if not target_remaining:
+        if targets_present and not target_remaining:
             line = "All targets have been captured."
             self.must_captured = True
             outfile_list.append("#" + line + "\n")
@@ -1363,9 +1367,9 @@ class Paralog(Locus):
             self.must_captured = False
         if self.chain_mips:
             if self.chained_mips:
-                line = "All mips chained"
+                line = "All mips are chained"
             else:
-                line = "Mips not chained"
+                line = "Mips are not chained"
             outfile_list.append("#" + line + "\n")
             print(line, "for", self.paralog_name)
         outfile.write("\n".join(outfile_list))
