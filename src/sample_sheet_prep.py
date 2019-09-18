@@ -123,6 +123,13 @@ def main(capture_384, sample_plates, sheets_96, output_file,
     else:
         com.to_csv(os.path.join(wdir, output_file), index=False, sep="\t")
 
+    for sample_id in com["sample_name"]:
+        if not sample_id.replace("-", "").isalnum():
+            print(("Sample names can only contain "
+                   "alphanumeric characters and '-'. "
+                   "{} has invalid characters. "
+                   "This sample will not be processed.").format(sample_id))
+
 
 if __name__ == "__main__":
     # Read input arguments
