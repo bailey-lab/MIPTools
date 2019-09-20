@@ -89,11 +89,15 @@ def main(capture_384, sample_plates, sheets_96, output_file,
                 replicates[i] = int(rep)
                 reps_used.add(rep)
         return pd.Series(replicates)
-
-    com["Replicate"] = com.groupby(["sample_name", "sample_set"])[
-        "replicate"].transform(assign_replicate).astype(int)
-    com.drop("replicate", inplace=True, axis=1)
-    com.rename(columns={"Replicate": "replicate"}, inplace=True)
+    try:
+        com["Replicate"] = com.groupby(["sample_name", "sample_set"])[
+            "replicate"].transform(assign_replicate).astype(int)
+        com.drop("replicate", inplace=True, axis=1)
+        com.rename(columns={"Replicate": "replicate"}, inplace=True)
+    except ValueError:
+        print("Error in assigning replicates. Please make sure "
+              "the 'sample_name' and 'sample_set' fields have "
+              "valid, non-empty values in all provided files.")
 
     if com.shape[0] != (com.groupby(["fw", "rev"]).first().shape[0]):
         size_file = os.path.join(wdir, "repeating_primers.csv")

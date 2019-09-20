@@ -2315,7 +2315,7 @@ def bowtie(fasta_file, output_file, bowtie2_input_DIR, bowtie2_output_DIR,
 
 
 def bwa(fastq_file, output_file, output_type, input_dir,
-        output_dir, options, species, base_name):
+        output_dir, options, species, base_name="None"):
     """ Run bwa alignment on given fastq file using the species bwa indexed genome.
     Options should be a list that starts with the command (e.g. mem, aln etc).
     Additional options should be appended as strings of "option value",
@@ -2333,7 +2333,7 @@ def bwa(fastq_file, output_file, output_type, input_dir,
         com.append(genome_file)
         com.append(os.path.join(input_dir, fastq_file))
         with open(os.path.join(output_dir, output_file), "w") as outfile:
-            subprocess.check_call(com, stdout=outfile, stderr=outfile)
+            subprocess.check_call(com, stdout=outfile)
     else:
         com = ["bwa"]
         com.extend(options)
@@ -4449,16 +4449,12 @@ def get_haplotypes(settings):
         for line in infile:
             if not line.startswith("@"):
                 newline = line.strip().split("\t")
-                try:
-                    if newline[13].startswith("AS"):
-                        score = int(newline[13].split(":")[-1])
-                    else:
-                        score = -5000
-                except IndexError:
-                    if newline[11].startswith("AS"):
-                        score = int(newline[11].split(":")[-1])
-                    else:
-                        score = -5000
+                for nl in newline:
+                    if nl.startswith("AS"):
+                        score = int(nl.split(":")[-1])
+                        break
+                else:
+                    score = -5000
                 hapname = newline[0]
                 if max(hap_hits[hapname][1]) < score:
                     hap_hits[hapname][0] = [newline]
