@@ -120,6 +120,10 @@ From: amd64/ubuntu:18.04
     cd /opt/programs/lastz/src
     make lastz_32 && install lastz_32 /usr/bin/
 
+    # install freebayes
+    cd /opt/bin
+    wget https://github.com/ekg/freebayes/releases/download/v1.3.1/freebayes-v1.3.1
+
     # install MIPWrangler
     cd /opt/programs
     git clone https://github.com/bailey-lab/MIPWrangler
