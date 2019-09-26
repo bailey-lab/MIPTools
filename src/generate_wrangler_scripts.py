@@ -60,6 +60,10 @@ parser.add_argument("-k", "--keep-files",
 parser.add_argument("-x", "--stitch-options",
                     help=("Probe set to be processed."),
                     required=True)
+parser.add_argument("--min-capture-length",
+                    help=("Minimum capture length for stitching, "
+                          "excluding probe arms."),
+                    type=int)
 # parse arguments from command line
 args = vars(parser.parse_args())
 experiment_id = args["experiment_id"]
@@ -76,10 +80,17 @@ sam_set = args["sample_set"]
 pr_set = args["probe_set"]
 keep_files = args["keep_files"]
 stitch_options = args["stitch_options"]
+min_capture_length = args["min_capture_length"]
 if stitch_options == "none":
     stitch_options = []
 else:
     stitch_options = stitch_options.split(",")
+if min_capture_length is not None:
+    for o in stitch_options:
+        if "minCaptureLength" in o:
+            break
+    else:
+        stitch_options.append("--minCaptureLength=" + str(min_capture_length))
 # create dirs if they do not exist
 if not os.path.exists(raw_mip_ids_dir):
     os.makedirs(raw_mip_ids_dir)
