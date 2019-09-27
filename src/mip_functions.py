@@ -5370,9 +5370,9 @@ def update_variation(settings):
     temp_variations_lines = ["\t".join(map(str, v)) for v in temp_variations]
     temp_variation_keys = [":".join(map(str, v)) for v in temp_variations]
     outfile_list.extend(temp_variations_lines)
-    raw_vcf_file = settings["rawVcfFile"]
+    raw_vcf_file = "raw.vcf"
     zipped_vcf = raw_vcf_file + ".gz"
-    norm_vcf_file = settings["normalizedVcfFile"]
+    norm_vcf_file = "norm.vcf"
     with open(os.path.join(wdir, raw_vcf_file), "w") as outfile:
         outfile.write("\n".join(outfile_list))
     with open(os.path.join(wdir, zipped_vcf), "w") as outfile:
@@ -5385,26 +5385,21 @@ def update_variation(settings):
                             "-cw", "-w", "0",
                            "-o", norm_vcf_file, raw_vcf_file + ".gz"],
                            cwd=wdir)
-    ann_db_dir = get_file_locations()[species]["annotation_db_dir"]
-    ann_build = settings["annotationBuildVersion"]
-    ann_protocol = settings["annotationProtocol"].replace(";", ",")
-    ann_operation = settings["annotationOperation"].replace(";", ",")
-    ann_nastring = settings["annotationNaString"]
-    ann_out = settings["annotationOutput"]
+    # annotate with snpEff
     try:
-        ann_script = settings["annotationScript"]
+        ann_db_dir = get_file_locations()[species]["annotation_db_dir"]
+        ann_db = get_file_locations()[species]["annotation_db"]
+        annotate = True
     except KeyError:
-        ann_script = "table_annovar.pl"
-    ann_command = [ann_script,
-                   norm_vcf_file,
-                   ann_db_dir,
-                   "-buildver", ann_build,
-                   "-vcfinput",
-                   "-protocol",  ann_protocol,
-                   "-operation", ann_operation,
-                   "-nastring", ann_nastring,
-                   "-out", ann_out]
-    dump = subprocess.check_call(ann_command, cwd=wdir)
+        annotate = False
+    if annotate:
+        ann = subprocess.Popen(["java", "-Xmx10g", "-jar",
+                                os.path.join(ann_db_dir, "snpEff.jar"),
+                                ann_db, norm_vcf_file], stdout=subprocess.PIPE)
+        annotated_vcf_file = "norm.ann.vcf"
+        with open(os.path.join(wdir, annotated_vcf_file), "wb") as outfile:
+            outfile.write(ann.communicate()[0])
+
     normalized_variation_keys = []
     with open(os.path.join(wdir, norm_vcf_file)) as infile:
         line_num = 0
@@ -5416,22 +5411,65 @@ def update_variation(settings):
                 var_key_to_uniq[var_key] = normalized_key
                 normalized_variation_keys.append(normalized_key)
                 line_num += 1
-    #
-    annotation_table_file = ann_out + "." + ann_build + "_multianno.txt"
-    with open(os.path.join(wdir, annotation_table_file)) as infile:
-        line_num = -1
-        for line in infile:
-            newline = line.strip().split("\t")
-            if line_num == -1:
-                line_num += 1
-                colnames = newline
-            else:
-                normalized_key = normalized_variation_keys[line_num]
-                if normalized_key not in variation:
-                    variation[normalized_key] = {
-                        colnames[i]: newline[i] for i in range(len(colnames))
-                    }
-                line_num += 1
+    if annotate:
+        with open(os.path.join(wdir, annotated_vcf_file)) as infile:
+            line_num = 0
+            for line in infile:
+                if not line.startswith("#"):
+                    newline = line.strip().split("\t")
+                    normalized_key = normalized_variation_keys[line_num]
+                    if normalized_key not in variation:
+                        i_field = newline[7]
+                        info_fields = i_field.split(";")
+                        for field in info_fields:
+                            fo = field.split("=")
+                            if fo[0] == "ANN":
+                                first_ann = fo[1].split(",")[0]
+                                first_annotation = first_ann.split("|")
+                                exonic_func = first_annotation[1]
+                                try:
+                                    aa_change = first_annotation[10][2:]
+                                except IndexError:
+                                    aa_change = first_annotation[10]
+                                try:
+                                    cds_change = first_annotation[9][2:]
+                                except IndexError:
+                                    cds_change = first_annotation[9]
+                                gene_id = first_annotation[3]
+                                cds_pos = first_annotation[12]
+                                try:
+                                    cds_pos = cds_pos.split("/")[0]
+                                except IndexError:
+                                    pass
+                                protein_pos = first_annotation[13]
+                                try:
+                                    protein_pos = protein_pos.split("/")[0]
+                                except IndexError:
+                                    pass
+                                variation[normalized_key] = {
+                                     "ExonicFunc": exonic_func,
+                                     "AA Change": aa_change,
+                                     "AA Change Position": protein_pos,
+                                     "GeneID": gene_id,
+                                     "CDS Change": cds_change,
+                                     "CDS Position": cds_pos}
+                    line_num += 1
+    else:
+        with open(os.path.join(wdir, norm_vcf_file)) as infile:
+            line_num = 0
+            for line in infile:
+                if not line.startswith("#"):
+                    newline = line.strip().split("\t")
+                    normalized_key = normalized_variation_keys[line_num]
+                    if normalized_key not in variation:
+                        variation[normalized_key] = {
+                            "ExonicFunc": ".",
+                            "AA Change": ".",
+                            "GeneID": ".",
+                            "CDS Position": ".",
+                            "AA Change Position": ".",
+                            "CDS Change": "."}
+                    line_num += 1
     if line_num != len(temp_variation_keys):
         print("There are more variation keys then annotated variants.")
     for m in haplotypes:
@@ -5448,20 +5486,6 @@ def update_variation(settings):
                             uniq_var_key = var_key_to_uniq[var_key]
                             d["annotation"] = variation[uniq_var_key]
                             d["vcf_normalized"] = uniq_var_key
-                            annotation_dict = d["annotation"]
-                            for ak in list(annotation_dict.keys()):
-                                if ak.startswith("AAChange."):
-                                    annotation_dict["AAChangeClean"] = (
-                                        annotation_dict.pop(ak)
-                                    )
-                                elif ak.startswith("ExonicFunc."):
-                                    annotation_dict["ExonicFunc"] = (
-                                        annotation_dict.pop(ak)
-                                    )
-                                elif ak.startswith("Gene."):
-                                    annotation_dict["GeneID"] = (
-                                        annotation_dict.pop(ak)
-                                    )
                     haplotypes[m][h]["left_normalized"] = True
     with open(unique_haplotype_file, "w") as outfile:
         json.dump(haplotypes, outfile)
@@ -5919,10 +5943,6 @@ def process_results(wdir,
     # keep haplotypes that are the same as reference genome
     # in the reference list
     reference_list = []
-    # annotation ID Key specifies if there is and ID field in the vcf
-    # which has a database ID of the variation at hand. For example,
-    # rsid for variation already defined in dbSNP.
-    annotation_id_key = settings["annotationIdKey"]
     unmapped = 0
     for m in haplotypes:
         g = m.split("_")[0]
@@ -5970,11 +5990,6 @@ def process_results(wdir,
                     # where the real change is
                     if len(raw_var[4]) != len(raw_var[3]):
                         original_pos += 1
-                    # get the annotation id if any, such as rsID
-                    try:
-                        annotation_id = d["annotation"][annotation_id_key]
-                    except KeyError:
-                        annotation_id = "."
                     # get the location of variation relative
                     # to haplotype sequence
                     hap_index = d["hap_index"]
@@ -5983,7 +5998,7 @@ def process_results(wdir,
                     temp_list = [normalized_key,
                                  var[0],
                                  int(var[1]),
-                                 annotation_id,
+                                 var[2],
                                  var[3],
                                  var[4],
                                  g, m, c, hid,
@@ -6194,13 +6209,7 @@ def process_results(wdir,
                                 & (hap_counts["Haplotype Barcodes"]
                                    >= haplotype_min_barcode_filter)]
     variation_df = variation_df.merge(hap_counts, how="inner")
-    # Rename or remove some columns for downstream analysis
-    variation_df["AA Change"] = variation_df["AAChangeClean"].apply(
-        split_aa
-    )
-    variation_df["AA Change Position"] = variation_df["AAChangeClean"].apply(
-        split_aa_pos
-    )
+    # Remove some columns for downstream analysis
     try:
         variation_df.drop(["Chr", "Ref", "Alt"], axis=1, inplace=True)
     except KeyError:
@@ -6706,17 +6715,7 @@ def process_results(wdir,
             # pos is something like Arg59Glu for mutations causing AA changes
             # or "." for intronic or intergenic changes.
             if pos != ".":
-                positions = []
-                num_found = False
-                for dig in pos:
-                    try:
-                        int(dig)
-                        positions.append(dig)
-                        num_found = True
-                    except ValueError:
-                        if num_found:
-                            break
-                pos = int("".join(positions))
+                pos = int(pos)
             col_list.append(c[:7] + (pos,) + c[7:])
         column_names = variant_table.columns.names
         new_cols = pd.MultiIndex.from_tuples(
@@ -6744,7 +6743,7 @@ def process_results(wdir,
         # amino acids and get to all reference amino acid calls from there
         nonsyn = list(
             set(variant_counts["ExonicFunc"]).difference(
-                [".", "synonymous SNV", "Temp"]
+                [".", "synonymous_variant", "Temp"]
             )
         )
         idx = pd.IndexSlice
@@ -8972,24 +8971,6 @@ def plot_coverage(barcode_counts,
     return
 
 
-def split_aa(aa):
-    try:
-        return aa.split(";")[0].split(":")[4][2:]
-    except IndexError:
-        return "."
-    except AttributeError:
-        return np.nan
-
-
-def split_aa_pos(aa):
-    try:
-        return aa.split(";")[0].split(":")[4][2:-1]
-    except IndexError:
-        return "."
-    except AttributeError:
-        return np.nan
-
-
 def get_mutation_counts(col):
     return col.apply(lambda gen: int(gen.split(":")[1]))
 
@@ -9022,7 +9003,7 @@ def add_known(group, used_targets):
 
 def find_ref_total(group):
     nr = group.loc[~group["ExonicFunc"].isin(
-        ["synonymous SNV", "."]), "Barcode Count"].sum()
+        ["synonymous_variant", "."]), "Barcode Count"].sum()
     cov = group["POS Coverage"].max()
     return cov - nr
 
@@ -9429,13 +9410,12 @@ def merge_snps(settings):
                     for i in range(len(diffs)):
                         d = diffs[i]
                         # get protein change information for the SNP
-                        ano = d["annotation"]["AAChangeClean"]
+                        aa = d["annotation"]["AA Change"]
                         # this would look like so
-                        # 'mal_mito_3:mal_mito_3:exon1:c.G673A:p.V225I'
+                        # 'V225I'
                         try:
-                            aa = ano.split(":")
                             # get aa change position, e.g. 225 for V225I
-                            aa_pos = int(aa[-1].split(".")[-1][1:-1])
+                            aa_pos = int(aa[1:-1])
                             # this will generate an IndexError or
                             # ValueError when the change is not a SNP
                             # that is a single aa change (such as indels,
@@ -9457,10 +9437,7 @@ def merge_snps(settings):
                                  c not in multi_indels):
                             # break out of loop if indels found
                             mindel = False
-                            # merge multiple snps affecting the same aa
-                            merge_dict = {}
                             indexes = aa_changes[c]
-                            merge = merge_dict[c] = {}
                             # keep positions relative to cDNA in a list
                             c_positions = []
                             # keep positions relative to haplotype in a list
@@ -9477,13 +9454,13 @@ def merge_snps(settings):
                                 d = diffs[i]
                                 # for each diff get the annotation
                                 # e.g. 'HBB:HBB:exon1:c.G673A:p.V225I'
-                                ano = d["annotation"]["AAChangeClean"]
-                                aa = ano.split(":")[-1].split(".")[-1]
+                                ano = d["annotation"]
+                                aa = ano["AA Change"]
                                 changes_to_aa.append(aa)
                                 # get the aa of reference genome (V)
                                 aa_ref = aa[0]
                                 # get cdna change, e.g. G673A
-                                cdna = ano.split(":")[-2].split(".")[-1]
+                                cdna = ano["CDS Change"]
                                 changes_to_cdna.append(cdna)
                                 # get the mutant base (A)
                                 cdna_change = cdna[-1]
@@ -9558,29 +9535,23 @@ def merge_snps(settings):
                             # calculate merged codon's amino acid
                             merged_aa = translate(codon)
                             # recreate the annotation string for the merge
-                            aa_change_base = ano.split(":")[:-2]
-                            protein_change = "p." + aa_ref + str(c) + merged_aa
-                            coding_change = ("c." + g_codon + str(codon_pos)
-                                             + codon)
-                            aa_change_base.extend([coding_change,
-                                                   protein_change])
-                            AAChange = ":".join(aa_change_base)
+                            protein_change = aa_ref + str(c) + merged_aa
+                            coding_change = g_codon + str(codon_pos) + codon
                             # determine if the merged change is synonymous
                             if aa_ref == merged_aa:
-                                ExonicFunc = "synonymous SNV"
+                                ExonicFunc = "synonymous_variant"
                             else:
-                                ExonicFunc = "nonsynonymous SNV"
+                                ExonicFunc = "nonsynonymous_variant"
                             merged_dict = {'annotation': {
-                                'AAChangeClean': AAChange,
+                                'AA Change': protein_change,
+                                "AA Change Position": str(c),
+                                "CDS Change": coding_change,
+                                "CDS Change  Position": str(codon_pos),
                                 'Alt': Alt,
                                 'Chr': d["chrom"],
                                 'End': g_end,
                                 'ExonicFunc': ExonicFunc,
-                                'Func.refGene': 'exonic',
                                 'GeneID': d["annotation"]['GeneID'],
-                                'GeneDetail.refGene': d["annotation"][
-                                    'GeneDetail.refGene'],
-                                'Otherinfo': d["annotation"]["Otherinfo"],
                                 'Ref': Ref,
                                 'Start': g_start},
                                            'begin': g_start,
