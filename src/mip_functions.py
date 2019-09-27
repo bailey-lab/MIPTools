@@ -5387,8 +5387,8 @@ def update_variation(settings):
                            cwd=wdir)
     # annotate with snpEff
     try:
-        ann_db_dir = get_file_locations()[species]["annotation_db_dir"]
-        ann_db = get_file_locations()[species]["annotation_db"]
+        ann_db_dir = get_file_locations()[species]["snpeff_dir"]
+        ann_db = get_file_locations()[species]["snpeff_db"]
         annotate = True
     except KeyError:
         annotate = False
@@ -5418,6 +5418,11 @@ def update_variation(settings):
                 if not line.startswith("#"):
                     newline = line.strip().split("\t")
                     normalized_key = normalized_variation_keys[line_num]
+                    chrom = newline[0]
+                    var_start = int(newline[1])
+                    gen_ref = newline[3]
+                    var_alt = newline[4]
+                    var_end = var_start + len(gen_ref) - 1
                     if normalized_key not in variation:
                         i_field = newline[7]
                         info_fields = i_field.split(";")
@@ -5427,32 +5432,72 @@ def update_variation(settings):
                                 first_ann = fo[1].split(",")[0]
                                 first_annotation = first_ann.split("|")
                                 exonic_func = first_annotation[1]
-                                try:
-                                    aa_change = first_annotation[10][2:]
-                                except IndexError:
-                                    aa_change = first_annotation[10]
-                                try:
-                                    cds_change = first_annotation[9][2:]
-                                except IndexError:
-                                    cds_change = first_annotation[9]
+                                protein_pos = first_annotation[13]
                                 gene_id = first_annotation[3]
                                 cds_pos = first_annotation[12]
-                                try:
-                                    cds_pos = cds_pos.split("/")[0]
-                                except IndexError:
-                                    pass
-                                protein_pos = first_annotation[13]
-                                try:
+                                cds_change = first_annotation[9]
+                                aa_change = first_annotation[10]
+                                snv = "."
+                                if protein_pos != "":
+                                    # if this is a protein changing variant
+                                    # it should have a position field
+                                    # like 235/1020
                                     protein_pos = protein_pos.split("/")[0]
-                                except IndexError:
-                                    pass
+                                    # and aa_change field would be like
+                                    # p.Leu235Ile for SNV or p.Leu235del
+                                    # or a more complex annotation starting
+                                    # with p.Leu235. Remove p. from that.
+                                    aa_change = aa_change[2:]
+                                    # split using the position string to get
+                                    # ["Leu", "Ile"] for SNV
+                                    aa_split = aa_change.split(protein_pos)
+                                    # cds position is similar to aa position
+                                    # we want to convert from c.2258T>A
+                                    # to 2258T>A
+                                    cds_pos = cds_pos.split("/")[0]
+                                    cds_change = cds_change[2:]
+                                    try:
+                                        # Leu and Ile would convert to single
+                                        # letter annotation whereas others
+                                        # like del, ins, frameshift etc. would
+                                        # raise KeyError
+                                        three_letter_1 = aa_split[0]
+                                        one_letter_1 = aa_converter(
+                                            three_letter_1)
+                                        three_letter_2 = aa_split[1]
+                                        one_letter_2 = aa_converter(
+                                            three_letter_2)
+                                        # change the aa change to single letter
+                                        # notation for SNVs for backward
+                                        # compatibility
+                                        aa_change = (one_letter_1 + protein_pos
+                                                     + one_letter_2)
+                                        snv = "SNV"
+                                        # convert the cds change to  old style
+                                        # we want to convert from 2258T>A
+                                        # to T2258A
+                                        cds_change = cds_change.split(
+                                            cds_pos)[-1].split(">")
+                                        cds_change = (cds_change[0]
+                                                      + cds_pos
+                                                      + cds_change[1])
+                                    except KeyError:
+                                        # if not a SNV, don't change the
+                                        # aa and cds notation
+                                        pass
                                 variation[normalized_key] = {
+                                     "Chr": chrom,
+                                     "Start": var_start,
+                                     "End": var_end,
+                                     "Ref": gen_ref,
+                                     "Alt": var_alt,
                                      "ExonicFunc": exonic_func,
                                      "AA Change": aa_change,
                                      "AA Change Position": protein_pos,
                                      "GeneID": gene_id,
                                      "CDS Change": cds_change,
-                                     "CDS Position": cds_pos}
+                                     "CDS Position": cds_pos,
+                                     "SNV": snv}
                     line_num += 1
     else:
         with open(os.path.join(wdir, norm_vcf_file)) as infile:
@@ -5461,14 +5506,25 @@ def update_variation(settings):
                 if not line.startswith("#"):
                     newline = line.strip().split("\t")
                     normalized_key = normalized_variation_keys[line_num]
+                    chrom = newline[0]
+                    var_start = int(newline[1])
+                    gen_ref = newline[3]
+                    var_alt = newline[4]
+                    var_end = var_start + len(gen_ref) - 1
                     if normalized_key not in variation:
                         variation[normalized_key] = {
+                            "Chr": chrom,
+                            "Start": var_start,
+                            "End": var_end,
+                            "Ref": gen_ref,
+                            "Alt": var_alt,
                             "ExonicFunc": ".",
                             "AA Change": ".",
                             "GeneID": ".",
                             "CDS Position": ".",
                             "AA Change Position": ".",
-                            "CDS Change": "."}
+                            "CDS Change": ".",
+                            "SNV": "."}
                     line_num += 1
     if line_num != len(temp_variation_keys):
         print("There are more variation keys then annotated variants.")
@@ -6237,6 +6293,11 @@ def process_results(wdir,
                      "targets": "right",
                      "data": "left"}
         targets["Targeted"] = "Yes"
+        try:
+            targets["AA Change Position"] = targets[
+                "AA Change Position"].astype(str)
+        except KeyError:
+            pass
         variation_df = variation_df.merge(
             targets,
             how=join_dict[target_join]
@@ -6711,11 +6772,13 @@ def process_results(wdir,
         # we'll just try to get the first number from all possible strings.
         col_list = []
         for c in variant_table.columns:
-            pos = c[7].split("-")[-1].split("_")[0]
+            pos = c[7]
             # pos is something like Arg59Glu for mutations causing AA changes
             # or "." for intronic or intergenic changes.
-            if pos != ".":
+            try:
                 pos = int(pos)
+            except ValueError:
+                pass
             col_list.append(c[:7] + (pos,) + c[7:])
         column_names = variant_table.columns.names
         new_cols = pd.MultiIndex.from_tuples(
@@ -8546,7 +8609,6 @@ def generate_mock_fastqs(settings_file):
                             hid = fd["haplotype_ID"]
                             qual = fd["sequence_quality"]
                             seq = haplotypes[m][hid]["sequence"]
-                            counter = 0
                             for i in range(bc):
                                 read_name = "_".join(
                                     ["@", sample, m, c, str(i)])
@@ -9411,23 +9473,15 @@ def merge_snps(settings):
                         d = diffs[i]
                         # get protein change information for the SNP
                         aa = d["annotation"]["AA Change"]
-                        # this would look like so
-                        # 'V225I'
                         try:
-                            # get aa change position, e.g. 225 for V225I
-                            aa_pos = int(aa[1:-1])
-                            # this will generate an IndexError or
-                            # ValueError when the change is not a SNP
-                            # that is a single aa change (such as indels,
-                            # or noncoding changes). Those should not be
-                            # merged.
+                            aa_pos = int(d["annotation"]["AA Change Position"])
                             try:
                                 # add the aa change position to the changes
                                 # dict.
                                 aa_changes[aa_pos].append(i)
                             except KeyError:
                                 aa_changes[aa_pos] = [i]
-                        except (IndexError, ValueError):
+                        except ValueError:
                             continue
                     # after going through all diffs, look for mutliple diffs
                     # affecting single aminoacid
@@ -9455,6 +9509,10 @@ def merge_snps(settings):
                                 # for each diff get the annotation
                                 # e.g. 'HBB:HBB:exon1:c.G673A:p.V225I'
                                 ano = d["annotation"]
+                                if ano["SNV"] != "SNV":
+                                    mindel = True
+                                    multi_indels.append(c)
+                                    break
                                 aa = ano["AA Change"]
                                 changes_to_aa.append(aa)
                                 # get the aa of reference genome (V)
@@ -9469,13 +9527,7 @@ def merge_snps(settings):
                                 # to determine the MIP/haplotype's orientation
                                 # relative to the cDNA
                                 ori = cdna_change == d["hap_base"]
-                                try:
-                                    cdna_pos = int(cdna[1:-1])
-                                    # raises value error if not a SNP
-                                except ValueError:
-                                    multi_indels.append(c)
-                                    mindel = True
-                                    break
+                                cdna_pos = int(ano["CDS Position"])
                                 # get genomic position of the change
                                 diff_start = int(d["annotation"]["Start"])
                                 # get the difference between the genomic and
@@ -9546,14 +9598,15 @@ def merge_snps(settings):
                                 'AA Change': protein_change,
                                 "AA Change Position": str(c),
                                 "CDS Change": coding_change,
-                                "CDS Change  Position": str(codon_pos),
+                                "CDS Position": str(codon_pos),
                                 'Alt': Alt,
                                 'Chr': d["chrom"],
                                 'End': g_end,
                                 'ExonicFunc': ExonicFunc,
                                 'GeneID': d["annotation"]['GeneID'],
                                 'Ref': Ref,
-                                'Start': g_start},
+                                'Start': g_start,
+                                "SNV": "MNV"},
                                            'begin': g_start,
                                            'chrom': d["chrom"],
                                            'end': g_end,
@@ -10181,7 +10234,7 @@ def translate(sequence, three_letter=False):
 def aa_converter(aa_name):
     """
     Output 3 letter and 1 letter amino acid codes for a given
-    list of 3 letter or 1 letter amino acid code list.
+    3 letter or 1 letter amino acid code.
     """
     gencode3 = {'A': 'Ala', 'C': 'Cys', 'D': 'Asp', 'E': 'Glu', 'F': 'Phe',
                 'G': 'Gly', 'H': 'His', 'I': 'Ile', 'K': 'Lys', 'L': 'Leu',
@@ -10189,10 +10242,7 @@ def aa_converter(aa_name):
                 'S': 'Ser', 'T': 'Thr', 'V': 'Val', 'W': 'Trp', 'Y': 'Tyr'}
     for a in list(gencode3.keys()):
         gencode3[gencode3[a]] = a
-    try:
-        return gencode3[aa_name.capitalize()]
-    except KeyError:
-        return "%s is not a valid amino acid name" % a
+    return gencode3[aa_name.capitalize()]
 
 
 def ntthal(s1, s2, Na=25, Mg=10, conc=0.4, print_command=False,
