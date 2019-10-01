@@ -308,7 +308,7 @@ From: amd64/ubuntu:18.04
     # create a fastq directory for saving fastqs
     mkdir -p /opt/analysis/fastq
     # increase limit of open number of files.
-    ulimit -Sn unlimited
+    ulimit -Sn $(ulimit -Hn)
     nohup bcl2fastq -o /opt/analysis/fastq \
         --sample-sheet /opt/analysis/SampleSheet.csv \
         --no-lane-splitting
