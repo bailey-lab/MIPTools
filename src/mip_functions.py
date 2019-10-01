@@ -2361,13 +2361,16 @@ def bwa_multi(fastq_files, output_type, fastq_dir, bam_dir, options, species,
         print(("Output type must be bam or sam, {} was given").format(
             output_type))
         return
+    if not os.path.exists(bam_dir):
+        os.makedirs(bam_dir)
     if parallel_processes == 1:
         for f in fastq_files:
             # get base file name
             base_name = f.split(".")[0]
             bam_name = base_name + extension
             options.extend("-t" + str(processor_number))
-            bwa(f, bam_name, "bam", fastq_dir, bam_dir, options, species)
+            bwa(f, bam_name, output_type, fastq_dir, bam_dir, options, species,
+                base_name)
     else:
         processor_per_process = processor_number // parallel_processes
         p = NoDaemonProcessPool(parallel_processes)
@@ -9708,6 +9711,10 @@ def vcf_to_df(vcf_file):
     info_cols = []
     with op as infile:
         for line in infile:
+            try:
+                line = line.decode("utf-8")
+            except AttributeError:
+                pass
             if line.startswith("#"):
                 # extract INFO field headers
                 if line.startswith("##INFO="):
