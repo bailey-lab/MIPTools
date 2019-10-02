@@ -7635,13 +7635,20 @@ def merge_contigs(settings, contig_info_dict, results):
                          filt_vcf_file, "-o", norm_vcf_file])
 
         # annotate with snpEff
-        ann_db = settings["snpEffDb"]
-        ann = subprocess.Popen(["java", "-Xmx10g", "-jar",
-                                "/opt/species_resources/snpEff/snpEff.jar",
-                                ann_db, norm_vcf_file], stdout=subprocess.PIPE)
-        annotated_vcf_file = os.path.join(wdir, chrom + ".norm.ann.vcf")
-        with open(annotated_vcf_file, "wb") as outfile:
-            outfile.write(ann.communicate()[0])
+        try:
+            ann_db_dir = get_file_locations()[species]["snpeff_dir"]
+            ann_db = get_file_locations()[species]["snpeff_db"]
+            annotate = True
+        except KeyError:
+            annotate = False
+        if annotate:
+            ann = subprocess.Popen(["java", "-Xmx10g", "-jar",
+                                    os.path.join(ann_db_dir, "snpEff.jar"),
+                                    ann_db, norm_vcf_file],
+                                   stdout=subprocess.PIPE)
+            annotated_vcf_file = os.path.join(wdir, chrom + ".norm.ann.vcf")
+            with open(annotated_vcf_file, "wb") as outfile:
+                outfile.write(ann.communicate()[0])
 
 
 def process_contig(contig_dict):
