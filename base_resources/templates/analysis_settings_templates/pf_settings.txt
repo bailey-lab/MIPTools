@@ -10,23 +10,7 @@ species	pf
 callInfoDictionary	/opt/project_resources/mip_ids/call_info.json
 mipSetsDictionary	/opt/project_resources/mip_ids/probe_sets.json
 ### Multiple sequence aligner to be used for variant calling.
-multipleSequenceAligner	decipher
-##############################################################################
-##############################################################################
-### Annotation settings below are species specific, so do dot change
-### unless working with something other than plasmodium falciparum
-##############################################################################
-annotationScript	table_annovar_pf.pl
-annotationBuildVersion	3d7
-annotationProtocol	refGene
-annotationOperation	g
-annotationNaString	.
-annotationOutput	myanno
-annotationKeys	AAChange.refGene;ExonicFunc.refGene;Gene.refGene
-annotationIdKey	na
-##############################################################################
-snpEffDb	pf
-##############################################################################
+multipleSequenceAligner	muscle
 ##############  SETTINGS THAT CAN CHANGE PER RUN #############################
 ##############################################################################
 ##############################################################################

@@ -4935,7 +4935,7 @@ def parse_aligned_haplotypes(settings):
                                         ("For the haplotype {} there are "
                                          "consecutive insertions and "
                                          "deletions. This haplotype will not"
-                                         "have variant calls.").format(h_name)
+                                         " have variant calls.").format(h_name)
                                     )
                                     problem_al = True
                                 else:
@@ -7748,9 +7748,10 @@ def process_contig(contig_dict):
         if contig_dict["msa_to_vcf"] == "miptools":
             msa_to_vcf(alignment_file, raw_vcf_file, ref="ref",
                        snp_only=contig_dict["snp_only"])
-        subprocess.call(
-            ["java", "-jar", "/opt/programs/jvarkit/dist/msa2vcf.jar",
-             "-m", "-c", "ref", "-o", raw_vcf_file, alignment_file])
+        else:
+            subprocess.call(
+                ["java", "-jar", "/opt/programs/jvarkit/dist/msa2vcf.jar",
+                 "-m", "-c", "ref", "-o", raw_vcf_file, alignment_file])
         contig_dict["raw_vcf_file"] = raw_vcf_file
         # find  comment line number
         with open(raw_vcf_file) as infile:
@@ -7787,10 +7788,12 @@ def process_contig(contig_dict):
                          "haplotype_start_index"]])
         vcf_merge["END"] = vcf_merge["REF"].apply(len) + vcf_merge["POS"] - 1
         vcf_merge["covered"] = (
-            (vcf_merge["capture_start"] <= vcf_merge["END"])
-            & (vcf_merge["capture_end"] >= vcf_merge["POS"]))
+            (vcf_merge["capture_start"] - 30 <= vcf_merge["END"])
+            & (vcf_merge["capture_end"] + 30 >= vcf_merge["POS"]))
         vcf_merge.loc[~vcf_merge["covered"], "genotype"] = np.nan
         vcf_clean = vcf_merge.loc[~vcf_merge["genotype"].isnull()]
+        if vcf_clean.empty:
+            return
         contig_seq = pd.DataFrame(contig_haps.groupby("haplotype_ID")[
             "forward_sequence"].first()).to_dict(orient="index")
 
@@ -7870,15 +7873,25 @@ def process_contig(contig_dict):
             total_depth = int(round(np.sum(allele_depths), 0))
             wsaf = np.array(allele_depths)/total_depth
             if total_depth < min_depth:
-                return "."
+                return "./."
             genotypes = []
             for i in range(allele_count):
                 if (allele_depths[i] >= min_count) and (wsaf[i] >= min_wsaf):
                     genotypes.append(i)
             if len(genotypes) == 0:
-                return "."
+                return ".:.:.:.:.:.:."
             else:
-                gt = "/".join(map(str, sorted(genotypes)))
+                alleles = list(range(allele_count))
+                geno = sorted(zip(alleles, allele_depths),
+                              key=itemgetter(1, 0), reverse=True)[:2]
+                if len(genotypes) == 1:
+                    gt = str(geno[0][0])
+                    gt = gt + "/" + gt
+                else:
+                    gt1 = geno[0][0]
+                    gt2 = geno[1][0]
+                    gt = sorted(map(str, [gt1, gt2]))
+                    gt = "/".join(gt)
             allele_depths = [str(int(a)) for a in allele_depths]
             variant_quals = []
             for i in range(allele_count):
@@ -7899,7 +7912,8 @@ def process_contig(contig_dict):
                              ",".join(variant_quals),
                              ",".join(map(str, mip_count)),
                              ",".join(map(str, hap_count)),
-                             ",".join(map(str, wsaf.round(3)))])
+                             ",".join(map(str, wsaf.round(3))),
+                             ])
 
         collapsed_vcf = pd.DataFrame(combined_vcf.groupby(
             ["CHROM", "POS", "REF", "ALT", "Sample ID"]).apply(collapse_vcf)
@@ -7910,14 +7924,17 @@ def process_contig(contig_dict):
         vcf_table.fillna(".", inplace=True)
 
         def get_var_summary(row):
+            nastring = ".:.:.:.:.:.:."
             val = row.values
             ad = []
             quals = []
             wsafs = []
             mip_counts = []
             hap_counts = []
+            genotypes = []
             for v in val:
-                if v != ".":
+                if v != nastring:
+                    genotypes.append(v.split(":")[0])
                     ad.append(list(map(int, v.split(":")[1].split(","))))
                     quals.append(v.split(":")[3].split(","))
                     mip_counts.append(list(map(
@@ -7927,6 +7944,21 @@ def process_contig(contig_dict):
                     wsafs.append(list(map(float, v.split(":")[6].split(","))))
             if len(ad) == 0:
                 return "."
+            geno_dict = {}
+            an_count = 0
+            for geno in genotypes:
+                try:
+                    geno_list = list(map(int, geno.split("/")))
+                    for gt in geno_list:
+                        try:
+                            geno_dict[gt] += 1
+                        except KeyError:
+                            geno_dict[gt] = 1
+                        an_count += 1
+                except ValueError:
+                    continue
+
+
             quality = []
             for q in quals:
                 nq = []
@@ -7964,11 +7996,13 @@ def process_contig(contig_dict):
             info_cols = [
                 "DP=" + str(np.sum(ad)),
                 "AD=" + ",".join(map(str, np.sum(ad, axis=0))),
-                "AC=" + ",".join(map(str, (np.array(ad) >= min_count).sum(
+                "AN=" + an_count,
+                "AC=" + ",".join()
+                "SC=" + ",".join(map(str, (np.array(ad) >= min_count).sum(
                     axis=0))),
                 "AF=" + ",".join(map(str, ((np.array(ad) >= min_count).sum(
                     axis=0)/len(ad)).round(5))),
-                "AN=" + str(len(ad)),
+                "SN=" + str(len(ad)),
                 "QS=" + ",".join(quality),
                 "WSAF=" + ",".join(wsafs),
                 "MC=" + ",".join(mip_counts),
