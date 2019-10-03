@@ -7626,9 +7626,9 @@ def merge_contigs(settings, contig_info_dict, results):
 
         filter_expressions = [
             "((INFO/AD[1] >= " + minVariantBarcodes + ")",
-            "(INFO/AC[1] >= " + minVariantSamples + ")",
-            "(INFO/AF[1] >= " + minVariantSampleFraction + ")",
-            "(INFO/AN >= " + minVariantSampleTotal + ")",
+            "(INFO/SC[1] >= " + minVariantSamples + ")",
+            "(INFO/SF[1] >= " + minVariantSampleFraction + ")",
+            "(INFO/NS >= " + minVariantSampleTotal + ")",
             "(INFO/QS[1] >= " + minVariantMeanQuality + ")",
             "(INFO/WSAF[1] >= " + minVariantMeanWsaf + ")",
             "(INFO/MCF[1] >= " + minMipCountFraction + ")"]
@@ -7645,7 +7645,7 @@ def merge_contigs(settings, contig_info_dict, results):
 
         norm_vcf_file = os.path.join(wdir, chrom + ".norm.vcf")
         subprocess.call(["bcftools", "norm", "-m-both", "-f", genome_fasta,
-                         filt_vcf_file, "-o", norm_vcf_file])
+                         "-cs", merged_vcf_file, "-o", norm_vcf_file])
 
         # annotate with snpEff
         try:
