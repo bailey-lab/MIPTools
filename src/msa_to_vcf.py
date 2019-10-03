@@ -41,8 +41,8 @@ def msa_to_vcf(alignment_file, vcf_file, ref=None, snp_only=False):
                 snp_index.update(s)
 
             # go through each indel and create a dataframe for each where the
-            # each haplotype has the allele for the indel at the beginning index
-            # position
+            # each haplotype has the allele for the indel at the beginning
+            # index position
             indel_list = []
             for ind in indel_index:
                 indel_list.append(

@@ -7661,6 +7661,7 @@ def process_contig(contig_dict):
             chrom, contig_start, contig_end), species)
         contig_haplotypes_file = contig_dict["contig_haplotypes_file"]
         contig_haps = pd.read_csv(contig_haplotypes_file)
+        nastring = ".:.:.:.:.:.:."
         # Create a contig sequence for each haplotype.
         # This will be done by gettig the forward strand sequence for each
         # haplotype and padding it on both flanks with the reference sequence
@@ -7873,13 +7874,13 @@ def process_contig(contig_dict):
             total_depth = int(round(np.sum(allele_depths), 0))
             wsaf = np.array(allele_depths)/total_depth
             if total_depth < min_depth:
-                return "./."
+                return nastring
             genotypes = []
             for i in range(allele_count):
                 if (allele_depths[i] >= min_count) and (wsaf[i] >= min_wsaf):
                     genotypes.append(i)
             if len(genotypes) == 0:
-                return ".:.:.:.:.:.:."
+                return nastring
             else:
                 alleles = list(range(allele_count))
                 geno = sorted(zip(alleles, allele_depths),
@@ -7921,10 +7922,9 @@ def process_contig(contig_dict):
         vcf_table = collapsed_vcf.pivot_table(
             index=["CHROM", "POS", "REF", "ALT"],
             columns="Sample ID", aggfunc="first")
-        vcf_table.fillna(".", inplace=True)
+        vcf_table.fillna(nastring, inplace=True)
 
         def get_var_summary(row):
-            nastring = ".:.:.:.:.:.:."
             val = row.values
             ad = []
             quals = []
@@ -7957,7 +7957,13 @@ def process_contig(contig_dict):
                         an_count += 1
                 except ValueError:
                     continue
-
+            number_of_alleles = len(ad[0])
+            ac_list = []
+            for i in range(number_of_alleles):
+                try:
+                    ac_list.append(geno_dict[i])
+                except KeyError:
+                    ac_list.append(0)
 
             quality = []
             for q in quals:
@@ -7996,13 +8002,18 @@ def process_contig(contig_dict):
             info_cols = [
                 "DP=" + str(np.sum(ad)),
                 "AD=" + ",".join(map(str, np.sum(ad, axis=0))),
-                "AN=" + an_count,
-                "AC=" + ",".join()
+                "AC=" + ",".join(map(str, ac_list[1:])),
+                "AN=" + str(an_count),
+                "AF=" + ",".join(map(str, (
+                    np.array(ac_list)/an_count)[1:].round(4))),
+                "RAF=" + ",".join(map(str, (
+                    np.array(ac_list)/an_count).round(4))),
+                "RAC=" + ",".join(map(str, ac_list)),
+                "NS=" + str(len(ad)),
                 "SC=" + ",".join(map(str, (np.array(ad) >= min_count).sum(
                     axis=0))),
-                "AF=" + ",".join(map(str, ((np.array(ad) >= min_count).sum(
+                "SF=" + ",".join(map(str, ((np.array(ad) >= min_count).sum(
                     axis=0)/len(ad)).round(5))),
-                "SN=" + str(len(ad)),
                 "QS=" + ",".join(quality),
                 "WSAF=" + ",".join(wsafs),
                 "MC=" + ",".join(mip_counts),
@@ -8033,7 +8044,7 @@ def process_contig(contig_dict):
         samples = vcf_table.columns.droplevel(0).tolist()
         vcf_table.columns = samples
         samples = contig_dict["sample_ids"]
-        vcf_table = vcf_table.loc[:, samples].fillna(".")
+        vcf_table = vcf_table.loc[:, samples].fillna(nastring)
         vcf_table = vcf_table.merge(var_summary, left_index=True,
                                     right_index=True)
         vcf_table = vcf_table.reset_index()[
@@ -8047,28 +8058,38 @@ def process_contig(contig_dict):
             '"Total coverage for locus, across samples.">',
             "##INFO=<ID=AD,Number=R,Type=Integer,Description="
             '"Total coverage per allele, across samples.">',
+            "##INFO=<ID=AC,Number=A,Type=Integer,Description="
+            '"Total number of alternate alleles in called genotypes.">',
+            "##INFO=<ID=AN,Number=1,Type=Integer,Description="
+            '"Total number of alleles in called genotypes.">',
+            "##INFO=<ID=AF,Number=A,Type=Float,Description="
+            '"Allele frequency (AC/AN) for alternate alleles.">',
+            "##INFO=<ID=RAF,Number=R,Type=Float,Description="
+            '"Allele frequency (AC/AN) for all alleles.">',
+            "##INFO=<ID=RAC,Number=R,Type=Integer,Description="
+            '"Total number of each allele in called genotypes.">',
+            "##INFO=<ID=NS,Number=1,Type=Integer,Description="
+            '"Number of samples with genotype calls.">',
+            "##INFO=<ID=SC,Number=R,Type=Integer,Description="
+            '"Number of samples carrying the allele.">',
+            "##INFO=<ID=SF,Number=R,Type=Float,Description="
+            '"Frequency of samples carrying the allele.">',
             "##INFO=<ID=QS,Number=R,Type=Float,Description="
             '"Average sequence quality per allele.">',
-            "##INFO=<ID=AN,Number=1,Type=Integer,Description="
-            '"Number of samples with genotype calls.">',
-            "##INFO=<ID=AC,Number=R,Type=Integer,Description="
-            '"Number of samples carrying the allele.">',
-            "##INFO=<ID=AF,Number=R,Type=Float,Description="
-            '"Frequency of samples carrying the allele.">',
             "##INFO=<ID=WSAF,Number=R,Type=Float,Description="
             '"Average nonzero WithinSampleAlleleFrequency.">',
             "##INFO=<ID=MC,Number=R,Type=Float,Description="
             '"Average number of MIPs supporting the allele (when called).">',
+            "##INFO=<ID=MCF,Number=R,Type=Float,Description="
+            '"MC expressed as the fraction of MAX MC.">',
             "##INFO=<ID=HC,Number=R,Type=Float,Description="
             '"Average number of haplotypes supporting the allele'
             ' (when called).">',
-            "##INFO=<ID=MCF,Number=R,Type=Float,Description="
-            '"MC expressed as the fraction of MAX MC.">',
             "##INFO=<ID=OT,Number=.,Type=String,Description="
             '"Variant position overlaps with a target.">',
             '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">',
             '##FORMAT=<ID=AD,Number=R,Type=Integer,Description='
-            '"Allelic depths for the ref and alt alleles in that order.">',
+            '"Number of observation for each allele.">',
             '##FORMAT=<ID=DP,Number=1,Type=Integer,Description='
             '"Total read depth (coverage) at this position">',
             '##FORMAT=<ID=QS,Number=R,Type=Integer,Description='
