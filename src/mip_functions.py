@@ -5566,8 +5566,7 @@ def make_snp_vcf(variant_file, haplotype_file, call_info_file,
                  min_cov, min_count, min_freq, vcf_file,
                  settings_file, header_count=11):
     """
-    Create a vcf file for SNV only. This will be integrated to process_results
-    in the future.
+    Create a vcf file for SNV only.
     """
     # Load variant count table
     variant_counts = pd.read_csv(variant_file,
@@ -5766,6 +5765,7 @@ def make_snp_vcf(variant_file, haplotype_file, call_info_file,
     def call_genotype(s, min_cov, min_count, min_freq):
         """Call genotypes from the variant strings that are in the form:
         ref_count,allele1_count,allele2_count,...:coverage."""
+        nastring = ".:.:."
         sp = s.split(":")
         cov = int(sp[-1])
         allele_counts = list(map(int, sp[0].split(",")))
@@ -5777,11 +5777,24 @@ def make_snp_vcf(variant_file, haplotype_file, call_info_file,
                 ac = allele_counts[i]
                 if ((ac >= min_count) & ((ac/cov) >= min_freq)):
                     genotypes.append(str(i))
+
         if len(genotypes) == 0:
-            genotypes = "."
+            return nastring
         else:
-            genotypes = "/".join(genotypes) + ":" + s
-        return genotypes
+            alleles = list(range(len(allele_counts)))
+            geno = sorted(zip(alleles, allele_counts),
+                          key=itemgetter(1, 0), reverse=True)[:2]
+            if len(genotypes) == 1:
+                gt = str(geno[0][0])
+                gt = gt + "/" + gt
+            else:
+                gt1 = geno[0][0]
+                gt2 = geno[1][0]
+                gt = sorted(map(str, [gt1, gt2]))
+                gt = "/".join(gt)
+
+            return gt + ":" + s
+
     # call genotypes
     vcf = collapsed_merge.applymap(lambda a: call_genotype(
         a, min_cov, min_count, min_freq)
