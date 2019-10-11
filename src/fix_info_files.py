@@ -29,7 +29,10 @@ def fix(call_file, mip_file, species, verbose=True):
                                 print(m, c, k)
                             pairs[c]["capture_end"] -= 1
                 chrom = pairs[c]["chrom"]
-                ck = pairs[c]["capture_key"]
+                try:
+                    ck = pairs[c]["capture_key"]
+                except KeyError:
+                    ck = "none"
                 capture_key = mip.create_region(
                     chrom, pairs[c]["capture_start"], pairs[c]["capture_end"])
                 if ck != capture_key:
@@ -67,7 +70,10 @@ def fix(call_file, mip_file, species, verbose=True):
                 "captured_targets"]
             for t in capture_info:
                 for ck in cap_keys:
-                    capture_info[t][ck] = int(capture_info[t][ck])
+                    try:
+                        capture_info[t][ck] = int(capture_info[t][ck])
+                    except KeyError:
+                        continue
                 for copyname in capture_info[t]["copies"]:
                     for ck in cap_copy_keys:
                         capture_info[t]["copies"][copyname][ck] = int(

@@ -60,7 +60,7 @@ parser.add_argument("-k", "--keep-files",
 parser.add_argument("-x", "--stitch-options",
                     help=("Probe set to be processed."),
                     required=True)
-parser.add_argument("--min-capture-length",
+parser.add_argument("-m", "--min-capture-length",
                     help=("Minimum capture length for stitching, "
                           "excluding probe arms."),
                     type=int)
@@ -85,7 +85,7 @@ if stitch_options == "none":
     stitch_options = []
 else:
     stitch_options = stitch_options.split(",")
-if min_capture_length is not None:
+if min_capture_length != "none":
     for o in stitch_options:
         if "minCaptureLength" in o:
             break

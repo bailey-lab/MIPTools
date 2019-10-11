@@ -211,9 +211,10 @@ From: amd64/ubuntu:18.04
     cluster_script="runMIPWranglerCurrent.sh"
     server_number=1
     cpu_count=1
+    min_capture_length="none"
     stitch_options="none"
     keep_files=""
-    while getopts p:l:e:s:w:n:c:x:k OPT; do
+    while getopts p:l:e:s:w:n:c:x:m:k OPT; do
         case "$OPT" in
             e)
               experiment_id="$OPTARG";;
@@ -234,17 +235,21 @@ From: amd64/ubuntu:18.04
             k)
               keep_files="-k";;
 
+            m)
+              min_capture_length="$OPTARG";;
+
             *)
               echo "Invalid option. Use 'wrangler \
               -e experiment_id -l sample_list.file -p  probe_sets\
               -s sample_sets -w cluster_script -n server_number \
-              -c  cpu_count -x additinal_stitch_options'  [-k]"
+              -c  cpu_count -x additional_stitch_options'  \
+              -m min_capture_length [-k]"
         esac
     done
     python /opt/src/generate_wrangler_scripts.py \
     -e $experiment_id -l /opt/analysis/$sample_list \
     -p $probe_sets -s $sample_sets -w $cluster_script -n $server_number \
-    -c $cpu_count -x $stitch_options $keep_files
+    -c $cpu_count -x $stitch_options -m $min_capture_length $keep_files
     script_name=$sample_sets"_"$(echo $probe_sets|tr "," "_")".sh"
     . /opt/analysis/$script_name
 

@@ -20,11 +20,14 @@ from scipy.stats import chi2_contingency, fisher_exact
 import pysam
 import mip_classes as mod
 import pandas as pd
+from pandas.errors import MergeError
 import gzip
 from primer3 import calcHeterodimerTm
 import traceback
 from msa_to_vcf import msa_to_vcf as msa_to_vcf
 import itertools
+import tblib.pickling_support
+import sys
 
 print("functions reloading")
 # backbone dictionary
@@ -76,6 +79,20 @@ class NoDaemonProcessPool(multiprocessing.pool.Pool):
     def __init__(self, *args, **kwargs):
         kwargs['context'] = NoDaemonContext()
         super(NoDaemonProcessPool, self).__init__(*args, **kwargs)
+
+
+# Exception wrapper for multiprocessing taken from
+# https://stackoverflow.com/questions/6126007/python-getting-a-traceback-from-a-multiprocessing-process/26096355#26096355
+class ExceptionWrapper(object):
+
+    def __init__(self, ee, exc):
+        self.ee = ee
+        self.exc = exc
+        __,  __, self.tb = sys.exc_info()
+
+    def re_raise(self):
+        print(self.exc)
+        raise self.ee.with_traceback(self.tb)
 
 
 ###############################################################
@@ -4603,16 +4620,6 @@ def get_haplotypes(settings):
     for m in list(haplotypes.keys()):
         for h in list(haplotypes[m].keys()):
             if not haplotypes[m][h]["mapped"]:
-                """
-                anoter solution to this should be found
-                if m.startswith("AMELX"):
-                    # AMELX also maps to Y chromosome, which is not off target
-                    # this is a quick fix for now but ideally Y chromosome
-                    # should be included in the design as a paralogous copy
-
-                    haplotypes[m][h]["mapped"] = True
-                else:
-                """
                 off_target_haplotypes[h] = haplotypes[m].pop(h)
         if len(haplotypes[m]) == 0:
             haplotypes.pop(m)
@@ -5488,6 +5495,10 @@ def update_variation(settings):
                                         # if not a SNV, don't change the
                                         # aa and cds notation
                                         pass
+                                # if not a protein coding change
+                                else:
+                                    protein_pos = aa_change = "."
+                                    cds_pos = cds_change = snv = "."
                                 variation[normalized_key] = {
                                      "Chr": chrom,
                                      "Start": var_start,
@@ -5890,6 +5901,9 @@ def make_chrom_vcf(wdir, header_count, min_cov=1, min_count=1, min_freq=0):
 
     call_info_file = "/opt/project_resources/mip_ids/call_info.json"
     chromosomes = set(haplotype_counts["CHROM"])
+    vcfdir = os.path.join(wdir, "vcfs")
+    if not os.path.exists(vcfdir):
+        os.makedirs(vcfdir)
     for chrom in sorted(chromosomes):
         haplotype_file = os.path.join(wdir, chrom + ".haps.json")
         variant_file = os.path.join(wdir, chrom + ".var.csv")
@@ -5897,7 +5911,7 @@ def make_chrom_vcf(wdir, header_count, min_cov=1, min_count=1, min_freq=0):
         haplotype_file = os.path.join(wdir, chrom + ".haps.json")
         vcf_chrom = chrom
         barcode_count_file = os.path.join(wdir, "barcode_counts.csv")
-        vcf_file = os.path.join(wdir, chrom + ".vcf")
+        vcf_file = os.path.join(vcfdir, chrom + ".vcf")
         settings_file = os.path.join(wdir, "settings.txt")
         try:
             make_snp_vcf(vcf_file=vcf_file,
@@ -6208,18 +6222,21 @@ def process_results(wdir,
         # get the average copy count for the gene the haplotype belongs to
         mca = multi_df.apply(lambda r: get_copy_average(r, ac), axis=1)
         multi_df.loc[mca.index, "Copy Average"] = mca
-        mca = multi_df.groupby(
-            ["Sample ID", "Gene"]
-        )["Copy Average"].transform(normalize_copies)
-        multi_df.loc[mca.index, "CA"] = mca
-        multi_df.loc[:, "Adjusted Barcode Count"] = (
-            multi_df.loc[:, "Barcode Count"]
-            * multi_df.loc[:, "CA"]
-        )
-        multi_df.loc[:, "Adjusted Read Count"] = (
-            multi_df.loc[:, "Read Count"]
-            * multi_df.loc[:, "CA"]
-        )
+        multi_df["copy_sum"] = multi_df.groupby(
+            ["Sample ID", "haplotype_ID"])["Copy Average"].transform("sum")
+        multi_df["copy_len"] = multi_df.groupby(
+            ["Sample ID", "haplotype_ID"])["Copy Average"].transform("size")
+        null_index = multi_df["copy_sum"] == 0
+        multi_df.loc[null_index, "Copy Average"] = (
+            average_copy_count / multi_df.loc[null_index, "copy_len"])
+        multi_df.loc[null_index, "copy_sum"] = average_copy_count
+        multi_df["Copy Average"].fillna(0, inplace=True)
+        multi_df["Adjusted Barcode Count"] = (multi_df["Barcode Count"]
+                                              * multi_df["Copy Average"]
+                                              / multi_df["copy_sum"])
+        multi_df["Adjusted Read Count"] = (multi_df["Read Count"]
+                                           * multi_df["Copy Average"]
+                                           / multi_df["copy_sum"])
     # Combine unique and multimapping data
     combined_df = pd.concat([unique_df, multi_df], ignore_index=True)
     combined_df.rename(
@@ -6314,10 +6331,17 @@ def process_results(wdir,
                 "AA Change Position"].astype(str)
         except KeyError:
             pass
-        variation_df = variation_df.merge(
-            targets,
-            how=join_dict[target_join]
-        )
+        try:
+            variation_df = variation_df.merge(
+                targets,
+                how=join_dict[target_join]
+            )
+        except MergeError:
+            targets["VKEY"] = targets["Vkey"]
+            variation_df = variation_df.merge(
+                targets,
+                how=join_dict[target_join]
+            )
         variation_df["Targeted"].fillna("No", inplace=True)
         # If a reference genome locus is a mutation of interest
         # such as dhps-437, this information can be supplied
@@ -7590,9 +7614,13 @@ def merge_contigs(settings, contig_info_dict, results):
     wdir = settings["workingDir"]
     species = settings["species"]
     genome_fasta = get_file_locations()[species]["fasta_genome"]
+    vcfdir = os.path.join(wdir, "msa_vcfs")
+    vcf_file_list = []
+    if not os.path.exists(vcfdir):
+        os.makedirs(vcfdir)
     for chrom in contig_info_dict:
         chrom_vcf_list = os.path.join(wdir, chrom + "_vcf_files.txt")
-        chrom_vcf_file = os.path.join(wdir, chrom + ".vcf")
+        chrom_vcf_file = os.path.join(wdir, chrom + ".vcf.gz")
         with open(chrom_vcf_list, "w") as outf:
             for contig in contig_info_dict[chrom]:
                 contig_name = contig_info_dict[chrom][contig]["contig_name"]
@@ -7607,14 +7635,16 @@ def merge_contigs(settings, contig_info_dict, results):
                                      contig_vcf_file + ".gz"],
                                     cwd=contigs_dir)
                     outf.write(contig_vcf_file + ".gz" + "\n")
-        subprocess.call(["bcftools", "concat", "-f", chrom_vcf_list,
+        subprocess.call(["bcftools", "concat", "-f", chrom_vcf_list, "-Oz",
                          "-o", chrom_vcf_file])
+        vcf_file_list.append(chrom_vcf_file)
 
-        split_vcf_file = os.path.join(wdir, chrom + ".split.vcf")
-        subprocess.call(["bcftools", "norm", "-m-both", "-N",
+        split_vcf_file = os.path.join(wdir, chrom + ".split.vcf.gz")
+        subprocess.call(["bcftools", "norm", "-m-both", "-N", "-Oz",
                          chrom_vcf_file, "-o", split_vcf_file])
+        vcf_file_list.append(split_vcf_file)
 
-        filt_vcf_file = os.path.join(wdir, chrom + ".split.filt.vcf")
+        filt_vcf_file = os.path.join(wdir, chrom + ".split.filt.vcf.gz")
 
         minVariantBarcodes = settings["minVariantBarcodes"]
         minVariantSamples = settings["minVariantSamples"]
@@ -7636,16 +7666,19 @@ def merge_contigs(settings, contig_info_dict, results):
         filter_expressions = " & ".join(filter_expressions)
         filter_expressions = filter_expressions + ') | (OT !=".")'
 
-        subprocess.call(["bcftools", "view", "-i", filter_expressions,
+        subprocess.call(["bcftools", "view", "-i", filter_expressions, "-Oz",
                          split_vcf_file, "-o", filt_vcf_file])
+        vcf_file_list.append(filt_vcf_file)
 
-        merged_vcf_file = os.path.join(wdir, chrom + ".merged.filt.vcf")
-        subprocess.call(["bcftools", "norm", "+m-any", "-N",
+        merged_vcf_file = os.path.join(wdir, chrom + ".merged.filt.vcf.gz")
+        subprocess.call(["bcftools", "norm", "-m+any", "-N", "-Oz",
                          filt_vcf_file, "-o", merged_vcf_file])
+        vcf_file_list.append(merged_vcf_file)
 
-        norm_vcf_file = os.path.join(wdir, chrom + ".norm.vcf")
+        norm_vcf_file = os.path.join(wdir, chrom + ".norm.vcf.gz")
         subprocess.call(["bcftools", "norm", "-m-both", "-f", genome_fasta,
-                         "-cs", merged_vcf_file, "-o", norm_vcf_file])
+                         "-cs", "-Oz", merged_vcf_file, "-o", norm_vcf_file])
+        vcf_file_list.append(norm_vcf_file)
 
         # annotate with snpEff
         try:
@@ -7659,9 +7692,13 @@ def merge_contigs(settings, contig_info_dict, results):
                                     os.path.join(ann_db_dir, "snpEff.jar"),
                                     ann_db, norm_vcf_file],
                                    stdout=subprocess.PIPE)
-            annotated_vcf_file = os.path.join(wdir, chrom + ".norm.ann.vcf")
-            with open(annotated_vcf_file, "wb") as outfile:
-                outfile.write(ann.communicate()[0])
+            annotated_vcf_file = os.path.join(wdir, chrom + ".norm.ann.vcf.gz")
+            with open(annotated_vcf_file, "wb") as avf:
+                subprocess.call(["bgzip"], stdin=ann.stdout,
+                                stdout=avf)
+
+            vcf_file_list.append(annotated_vcf_file)
+        subprocess.call(["mv"] + vcf_file_list + [vcfdir])
 
 
 def process_contig(contig_dict):
@@ -7777,7 +7814,7 @@ def process_contig(contig_dict):
                     break
         vcf = pd.read_table(raw_vcf_file, skiprows=line_count)
         if vcf.empty:
-            return
+            return contig_name + "_empty"
         vcf = vcf.drop(["ID", "QUAL", "FILTER", "INFO", "FORMAT"],
                        axis=1).set_index(["#CHROM", "POS", "REF", "ALT"])
         vcf = vcf.applymap(lambda a: 0 if a == "." else int(a.split(":")[0]))
@@ -7807,7 +7844,7 @@ def process_contig(contig_dict):
         vcf_merge.loc[~vcf_merge["covered"], "genotype"] = np.nan
         vcf_clean = vcf_merge.loc[~vcf_merge["genotype"].isnull()]
         if vcf_clean.empty:
-            return
+            return contig_name + "_empty"
         contig_seq = pd.DataFrame(contig_haps.groupby("haplotype_ID")[
             "forward_sequence"].first()).to_dict(orient="index")
 
@@ -8128,11 +8165,7 @@ def process_contig(contig_dict):
         contig_counts.to_csv(contig_counts_file)
         return contig_name
     except Exception as e:
-        print(("Caught exception in worker thread for contig {}.").format(
-            contig_name))
-        traceback.print_exc()
-        print()
-        raise e
+        return ExceptionWrapper(e)
 
 
 ###############################################################################
@@ -8645,8 +8678,106 @@ def combine_info_files(wdir,
     run_meta.to_csv(os.path.join(wdir, "samples.tsv"), sep="\t", index=False)
 
 
-def update_probe_sets(mipset_table="/opt/resources/mip_ids/mipsets.csv",
-                      mipset_json="/opt/resources/mip_ids/probe_sets.json"):
+def process_info_file(wdir,
+                      settings_file,
+                      info_files,
+                      sample_sheets,
+                      combined_file,
+                      sample_sets=None):
+    settings = get_analysis_settings(os.path.join(wdir, settings_file))
+    colnames = dict(list(zip(settings["colNames"],
+                         settings["givenNames"])))
+    c_keys = list(colnames.keys())
+    c_vals = [colnames[k] for k in c_keys]
+    data = []
+    current_run_meta = pd.read_table(sample_sheets[0])
+    for k in ["sample_name", "sample_set", "replicate"]:
+        current_run_meta[k] = current_run_meta[k].astype(str)
+    current_run_meta["sheet_order"] = 0
+    current_run_meta["capital_set"] = current_run_meta[
+        "sample_set"
+    ].apply(str.upper)
+    current_run_meta["Original SID"] = current_run_meta[
+        ["sample_name", "sample_set", "replicate"]
+    ].apply(lambda a: "-".join(a), axis=1)
+    run_meta = current_run_meta
+    if sample_sets is not None:
+        sps = pd.DataFrame(sample_sets, columns=["sample_set",
+                                                 "probe_set"])
+    else:
+        sps = run_meta.groupby(
+            ["sample_set", "probe_set"]
+        ).first().reset_index()[["sample_set", "probe_set"]]
+    run_meta = run_meta.merge(sps, how="inner")
+    run_meta["Sample ID"] = run_meta["Original SID"]
+    # load the probe set dictionary to extract the
+    # probes that we're interested in
+    probe_sets_file = settings["mipSetsDictionary"]
+    probe_set_keys = settings["mipSetKey"]
+    used_probes = set()
+    for psk in probe_set_keys:
+        with open(probe_sets_file) as infile:
+            used_probes.update(json.load(infile)[psk])
+    i_file = info_files[0]
+    current_run_meta = run_meta
+    current_run_dict = current_run_meta.set_index(
+        "Original SID"
+    ).to_dict(orient="index")
+    line_number = 0
+    try:
+        gzip.open(i_file, "rb").readline()
+        inf_file = gzip.open(i_file, "rb")
+    except IOError:
+        inf_file = open(i_file, "rb")
+    with inf_file as infile:
+        for line in infile:
+            newline = line.decode("utf-8").strip().split("\t")
+            line_number += 1
+            if line_number == 1:
+                col_indexes = [
+                    newline.index(ck)
+                    for ck in c_keys
+                ]
+                for ci in col_indexes:
+                    if colnames[newline[ci]] == "sample_name":
+                        si_index = ci
+                    elif colnames[newline[ci]] == "mip_name":
+                        mip_name_index = ci
+            else:
+                ori_sample_id = newline[si_index]
+                mip_fam_name = newline[mip_name_index]
+                if mip_fam_name in used_probes:
+                    try:
+                        library = current_run_dict[
+                            ori_sample_id
+                        ]["Library Prep"]
+                        sample_id = current_run_dict[
+                            ori_sample_id
+                        ]["Sample ID"]
+                        d = ([newline[ci] if ci != si_index else sample_id
+                              for ci in col_indexes] + [library])
+                        data.append(d)
+                    except KeyError:
+                        continue
+    info = pd.DataFrame(data, columns=c_vals + ["Library Prep"])
+    info["barcode_count"] = info["barcode_count"].astype(int)
+    info["read_count"] = info["read_count"].astype(int)
+    info.to_csv(os.path.join(wdir, combined_file), index=False, sep="\t")
+    info.groupby(["gene_name", "mip_name", "haplotype_ID"])[
+        "haplotype_sequence"].first().reset_index().to_csv(
+            os.path.join(wdir, "unique_haplotypes.csv"), index=False)
+    run_meta = run_meta.groupby("Sample ID").first().reset_index()
+    run_meta = run_meta.drop(["Sample ID",
+                              "sample_set"],
+                             axis=1).rename(
+        columns={"capital_set": "sample_set"}
+    )
+    run_meta.to_csv(os.path.join(wdir, "samples.tsv"), sep="\t", index=False)
+
+
+def update_probe_sets(
+        mipset_table="/opt/project_resources/mip_ids/mipsets.csv",
+        mipset_json="/opt/project_resources/mip_ids/probe_sets.json"):
     mipsets = pd.read_csv(mipset_table)
     mipset_list = mipsets.to_dict(orient="list")
     mipset_dict = {}
