@@ -5660,6 +5660,38 @@ def make_snp_vcf(variant_file, haplotype_file, call_info_file,
                                 position_to_mip[p].add((m, c))
                             except KeyError:
                                 position_to_mip[p] = set([(m, c)])
+    # go through each variant and add the mip and copy associated with it.
+    # if a variants position shifted during normalization, it may not be
+    # within the "theoretical" capture region of the MIP and would be missed
+    # in the above section.
+    for m in haplotypes:
+        for hid in haplotypes[m]:
+            hap = haplotypes[m][hid]
+            if not hap["mapped"]:
+                continue
+            copies = hap["mapped_copies"]
+            for c in copies:
+                copy_differences = hap["mapped_copies"][c]["differences"]
+                # go through all differences from reference genome
+                # get a subset of information included in the
+                # haplotype dictionary
+                for d in copy_differences:
+                    # all variation is left normalized to reference genome
+                    # this is done to align all indels to the same start
+                    # to avoid having different locations for the same
+                    # indel in a tandem repeat region.
+                    # each variation is given a unique key, which is
+                    # formed by the first 4 fields of vcf (chr:pos:id:ref:alt)
+                    normalized_key = d["vcf_normalized"]
+                    var = normalized_key.split(":")
+                    chrom = var[0]
+                    p = int(var[1])
+                    if chrom == vcf_chrom:
+                        try:
+                            position_to_mip[p].add((m, c))
+                        except KeyError:
+                            position_to_mip[p] = set([(m, c)])
+
     # Create a dataframe that maps whether a genomic position is the same
     # as the reference or not for each haplotype
     references = []
@@ -5727,8 +5759,11 @@ def make_snp_vcf(variant_file, haplotype_file, call_info_file,
             except KeyError:
                 ref_count = 0
             cov = 0
-            for k in position_to_mip[pos]:
-                cov += cov_dict[k][sample]
+            try:
+                for k in position_to_mip[pos]:
+                    cov += cov_dict[k][sample]
+            except KeyError:
+                pass
             sample_refs.append(ref_count)
             sample_cov.append(cov)
         reference_counts.append(sample_refs)
@@ -6903,12 +6938,6 @@ def process_results(wdir,
                    "Targeted",
                    "ExonicFunc"],
             axis=0).sum()
-        # do a sanity check for all the grouping and coverage calculations
-        # none of the table values for mutant or reference tables can be
-        # larger than the coverage for a given locus.
-        if (((mutant_aa_table - coverage_aa_table) > 0).sum().sum()
-           + ((ref_aa_table - coverage_aa_table) > 0).sum().sum()) > 0:
-            print("Some loci have lower coverage than mutation calls!")
         # Revert transposed dataframes
         variant_table = variant_table.T
         variant_cov_df = variant_cov_df.T
@@ -6986,15 +7015,6 @@ def process_results(wdir,
         variant_cov_df = variant_cov_df.T
         mutant_aa_table = mutant_aa_table.T
         coverage_aa_table = coverage_aa_table.T
-        # do a sanity check for all the grouping and coverage calculations
-        # none of the table values for mutant or reference tables can be
-        # larger than the coverage for a given locus. However, this is only
-        # relevant when the analysis is limited to coding changes.
-        if (((mutant_aa_table - coverage_aa_table) > 0).sum().sum()) > 0:
-            print(("Some loci have lower coverage than mutation calls!"
-                   "This warning is only relevant if the analysis is limited "
-                   "to single amino acid changes, excluding indels and "
-                   "noncoding changes."))
     variant_counts.to_csv(os.path.join(wdir, "variants.csv"), index=False)
     plot_performance(barcode_counts, wdir=wdir, save=True)
     variant_table.to_csv(os.path.join(wdir, "variant_table.csv"))
