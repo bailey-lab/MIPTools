@@ -8938,6 +8938,77 @@ def generate_processed_fastqs(fastq_dir, mipster_file,
     return
 
 
+def generate_mapped_fastqs(fastq_dir, mipster_file,
+                           mapped_haplotypes_file, species, min_bc_count=1,
+                           pro=8, pad_size=20, save=False):
+    """
+    Generate fastq files for each sample. These files will have stitched and
+    barcode corrected reads.
+    """
+    if not os.path.exists(fastq_dir):
+        os.makedirs(fastq_dir)
+    mipster = pd.read_table(mipster_file,
+                            usecols=[
+                              "sample_name",
+                              'haplotype_ID',
+                              "haplotype_sequence",
+                              'sequence_quality',
+                              'barcode_count'
+                            ])
+    mapped_haplotypes = pd.read_csv(mapped_haplotypes_file)
+
+    def get_padded_haplotype_sequence(row, pad_size, species):
+        """
+        Return the haplotype sequence padded on each side from the
+        reference genome.
+        """
+        chrom = row["Chrom"]
+        capture_start = int(row["capture_start"])
+        capture_end = int(row["capture_end"])
+        pad_start = capture_start - 20
+        pad_end = capture_end + 20
+        left_key = create_region(chrom, pad_start, capture_start - 1)
+        right_key = create_region(chrom, capture_end + 1, pad_end)
+        left_pad = get_sequence(left_key, species)
+        right_pad = get_sequence(right_key, species)
+        h_seq = row["haplotype_sequence"]
+        ori = row["orientation"]
+        if ori == "reverse":
+            hs = left_pad + reverse_complement(h_seq) + right_pad
+            return reverse_complement(hs)
+        else:
+            return left_pad + h_seq + right_pad
+
+    mapped_haplotypes["padded_haplotype_sequence"] = mapped_haplotypes.apply(
+        get_padded_haplotype_sequence, args=(pad_size, species), axis=1)
+    mipster = mipster.merge(mapped_haplotypes[["haplotype_ID",
+                                               "padded_haplotype_sequence",
+                                               "mapped_copy_number"]])
+    mapped_haplotypes["raw_haplotype_sequence"] = mapped_haplotypes[
+        "haplotype_sequence"]
+    mapped_haplotypes["haplotype_sequence"] = mapped_haplotypes[
+        "padded_haplotype_sequence"]
+    mipster["adjusted_barcode_count"] = (
+        mipster["barcode_count"] / mipster["mapped_copy_number"]).astype(int)
+    mipster["raw_barcode_count"] = mipster["barcode_count"]
+    mipster["barcode_count"] = mipster["adjusted_barcode_count"]
+    mipster_dict = mipster.loc[mipster["barcode_count"]
+                               >= min_bc_count].groupby(
+        "sample_name").apply(lambda x: pd.DataFrame.to_dict(
+                             x, orient="index")).to_dict()
+    if save:
+        mipster.to_csv(mipster_file + ".padded")
+    p = Pool(pro)
+    for sample in mipster_dict:
+        fastq_file = os.path.join(fastq_dir, sample + ".fq.gz")
+        sample_mipster = mipster_dict[sample]
+        p.apply_async(generate_processed_fastqs_worker, (fastq_file,
+                                                         sample_mipster))
+    p.close()
+    p.join()
+    return
+
+
 def generate_unprocessed_fastqs(fastq_dir, mipster_file, min_bc_count=1,
                                 pro=8):
     """
