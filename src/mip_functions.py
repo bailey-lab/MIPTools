@@ -7124,17 +7124,12 @@ def get_vcf_haplotypes(settings):
     except KeyError:
         tol = 200
     # DATA EXTRACTION ###
-    # try loading unique haplotypes values. This file is generated
-    # in the recent versions of the pipeline but will be missing in older
-    # data. If missing, we'll generate it.
-    try:
-        hap_df = pd.read_csv(os.path.join(wdir, "unique_haplotypes.csv"))
-    except IOError:
-        raw_results = pd.read_table(os.path.join(wdir,
-                                                 settings["mipsterFile"]))
-        hap_df = raw_results.groupby(
-            ["gene_name", "mip_name", "haplotype_ID"])[
-            "haplotype_sequence"].first().reset_index()
+    raw_results = pd.read_table(os.path.join(wdir,
+                                             settings["mipsterFile"]))
+                                             
+    hap_df = raw_results.groupby(
+        ["gene_name", "mip_name", "haplotype_ID"])[
+        "haplotype_sequence"].first().reset_index()
     # fill in fake sequence quality scores for each haplotype. These scores
     # will be used for mapping only and the real scores for each haplotype
     # for each sample will be added later.
