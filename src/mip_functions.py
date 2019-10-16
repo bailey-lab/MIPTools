@@ -7126,8 +7126,48 @@ def get_vcf_haplotypes(settings):
     # DATA EXTRACTION ###
     raw_results = pd.read_table(os.path.join(wdir,
                                              settings["mipsterFile"]))
-                                             
-    hap_df = raw_results.groupby(
+    ##########################################################
+    # Add the statistics for each haplotype to the data
+    # such as how many samples had a given haplotype
+    # and how many barcodes supported a given haplotype
+    # Filter the haplotypes for those criteria to
+    # remove possible noise and infrequent haplotypes
+    ##########################################################
+    # Haplotype Filters from the settings file
+    haplotype_min_barcode_filter = int(settings["minHaplotypeBarcodes"])
+    haplotype_min_sample_filter = int(settings["minHaplotypeSamples"])
+    haplotype_min_sample_fraction_filter = float(
+        settings["minHaplotypeSampleFraction"]
+    )
+    # Gather per haplotype data across samples
+    hap_counts = raw_results.groupby(
+        "haplotype_ID"
+    )["barcode_count"].sum().reset_index().rename(
+        columns={"barcode_count": "Haplotype Barcodes"})
+    hap_sample_counts = raw_results.groupby("haplotype_ID")[
+        "sample_name"].apply(lambda a: len(set(a))).reset_index().rename(
+        columns={"sample_name": "Haplotype Samples"})
+    num_samples = float(raw_results["sample_name"].unique().size)
+    hap_sample_counts["Haplotype Sample Fraction"] = (
+        hap_sample_counts["Haplotype Samples"] / num_samples
+    )
+    hap_counts = hap_counts.merge(hap_sample_counts)
+    initial_hap_count = len(hap_counts)
+    hap_counts = hap_counts.loc[(hap_counts["Haplotype Samples"]
+                                 >= haplotype_min_sample_filter)
+                                & (hap_counts["Haplotype Sample Fraction"]
+                                   >= haplotype_min_sample_fraction_filter)
+                                & (hap_counts["Haplotype Barcodes"]
+                                   >= haplotype_min_barcode_filter)]
+    print(("Out of {} initial haplotypes, {} were filtered using {}, {}, and "
+           "{} as minimum total UMI count; number and fraction of samples "
+           " the haplotype was observed in, respectively.").format(
+               initial_hap_count, len(hap_counts) - initial_hap_count,
+               haplotype_min_barcode_filter, haplotype_min_sample_filter,
+               haplotype_min_sample_fraction_filter))
+
+    hap_df = raw_results.loc[raw_results["haplotype_ID"].isin(
+        hap_counts["haplotype_ID"])].groupby(
         ["gene_name", "mip_name", "haplotype_ID"])[
         "haplotype_sequence"].first().reset_index()
     # fill in fake sequence quality scores for each haplotype. These scores
