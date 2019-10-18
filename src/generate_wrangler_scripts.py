@@ -32,9 +32,8 @@ parser.add_argument("-a", "--analysis-dir",
                           "MIPWrangler working directory."),
                     default="/opt/analysis")
 parser.add_argument("-w", "--cluster-script",
-                    help=("MIPWrangler script name. Absolute path"
-                          "if not in $PATH."),
-                    default="runMIPWranglerCurrent.sh")
+                    help="Absolute path to MIPWrangler run script.",
+                    default="/opt/bin/runMIPWranglerCurrent.sh")
 parser.add_argument("-r", "--project-resource-dir",
                     help=("Path to directory where project specific resources "
                           "such as probe sets used, mip arm info etc. are"),
@@ -228,7 +227,7 @@ renamed_info = os.path.join(analysis_dir, experiment_id + "_"
                             + subset_name + "_" + run_date + ".txt")
 wrangler_commands = [
     ["cd", "analysis"],
-    ["nohup", cluster_script, str(server_num), str(cpu_count)],
+    ["nohup", "bash", cluster_script, str(server_num), str(cpu_count)],
     ["mv", os.path.join(analysis_dir, "analysis/logs"), analysis_dir],
     ["mv", os.path.join(analysis_dir, "analysis/scripts"), analysis_dir],
     ["mv", os.path.join(analysis_dir, "analysis/resources"), analysis_dir],
@@ -247,6 +246,7 @@ for filename in [extraction_summary_file,
                     "-name", filename, "-exec", "cat",
                     "{}", "+", ">", os.path.join(analysis_dir, filename)]
     wrangler_commands.append(stat_command)
+wrangler_commands.append(["cd", "/opt/analysis"])
 for filename in [extraction_summary_file,
                  extraction_per_target_file,
                  stitching_per_target_file]:
