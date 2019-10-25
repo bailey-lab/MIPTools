@@ -252,6 +252,8 @@ for filename in [extraction_summary_file,
                  stitching_per_target_file]:
     zip_command = ["pigz", "-9", "-p", str(cpu_count), filename]
     wrangler_commands.append(zip_command)
+    mv_command = ["mv", filename + ".gz", experiment_id + "_"
+                  + subset_name + "_" + run_date + "_" + filename + ".gz"]
 server_num += 1
 if subset_name in subset_names:
     print("%s is already in subset_names!" % subset_name)

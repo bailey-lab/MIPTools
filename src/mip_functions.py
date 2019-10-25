@@ -3839,8 +3839,7 @@ def compatible_chains(primer_file, mip_dict, primer3_output_DIR,
                 cp = temp_dict[k].mip["C0"]
                 cs = cp["capture_start"]
                 ce = cp["capture_end"]
-                if ((bin_start <= cs) and (bin_end >= cs)) or (
-                        (bin_start <= ce) and (bin_end >= ce)):
+                if len(overlap([cs, ce], [bin_start, bin_end])) > 0:
                     binned[i][k] = temp_dict[k]
         # remove MIPs covering similar regions until we have only
         # "set_size" number of MIPs per bin.
@@ -4470,7 +4469,7 @@ def get_haplotypes(settings):
             if not line.startswith("@"):
                 newline = line.strip().split("\t")
                 for nl in newline:
-                    if nl.startswith("AS"):
+                    if nl.startswith("AS:"):
                         score = int(nl.split(":")[-1])
                         break
                 else:
@@ -7634,6 +7633,7 @@ def split_contigs(settings):
         contig_info["aligner"] = settings["multipleSequenceAligner"]
         contig_info["msa_to_vcf"] = settings["msaToVcf"]
         contig_info["snp_only"] = int(settings["snpOnlyVcf"])
+        contig_info["max_hours"] = settings["maxMuscleHours"]
         try:
             contig_info["contig_targets"] = targets.loc[
                 (targets["Chrom"] == contig_info["chrom"])
@@ -7816,8 +7816,9 @@ def process_contig(contig_dict):
         alignment_file = os.path.join(wdir, contig_name + ".aln")
         save_fasta_dict(sequences, fasta_file)
         if contig_dict["aligner"] == "muscle":
+            mh = contig_dict["max_hours"]
             subprocess.call(["muscle", "-in", fasta_file, "-out",
-                             alignment_file])
+                             alignment_file, "-maxhours", mh])
         elif contig_dict["aligner"] == "decipher":
             subprocess.call(["Rscript", "/opt/src/align.R", fasta_file,
                              alignment_file])
