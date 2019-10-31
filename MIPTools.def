@@ -3,7 +3,7 @@ From: amd64/ubuntu:18.04
 
 %post
     # set number of cpus to use in build
-    CPU_COUNT=6
+    CPU_COUNT=20
     # set build environment
     export DEBIAN_FRONTEND=noninteractive \
         CONDA_DIR=/opt/conda \
@@ -160,15 +160,13 @@ From: amd64/ubuntu:18.04
     rm $gatk_filename
     mv gatk-$gatk_ver gatk
 
+    # install parasight
+    scp /opt/programs/parasight_v7.6/parasight.pl /opt/bin/parasight76.pl
+
     # add executable flag to executables
     chmod -R +xr /usr/bin
     chmod -R +xr /opt/bin
 
-
-    # create symlinks to executables in /usr/bin so everything will be in
-    # $PATH for users.
-    ln -sf /opt/programs/parasight_v7.6/parasight.pl /usr/bin/parasight76.pl
-    ln -sf /opt/programs/annovar-20180416/*.pl /usr/bin
 
     # create work and resources directories in /opt
     mkdir /opt/resources \

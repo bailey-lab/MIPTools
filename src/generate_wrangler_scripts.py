@@ -232,7 +232,7 @@ wrangler_commands = [
     ["mv", os.path.join(analysis_dir, "analysis/scripts"), analysis_dir],
     ["mv", os.path.join(analysis_dir, "analysis/resources"), analysis_dir],
     ["mv", os.path.join(analysis_dir, "analysis/nohup.out"),
-     os.path.join(analysis_dir, "nohup2.out")],
+     os.path.join(analysis_dir, "nohup2.out"), "2>/dev/null ||true"],
     ["mv", info_file, renamed_info],
     ["pigz", "-9", "-p", str(cpu_count), renamed_info]
 ]

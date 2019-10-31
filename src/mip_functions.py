@@ -8228,6 +8228,27 @@ def process_contig(contig_dict):
 # general use functions.
 ###############################################################################
 
+def parse_alignment_positions(alignment_file, contig_start, ref_key="ref"):
+    """ Parse a multiple sequence alignment file given in fasta format.
+    Using the genomic start position of the reference contig, create a
+    genome to alignment and alignment to genome position maps.
+    """
+    alignments = fasta_parser(alignment_file)
+    ref_seq = alignments[ref_key]
+    alignment_to_genomic = {0: contig_start - 1}
+    insertion_count = 0
+    for i in range(len(ref_seq)):
+        if ref_seq[i] != "-":
+            alignment_to_genomic[i+1] = i + contig_start - insertion_count
+        else:
+            insertion_count += 1
+    genomic_to_alignment = {}
+    for alignment_position in alignment_to_genomic:
+        genomic_to_alignment[alignment_to_genomic[
+            alignment_position]] = alignment_position
+    return {"a2g": alignment_to_genomic, "g2a": genomic_to_alignment}
+
+
 def check_overlap(r1, r2, padding=0):
     """ Check if two regions overlap. Regions are given as lists of chrom (str),
     begin (int), end (int)."""
