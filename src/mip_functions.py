@@ -9041,10 +9041,11 @@ def generate_mapped_fastqs(fastq_dir, mipster_file,
     mipster = mipster.merge(mapped_haplotypes[["haplotype_ID",
                                                "padded_haplotype_sequence",
                                                "mapped_copy_number"]])
-    mapped_haplotypes["raw_haplotype_sequence"] = mapped_haplotypes[
-        "haplotype_sequence"]
-    mapped_haplotypes["haplotype_sequence"] = mapped_haplotypes[
-        "padded_haplotype_sequence"]
+    mipster["raw_haplotype_sequence"] = mipster["haplotype_sequence"]
+    mipster["haplotype_sequence"] = mipster["padded_haplotype_sequence"]
+    mipster["raw_sequence_quality"] = mipster["sequence_quality"]
+    mipster["sequence_quality"] = (
+        20 * "H" + mipster["sequence_quality"] + 20 * "H")
     mipster["adjusted_barcode_count"] = (
         mipster["barcode_count"] / mipster["mapped_copy_number"]).astype(int)
     mipster["raw_barcode_count"] = mipster["barcode_count"]
