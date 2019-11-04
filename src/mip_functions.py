@@ -2343,6 +2343,7 @@ def bwa(fastq_file, output_file, output_type, input_dir,
     genome_file = get_file_locations()[species]["bwa_genome"]
     read_group = ("@RG\\tID:" + base_name + "\\tSM:" + base_name + "\\tLB:"
                   + base_name + "\\tPL:ILLUMINA")
+    options = copy.deepcopy(options)
     options.append("-R" + read_group)
     if output_type == "sam":
         com = ["bwa"]
@@ -7664,6 +7665,74 @@ def split_contigs(settings):
     return (contig_info_dict, results)
 
 
+def freebayes_call(settings, bam_dir, fastq_dir, options, align=True):
+    wdir = settings["workingDir"]
+    padded_fastq_dir = os.path.join(wdir, "padded_fastqs")
+    bam_dir = os.path.join(wdir, "padded_bams")
+    mapped_haplotypes_file = os.path.join(wdir, "mapped_haplotypes.csv")
+    mipster_file = os.path.join(wdir, settings["mipsterFile"])
+    if align:
+        generate_mapped_fastqs(padded_fastq_dir, mipster_file,
+                               mapped_haplotypes_file, settings["species"],
+                               pro=int(settings["processorNumber"]))
+        bwa_multi([], "bam", padded_fastq_dir, bam_dir,
+                  settings["bwaOptions"], settings["species"],
+                  int(settings["processorNumber"]),
+                  int(settings["processorNumber"]))
+
+    call_file = settings["callInfoDictionary"]
+    with open(call_file) as infile:
+        call_dict = json.load(infile)
+    call_df = []
+    for g in call_dict:
+        for m in call_dict[g]:
+            for c in call_dict[g][m]["copies"]:
+                cdict = call_dict[g][m]["copies"][c]
+                call_df.append([cdict["chrom"], cdict["capture_start"],
+                                cdict["capture_end"]])
+    call_df = pd.DataFrame(call_df, columns=["chrom", "capture_start",
+                                             "capture_end"])
+
+    def get_contig(g):
+        intervals = zip(g["capture_start"], g["capture_end"])
+        return pd.DataFrame(merge_overlap(
+            [list(i) for i in intervals], spacer=1000))
+
+    contigs = call_df.groupby("chrom").apply(get_contig)
+    contigs = contigs.reset_index()
+    contigs.rename(columns={"level_1": "contig", 0: "contig_capture_start",
+                            1: "contig_capture_end"}, inplace=True)
+    contigs["contig_name"] = contigs["chrom"] + "_" + contigs["contig"].astype(
+        str)
+    contigs["region"] = contigs["chrom"] + ":" + (
+        contigs["contig_capture_start"] - 500).astype(str) + "-" + (
+        contigs["contig_capture_end"] + 500).astype(str)
+    contig_dict = {}
+    gb = contigs.groupby("chrom")
+    for g in gb.groups.keys():
+        gr = gb.get_group(g)
+        contig_dict[g] = gr[["contig_name", "region"]].set_index(
+            "contig_name").to_dict(orient="index")
+
+    for chrom in contig_dict:
+        for contig_name in contig_dict[chrom]:
+            contig_options = contig_dict[chrom][contig_name][
+                "options"] = copy.deepcopy(options)
+            region = contig_dict[chrom][contig_name]["region"]
+            vcf_name = os.path.join()
+            contig_options.extend(["-r", region])
+
+
+
+def freebayes_worker(contig_dict):
+    settings = contig_dict["settings"]
+    genome_fasta = get_file_locations()[settings["species"]]["fasta_genome"]
+    options = contig_dict["options"]
+    commands = ["freebayes", "-f", genome_fasta]
+    commands.extend(options)
+    subprocess.call(commands)
+
+
 def merge_contigs(settings, contig_info_dict, results):
     # merge contig vcfs for each chromosome
     wdir = settings["workingDir"]
@@ -9022,8 +9091,8 @@ def generate_mapped_fastqs(fastq_dir, mipster_file,
         chrom = row["Chrom"]
         capture_start = int(row["capture_start"])
         capture_end = int(row["capture_end"])
-        pad_start = capture_start - 20
-        pad_end = capture_end + 20
+        pad_start = capture_start - pad_size
+        pad_end = capture_end + pad_size
         left_key = create_region(chrom, pad_start, capture_start - 1)
         right_key = create_region(chrom, capture_end + 1, pad_end)
         left_pad = get_sequence(left_key, species)
@@ -9045,7 +9114,7 @@ def generate_mapped_fastqs(fastq_dir, mipster_file,
     mipster["haplotype_sequence"] = mipster["padded_haplotype_sequence"]
     mipster["raw_sequence_quality"] = mipster["sequence_quality"]
     mipster["sequence_quality"] = (
-        20 * "H" + mipster["sequence_quality"] + 20 * "H")
+        pad_size * "H" + mipster["sequence_quality"] + pad_size * "H")
     mipster["adjusted_barcode_count"] = (
         mipster["barcode_count"] / mipster["mapped_copy_number"]).astype(int)
     mipster["raw_barcode_count"] = mipster["barcode_count"]
