@@ -5936,7 +5936,7 @@ def make_chrom_vcf(wdir, header_count, min_cov=1, min_count=1, min_freq=0):
 
     call_info_file = "/opt/project_resources/mip_ids/call_info.json"
     chromosomes = set(haplotype_counts["CHROM"])
-    vcfdir = os.path.join(wdir, "vcfs")
+    vcfdir = os.path.join(wdir, "pwa_vcfs")
     if not os.path.exists(vcfdir):
         os.makedirs(vcfdir)
     for chrom in sorted(chromosomes):
@@ -7665,24 +7665,71 @@ def split_contigs(settings):
     return (contig_info_dict, results)
 
 
-def freebayes_call(settings, bam_dir, fastq_dir, options, align=True):
+def freebayes_call(bam_dir="/opt/analysis/padded_bams",
+                   fastq_dir="/opt/analysiss/padded_fastqs", options=[],
+                   vcf_dir="/opt/analysis/freebayes_vcfs",
+                   align=True, settings=None, settings_file=None):
+    """ Call variants for MIP data using freebayes.
+    A mapped haplotype file must be present in the working directory. This
+    is generated during haplotype processing. Per sample fastqs and bams
+    will be created if align=True. Fastqs are generated with a default 20 bp
+    padding on each side of the haplotype. This assumes that there were no
+    errors where the MIP arms bind to the DNA. It may cause some false negative
+    calls where there was imperfect binding, but it is crucial for determining
+    variants close to the MIP arms.
+
+    Parameters
+    ----------
+    bam_dir: str/path, /opt/analysis/padded_bams
+        path to the directory where per sample bam files are or where they
+        will be created if align=True.
+    fastq_dir: str/path, /opt/analysiss/padded_fastqs
+        path to the directory where per sample fastq files are or  where they
+        will be created if align=True.
+    vcf_dir: str/path, /opt/analysiss/freebayes_vcfs
+        path to the directory where per chromosome vcf files will be saved.
+    options: list, []
+        options to pass to freebayes directly, such as --min-coverage
+        the list must have each parameter and value as separate items.
+        For example, ["--min-alternate-count", "2"] and not
+        ["--min-alternate-count 2"]
+    align: bool, True
+        Set to false if fastq and bam files have already been created.
+    settings: dict, None
+        Analysis settings dictionary. Either this or settings_file must
+        be provided.
+    settings_file: str/path, None
+        Path to the analysis settings file. Either this or the settings dict
+        must be provided.
+    """
+    # get the working directory from settings
     wdir = settings["workingDir"]
-    padded_fastq_dir = os.path.join(wdir, "padded_fastqs")
-    bam_dir = os.path.join(wdir, "padded_bams")
+    # load mapped haplotypes file. This file has the genomic locations
+    # of the haplotypes in mip data
     mapped_haplotypes_file = os.path.join(wdir, "mapped_haplotypes.csv")
+    # get the mip data file location. This file has per sample haplotype
+    # information including counts.
     mipster_file = os.path.join(wdir, settings["mipsterFile"])
     if align:
-        generate_mapped_fastqs(padded_fastq_dir, mipster_file,
+        # create fastq files from MIP data. One read per UMI will be created.
+        generate_mapped_fastqs(fastq_dir, mipster_file,
                                mapped_haplotypes_file, settings["species"],
                                pro=int(settings["processorNumber"]))
-        bwa_multi([], "bam", padded_fastq_dir, bam_dir,
+        # map per sample fastqs to the reference genome, creating bam files.
+        # bam files will have sample groups added, which is required for
+        # calling variants across the samples.
+        bwa_multi([], "bam", fastq_dir, bam_dir,
                   settings["bwaOptions"], settings["species"],
                   int(settings["processorNumber"]),
                   int(settings["processorNumber"]))
 
+    # divide data into contigs to make parallelization more efficient
+    # we'll create contigs from overlapping MIPs.
+    # load the call info dictionary which contains per MIP information
     call_file = settings["callInfoDictionary"]
     with open(call_file) as infile:
         call_dict = json.load(infile)
+    # create a dataframe that has the genomic coordinates of each MIP
     call_df = []
     for g in call_dict:
         for m in call_dict[g]:
@@ -7693,6 +7740,7 @@ def freebayes_call(settings, bam_dir, fastq_dir, options, align=True):
     call_df = pd.DataFrame(call_df, columns=["chrom", "capture_start",
                                              "capture_end"])
 
+    # create a function that generates contigs of MIPs which have overlaps
     def get_contig(g):
         intervals = zip(g["capture_start"], g["capture_end"])
         return pd.DataFrame(merge_overlap(
@@ -7719,7 +7767,7 @@ def freebayes_call(settings, bam_dir, fastq_dir, options, align=True):
             contig_options = contig_dict[chrom][contig_name][
                 "options"] = copy.deepcopy(options)
             region = contig_dict[chrom][contig_name]["region"]
-            vcf_name = os.path.join()
+            vcf_name = os.path.join(wdir, "contig_vcfs", contig_name + ".vcf")
             contig_options.extend(["-r", region])
 
 
