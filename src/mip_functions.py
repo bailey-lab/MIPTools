@@ -6958,6 +6958,75 @@ def process_results(wdir,
         coverage_aa_table.columns = coverage_aa_table.columns.droplevel(
             "Reference Resistant"
         )
+        # ExonicFunc level in the columns had different values for the
+        # same mutations when merge_snps was used. In addition, snpEff
+        # can generate different exonicfunc values for the same mutation name
+        # for indels. Names would be 899fs, for example for all frameshift
+        # mutations 899 but effects can be different depending on the actual
+        # deletion. So ExonicFunc should be removed from the grouping variables
+        # from the above operations. We'll re-aggregate data removing the
+        # ExonicFunc column and then add the ExonicFunc back using the values
+        # from the current tables. Start by getting the current column info
+        v_cols = mutant_aa_table.columns
+        # aggregate mutant table
+        mutant_aa_table = mutant_aa_table.groupby(
+            level=[
+                "Gene",
+                "Mutation Name",
+                "Targeted"
+            ],
+            axis=1).sum()
+        # aggregate coverage table
+        coverage_aa_table = coverage_aa_table.groupby(
+            level=[
+                "Gene",
+                "Mutation Name",
+                "Targeted"],
+            axis=1).max()
+        ############################################################
+        # Creat a column to ExonicFunc dictionary from the original table cols
+        v_genes = v_cols.get_level_values("Gene")
+        v_mutation_names = v_cols.get_level_values("Mutation Name")
+        v_targeted = v_cols.get_level_values("Targeted")
+        v_exo = v_cols.get_level_values("ExonicFunc")
+        column_keys = list(zip(v_genes, v_mutation_names, v_targeted, v_exo))
+        col_dict = {}
+        for c in column_keys:
+            try:
+                col_dict[c[:3]].add(c[3])
+            except KeyError:
+                col_dict[c[:3]] = set([c[3]])
+        # remove nonsynonymous_variant and synonymous_variant values which
+        # are added by the merge_snps function, only if there is another
+        # value for the same mutation supplied by the snpEff program.
+        for c in col_dict:
+            if len(col_dict[c]) > 1:
+                col_dict[c].discard("nonsynonymous_variant")
+                col_dict[c].discard("synonymous_variant")
+                # use only a single value for the ExonicFunc for a given
+                # mutation name. So all indels with the same mutation name
+                # will get the same ExonicFunc.
+                col_dict[c] = sorted(col_dict[c])[0]
+            else:
+                col_dict[c] = col_dict[c][0]
+        # get the columns of the mutant table and update with the ExonicFunc
+        m_cols = mutant_aa_table.columns
+        updated_cols = []
+        for c in m_cols:
+            updated_cols.append(c + (col_dict[c],))
+        updated_cols = pd.MultiIndex.from_tuples(
+            updated_cols, names=["Gene", "Mutation Name", "Targeted",
+                                 "ExonicFunc"])
+        mutant_aa_table.columns = updated_cols
+        # update coverage table's columns
+        m_cols = coverage_aa_table.columns
+        updated_cols = []
+        for c in m_cols:
+            updated_cols.append(c + (col_dict[c],))
+        updated_cols = pd.MultiIndex.from_tuples(
+            updated_cols, names=["Gene", "Mutation Name", "Targeted",
+                                 "ExonicFunc"])
+        coverage_aa_table.columns = updated_cols
     else:
         # create pivot table for each unique variant
         variant_table = variant_counts.pivot_table(
@@ -6993,28 +7062,73 @@ def process_results(wdir,
             columns=v_cols)
         # aggregate all variants that lead to the
         # same amino acid change
-        variant_table = variant_table.T
-        variant_cov_df = variant_cov_df.T
         mutant_aa_table = variant_table.groupby(
             level=[
                 "Gene",
                 "Mutation Name",
-                "Targeted",
-                "ExonicFunc"
+                "Targeted"
             ],
-            axis=0).sum()
+            axis=1).sum()
         # create a like-indexed coverage table
         coverage_aa_table = variant_cov_df.groupby(
             level=[
                 "Gene",
                 "Mutation Name",
-                "Targeted",
-                "ExonicFunc"],
-            axis=0).max()
-        variant_table = variant_table.T
-        variant_cov_df = variant_cov_df.T
-        mutant_aa_table = mutant_aa_table.T
-        coverage_aa_table = coverage_aa_table.T
+                "Targeted"],
+            axis=1).max()
+        # ExonicFunc level in the columns had different values for the
+        # same mutations when merge_snps was used. In addition, snpEff
+        # can generate different exonicfunc values for the same mutation name
+        # for indels. Names would be 899fs, for example for all frameshift
+        # mutations 899 but effects can be different depending on the actual
+        # deletion. So ExonicFunc is removed from the grouping variables
+        # from the above operation. Now we'll try to add the ExonicFunc back
+        # using the values from variant_table.
+        ############################################################
+        # Creat a column to ExonicFunc dictionary from the variant table cols
+        v_genes = v_cols.get_level_values("Gene")
+        v_mutation_names = v_cols.get_level_values("Mutation Name")
+        v_targeted = v_cols.get_level_values("Targeted")
+        v_exo = v_cols.get_level_values("ExonicFunc")
+        column_keys = list(zip(v_genes, v_mutation_names, v_targeted, v_exo))
+        col_dict = {}
+        for c in column_keys:
+            try:
+                col_dict[c[:3]].add(c[3])
+            except KeyError:
+                col_dict[c[:3]] = set([c[3]])
+        # remove nonsynonymous_variant and synonymous_variant values which
+        # are added by the merge_snps function, only if there is another
+        # value for the same mutation supplied by the snpEff program.
+        for c in col_dict:
+            if len(col_dict[c]) > 1:
+                col_dict[c].discard("nonsynonymous_variant")
+                col_dict[c].discard("synonymous_variant")
+                # use only a single value for the ExonicFunc for a given
+                # mutation name. So all indels with the same mutation name
+                # will get the same ExonicFunc.
+                col_dict[c] = sorted(col_dict[c])[0]
+            else:
+                col_dict[c] = col_dict[c][0]
+        # get the columns of the mutant table and update with the ExonicFunc
+        m_cols = mutant_aa_table.columns
+        updated_cols = []
+        for c in m_cols:
+            updated_cols.append(c + (col_dict[c],))
+        updated_cols = pd.MultiIndex.from_tuples(
+            updated_cols, names=["Gene", "Mutation Name", "Targeted",
+                                 "ExonicFunc"])
+        mutant_aa_table.columns = updated_cols
+        # update coverage table's columns
+        m_cols = coverage_aa_table.columns
+        updated_cols = []
+        for c in m_cols:
+            updated_cols.append(c + (col_dict[c],))
+        updated_cols = pd.MultiIndex.from_tuples(
+            updated_cols, names=["Gene", "Mutation Name", "Targeted",
+                                 "ExonicFunc"])
+        coverage_aa_table.columns = updated_cols
+
     variant_counts.to_csv(os.path.join(wdir, "variants.csv"), index=False)
     plot_performance(barcode_counts, wdir=wdir, save=True)
     variant_table.to_csv(os.path.join(wdir, "variant_table.csv"))
@@ -7666,9 +7780,11 @@ def split_contigs(settings):
 
 
 def freebayes_call(bam_dir="/opt/analysis/padded_bams",
-                   fastq_dir="/opt/analysiss/padded_fastqs", options=[],
+                   fastq_dir="/opt/analysis/padded_fastqs", options=[],
                    vcf_dir="/opt/analysis/freebayes_vcfs",
-                   align=True, settings=None, settings_file=None):
+                   targets_vcf="/opt/project_resources/targets.vcf.gz",
+                   align=True, settings=None, settings_file=None,
+                   bam_files=None):
     """ Call variants for MIP data using freebayes.
     A mapped haplotype file must be present in the working directory. This
     is generated during haplotype processing. Per sample fastqs and bams
@@ -7683,7 +7799,7 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
     bam_dir: str/path, /opt/analysis/padded_bams
         path to the directory where per sample bam files are or where they
         will be created if align=True.
-    fastq_dir: str/path, /opt/analysiss/padded_fastqs
+    fastq_dir: str/path, /opt/analysis/padded_fastqs
         path to the directory where per sample fastq files are or  where they
         will be created if align=True.
     vcf_dir: str/path, /opt/analysiss/freebayes_vcfs
@@ -7701,6 +7817,13 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
     settings_file: str/path, None
         Path to the analysis settings file. Either this or the settings dict
         must be provided.
+    targets_vcf: str/path, /opt/project_resources/targets.vcf.gz
+        Path to targets file to force calls on certain locations even if
+        those variants do not satisfy filter criteria. It must be bgzipped,
+        sorted and indexed. Set to None if this is not desired.
+    bam_files: list, None
+        list of bam files within the bam_dir to pass to freebayes. If None (
+        default), all bam files in the bam_dir will be used.
     """
     # get the working directory from settings
     wdir = settings["workingDir"]
@@ -7740,21 +7863,28 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
     call_df = pd.DataFrame(call_df, columns=["chrom", "capture_start",
                                              "capture_end"])
 
-    # create a function that generates contigs of MIPs which have overlaps
+    # create a function that generates contigs of MIPs which overlap
+    # with 1 kb padding on both sides.
     def get_contig(g):
         intervals = zip(g["capture_start"], g["capture_end"])
         return pd.DataFrame(merge_overlap(
             [list(i) for i in intervals], spacer=1000))
 
+    # create contigs per chromosome
     contigs = call_df.groupby("chrom").apply(get_contig)
     contigs = contigs.reset_index()
     contigs.rename(columns={"level_1": "contig", 0: "contig_capture_start",
                             1: "contig_capture_end"}, inplace=True)
     contigs["contig_name"] = contigs["chrom"] + "_" + contigs["contig"].astype(
         str)
+    # we'll call freebayes on each contig by providing a region string in the
+    # form chrx:begin-end. Create those strings for each contig with 500 bp
+    # padding.
     contigs["region"] = contigs["chrom"] + ":" + (
         contigs["contig_capture_start"] - 500).astype(str) + "-" + (
         contigs["contig_capture_end"] + 500).astype(str)
+    # create a contig dictionary from the contigs dataframe
+    # this dict will be passed to the worker function for parallelization
     contig_dict = {}
     gb = contigs.groupby("chrom")
     for g in gb.groups.keys():
@@ -7762,19 +7892,32 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
         contig_dict[g] = gr[["contig_name", "region"]].set_index(
             "contig_name").to_dict(orient="index")
 
+    # populate the contigs dictionary for freebayes parameters
+    # get fasta genome location
+    genome_fasta = get_file_locations()[settings["species"]]["fasta_genome"]
+
     for chrom in contig_dict:
         for contig_name in contig_dict[chrom]:
             contig_options = contig_dict[chrom][contig_name][
                 "options"] = copy.deepcopy(options)
             region = contig_dict[chrom][contig_name]["region"]
-            vcf_name = os.path.join(wdir, "contig_vcfs", contig_name + ".vcf")
+            contig_vcf = os.path.join(wdir, "contig_vcfs",
+                                      contig_name + ".vcf")
+            # specify region string
             contig_options.extend(["-r", region])
+            # specify fasta genome file
+            contig_options.extend(["-f", genome_fasta])
+            # specify output file parameter for vcf output
+            contig_options.extend(["-v", contig_vcf])
+            # force calls on targeted variants if so specified
+            if targets_vcf is not None:
+                contig_options.extend(["-@", targets_vcf])
+
 
 
 
 def freebayes_worker(contig_dict):
     settings = contig_dict["settings"]
-    genome_fasta = get_file_locations()[settings["species"]]["fasta_genome"]
     options = contig_dict["options"]
     commands = ["freebayes", "-f", genome_fasta]
     commands.extend(options)
