@@ -28,6 +28,7 @@ from msa_to_vcf import msa_to_vcf as msa_to_vcf
 import itertools
 import tblib.pickling_support
 import sys
+import time
 
 print("functions reloading")
 # backbone dictionary
@@ -7781,10 +7782,12 @@ def split_contigs(settings):
 
 def freebayes_call(bam_dir="/opt/analysis/padded_bams",
                    fastq_dir="/opt/analysis/padded_fastqs", options=[],
-                   vcf_dir="/opt/analysis/freebayes_vcfs",
+                   vcf_file="/opt/analysis/variants.vcf.gz",
                    targets_vcf="/opt/project_resources/targets.vcf.gz",
                    align=True, settings=None, settings_file=None,
-                   bam_files=None):
+                   bam_files=None, verbose=True,
+                   errors_file="/opt/analysis/freebayes_errors.txt",
+                   warnings_file="/opt/analysis/freebayes_warnings.txt"):
     """ Call variants for MIP data using freebayes.
     A mapped haplotype file must be present in the working directory. This
     is generated during haplotype processing. Per sample fastqs and bams
@@ -7802,8 +7805,8 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
     fastq_dir: str/path, /opt/analysis/padded_fastqs
         path to the directory where per sample fastq files are or  where they
         will be created if align=True.
-    vcf_dir: str/path, /opt/analysiss/freebayes_vcfs
-        path to the directory where per chromosome vcf files will be saved.
+    vcf_file: str/path, /opt/analysis/variants.vcf.gz
+        Output vcf file path.
     options: list, []
         options to pass to freebayes directly, such as --min-coverage
         the list must have each parameter and value as separate items.
@@ -7824,7 +7827,24 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
     bam_files: list, None
         list of bam files within the bam_dir to pass to freebayes. If None (
         default), all bam files in the bam_dir will be used.
+    verbose: bool, True
+        if set to True, print errors and warnings in addition to saving to
+        errors and warnings files.
+    errors_file: str/path, /opt/analysis/freebayes_errors.txt
+        file to save freebayes errors.
+    warnings_file: str/path, /opt/analysis/freebayes_warnings
+        file to save freebayes warnings
     """
+    # get the analysis settings
+    # check if both settings and the settings file are None:
+    if (settings is None) and (settings_file is None):
+        print("settings or settings file must be provided for freebayes_call.")
+        return
+    else:
+        if settings is None:
+            settings = get_analysis_settings(settings_file)
+        else:
+            settings = copy.deepcopy(settings)
     # get the working directory from settings
     wdir = settings["workingDir"]
     # load mapped haplotypes file. This file has the genomic locations
@@ -7863,6 +7883,7 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
     call_df = pd.DataFrame(call_df, columns=["chrom", "capture_start",
                                              "capture_end"])
 
+
     # create a function that generates contigs of MIPs which overlap
     # with 1 kb padding on both sides.
     def get_contig(g):
@@ -7893,35 +7914,166 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
             "contig_name").to_dict(orient="index")
 
     # populate the contigs dictionary for freebayes parameters
+    # start with options to be added for each contig
     # get fasta genome location
     genome_fasta = get_file_locations()[settings["species"]]["fasta_genome"]
+    # specify fasta genome file
+    options.extend(["-f", genome_fasta])
+    # force calls on targeted variants if so specified
+    if targets_vcf is not None:
+        options.extend(["-@", targets_vcf])
+    # add if bam files are specified. Nothing should be added to options
+    # after the bam files.
+    if bam_files is not None:
+        options.extend(bam_files)
+    # create a file list in the bam_dir that has full path to all bam files
+    # if all bam files are to be used
+    else:
+        bam_file_list = os.path.join(bam_dir, "bamlist.txt")
+        with open(bam_file_list, "w") as outfile:
+            for f in os.scandir(bam_dir):
+                if os.path.splitext(f.name)[1] == ".bam":
+                    outfile.write(f.path + "\n")
+        options.extend(["-L", bam_file_list])
 
+    # create a list for keeping all contig vcf file paths to concatanate
+    # them at the end.
+    contig_vcf_paths = []
+    # create a similar list for zipped vcf files
+    contig_vcf_gz_paths = []
+    # create a list of per contig dictionary to feed to multiprocessing
+    # function map_async
+    contig_dict_list = []
+    # create the contigs vcf directory
+    cvcfs_dir = os.path.join(wdir, "contig_vcfs")
+    if not os.path.exists(cvcfs_dir):
+        os.makedirs(cvcfs_dir)
+    # update contig_dict with contig specific options
     for chrom in contig_dict:
         for contig_name in contig_dict[chrom]:
-            contig_options = contig_dict[chrom][contig_name][
-                "options"] = copy.deepcopy(options)
+            contig_options = copy.deepcopy(options)
+            # we'll add the contig specific options to the beginning of
+            # the options list in case bam files were added to the options
+            # and they must stay at the end because they are positional args.
+            ################################################################
+            # add contigs region string (chrx:begin-end)
             region = contig_dict[chrom][contig_name]["region"]
+            contig_options = ["-r", region] + contig_options
+            # add contigs vcf file name
             contig_vcf = os.path.join(wdir, "contig_vcfs",
                                       contig_name + ".vcf")
-            # specify region string
-            contig_options.extend(["-r", region])
-            # specify fasta genome file
-            contig_options.extend(["-f", genome_fasta])
-            # specify output file parameter for vcf output
+            contig_dict[chrom][contig_name]["vcf_path"] = contig_vcf
+            # add output file to the freebayes options
             contig_options.extend(["-v", contig_vcf])
-            # force calls on targeted variants if so specified
-            if targets_vcf is not None:
-                contig_options.extend(["-@", targets_vcf])
+            # add contig vcf path to the list
+            contig_vcf_paths.append(contig_vcf)
+            # add contigs vcf.gz file name
+            contig_vcf_gz = os.path.join(wdir, "contig_vcfs",
+                                         contig_name + ".vcf.gz")
+            contig_vcf_gz_paths.append(contig_vcf_gz)
+            contig_dict[chrom][contig_name]["vcf_gz_path"] = contig_vcf_gz
+            contig_dict[chrom][contig_name]["options"] = contig_options
+            # add the contig dict to contig dict list
+            contig_dict_list.append(contig_dict[chrom][contig_name])
 
+    # create a processor pool for parallel processing
+    pool = Pool(int(settings["processorNumber"]))
+    # create a results container for the return values from the worker function
+    results = []
+    errors = []
+    # run the freebayes worker program in parallel
+    for c in contig_dict_list:
+        pool.apply_async(freebayes_worker, (c, ),
+                         callback=results.append,
+                         error_callback=errors.append)
+    # join and close the processor pool.
+    pool.close()
+    pool.join()
 
+    # compare the length of the results object and the number of contigs
+    # print an error message if they are not the same
+    if len(contig_dict_list) != (len(results) + len(errors)):
+        print(("Number of contigs, {}, is not the same as number of results "
+               "from the variant caller, {},"
+               " plus number of errors, {}.").format(len(contig_dict_list),
+                                                     len(results),
+                                                     len(errors)))
+        return contig_dict_list, results
+    # check each contig's variant call results for errors and warnings
+    # open files to save errors and warnings
+    with open(errors_file, "w") as ef, open(warnings_file, "wb") as wf:
+        # keep a count of warnings an errors
+        error_count = 0
+        warning_count = 0
+        for res in results:
+            for r in res:
+                try:
+                    r.check_returncode()
+                except subprocess.CalledProcessError as e:
+                    error_count += 1
+                    ef.write(str(e) + "\n")
+                    if verbose:
+                        print("Error in freebayes calls: ", e)
+                # print if any warnings were issued
+                if len(r.stderr) > 0:
+                    warning_count += 1
+                    wf.write(r.stderr + b"\n")
+                    if verbose:
+                        print("Warning in freebayes calls: ", r.stderr)
+        # if errors are not printed but present, print an message to indicate
+        # the presence of errors/warnings
+        if not verbose:
+            if error_count > 0:
+                print(("Errors were encountered in freebayes calls."
+                       " Please inspect {} for errors.").format(errors_file))
+            if warning_count > 0:
+                print(("There were warnings in freebayes calls."
+                       " Please inspect {} for warnings.").format(
+                           warnings_file))
+
+    if len(errors) > 0:
+        print(("There were {} calls that failed").format(len(errors)))
+
+    # concatanate contig vcfs. The number of contigs may be high, so we'll
+    # write the vcf paths to a file and bcftools will read from that file
+    cvcf_paths_file = os.path.join(wdir, "contig_vcfs", "vcf_file_list.txt")
+    with open(cvcf_paths_file, "w") as outfile:
+        outfile.write("\n".join(contig_vcf_gz_paths) + "\n")
+    subprocess.run(["bcftools", "concat", "-f", cvcf_paths_file, "-Oz",
+                    "-o", vcf_file])
+    return (contig_dict_list, results, errors)
 
 
 def freebayes_worker(contig_dict):
-    settings = contig_dict["settings"]
+    """ Run freebayes program with the specified options and return a
+    subprocess.CompletedProcess object.
+    """
     options = contig_dict["options"]
-    commands = ["freebayes", "-f", genome_fasta]
-    commands.extend(options)
-    subprocess.call(commands)
+    command = ["freebayes"]
+    command.extend(options)
+    # run freebayes command piping the output
+    fres = subprocess.run(command, stderr=subprocess.PIPE)
+    # check the return code of the freebayes run. if succesfull continue
+    if fres.returncode == 0:
+        # bgzip the vcf output, using the freebayes output as bgzip input
+        vcf_path = contig_dict["vcf_path"]
+        gres = subprocess.run(["bgzip", "-f", vcf_path],
+                              stderr=subprocess.PIPE)
+        # make sure bugzip process completed successfully
+        if gres.returncode == 0:
+            # index the vcf.gz file
+            vcf_gz_path = contig_dict["vcf_gz_path"]
+            ires = subprocess.run(["bcftools", "index", "-f", vcf_gz_path],
+                                  stderr=subprocess.PIPE)
+            # return the CompletedProcess objects
+            return (fres, gres, ires)
+        else:
+            return (fres, gres)
+    # if freebayes call failed, return the completed process object
+    # instead of attempting to zip the vcf file which does not exist if
+    # freebayes failed.
+    else:
+        return (fres, )
 
 
 def merge_contigs(settings, contig_info_dict, results):
