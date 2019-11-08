@@ -12,11 +12,8 @@ import string
 import pickle
 import copy
 import numpy as np
-from sklearn.cluster import MeanShift, DBSCAN
 import matplotlib.pyplot as plt
 from matplotlib import colors
-from sklearn.manifold import TSNE
-from scipy.stats import chi2_contingency, fisher_exact
 import pysam
 import mip_classes as mod
 import pandas as pd
@@ -26,8 +23,8 @@ from primer3 import calcHeterodimerTm
 import traceback
 from msa_to_vcf import msa_to_vcf as msa_to_vcf
 import itertools
-import tblib.pickling_support
 import sys
+import allel
 import time
 
 print("functions reloading")
@@ -2362,10 +2359,11 @@ def bwa(fastq_file, output_file, output_type, input_dir,
         bam_com = ["samtools", "view", "-b"]
         bam = subprocess.Popen(bam_com, stdin=sam.stdout,
                                stdout=subprocess.PIPE)
-        sort_com = ["samtools", "sort", "-T /tmp/" + output_file]
-        with open(os.path.join(output_dir, output_file), "w") as outfile:
-            subprocess.Popen(sort_com, stdin=bam.stdout, stdout=outfile,
-                             stderr=outfile)
+        bam_file = os.path.join(output_dir, output_file)
+        sort_com = ["samtools", "sort", "-T", "/tmp/", "-o", bam_file]
+        subprocess.run(sort_com, stdin=bam.stdout)
+        subprocess.run(["samtools", "index", bam_file], check=True,
+                       stderr=subprocess.PIPE)
 
 
 def bwa_multi(fastq_files, output_type, fastq_dir, bam_dir, options, species,
@@ -2394,13 +2392,20 @@ def bwa_multi(fastq_files, output_type, fastq_dir, bam_dir, options, species,
         processor_per_process = processor_number // parallel_processes
         p = NoDaemonProcessPool(parallel_processes)
         options = options + ["-t " + str(processor_per_process)]
+        results = []
+        errors = []
         for f in fastq_files:
             base_name = f.split(".")[0]
             bam_name = base_name + extension
             p.apply_async(bwa, (f, bam_name, output_type, fastq_dir, bam_dir,
-                                options, species, base_name))
+                                options, species, base_name),
+                          callback=results.append,
+                          error_callback=errors.append)
         p.close()
         p.join()
+        if len(errors) > 0:
+            for e in errors:
+                print("Error in bwa_multi function", e.stderr)
 
 
 def parse_cigar(cigar):
@@ -7883,7 +7888,6 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
     call_df = pd.DataFrame(call_df, columns=["chrom", "capture_start",
                                              "capture_end"])
 
-
     # create a function that generates contigs of MIPs which overlap
     # with 1 kb padding on both sides.
     def get_contig(g):
@@ -7904,13 +7908,39 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
     contigs["region"] = contigs["chrom"] + ":" + (
         contigs["contig_capture_start"] - 500).astype(str) + "-" + (
         contigs["contig_capture_end"] + 500).astype(str)
+    # we'll force calls on targeted variants if so specified
+    if targets_vcf is not None:
+        # each contig must include at least one of the targets, otherwise
+        # freebayes throws an error. So we'll load the targets and add the
+        # targets option to only those contigs that contain targets
+        targets = allel.vcf_to_dataframe(targets_vcf)
+        # merge targets and contigs dataframes to determine which contigs
+        # contain targets. chrom will be used as the common column name
+        targets["chrom"] = targets["CHROM"]
+        targets = targets.merge(contigs)
+        # remove rows where chrom is shared but target position is outside
+        # of contig boundries.
+        targets = targets.loc[
+            (targets["contig_capture_start"] <= targets["POS"])
+            & (targets["POS"] <= targets["contig_capture_end"])]
+        targets["contains_targets"] = True
+        # merge only two columns of the targets df to contigs so that
+        # the only shared column is contig_name. More than one target can
+        # be in a single contig, so we need to drop duplicates from targets.
+        contigs = contigs.merge(targets[
+            ["contig_name", "contains_targets"]].drop_duplicates(), how="left")
+        contigs["contains_targets"].fillna(False, inplace=True)
+    else:
+        contigs["contains_targets"] = False
+
     # create a contig dictionary from the contigs dataframe
     # this dict will be passed to the worker function for parallelization
-    contig_dict = {}
+    chrom_dict = {}
     gb = contigs.groupby("chrom")
     for g in gb.groups.keys():
         gr = gb.get_group(g)
-        contig_dict[g] = gr[["contig_name", "region"]].set_index(
+        chrom_dict[g] = gr[["contig_name", "region",
+                            "contains_targets"]].set_index(
             "contig_name").to_dict(orient="index")
 
     # populate the contigs dictionary for freebayes parameters
@@ -7919,9 +7949,6 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
     genome_fasta = get_file_locations()[settings["species"]]["fasta_genome"]
     # specify fasta genome file
     options.extend(["-f", genome_fasta])
-    # force calls on targeted variants if so specified
-    if targets_vcf is not None:
-        options.extend(["-@", targets_vcf])
     # add if bam files are specified. Nothing should be added to options
     # after the bam files.
     if bam_files is not None:
@@ -7942,27 +7969,25 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
     # create a similar list for zipped vcf files
     contig_vcf_gz_paths = []
     # create a list of per contig dictionary to feed to multiprocessing
-    # function map_async
+    # function apply_async
     contig_dict_list = []
     # create the contigs vcf directory
     cvcfs_dir = os.path.join(wdir, "contig_vcfs")
     if not os.path.exists(cvcfs_dir):
         os.makedirs(cvcfs_dir)
     # update contig_dict with contig specific options
-    for chrom in contig_dict:
-        for contig_name in contig_dict[chrom]:
-            contig_options = copy.deepcopy(options)
-            # we'll add the contig specific options to the beginning of
-            # the options list in case bam files were added to the options
-            # and they must stay at the end because they are positional args.
+    for chrom in chrom_dict:
+        for contig_name in chrom_dict[chrom]:
+            contig_dict = chrom_dict[chrom][contig_name]
             ################################################################
+            # create contig specific options and
             # add contigs region string (chrx:begin-end)
-            region = contig_dict[chrom][contig_name]["region"]
-            contig_options = ["-r", region] + contig_options
+            region = contig_dict["region"]
+            contig_options = ["-r", region]
             # add contigs vcf file name
             contig_vcf = os.path.join(wdir, "contig_vcfs",
                                       contig_name + ".vcf")
-            contig_dict[chrom][contig_name]["vcf_path"] = contig_vcf
+            contig_dict["vcf_path"] = contig_vcf
             # add output file to the freebayes options
             contig_options.extend(["-v", contig_vcf])
             # add contig vcf path to the list
@@ -7971,10 +7996,16 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
             contig_vcf_gz = os.path.join(wdir, "contig_vcfs",
                                          contig_name + ".vcf.gz")
             contig_vcf_gz_paths.append(contig_vcf_gz)
-            contig_dict[chrom][contig_name]["vcf_gz_path"] = contig_vcf_gz
-            contig_dict[chrom][contig_name]["options"] = contig_options
+            contig_dict["vcf_gz_path"] = contig_vcf_gz
+            # if contig includes targets, we'll force calls on those
+            if contig_dict["contains_targets"]:
+                contig_options.extend(["-@", targets_vcf])
+            # we'll add the contig specific options to the beginning of
+            # the options list in case bam files were added to the options
+            # and they must stay at the end because they are positional args.
+            contig_dict["options"] = contig_options + options
             # add the contig dict to contig dict list
-            contig_dict_list.append(contig_dict[chrom][contig_name])
+            contig_dict_list.append(contig_dict)
 
     # create a processor pool for parallel processing
     pool = Pool(int(settings["processorNumber"]))
@@ -7982,10 +8013,8 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
     results = []
     errors = []
     # run the freebayes worker program in parallel
-    for c in contig_dict_list:
-        pool.apply_async(freebayes_worker, (c, ),
-                         callback=results.append,
-                         error_callback=errors.append)
+    pool.map_async(freebayes_worker, contig_dict_list, callback=results.extend,
+                   error_callback=errors.extend)
     # join and close the processor pool.
     pool.close()
     pool.join()
@@ -7994,11 +8023,10 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
     # print an error message if they are not the same
     if len(contig_dict_list) != (len(results) + len(errors)):
         print(("Number of contigs, {}, is not the same as number of results "
-               "from the variant caller, {},"
-               " plus number of errors, {}.").format(len(contig_dict_list),
-                                                     len(results),
-                                                     len(errors)))
-        return contig_dict_list, results
+               "from the variant caller, {}, plus number of errors, {}. "
+               "This means some calls have failed silently. "
+               "Results and errors should be inspected.").format(
+               len(contig_dict_list), len(results), len(errors)))
     # check each contig's variant call results for errors and warnings
     # open files to save errors and warnings
     with open(errors_file, "w") as ef, open(warnings_file, "wb") as wf:
@@ -8074,6 +8102,43 @@ def freebayes_worker(contig_dict):
     # freebayes failed.
     else:
         return (fres, )
+
+
+def create_variant_tables(settings,
+        vcf_file, geneid2genename=None, target_annotation=None,
+        wdir="/opt/analylsis"):
+    """ Create various count tables from a vcf file generated by the freebayes
+    program. There are 3 different types of count output for each variant:
+    variant count, reference count and coverage. The vcf file will be split
+    into biallelic variants. Table versions of the input vcf will be created
+    but the info fields will be limited to the mandatory vcf fields and some
+    annotation data if avaliable.
+
+    In addition to the original vcf table, aa change tables can be generated.
+    These will be generated by filtering the vcf to missense variants only,
+    decomposing block substitutions (haplotypes) and combining the counts for
+    the same aminoacid changes. This operation is specifically intended for
+    generating data for targeted missense mutations and only reports that. All
+    other variants, even those complex variants including targeted variants
+    will not be reported. Finally, one specific mutation (dhps-437) will have
+    reference counts instead of variant counts if present. This is because this
+    drug resistance variant is encoded by the 3d7 reference sequence.
+
+    Parameters
+    ----------
+    vcf_file: str/path
+        Starting vcf file.
+    geneid2genename: str/path, None.
+        Path to a json dictionary that maps gene ids to gene names. Gene IDs
+        will populate the Gene field if this file is not provided.
+    target_annotation: str/path, None.
+        Path to pickled dictionary with the format:
+        {(gene_name, aminoacid_change): mutation_name} to annotate and label
+        targeted mutations. This is required for targeted variant labeling.
+    """
+    # Will protein level aggregation be performed on the variants?
+    # This will only be done for simple missense variants but it is important
+    # to annotate the vcf file before breaking down the haplotypes.
 
 
 def merge_contigs(settings, contig_info_dict, results):
@@ -8166,6 +8231,30 @@ def merge_contigs(settings, contig_info_dict, results):
 
             vcf_file_list.append(annotated_vcf_file)
         subprocess.call(["mv"] + vcf_file_list + [vcfdir])
+
+
+def annotate_vcf_file(settings, vcf_file, annotated_vcf_file):
+    """ Annotate a vcf file using snpEff, bgzip and index the output file."""
+    # get the species information from settings
+    species = settings["species"]
+    try:
+        # find where snpEff files are located and which database should be used
+        ann_db_dir = get_file_locations()[species]["snpeff_dir"]
+        ann_db = get_file_locations()[species]["snpeff_db"]
+    except KeyError:
+        print("snpeff_dir and snpeff_db must be specified in the settings "
+              "to carry out snpeff annotations.")
+        return
+    # run snpeff program on the vcf file. Snpeff outputs to stdout so we'll
+    # redirect it to the annotated vcf file.
+    with open(annotated_vcf_file, "wb") as avf:
+        subprocess.run(["java", "-Xmx10g", "-jar",
+                        os.path.join(ann_db_dir, "snpEff.jar"),
+                       ann_db, vcf_file], stdout=avf, check=True)
+    # most vcf operations require a bgzipped indexed file, so do those
+    subprocess.run(["bgzip", annotated_vcf_file], check=True)
+    subprocess.run(["bcftools", "index", annotated_vcf_file + ".gz"],
+                   check=True)
 
 
 def process_contig(contig_dict):
