@@ -7788,7 +7788,7 @@ def split_contigs(settings):
 def freebayes_call(bam_dir="/opt/analysis/padded_bams",
                    fastq_dir="/opt/analysis/padded_fastqs", options=[],
                    vcf_file="/opt/analysis/variants.vcf.gz",
-                   targets_vcf="/opt/project_resources/targets.vcf.gz",
+                   targets_file=None,
                    align=True, settings=None, settings_file=None,
                    bam_files=None, verbose=True,
                    errors_file="/opt/analysis/freebayes_errors.txt",
@@ -7825,10 +7825,10 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
     settings_file: str/path, None
         Path to the analysis settings file. Either this or the settings dict
         must be provided.
-    targets_vcf: str/path, /opt/project_resources/targets.vcf.gz
+    targets_file: str/path, None
         Path to targets file to force calls on certain locations even if
-        those variants do not satisfy filter criteria. It must be bgzipped,
-        sorted and indexed. Set to None if this is not desired.
+        those variants do not satisfy filter criteria. It must be a tab
+        separated text file with minimum columns CHROM, POS, REF, ALT.
     bam_files: list, None
         list of bam files within the bam_dir to pass to freebayes. If None (
         default), all bam files in the bam_dir will be used.
@@ -7909,11 +7909,11 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
         contigs["contig_capture_start"] - 500).astype(str) + "-" + (
         contigs["contig_capture_end"] + 500).astype(str)
     # we'll force calls on targeted variants if so specified
-    if targets_vcf is not None:
+    if targets_file is not None:
         # each contig must include at least one of the targets, otherwise
         # freebayes throws an error. So we'll load the targets and add the
         # targets option to only those contigs that contain targets
-        targets = allel.vcf_to_dataframe(targets_vcf)
+        targets = pd.read_table(targets_file)
         # merge targets and contigs dataframes to determine which contigs
         # contain targets. chrom will be used as the common column name
         targets["chrom"] = targets["CHROM"]
@@ -7930,6 +7930,33 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
         contigs = contigs.merge(targets[
             ["contig_name", "contains_targets"]].drop_duplicates(), how="left")
         contigs["contains_targets"].fillna(False, inplace=True)
+        # create a targets.vcf file for freebayes
+        targets_vcf = os.path.join(wdir, "targets.vcf")
+        with open(targets_vcf, "w") as outfile:
+            outfile.write('##fileformat=VCFv4.2\n')
+            outfile.write(
+                '##FILTER=<ID=PASS,Description="All filters passed">\n')
+            outfile.write('##INFO=<ID=TR,Number=.,Type=String,Description'
+                          '="Targeted variant.">\n')
+            vcf_fields = ["ID", "QUAL", "FILTER"]
+            for vf in vcf_fields:
+                targets[vf] = "."
+            targets["INFO"] = "TR"
+            vcf_fields = ["#CHROM", "POS", "ID", "REF", "ALT", "QUAL",
+                          "FILTER", "INFO"]
+            targets = targets.rename(columns={"CHROM": "#CHROM"})[vcf_fields]
+            targets.sort_values(["#CHROM", "POS"]).to_csv(
+                outfile, sep="\t", index=False)
+        # bgzip and index
+        res = subprocess.run(["bgzip", "-f", targets_vcf],
+                             stderr=subprocess.PIPE)
+        if res.returncode != 0:
+            print("Error in compressing targets.vcf file", res.stderr)
+        targets_vcf = targets_vcf + ".gz"
+        res = subprocess.run(["tabix", "-s", "1", "-b", "2", "-e", "2", "-f",
+                              targets_vcf], stderr=subprocess.PIPE)
+        if res.returncode != 0:
+            print("Error in indexing targets.vcf.gz file ", res.stderr)
     else:
         contigs["contains_targets"] = False
 
@@ -8068,7 +8095,8 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
     with open(cvcf_paths_file, "w") as outfile:
         outfile.write("\n".join(contig_vcf_gz_paths) + "\n")
     subprocess.run(["bcftools", "concat", "-f", cvcf_paths_file, "-Oz",
-                    "-o", vcf_file])
+                    "-o", vcf_file], check=True)
+    subprocess.run(["bcftools", "index", "-f", vcf_file], check=True)
     return (contig_dict_list, results, errors)
 
 
@@ -8105,9 +8133,10 @@ def freebayes_worker(contig_dict):
 
 
 def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
-                  geneid_to_genename=None, target_annotation=None,
-                  aggregate_aminoacids=False, aggregate_nucleotides=False,
-                  decompose_options=[], annotated_vcf=False):
+                  geneid_to_genename=None, target_aa_annotation=None,
+                  aggregate_aminoacids=False, target_nt_annotation=None,
+                  aggregate_nucleotides=False, decompose_options=[],
+                  annotated_vcf=False, aggregate_none=True):
     """ Create various count tables from a vcf file generated by the freebayes
     program. There are 3 different types of count output for each variant:
     variant count, reference count and coverage. The vcf file will be split
@@ -8138,16 +8167,21 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
     vcf_file: str/path
         Starting vcf file.
     geneid2genename: str/path, None.
-        Path to a json dictionary that maps gene ids to gene names. Gene IDs
+        Path to a tab separated tex file that maps gene ids to gene names.
+        Column names must be gene_id and gene_name. Gene IDs
         will populate the Gene field if this file is not provided.
-    target_annotation: str/path, None.
-        Path to pickled dictionary with the format:
-        {(gene_name, aminoacid_change (refAAPosAltAA)): mutation_name} to
-        annotate and label targeted mutations. refAA and AltAA should be single
-        letter amino acid codes.
-        Alternatively, if targets are specified at the nucleotide level,
-        {(CHROM, POS, REF, ALT): mutation_name} should be
-        used. This parameter is required for targeted variant labeling.
+    target_aa_annotation: str/path, None.
+        Path to a tab separated text file with targeted variant information to
+        annotate and label targeted amino acid changes.
+        It must have gene_name, aminoacid_change, and mutation_name columns.
+        Amino acid changes should be represented as refAAPosAltAA. refAA and
+        AltAA must be three letter amino acid codes.
+        This file is required for targeted protein variant labeling.
+    target_nt_annotation: str/path, None.
+        Path to a tab separated text file with targeted variant information to
+        annotate and label targeted nucleotide changes.
+        It must have CHROM, POS, REF, ALT, NAME columns.
+        This file is required for targeted nucleotide variant labeling.
     aggregate_aminoacids: bool, False
         whether counts for same amino acids should be aggregated. This involves
         decomposing multi amino acid changes for missense variants. If amino
@@ -8160,6 +8194,10 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
         involves decomposing all variants to the smallest units possible,
         breaking all haplotype data. The level of decomposition should be
         specified with the decompose_options parameter.
+    aggregate_none: bool, True.
+        Do no aggregation on counts, save the original (annotated if requested)
+        vcf file as 3  count tables. Three aggregation options are compatible
+        with each other and can be used all at once.
     decompose_options: list, []
         if aggregate nucleotides option is selected, these options will be
         passed to vt program. "-a" for decomposing variants containing indels,
@@ -8190,7 +8228,7 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
     split_vcf_path = os.path.join(wdir, "split." + vcf_file)
     subprocess.run(["bcftools", "norm", "-f", genome_fasta, "-m-both",
                     vcf_path, "-Oz", "-o", split_vcf_path], check=True)
-    subprocess.run(["bcftools", "index", split_vcf_path])
+    subprocess.run(["bcftools", "index", "-f", split_vcf_path])
 
     # Will protein level aggregation be performed on the variants?
     # This will only be done for simple missense variants but it is important
@@ -8207,17 +8245,20 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
                   " aggregation. Not aggregating counts on amino acids.")
             return
         # check if a target annotation dict is provided.
-        if target_annotation is not None:
-            with open(target_annotation, "rb") as infile:
-                target_annotation_dict = pickle.load(infile)
-        else:
-            target_annotation_dict = {}
+        target_annotation_dict = {}
+        if target_aa_annotation is not None:
+            taa = pd.read_table(target_aa_annotation).set_index(
+                ["gene_name", "aminoacid_change"]).to_dict(orient="index")
+            for k in taa.keys():
+                target_annotation_dict[k] = taa[k]["mutation_name"]
         # check if a gene id to gene name file is provided
+        gene_ids = {}
         if geneid_to_genename is not None:
-            with open(geneid_to_genename) as infile:
-                gene_ids = json.load(infile)
-        else:
-            gene_ids = {}
+            gids = pd.read_table(geneid_to_genename).set_index("gene_id")
+            gids = gids.to_dict(orient="index")
+            for g in gids:
+                gene_ids[g] = gids[g]["gene_name"]
+
         # load annotated vcf file
         variants = allel.read_vcf(annotated_vcf_path, fields=["*"],
                                   alt_number=1,
@@ -8351,7 +8392,7 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
         mutation_refs.loc[:, exceed_index] = diff_count.loc[:, exceed_index]
         # for one pf mutation alt count will be replaced with ref count
         # because reference allele is drug resistant
-        dhps_key = ("PF3D7_0810800", "dhps", "dhps-A437G")
+        dhps_key = ("PF3D7_0810800", "dhps", "dhps-Ala581Gly")
         try:
             mutation_counts.loc[dhps_key] = reference_counts[dhps_key].values
         except KeyError:
@@ -8361,20 +8402,17 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
         mutation_refs.T.to_csv(os.path.join(wdir, "reference_AA_table.csv"))
         mutation_coverage.T.to_csv(os.path.join(wdir, "coverage_AA_table.csv"))
 
-    elif aggregate_nucleotides:
+    if aggregate_nucleotides:
         # aggregating counts of nucleotides requires decomposing block
         # substitutions, at a minimum. If desired, complex variants involving
         # indels can be decomposed as well.
         decomposed_vcf = os.path.join(wdir, "decomposed." + vcf_file)
         # prepare vt decompose command
         comm = ["vt", "decompose_blocksub"] + decompose_options
-        comm.extend(split_vcf_path)
+        comm.append(split_vcf_path)
         comm.extend(["-o", decomposed_vcf])
         # run decompose
         subprocess.run(comm, check=True)
-        # zip  and index the decomposed vcf file
-        subprocess.run(["bgzip", "-f", decomposed_vcf], check=True)
-        decomposed_vcf = decomposed_vcf + ".gz"
         subprocess.run(["bcftools", "index", "-f", decomposed_vcf], check=True)
         # load decomposed vcf file
         variants = allel.read_vcf(decomposed_vcf, fields=["*"], alt_number=1)
@@ -8389,10 +8427,18 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
         # for each variant
         variant_data = list(zip(*[variants[v] for v in variant_fields]))
         # check if a target annotation dict is provided.
-        if target_annotation is not None:
+        if target_nt_annotation is not None:
             # annotate targeted variants
-            with open(target_annotation, "rb") as infile:
+            with open(target_nt_annotation, "rb") as infile:
                 target_annotation_dict = pickle.load(infile)
+
+        # check if a target annotation dict is provided.
+        target_annotation_dict = {}
+        if target_nt_annotation is not None:
+            taa = pd.read_table(target_nt_annotation).set_index(
+                ["CHROM", "POS", "REF", "ALT"]).to_dict(orient="index")
+            for k in taa.keys():
+                target_annotation_dict[k] = taa[k]["mutation_name"]
             grouping_keys = ["CHROM", "POS", "REF", "ALT", "Mutation Name",
                              "Targeted"]
             split_variants = []
@@ -8438,7 +8484,7 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
         mutation_counts.T.to_csv(os.path.join(wdir, "alternate_AN_table.csv"))
         mutation_refs.T.to_csv(os.path.join(wdir, "reference_AN_table.csv"))
         mutation_coverage.T.to_csv(os.path.join(wdir, "coverage_AN_table.csv"))
-    else:
+    if aggregate_none:
         # if no aggregation will be done, load the vcf file
         if annotate:
             # if annotation was requested use the annotated vcf path
@@ -8485,9 +8531,9 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
                                 columns=variants["samples"],
                                 index=index).replace(-1, 0)
         # save count tables
-        mutation_counts.T.to_csv(os.path.join(wdir, "alternate_table.csv"))
-        mutation_refs.T.to_csv(os.path.join(wdir, "reference_table.csv"))
-        mutation_coverage.T.to_csv(os.path.join(wdir, "coverage_table.csv"))
+        variant_counts.T.to_csv(os.path.join(wdir, "alternate_table.csv"))
+        reference_counts.T.to_csv(os.path.join(wdir, "reference_table.csv"))
+        coverage.T.to_csv(os.path.join(wdir, "coverage_table.csv"))
 
 
 def merge_contigs(settings, contig_info_dict, results):
@@ -8609,12 +8655,13 @@ def annotate_vcf_file(settings, vcf_file, annotated_vcf_file, options=[]):
             print("Error  in snpEff call ", res.stderr)
             return res.returncode
     # most vcf operations require a bgzipped indexed file, so do those
-    res = subprocess.run(["bgzip", annotated_vcf_file], stderr=subprocess.PIPE)
+    res = subprocess.run(["bgzip", "-f", annotated_vcf_file],
+                         stderr=subprocess.PIPE)
     if res.returncode != 0:
         print("Error in compressing the annotated vcf file, ", res.stderr)
         return res.returncode
-    res = subprocess.run(["bcftools", "index", annotated_vcf_file + ".gz"],
-                         stderr=subprocess.PIPE)
+    res = subprocess.run(["bcftools", "index", "-f",
+                          annotated_vcf_file + ".gz"], stderr=subprocess.PIPE)
     if res.returncode != 0:
         print("Error in indexing the annotated vcf file, ", res.stderr)
         return res.returncode
