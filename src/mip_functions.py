@@ -8427,32 +8427,23 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
         # for each variant
         variant_data = list(zip(*[variants[v] for v in variant_fields]))
         # check if a target annotation dict is provided.
-        if target_nt_annotation is not None:
-            # annotate targeted variants
-            with open(target_nt_annotation, "rb") as infile:
-                target_annotation_dict = pickle.load(infile)
-
-        # check if a target annotation dict is provided.
         target_annotation_dict = {}
         if target_nt_annotation is not None:
             taa = pd.read_table(target_nt_annotation).set_index(
                 ["CHROM", "POS", "REF", "ALT"]).to_dict(orient="index")
             for k in taa.keys():
                 target_annotation_dict[k] = taa[k]["mutation_name"]
-            grouping_keys = ["CHROM", "POS", "REF", "ALT", "Mutation Name",
-                             "Targeted"]
-            split_variants = []
-            for vd in variant_data:
-                try:
-                    t_anno = target_annotation_dict[vd]
-                    targeted_mutation = "Yes"
-                except KeyError:
-                    t_anno = ":".join(map(str, vd))
-                    targeted_mutation = "No"
-                split_variants.append(vd + (t_anno, targeted_mutation))
-        else:
-            grouping_keys = ["CHROM", "POS", "REF", "ALT"]
-            split_variants = variant_data
+        grouping_keys = ["CHROM", "POS", "REF", "ALT", "Mutation Name",
+                         "Targeted"]
+        split_variants = []
+        for vd in variant_data:
+            try:
+                t_anno = target_annotation_dict[vd]
+                targeted_mutation = "Yes"
+            except KeyError:
+                t_anno = ":".join(map(str, vd))
+                targeted_mutation = "No"
+            split_variants.append(vd + (t_anno, targeted_mutation))
         # get count data for the variants
         split_calls = list(zip(*[variants[c] for c in call_data_fields]))
         # first item of the above list is alt counts, then ref counts and
