@@ -9572,11 +9572,40 @@ def combine_info_files(wdir,
         ["sample_name", "capital_set", "replicate", "Library Prep"]
     ).first().reset_index()[["sample_name", "capital_set",
                              "replicate", "Library Prep"]]
+    # check if there are repeating sample_name, sample_set, replicate
+    # combinations; which make up the sample ID. If there are, replicate
+    # numbers will need to be re-assigned so that each library has a unique
+    # ID. If no overlap, they should be left as they are.
+    repeat_found = False
+
+    def assign_replicate(replicates):
+        replicates = list(map(int, replicates))
+        group_size = len(replicates)
+        reps_available = set(range(1, group_size + 1))
+        reps_used = set(replicates)
+        reps_available = reps_available.difference(reps_used)
+        reps_available = sorted(reps_available, reverse=True)
+        reps_used = set()
+        for i in range(group_size):
+            rep = replicates[i]
+            if np.isnan(rep) or (rep in reps_used):
+                rep = int(reps_available.pop())
+                replicates[i] = rep
+                reps_used.add(rep)
+                if not repeat_found:
+                    repeat_found
+                    print("Sample ID will change for a sample because there "
+                          "was another sample with the same ID. Please check "
+                          "the samples.tsv file to compare SID and Original "
+                          "SID fields.")
+            else:
+                replicates[i] = int(rep)
+                reps_used.add(rep)
+        return pd.Series(replicates)
+
     run_meta_collapsed["new_replicate"] = run_meta_collapsed.groupby(
-        "sample_name"
-    )["replicate"].transform(
-        lambda g: list(map(str, list(range(1, len(g) + 1))))
-    )
+        ["sample_name", "sample_set"])["replicate"].transform(
+        assign_replicate).astype(str)
     run_meta = run_meta.merge(run_meta_collapsed)
     run_meta["Sample ID"] = run_meta[["sample_name",
                                       "capital_set",
