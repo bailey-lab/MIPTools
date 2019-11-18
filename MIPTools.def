@@ -63,10 +63,9 @@ From: amd64/ubuntu:18.04
 
     # install bcl2fastq
     cd /opt/programs
-    wget https://support.illumina.com/content/dam/illumina-support/documents/downloads/software/bcl2fastq/bcl2fastq2-v2-20-0-linux-x86-64.zip
-    unzip bcl2fastq2-v2-20-0-linux-x86-64.zip
-    alien bcl2fastq2-v2.20.0.422-Linux-x86_64.rpm
-    dpkg -i bcl2fastq2_0v2.20.0.422-2_amd64.deb
+    unzip bcl2fastq2*.zip || true
+    alien bcl2fastq2*.rpm || true
+    dpkg -i bcl2fastq2*.deb || true
 
     # install msa2vcf
     cd /opt/programs
@@ -122,6 +121,13 @@ From: amd64/ubuntu:18.04
     cd vt
     make -j $CPU_COUNT
     scp vt /opt/bin
+
+    # install seqtk
+    cd /opt/programs
+    git clone https://github.com/lh3/seqtk.git
+    cd seqtk
+    make -j $CPU_COUNT
+    scp seqtk /opt/bin
 
     # install primer3 python wrapper
     pip install primer3-py==0.5.7
