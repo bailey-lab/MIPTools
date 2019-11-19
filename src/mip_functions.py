@@ -9491,6 +9491,27 @@ def fasta_parser(fasta):
     return fasta_dic
 
 
+def fasta_parser_verbatim(fasta):
+    """ Convert a fasta file with multiple sequences to a dictionary with fasta
+    headers as keys and sequences as values. Spaces are allowed in keys.
+    """
+    fasta_dic = {}
+    with open(fasta) as infile:
+        for line in infile:
+            # find the headers
+            if line.startswith(">"):
+                header = line[1:-1]
+                if header in fasta_dic:
+                    print(("%s occurs multiple times in fasta file" % header))
+                fasta_dic[header] = ""
+                continue
+            try:
+                fasta_dic[header] = fasta_dic[header] + line.strip()
+            except KeyError:
+                fasta_dic[header] = line.strip()
+    return fasta_dic
+
+
 def fasta_to_sequence(fasta):
     """ Convert a multiline fasta sequence to one line sequence"""
     f = fasta.strip().split("\n")
