@@ -14,6 +14,8 @@ Note: Snap package install is a rapid way to install the go language required by
 #### Download container 
 A recent version of MIPTools container, built and ready to use, can be downloaded [here](http://baileylab.brown.edu/MIPTools/resources/miptools.sif).  
 
+Please note that this pre-build version does not include bcl2fastq software due to its license. If you plan to use MIPTools to demultiplex bcl files, then please built the container yourself as described in the next section. You will not need bcl2fastq if you are not planning to download your sequencing data in bcl format and do your own demultiplexing. 
+
 #### Alternatively, build MIPTools from the definition file
 MIPTools can also be built from scratch using the definition file provided in this GitHub repository.
 
@@ -28,11 +30,14 @@ Clone the repository with:
 git clone git@github.com:bailey-lab/MIPTools.git
 ```
 
+
 Some computers, such as servers/clusters managed by IT departments, may have restrictions on ports which may lead to a permission error for the above command. **If the above command fails**, try the command below.
 
 ```bash
 git clone https://github.com/bailey-lab/MIPTools.git
 ```
+
+bcl2fastq software is not included in the container by default due to its license. You will not need bcl2fastq if you are not planning to download your sequencing data in bcl format and do your own demultiplexing. Only if you plan to use MIPTools to demultiplex bcl files, please download the program and place it in the `MIPTools/programs` directory. Currently, you can download it from [here](https://support.illumina.com/downloads/bcl2fastq-conversion-software-v2-20.html), but it may change in the future. You must download the file: **bcl2fastq2 Conversion Software v2.20 Installer (Linux rpm)**. 
 
 Build the container.  
 
