@@ -1,5 +1,7 @@
 *.sif
 *.simg
 *.img
+*.err
+*.out
 miptools/
 src/__pycache__/
