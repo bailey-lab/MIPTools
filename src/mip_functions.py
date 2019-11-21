@@ -8411,11 +8411,26 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
         mutation_refs.loc[:, exceed_index] = diff_count.loc[:, exceed_index]
         # for one pf mutation alt count will be replaced with ref count
         # because reference allele is drug resistant
-        dhps_key = ("PF3D7_0810800", "dhps", "dhps-Ala581Gly")
+        dhps_key = ("PF3D7_0810800", "dhps", "dhps-Gly437Ala",
+                    "missense_variant", "Gly437Ala", "Yes")
+        dhps_new_key = ("PF3D7_0810800", "dhps", "dhps-Ala437Gly",
+                        "missense_variant", "Ala437Gly", "Yes")
         try:
-            mutation_counts.loc[dhps_key] = reference_counts[dhps_key].values
+            mutation_counts.loc[dhps_new_key, :] = mutation_refs.loc[
+                dhps_key, :]
+            mutation_refs.loc[dhps_new_key, :] = mutation_counts.loc[
+                dhps_key, :]
+            mutation_coverage.loc[dhps_new_key, :] = mutation_coverage.loc[
+                dhps_key, :]
+            mutation_counts.drop(dhps_key, inplace=True)
+            mutation_refs.drop(dhps_key, inplace=True)
+            mutation_coverage.drop(dhps_key, inplace=True)
+            mutation_counts.sort_index()
+            mutation_refs.sort_index()
+            mutation_coverage.sort_index()
         except KeyError:
             pass
+
         # save count tables
         mutation_counts.T.to_csv(os.path.join(wdir, "alternate_AA_table.csv"))
         mutation_refs.T.to_csv(os.path.join(wdir, "reference_AA_table.csv"))
