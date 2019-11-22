@@ -8425,9 +8425,9 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
             mutation_counts.drop(dhps_key, inplace=True)
             mutation_refs.drop(dhps_key, inplace=True)
             mutation_coverage.drop(dhps_key, inplace=True)
-            mutation_counts.sort_index()
-            mutation_refs.sort_index()
-            mutation_coverage.sort_index()
+            mutation_counts = mutation_counts.sort_index()
+            mutation_refs = mutation_refs.sort_index()
+            mutation_coverage = mutation_coverage.sort_index()
         except KeyError:
             pass
 
