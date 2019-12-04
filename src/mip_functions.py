@@ -8252,10 +8252,14 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
         if res != 0:
             print("Annotating the vcf file failed.")
             return
+    else:
+        annotated_vcf_path = split_vcf_path
     if aggregate_aminoacids:
-        if not annotate:
-            print("Annotate option must be set to true for amino acid level"
-                  " aggregation. Not aggregating counts on amino acids.")
+        if not (annotate or annotated_vcf):
+            print("annotate option must be set to true or an annotadet vcf "
+                  "file must be provided and annotated_vcf option must be "
+                  "set to true for amino acid level aggregation. \n"
+                  "Exiting!")
             return
         # check if a target annotation dict is provided.
         target_annotation_dict = {}
@@ -8542,19 +8546,14 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
         mutation_coverage.T.to_csv(os.path.join(wdir, "coverage_AN_table.csv"))
     if aggregate_none:
         # if no aggregation will be done, load the vcf file
-        if annotate:
+        if annotate or annotated_vcf:
             # if annotation was requested use the annotated vcf path
-            variants = allel.read_vcf(annotated_vcf_path, fields=["*"],
-                                      alt_number=1,
-                                      transformers=allel.ANNTransformer())
-        elif annotated_vcf:
-            # if the original file was already annotated, use split file path
             variants = allel.read_vcf(annotated_vcf_path, fields=["*"],
                                       alt_number=1,
                                       transformers=allel.ANNTransformer())
         else:
             # if the file is not annotated, don't try to parse ANN field.
-            variants = allel.read_vcf(split_vcf_path, fields=["*"],
+            variants = allel.read_vcf(annotated_vcf_path, fields=["*"],
                                       alt_number=1)
         # Freebayes vcfs have AO and RO counts for alt and ref allele depths
         # but GATK has a combined AD depth. Create AO and RO from AD if
@@ -8564,21 +8563,45 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
         except KeyError:
             variants["calldata/RO"] = variants["calldata/AD"][:, :, 0]
             variants["calldata/AO"] = variants["calldata/AD"][:, :, 1]
-        variant_fields = [v for v in variant_fields
-                          if v.startswith("variants/")]
+        variant_fields = ["CHROM", "POS", "REF", "ALT", "QUAL"]
+        if annotate or annotated_vcf:
+            variant_fields.extend(["ANN_Gene_ID", "ANN_HGVS_p"])
+        variant_fields = ["variants/" + v for v in variant_fields]
         # specify fields of interest from individual level data
         # that is basically the count data for tables. AO: alt allele count,
         # RO ref count, DP: coverage.
         call_data_fields = ['calldata/AO', 'calldata/RO', 'calldata/DP']
         # zip variant level  information together, so we have a single value
         # for each variant
-        split_variants = list(zip(*[variants[v] for v in variant_fields]))
+        variant_data = list(zip(*[variants[v] for v in variant_fields]))
         # get count data for the variants
-        split_calls = list(zip(*[variants[c] for c in call_data_fields]))
+        call_data = list(zip(*[variants[c] for c in call_data_fields]))
+        split_variants = []
+        split_calls = []
+        for i in range(len(variant_data)):
+            vd = variant_data[i][:4]
+            site_qual = float(variant_data[i][4])
+            if site_qual < min_site_qual:
+                continue
+            if annotate or annotated_vcf:
+                g_ann = variant_data[i][5]
+                p_ann = variant_data[i][6]
+                if p_ann == "":
+                    p_ann = "."
+                if g_ann == "":
+                    g_ann = "."
+            else:
+                p_ann = "."
+                g_ann = "."
+            vd = vd + (g_ann, p_ann)
+            split_variants.append(vd)
+            split_calls.append(call_data[i])
         # first item of the above list is alt counts, then ref counts and
         # coverage.
         #############################
         # create a multiindex for the variant df that we'll create next
+        variant_fields = variant_fields[:4] + [
+            "variants/Gene ID", "variants/AA Change"]
         index = pd.MultiIndex.from_tuples(split_variants,
                                           names=[v.split("variants/")[1]
                                                  for v in variant_fields])
