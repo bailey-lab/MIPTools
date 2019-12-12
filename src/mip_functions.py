@@ -3833,6 +3833,11 @@ def compatible_chains(primer_file, mip_dict, primer3_output_DIR,
         begin = intervals[0]
         end = intervals[1]
         bins = list(range(begin, end, bin_size))
+        # if a single nucleotide is the target, the interval will be the
+        # position of that nucleotide as [pos, pos] and the range will return
+        # an empty list. In this case we'll crease a [pos, pos] list instead.
+        if begin == end:
+            bins = [begin, end]
         if bins[-1] != end:
             bins.append(end)
         num_bins = len(bins) - 1

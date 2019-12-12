@@ -1,0 +1,3592 @@
+{
+ "GP327": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19045*1", 
+  "1000g_name": "NA19045", 
+  "sex": "Male", 
+  "gp_name": "GP327", 
+  "population": "LWK", 
+  "col": 9, 
+  "row": "B"
+ }, 
+ "GP326": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18934*2", 
+  "1000g_name": "NA18934", 
+  "sex": "Male", 
+  "gp_name": "GP326", 
+  "population": "YRI", 
+  "col": 1, 
+  "row": "E"
+ }, 
+ "GP325": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19092*B1", 
+  "1000g_name": "NA19092", 
+  "sex": "Male", 
+  "gp_name": "GP325", 
+  "population": "YRI", 
+  "col": 2, 
+  "row": "E"
+ }, 
+ "GP324": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19093*3", 
+  "1000g_name": "NA19093", 
+  "sex": "Female", 
+  "gp_name": "GP324", 
+  "population": "YRI", 
+  "col": 3, 
+  "row": "E"
+ }, 
+ "GP323": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19095*2", 
+  "1000g_name": "NA19095", 
+  "sex": "Female", 
+  "gp_name": "GP323", 
+  "population": "YRI", 
+  "col": 4, 
+  "row": "E"
+ }, 
+ "GP322": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19096*2", 
+  "1000g_name": "NA19096", 
+  "sex": "Male", 
+  "gp_name": "GP322", 
+  "population": "YRI", 
+  "col": 5, 
+  "row": "E"
+ }, 
+ "GP321": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19098*B4", 
+  "1000g_name": "NA19098", 
+  "sex": "Male", 
+  "gp_name": "GP321", 
+  "population": "YRI", 
+  "col": 6, 
+  "row": "E"
+ }, 
+ "GP320": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19099*B5", 
+  "1000g_name": "NA19099", 
+  "sex": "Female", 
+  "gp_name": "GP320", 
+  "population": "YRI", 
+  "col": 7, 
+  "row": "E"
+ }, 
+ "GP329": {
+  "plate": "MGP00013b", 
+  "starred_name": "NA19210*B5", 
+  "1000g_name": "NA19210", 
+  "sex": "Male", 
+  "gp_name": "GP329", 
+  "population": "YRI", 
+  "col": 10, 
+  "row": "C"
+ }, 
+ "GP328": {
+  "plate": "MGP00013b", 
+  "starred_name": "NA19214*A1", 
+  "1000g_name": "NA19214", 
+  "sex": "Female", 
+  "gp_name": "GP328", 
+  "population": "YRI", 
+  "col": 12, 
+  "row": "C"
+ }, 
+ "GP248": {
+  "plate": "MGP00008b", 
+  "starred_name": "NA19463*1", 
+  "1000g_name": "NA19463", 
+  "sex": "Female", 
+  "gp_name": "GP248", 
+  "population": "LWK", 
+  "col": 2, 
+  "row": "B"
+ }, 
+ "GP249": {
+  "plate": "MGP00008b", 
+  "starred_name": "NA19462*1", 
+  "1000g_name": "NA19462", 
+  "sex": "Female", 
+  "gp_name": "GP249", 
+  "population": "LWK", 
+  "col": 1, 
+  "row": "B"
+ }, 
+ "GP244": {
+  "plate": "MGP00008b", 
+  "starred_name": "NA19469*1", 
+  "1000g_name": "NA19469", 
+  "sex": "Female", 
+  "gp_name": "GP244", 
+  "population": "LWK", 
+  "col": 6, 
+  "row": "B"
+ }, 
+ "GP245": {
+  "plate": "MGP00008b", 
+  "starred_name": "NA19468*1", 
+  "1000g_name": "NA19468", 
+  "sex": "Female", 
+  "gp_name": "GP245", 
+  "population": "LWK", 
+  "col": 5, 
+  "row": "B"
+ }, 
+ "GP246": {
+  "plate": "MGP00008b", 
+  "starred_name": "NA19467*A1", 
+  "1000g_name": "NA19467", 
+  "sex": "Female", 
+  "gp_name": "GP246", 
+  "population": "LWK", 
+  "col": 4, 
+  "row": "B"
+ }, 
+ "GP247": {
+  "plate": "MGP00008b", 
+  "starred_name": "NA19466*1", 
+  "1000g_name": "NA19466", 
+  "sex": "Male", 
+  "gp_name": "GP247", 
+  "population": "LWK", 
+  "col": 3, 
+  "row": "B"
+ }, 
+ "GP240": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19350*2", 
+  "1000g_name": "NA19350", 
+  "sex": "Male", 
+  "gp_name": "GP240", 
+  "population": "LWK", 
+  "col": 11, 
+  "row": "D"
+ }, 
+ "GP241": {
+  "plate": "MGP00008b", 
+  "starred_name": "NA19472*1", 
+  "1000g_name": "NA19472", 
+  "sex": "Female", 
+  "gp_name": "GP241", 
+  "population": "LWK", 
+  "col": 9, 
+  "row": "B"
+ }, 
+ "GP242": {
+  "plate": "MGP00008b", 
+  "starred_name": "NA19471*1", 
+  "1000g_name": "NA19471", 
+  "sex": "Female", 
+  "gp_name": "GP242", 
+  "population": "LWK", 
+  "col": 8, 
+  "row": "B"
+ }, 
+ "GP243": {
+  "plate": "MGP00008b", 
+  "starred_name": "NA19470*1", 
+  "1000g_name": "NA19470", 
+  "sex": "Female", 
+  "gp_name": "GP243", 
+  "population": "LWK", 
+  "col": 7, 
+  "row": "B"
+ }, 
+ "GP289": {
+  "plate": "MGP00013b", 
+  "starred_name": "NA19200*B3", 
+  "1000g_name": "NA19200", 
+  "sex": "Male", 
+  "gp_name": "GP289", 
+  "population": "YRI", 
+  "col": 3, 
+  "row": "C"
+ }, 
+ "GP028": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19396*1", 
+  "1000g_name": "NA19396", 
+  "sex": "Female", 
+  "gp_name": "GP028", 
+  "population": "LWK", 
+  "col": 2, 
+  "row": "G"
+ }, 
+ "GP029": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02573*1", 
+  "1000g_name": "HG02573", 
+  "sex": "Male", 
+  "gp_name": "GP029", 
+  "population": "GWD", 
+  "col": 11, 
+  "row": "A"
+ }, 
+ "GP020": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19404*1", 
+  "1000g_name": "NA19404", 
+  "sex": "Female", 
+  "gp_name": "GP020", 
+  "population": "LWK", 
+  "col": 9, 
+  "row": "G"
+ }, 
+ "GP021": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19403*1", 
+  "1000g_name": "NA19403", 
+  "sex": "Female", 
+  "gp_name": "GP021", 
+  "population": "LWK", 
+  "col": 8, 
+  "row": "G"
+ }, 
+ "GP022": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19399*1", 
+  "1000g_name": "NA19399", 
+  "sex": "Female", 
+  "gp_name": "GP022", 
+  "population": "LWK", 
+  "col": 5, 
+  "row": "G"
+ }, 
+ "GP023": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19398*1", 
+  "1000g_name": "NA19398", 
+  "sex": "Female", 
+  "gp_name": "GP023", 
+  "population": "LWK", 
+  "col": 4, 
+  "row": "G"
+ }, 
+ "GP024": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19402*1", 
+  "1000g_name": "NA19402", 
+  "sex": "Female", 
+  "gp_name": "GP024", 
+  "population": "LWK", 
+  "col": 7, 
+  "row": "G"
+ }, 
+ "GP025": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19401*1", 
+  "1000g_name": "NA19401", 
+  "sex": "Female", 
+  "gp_name": "GP025", 
+  "population": "LWK", 
+  "col": 6, 
+  "row": "G"
+ }, 
+ "GP026": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19395*1", 
+  "1000g_name": "NA19395", 
+  "sex": "Female", 
+  "gp_name": "GP026", 
+  "population": "LWK", 
+  "col": 1, 
+  "row": "G"
+ }, 
+ "GP027": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19397*1", 
+  "1000g_name": "NA19397", 
+  "sex": "Male", 
+  "gp_name": "GP027", 
+  "population": "LWK", 
+  "col": 3, 
+  "row": "G"
+ }, 
+ "GP114": {
+  "plate": "MGP00019b", 
+  "starred_name": "HG03045*1", 
+  "1000g_name": "HG03045", 
+  "sex": "Male", 
+  "gp_name": "GP114", 
+  "population": "GWD", 
+  "col": 10, 
+  "row": "E"
+ }, 
+ "GP115": {
+  "plate": "MGP00019b", 
+  "starred_name": "HG03046*1", 
+  "1000g_name": "HG03046", 
+  "sex": "Female", 
+  "gp_name": "GP115", 
+  "population": "GWD", 
+  "col": 11, 
+  "row": "E"
+ }, 
+ "GP116": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18523*B1", 
+  "1000g_name": "NA18523", 
+  "sex": "Female", 
+  "gp_name": "GP116", 
+  "population": "YRI", 
+  "col": 8, 
+  "row": "B"
+ }, 
+ "GP117": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18852*B3", 
+  "1000g_name": "NA18852", 
+  "sex": "Female", 
+  "gp_name": "GP117", 
+  "population": "YRI", 
+  "col": 9, 
+  "row": "B"
+ }, 
+ "GP110": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02799*1", 
+  "1000g_name": "HG02799", 
+  "sex": "Female", 
+  "gp_name": "GP110", 
+  "population": "GWD", 
+  "col": 11, 
+  "row": "E"
+ }, 
+ "GP111": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02798*1", 
+  "1000g_name": "HG02798", 
+  "sex": "Male", 
+  "gp_name": "GP111", 
+  "population": "GWD", 
+  "col": 10, 
+  "row": "E"
+ }, 
+ "GP299": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02594*1", 
+  "1000g_name": "HG02594", 
+  "sex": "Male", 
+  "gp_name": "GP299", 
+  "population": "GWD", 
+  "col": 7, 
+  "row": "B"
+ }, 
+ "GP298": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02589*1", 
+  "1000g_name": "HG02589", 
+  "sex": "Female", 
+  "gp_name": "GP298", 
+  "population": "GWD", 
+  "col": 6, 
+  "row": "B"
+ }, 
+ "GP297": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02588*1", 
+  "1000g_name": "HG02588", 
+  "sex": "Male", 
+  "gp_name": "GP297", 
+  "population": "GWD", 
+  "col": 5, 
+  "row": "B"
+ }, 
+ "GP296": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02586*1", 
+  "1000g_name": "HG02586", 
+  "sex": "Female", 
+  "gp_name": "GP296", 
+  "population": "GWD", 
+  "col": 4, 
+  "row": "B"
+ }, 
+ "GP295": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02585*1", 
+  "1000g_name": "HG02585", 
+  "sex": "Male", 
+  "gp_name": "GP295", 
+  "population": "GWD", 
+  "col": 3, 
+  "row": "B"
+ }, 
+ "GP294": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02583*1", 
+  "1000g_name": "HG02583", 
+  "sex": "Female", 
+  "gp_name": "GP294", 
+  "population": "GWD", 
+  "col": 2, 
+  "row": "B"
+ }, 
+ "GP118": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18520*1", 
+  "1000g_name": "NA18520", 
+  "sex": "Female", 
+  "gp_name": "GP118", 
+  "population": "YRI", 
+  "col": 6, 
+  "row": "B"
+ }, 
+ "GP119": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18522*B4", 
+  "1000g_name": "NA18522", 
+  "sex": "Male", 
+  "gp_name": "GP119", 
+  "population": "YRI", 
+  "col": 7, 
+  "row": "B"
+ }, 
+ "GP291": {
+  "plate": "MGP00013b", 
+  "starred_name": "NA19209*B1", 
+  "1000g_name": "NA19209", 
+  "sex": "Female", 
+  "gp_name": "GP291", 
+  "population": "YRI", 
+  "col": 9, 
+  "row": "C"
+ }, 
+ "GP290": {
+  "plate": "MGP00013b", 
+  "starred_name": "NA19207*B1", 
+  "1000g_name": "NA19207", 
+  "sex": "Male", 
+  "gp_name": "GP290", 
+  "population": "YRI", 
+  "col": 8, 
+  "row": "C"
+ }, 
+ "GP059": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19311*B2", 
+  "1000g_name": "NA19311", 
+  "sex": "Male", 
+  "gp_name": "GP059", 
+  "population": "LWK", 
+  "col": 3, 
+  "row": "C"
+ }, 
+ "GP058": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19309*A1", 
+  "1000g_name": "NA19309", 
+  "sex": "Male", 
+  "gp_name": "GP058", 
+  "population": "LWK", 
+  "col": 1, 
+  "row": "C"
+ }, 
+ "GP055": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19429*1", 
+  "1000g_name": "NA19429", 
+  "sex": "Male", 
+  "gp_name": "GP055", 
+  "population": "LWK", 
+  "col": 11, 
+  "row": "G"
+ }, 
+ "GP054": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19189*B2", 
+  "1000g_name": "NA19189", 
+  "sex": "Male", 
+  "gp_name": "GP054", 
+  "population": "YRI", 
+  "col": 9, 
+  "row": "H"
+ }, 
+ "GP057": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19430*1", 
+  "1000g_name": "NA19430", 
+  "sex": "Male", 
+  "gp_name": "GP057", 
+  "population": "LWK", 
+  "col": 12, 
+  "row": "G"
+ }, 
+ "GP056": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19428*1", 
+  "1000g_name": "NA19428", 
+  "sex": "Male", 
+  "gp_name": "GP056", 
+  "population": "LWK", 
+  "col": 10, 
+  "row": "G"
+ }, 
+ "GP051": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18923*1", 
+  "1000g_name": "NA18923", 
+  "sex": "Male", 
+  "gp_name": "GP051", 
+  "population": "YRI", 
+  "col": 10, 
+  "row": "D"
+ }, 
+ "GP050": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18933*2", 
+  "1000g_name": "NA18933", 
+  "sex": "Female", 
+  "gp_name": "GP050", 
+  "population": "YRI", 
+  "col": 12, 
+  "row": "D"
+ }, 
+ "GP053": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19185*2", 
+  "1000g_name": "NA19185", 
+  "sex": "Female", 
+  "gp_name": "GP053", 
+  "population": "YRI", 
+  "col": 8, 
+  "row": "H"
+ }, 
+ "GP052": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18924*2", 
+  "1000g_name": "NA18924", 
+  "sex": "Female", 
+  "gp_name": "GP052", 
+  "population": "YRI", 
+  "col": 11, 
+  "row": "D"
+ }, 
+ "GP200": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18917*1", 
+  "1000g_name": "NA18917", 
+  "sex": "Male", 
+  "gp_name": "GP200", 
+  "population": "YRI", 
+  "col": 9, 
+  "row": "D"
+ }, 
+ "GP201": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18910*1", 
+  "1000g_name": "NA18910", 
+  "sex": "Male", 
+  "gp_name": "GP201", 
+  "population": "YRI", 
+  "col": 4, 
+  "row": "D"
+ }, 
+ "GP202": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18912*B5", 
+  "1000g_name": "NA18912", 
+  "sex": "Female", 
+  "gp_name": "GP202", 
+  "population": "YRI", 
+  "col": 5, 
+  "row": "D"
+ }, 
+ "GP203": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19017*1", 
+  "1000g_name": "NA19017", 
+  "sex": "Female", 
+  "gp_name": "GP203", 
+  "population": "LWK", 
+  "col": 1, 
+  "row": "A"
+ }, 
+ "GP204": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18915*1", 
+  "1000g_name": "NA18915", 
+  "sex": "Male", 
+  "gp_name": "GP204", 
+  "population": "YRI", 
+  "col": 7, 
+  "row": "D"
+ }, 
+ "GP205": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19025*1", 
+  "1000g_name": "NA19025", 
+  "sex": "Male", 
+  "gp_name": "GP205", 
+  "population": "LWK", 
+  "col": 7, 
+  "row": "A"
+ }, 
+ "GP206": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19024*1", 
+  "1000g_name": "NA19024", 
+  "sex": "Female", 
+  "gp_name": "GP206", 
+  "population": "LWK", 
+  "col": 6, 
+  "row": "A"
+ }, 
+ "GP207": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19023*1", 
+  "1000g_name": "NA19023", 
+  "sex": "Female", 
+  "gp_name": "GP207", 
+  "population": "LWK", 
+  "col": 5, 
+  "row": "A"
+ }, 
+ "GP208": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19022*1", 
+  "1000g_name": "NA19022", 
+  "sex": "Female", 
+  "gp_name": "GP208", 
+  "population": "LWK", 
+  "col": 4, 
+  "row": "A"
+ }, 
+ "GP209": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02887*1", 
+  "1000g_name": "HG02887", 
+  "sex": "Male", 
+  "gp_name": "GP209", 
+  "population": "GWD", 
+  "col": 6, 
+  "row": "H"
+ }, 
+ "GP275": {
+  "plate": "MGP00013b", 
+  "starred_name": "NA19238*B2", 
+  "1000g_name": "NA19238", 
+  "sex": "Female", 
+  "gp_name": "GP275", 
+  "population": "YRI", 
+  "col": 6, 
+  "row": "D"
+ }, 
+ "GP274": {
+  "plate": "MGP00013b", 
+  "starred_name": "NA19239*B12", 
+  "1000g_name": "NA19239", 
+  "sex": "Male", 
+  "gp_name": "GP274", 
+  "population": "YRI", 
+  "col": 7, 
+  "row": "D"
+ }, 
+ "GP277": {
+  "plate": "MGP00013b", 
+  "starred_name": "NA19240*C3", 
+  "1000g_name": "NA19240", 
+  "sex": "Female", 
+  "gp_name": "GP277", 
+  "population": "YRI", 
+  "col": 8, 
+  "row": "D"
+ }, 
+ "GP276": {
+  "plate": "MGP00013b", 
+  "starred_name": "NA19247*2", 
+  "1000g_name": "NA19247", 
+  "sex": "Female", 
+  "gp_name": "GP276", 
+  "population": "YRI", 
+  "col": 9, 
+  "row": "D"
+ }, 
+ "GP271": {
+  "plate": "MGP00013b", 
+  "starred_name": "NA19223*B6", 
+  "1000g_name": "NA19223", 
+  "sex": "Male", 
+  "gp_name": "GP271", 
+  "population": "YRI", 
+  "col": 2, 
+  "row": "D"
+ }, 
+ "GP270": {
+  "plate": "MGP00013b", 
+  "starred_name": "NA19225*1", 
+  "1000g_name": "NA19225", 
+  "sex": "Female", 
+  "gp_name": "GP270", 
+  "population": "YRI", 
+  "col": 3, 
+  "row": "D"
+ }, 
+ "GP273": {
+  "plate": "MGP00013b", 
+  "starred_name": "NA19235*1", 
+  "1000g_name": "NA19235", 
+  "sex": "Female", 
+  "gp_name": "GP273", 
+  "population": "YRI", 
+  "col": 4, 
+  "row": "D"
+ }, 
+ "GP272": {
+  "plate": "MGP00013b", 
+  "starred_name": "NA19236*1", 
+  "1000g_name": "NA19236", 
+  "sex": "Male", 
+  "gp_name": "GP272", 
+  "population": "YRI", 
+  "col": 5, 
+  "row": "D"
+ }, 
+ "GP279": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19391*1", 
+  "1000g_name": "NA19391", 
+  "sex": "Female", 
+  "gp_name": "GP279", 
+  "population": "LWK", 
+  "col": 9, 
+  "row": "F"
+ }, 
+ "GP278": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19390*1", 
+  "1000g_name": "NA19390", 
+  "sex": "Female", 
+  "gp_name": "GP278", 
+  "population": "LWK", 
+  "col": 8, 
+  "row": "F"
+ }, 
+ "GP288": {
+  "plate": "MGP00013b", 
+  "starred_name": "NA19198*A1", 
+  "1000g_name": "NA19198", 
+  "sex": "Male", 
+  "gp_name": "GP288", 
+  "population": "YRI", 
+  "col": 2, 
+  "row": "C"
+ }, 
+ "GP011": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19393*1", 
+  "1000g_name": "NA19393", 
+  "sex": "Male", 
+  "gp_name": "GP011", 
+  "population": "LWK", 
+  "col": 11, 
+  "row": "F"
+ }, 
+ "GP010": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19392*1", 
+  "1000g_name": "NA19392", 
+  "sex": "Female", 
+  "gp_name": "GP010", 
+  "population": "LWK", 
+  "col": 10, 
+  "row": "F"
+ }, 
+ "GP013": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19153*B1", 
+  "1000g_name": "NA19153", 
+  "sex": "Male", 
+  "gp_name": "GP013", 
+  "population": "YRI", 
+  "col": 1, 
+  "row": "H"
+ }, 
+ "GP012": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19394*1", 
+  "1000g_name": "NA19394", 
+  "sex": "Male", 
+  "gp_name": "GP012", 
+  "population": "LWK", 
+  "col": 12, 
+  "row": "F"
+ }, 
+ "GP015": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19160*B4", 
+  "1000g_name": "NA19160", 
+  "sex": "Male", 
+  "gp_name": "GP015", 
+  "population": "YRI", 
+  "col": 3, 
+  "row": "H"
+ }, 
+ "GP014": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19159*B5", 
+  "1000g_name": "NA19159", 
+  "sex": "Female", 
+  "gp_name": "GP014", 
+  "population": "YRI", 
+  "col": 2, 
+  "row": "H"
+ }, 
+ "GP017": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19172*B3", 
+  "1000g_name": "NA19172", 
+  "sex": "Female", 
+  "gp_name": "GP017", 
+  "population": "YRI", 
+  "col": 5, 
+  "row": "H"
+ }, 
+ "GP016": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19171*B1", 
+  "1000g_name": "NA19171", 
+  "sex": "Male", 
+  "gp_name": "GP016", 
+  "population": "YRI", 
+  "col": 4, 
+  "row": "H"
+ }, 
+ "GP150": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19190*1", 
+  "1000g_name": "NA19190", 
+  "sex": "Female", 
+  "gp_name": "GP150", 
+  "population": "YRI", 
+  "col": 10, 
+  "row": "H"
+ }, 
+ "GP151": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19192*B4", 
+  "1000g_name": "NA19192", 
+  "sex": "Male", 
+  "gp_name": "GP151", 
+  "population": "YRI", 
+  "col": 11, 
+  "row": "H"
+ }, 
+ "GP152": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19128*B4", 
+  "1000g_name": "NA19128", 
+  "sex": "Male", 
+  "gp_name": "GP152", 
+  "population": "YRI", 
+  "col": 10, 
+  "row": "F"
+ }, 
+ "GP153": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19129*3", 
+  "1000g_name": "NA19129", 
+  "sex": "Female", 
+  "gp_name": "GP153", 
+  "population": "YRI", 
+  "col": 11, 
+  "row": "F"
+ }, 
+ "GP154": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19130*B1", 
+  "1000g_name": "NA19130", 
+  "sex": "Male", 
+  "gp_name": "GP154", 
+  "population": "YRI", 
+  "col": 12, 
+  "row": "F"
+ }, 
+ "GP155": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19373*1", 
+  "1000g_name": "NA19373", 
+  "sex": "Male", 
+  "gp_name": "GP155", 
+  "population": "LWK", 
+  "col": 7, 
+  "row": "E"
+ }, 
+ "GP156": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19372*1", 
+  "1000g_name": "NA19372", 
+  "sex": "Male", 
+  "gp_name": "GP156", 
+  "population": "LWK", 
+  "col": 6, 
+  "row": "E"
+ }, 
+ "GP157": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19371*A1", 
+  "1000g_name": "NA19371", 
+  "sex": "Male", 
+  "gp_name": "GP157", 
+  "population": "LWK", 
+  "col": 5, 
+  "row": "E"
+ }, 
+ "GP129": {
+  "plate": "MGP00019b", 
+  "starred_name": "HG03024*1", 
+  "1000g_name": "HG03024", 
+  "sex": "Male", 
+  "gp_name": "GP129", 
+  "population": "GWD", 
+  "col": 2, 
+  "row": "E"
+ }, 
+ "GP128": {
+  "plate": "MGP00019b", 
+  "starred_name": "HG02983*1", 
+  "1000g_name": "HG02983", 
+  "sex": "Female", 
+  "gp_name": "GP128", 
+  "population": "GWD", 
+  "col": 1, 
+  "row": "E"
+ }, 
+ "GP125": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18853*B5", 
+  "1000g_name": "NA18853", 
+  "sex": "Male", 
+  "gp_name": "GP125", 
+  "population": "YRI", 
+  "col": 10, 
+  "row": "B"
+ }, 
+ "GP124": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18510*2", 
+  "1000g_name": "NA18510", 
+  "sex": "Male", 
+  "gp_name": "GP124", 
+  "population": "YRI", 
+  "col": 1, 
+  "row": "B"
+ }, 
+ "GP127": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18856*B7", 
+  "1000g_name": "NA18856", 
+  "sex": "Male", 
+  "gp_name": "GP127", 
+  "population": "YRI", 
+  "col": 12, 
+  "row": "B"
+ }, 
+ "GP126": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18855*B4", 
+  "1000g_name": "NA18855", 
+  "sex": "Female", 
+  "gp_name": "GP126", 
+  "population": "YRI", 
+  "col": 11, 
+  "row": "B"
+ }, 
+ "GP121": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18519*1", 
+  "1000g_name": "NA18519", 
+  "sex": "Male", 
+  "gp_name": "GP121", 
+  "population": "YRI", 
+  "col": 5, 
+  "row": "B"
+ }, 
+ "GP120": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18517*B1", 
+  "1000g_name": "NA18517", 
+  "sex": "Female", 
+  "gp_name": "GP120", 
+  "population": "YRI", 
+  "col": 4, 
+  "row": "B"
+ }, 
+ "GP123": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18516*B3", 
+  "1000g_name": "NA18516", 
+  "sex": "Male", 
+  "gp_name": "GP123", 
+  "population": "YRI", 
+  "col": 3, 
+  "row": "B"
+ }, 
+ "GP122": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18511*1", 
+  "1000g_name": "NA18511", 
+  "sex": "Female", 
+  "gp_name": "GP122", 
+  "population": "YRI", 
+  "col": 2, 
+  "row": "B"
+ }, 
+ "GP088": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19107*2", 
+  "1000g_name": "NA19107", 
+  "sex": "Male", 
+  "gp_name": "GP088", 
+  "population": "YRI", 
+  "col": 11, 
+  "row": "E"
+ }, 
+ "GP089": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19105*1", 
+  "1000g_name": "NA19105", 
+  "sex": "Female", 
+  "gp_name": "GP089", 
+  "population": "YRI", 
+  "col": 10, 
+  "row": "E"
+ }, 
+ "GP082": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02716*1", 
+  "1000g_name": "HG02716", 
+  "sex": "Female", 
+  "gp_name": "GP082", 
+  "population": "GWD", 
+  "col": 10, 
+  "row": "D"
+ }, 
+ "GP083": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02721*1", 
+  "1000g_name": "HG02721", 
+  "sex": "Male", 
+  "gp_name": "GP083", 
+  "population": "GWD", 
+  "col": 11, 
+  "row": "D"
+ }, 
+ "GP080": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19324*1", 
+  "1000g_name": "NA19324", 
+  "sex": "Female", 
+  "gp_name": "GP080", 
+  "population": "LWK", 
+  "col": 2, 
+  "row": "D"
+ }, 
+ "GP081": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19327*A2", 
+  "1000g_name": "NA19327", 
+  "sex": "Female", 
+  "gp_name": "GP081", 
+  "population": "LWK", 
+  "col": 3, 
+  "row": "D"
+ }, 
+ "GP086": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19346*1", 
+  "1000g_name": "NA19346", 
+  "sex": "Male", 
+  "gp_name": "GP086", 
+  "population": "LWK", 
+  "col": 9, 
+  "row": "D"
+ }, 
+ "GP087": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19108*1", 
+  "1000g_name": "NA19108", 
+  "sex": "Female", 
+  "gp_name": "GP087", 
+  "population": "YRI", 
+  "col": 12, 
+  "row": "E"
+ }, 
+ "GP084": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02722*1", 
+  "1000g_name": "HG02722", 
+  "sex": "Female", 
+  "gp_name": "GP084", 
+  "population": "GWD", 
+  "col": 12, 
+  "row": "D"
+ }, 
+ "GP085": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19338*A1", 
+  "1000g_name": "NA19338", 
+  "sex": "Female", 
+  "gp_name": "GP085", 
+  "population": "LWK", 
+  "col": 8, 
+  "row": "D"
+ }, 
+ "GP330": {
+  "plate": "MGP00013b", 
+  "starred_name": "NA19213*2", 
+  "1000g_name": "NA19213", 
+  "sex": "Male", 
+  "gp_name": "GP330", 
+  "population": "YRI", 
+  "col": 11, 
+  "row": "C"
+ }, 
+ "GP331": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19444*1", 
+  "1000g_name": "NA19444", 
+  "sex": "Male", 
+  "gp_name": "GP331", 
+  "population": "LWK", 
+  "col": 12, 
+  "row": "H"
+ }, 
+ "GP332": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19441*1", 
+  "1000g_name": "NA19441", 
+  "sex": "Female", 
+  "gp_name": "GP332", 
+  "population": "LWK", 
+  "col": 10, 
+  "row": "H"
+ }, 
+ "GP333": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19443*1", 
+  "1000g_name": "NA19443", 
+  "sex": "Male", 
+  "gp_name": "GP333", 
+  "population": "LWK", 
+  "col": 11, 
+  "row": "H"
+ }, 
+ "GP334": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19122*2", 
+  "1000g_name": "NA19122", 
+  "sex": "Female", 
+  "gp_name": "GP334", 
+  "population": "YRI", 
+  "col": 8, 
+  "row": "F"
+ }, 
+ "GP335": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19127*B3", 
+  "1000g_name": "NA19127", 
+  "sex": "Female", 
+  "gp_name": "GP335", 
+  "population": "YRI", 
+  "col": 9, 
+  "row": "F"
+ }, 
+ "GP336": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18508*D2", 
+  "1000g_name": "NA18508", 
+  "sex": "Female", 
+  "gp_name": "GP336", 
+  "population": "YRI", 
+  "col": 12, 
+  "row": "A"
+ }, 
+ "GP337": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18507*D8", 
+  "1000g_name": "NA18507", 
+  "sex": "Male", 
+  "gp_name": "GP337", 
+  "population": "YRI", 
+  "col": 11, 
+  "row": "A"
+ }, 
+ "GP338": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18505*C2", 
+  "1000g_name": "NA18505", 
+  "sex": "Female", 
+  "gp_name": "GP338", 
+  "population": "YRI", 
+  "col": 10, 
+  "row": "A"
+ }, 
+ "GP339": {
+  "plate": "MGP00008b", 
+  "starred_name": "NA19454*1", 
+  "1000g_name": "NA19454", 
+  "sex": "Male", 
+  "gp_name": "GP339", 
+  "population": "LWK", 
+  "col": 8, 
+  "row": "A"
+ }, 
+ "GP239": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19347*A1", 
+  "1000g_name": "NA19347", 
+  "sex": "Male", 
+  "gp_name": "GP239", 
+  "population": "LWK", 
+  "col": 10, 
+  "row": "D"
+ }, 
+ "GP238": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19351*1", 
+  "1000g_name": "NA19351", 
+  "sex": "Female", 
+  "gp_name": "GP238", 
+  "population": "LWK", 
+  "col": 12, 
+  "row": "D"
+ }, 
+ "GP231": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02464*1", 
+  "1000g_name": "HG02464", 
+  "sex": "Male", 
+  "gp_name": "GP231", 
+  "population": "GWD", 
+  "col": 3, 
+  "row": "A"
+ }, 
+ "GP230": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02461*A1", 
+  "1000g_name": "HG02461", 
+  "sex": "Male", 
+  "gp_name": "GP230", 
+  "population": "GWD", 
+  "col": 1, 
+  "row": "A"
+ }, 
+ "GP233": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02561*1", 
+  "1000g_name": "HG02561", 
+  "sex": "Male", 
+  "gp_name": "GP233", 
+  "population": "GWD", 
+  "col": 5, 
+  "row": "A"
+ }, 
+ "GP232": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02462*A1", 
+  "1000g_name": "HG02462", 
+  "sex": "Female", 
+  "gp_name": "GP232", 
+  "population": "GWD", 
+  "col": 2, 
+  "row": "A"
+ }, 
+ "GP235": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02567*1", 
+  "1000g_name": "HG02567", 
+  "sex": "Male", 
+  "gp_name": "GP235", 
+  "population": "GWD", 
+  "col": 7, 
+  "row": "A"
+ }, 
+ "GP234": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02465*1", 
+  "1000g_name": "HG02465", 
+  "sex": "Female", 
+  "gp_name": "GP234", 
+  "population": "GWD", 
+  "col": 4, 
+  "row": "A"
+ }, 
+ "GP237": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18907*1", 
+  "1000g_name": "NA18907", 
+  "sex": "Female", 
+  "gp_name": "GP237", 
+  "population": "YRI", 
+  "col": 1, 
+  "row": "D"
+ }, 
+ "GP236": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02562*1", 
+  "1000g_name": "HG02562", 
+  "sex": "Female", 
+  "gp_name": "GP236", 
+  "population": "GWD", 
+  "col": 6, 
+  "row": "A"
+ }, 
+ "GP169": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19030*1", 
+  "1000g_name": "NA19030", 
+  "sex": "Female", 
+  "gp_name": "GP169", 
+  "population": "LWK", 
+  "col": 11, 
+  "row": "A"
+ }, 
+ "GP168": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19031*A1", 
+  "1000g_name": "NA19031", 
+  "sex": "Male", 
+  "gp_name": "GP168", 
+  "population": "LWK", 
+  "col": 12, 
+  "row": "A"
+ }, 
+ "GP345": {
+  "plate": "MGP00008b", 
+  "starred_name": "NA19452*1", 
+  "1000g_name": "NA19452", 
+  "sex": "Male", 
+  "gp_name": "GP345", 
+  "population": "LWK", 
+  "col": 6, 
+  "row": "A"
+ }, 
+ "GP344": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02869*1", 
+  "1000g_name": "HG02869", 
+  "sex": "Male", 
+  "gp_name": "GP344", 
+  "population": "GWD", 
+  "col": 10, 
+  "row": "G"
+ }, 
+ "GP347": {
+  "plate": "MGP00008b", 
+  "starred_name": "NA19449*1", 
+  "1000g_name": "NA19449", 
+  "sex": "Female", 
+  "gp_name": "GP347", 
+  "population": "LWK", 
+  "col": 4, 
+  "row": "A"
+ }, 
+ "GP346": {
+  "plate": "MGP00008b", 
+  "starred_name": "NA19453*1", 
+  "1000g_name": "NA19453", 
+  "sex": "Male", 
+  "gp_name": "GP346", 
+  "population": "LWK", 
+  "col": 7, 
+  "row": "A"
+ }, 
+ "GP341": {
+  "plate": "MGP00008b", 
+  "starred_name": "NA19446*1", 
+  "1000g_name": "NA19446", 
+  "sex": "Female", 
+  "gp_name": "GP341", 
+  "population": "LWK", 
+  "col": 2, 
+  "row": "A"
+ }, 
+ "GP340": {
+  "plate": "MGP00008b", 
+  "starred_name": "NA19455*A1", 
+  "1000g_name": "NA19455", 
+  "sex": "Male", 
+  "gp_name": "GP340", 
+  "population": "LWK", 
+  "col": 9, 
+  "row": "A"
+ }, 
+ "GP343": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02870*3", 
+  "1000g_name": "HG02870", 
+  "sex": "Female", 
+  "gp_name": "GP343", 
+  "population": "GWD", 
+  "col": 11, 
+  "row": "G"
+ }, 
+ "GP342": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02878*1", 
+  "1000g_name": "HG02878", 
+  "sex": "Male", 
+  "gp_name": "GP342", 
+  "population": "GWD", 
+  "col": 12, 
+  "row": "G"
+ }, 
+ "GP349": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19114*1", 
+  "1000g_name": "NA19114", 
+  "sex": "Female", 
+  "gp_name": "GP349", 
+  "population": "YRI", 
+  "col": 2, 
+  "row": "F"
+ }, 
+ "GP348": {
+  "plate": "MGP00008b", 
+  "starred_name": "NA19451*A1", 
+  "1000g_name": "NA19451", 
+  "sex": "Male", 
+  "gp_name": "GP348", 
+  "population": "LWK", 
+  "col": 5, 
+  "row": "A"
+ }, 
+ "GP158": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19360*1", 
+  "1000g_name": "NA19360", 
+  "sex": "Male", 
+  "gp_name": "GP158", 
+  "population": "LWK", 
+  "col": 4, 
+  "row": "E"
+ }, 
+ "GP019": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19184*2", 
+  "1000g_name": "NA19184", 
+  "sex": "Male", 
+  "gp_name": "GP019", 
+  "population": "YRI", 
+  "col": 7, 
+  "row": "H"
+ }, 
+ "GP159": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19359*1", 
+  "1000g_name": "NA19359", 
+  "sex": "Male", 
+  "gp_name": "GP159", 
+  "population": "LWK", 
+  "col": 3, 
+  "row": "E"
+ }, 
+ "GP018": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19175*B2", 
+  "1000g_name": "NA19175", 
+  "sex": "Male", 
+  "gp_name": "GP018", 
+  "population": "YRI", 
+  "col": 6, 
+  "row": "H"
+ }, 
+ "GP161": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19352*1", 
+  "1000g_name": "NA19352", 
+  "sex": "Male", 
+  "gp_name": "GP161", 
+  "population": "LWK", 
+  "col": 1, 
+  "row": "E"
+ }, 
+ "GP160": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19355*1", 
+  "1000g_name": "NA19355", 
+  "sex": "Female", 
+  "gp_name": "GP160", 
+  "population": "LWK", 
+  "col": 2, 
+  "row": "E"
+ }, 
+ "GP163": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19374*B1", 
+  "1000g_name": "NA19374", 
+  "sex": "Male", 
+  "gp_name": "GP163", 
+  "population": "LWK", 
+  "col": 8, 
+  "row": "E"
+ }, 
+ "GP162": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19375*1", 
+  "1000g_name": "NA19375", 
+  "sex": "Male", 
+  "gp_name": "GP162", 
+  "population": "LWK", 
+  "col": 9, 
+  "row": "E"
+ }, 
+ "GP165": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18874*A2", 
+  "1000g_name": "NA18874", 
+  "sex": "Male", 
+  "gp_name": "GP165", 
+  "population": "YRI", 
+  "col": 10, 
+  "row": "C"
+ }, 
+ "GP164": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18877*1", 
+  "1000g_name": "NA18877", 
+  "sex": "Male", 
+  "gp_name": "GP164", 
+  "population": "YRI", 
+  "col": 11, 
+  "row": "C"
+ }, 
+ "GP167": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19383*1", 
+  "1000g_name": "NA19383", 
+  "sex": "Male", 
+  "gp_name": "GP167", 
+  "population": "LWK", 
+  "col": 5, 
+  "row": "F"
+ }, 
+ "GP166": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18881*1", 
+  "1000g_name": "NA18881", 
+  "sex": "Female", 
+  "gp_name": "GP166", 
+  "population": "YRI", 
+  "col": 12, 
+  "row": "C"
+ }, 
+ "GP280": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19378*B1", 
+  "1000g_name": "NA19378", 
+  "sex": "Female", 
+  "gp_name": "GP280", 
+  "population": "LWK", 
+  "col": 12, 
+  "row": "E"
+ }, 
+ "GP281": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19377*1", 
+  "1000g_name": "NA19377", 
+  "sex": "Female", 
+  "gp_name": "GP281", 
+  "population": "LWK", 
+  "col": 11, 
+  "row": "E"
+ }, 
+ "GP282": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19376*1", 
+  "1000g_name": "NA19376", 
+  "sex": "Male", 
+  "gp_name": "GP282", 
+  "population": "LWK", 
+  "col": 10, 
+  "row": "E"
+ }, 
+ "GP283": {
+  "plate": "MGP00013b", 
+  "starred_name": "NA19201*B2", 
+  "1000g_name": "NA19201", 
+  "sex": "Female", 
+  "gp_name": "GP283", 
+  "population": "YRI", 
+  "col": 4, 
+  "row": "C"
+ }, 
+ "GP284": {
+  "plate": "MGP00013b", 
+  "starred_name": "NA19203*C1", 
+  "1000g_name": "NA19203", 
+  "sex": "Male", 
+  "gp_name": "GP284", 
+  "population": "YRI", 
+  "col": 5, 
+  "row": "C"
+ }, 
+ "GP285": {
+  "plate": "MGP00013b", 
+  "starred_name": "NA19204*B3", 
+  "1000g_name": "NA19204", 
+  "sex": "Female", 
+  "gp_name": "GP285", 
+  "population": "YRI", 
+  "col": 6, 
+  "row": "C"
+ }, 
+ "GP286": {
+  "plate": "MGP00013b", 
+  "starred_name": "NA19206*C2", 
+  "1000g_name": "NA19206", 
+  "sex": "Female", 
+  "gp_name": "GP286", 
+  "population": "YRI", 
+  "col": 7, 
+  "row": "C"
+ }, 
+ "GP287": {
+  "plate": "MGP00013b", 
+  "starred_name": "NA19197*2", 
+  "1000g_name": "NA19197", 
+  "sex": "Female", 
+  "gp_name": "GP287", 
+  "population": "YRI", 
+  "col": 1, 
+  "row": "C"
+ }, 
+ "GP048": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02642*1", 
+  "1000g_name": "HG02642", 
+  "sex": "Male", 
+  "gp_name": "GP048", 
+  "population": "GWD", 
+  "col": 9, 
+  "row": "C"
+ }, 
+ "GP049": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02635*1", 
+  "1000g_name": "HG02635", 
+  "sex": "Female", 
+  "gp_name": "GP049", 
+  "population": "GWD", 
+  "col": 8, 
+  "row": "C"
+ }, 
+ "GP046": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02628*1", 
+  "1000g_name": "HG02628", 
+  "sex": "Male", 
+  "gp_name": "GP046", 
+  "population": "GWD", 
+  "col": 5, 
+  "row": "C"
+ }, 
+ "GP047": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02624*1", 
+  "1000g_name": "HG02624", 
+  "sex": "Female", 
+  "gp_name": "GP047", 
+  "population": "GWD", 
+  "col": 4, 
+  "row": "C"
+ }, 
+ "GP044": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02634*1", 
+  "1000g_name": "HG02634", 
+  "sex": "Male", 
+  "gp_name": "GP044", 
+  "population": "GWD", 
+  "col": 7, 
+  "row": "C"
+ }, 
+ "GP045": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02629*1", 
+  "1000g_name": "HG02629", 
+  "sex": "Female", 
+  "gp_name": "GP045", 
+  "population": "GWD", 
+  "col": 6, 
+  "row": "C"
+ }, 
+ "GP042": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02621*1", 
+  "1000g_name": "HG02621", 
+  "sex": "Female", 
+  "gp_name": "GP042", 
+  "population": "GWD", 
+  "col": 2, 
+  "row": "C"
+ }, 
+ "GP043": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02620*1", 
+  "1000g_name": "HG02620", 
+  "sex": "Male", 
+  "gp_name": "GP043", 
+  "population": "GWD", 
+  "col": 1, 
+  "row": "C"
+ }, 
+ "GP040": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19440*1", 
+  "1000g_name": "NA19440", 
+  "sex": "Female", 
+  "gp_name": "GP040", 
+  "population": "LWK", 
+  "col": 9, 
+  "row": "H"
+ }, 
+ "GP041": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02623*1", 
+  "1000g_name": "HG02623", 
+  "sex": "Male", 
+  "gp_name": "GP041", 
+  "population": "GWD", 
+  "col": 3, 
+  "row": "C"
+ }, 
+ "GP319": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19035*A1", 
+  "1000g_name": "NA19035", 
+  "sex": "Male", 
+  "gp_name": "GP319", 
+  "population": "LWK", 
+  "col": 1, 
+  "row": "B"
+ }, 
+ "GP318": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19102*3", 
+  "1000g_name": "NA19102", 
+  "sex": "Female", 
+  "gp_name": "GP318", 
+  "population": "YRI", 
+  "col": 9, 
+  "row": "E"
+ }, 
+ "GP266": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18868*A1", 
+  "1000g_name": "NA18868", 
+  "sex": "Male", 
+  "gp_name": "GP266", 
+  "population": "YRI", 
+  "col": 6, 
+  "row": "C"
+ }, 
+ "GP308": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02820*1", 
+  "1000g_name": "HG02820", 
+  "sex": "Female", 
+  "gp_name": "GP308", 
+  "population": "GWD", 
+  "col": 11, 
+  "row": "F"
+ }, 
+ "GP264": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19308*1", 
+  "1000g_name": "NA19308", 
+  "sex": "Male", 
+  "gp_name": "GP264", 
+  "population": "LWK", 
+  "col": 12, 
+  "row": "B"
+ }, 
+ "GP265": {
+  "plate": "MGP00008b", 
+  "starred_name": "NA19448*1", 
+  "1000g_name": "NA19448", 
+  "sex": "Male", 
+  "gp_name": "GP265", 
+  "population": "LWK", 
+  "col": 3, 
+  "row": "A"
+ }, 
+ "GP262": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19046*1", 
+  "1000g_name": "NA19046", 
+  "sex": "Male", 
+  "gp_name": "GP262", 
+  "population": "LWK", 
+  "col": 10, 
+  "row": "B"
+ }, 
+ "GP263": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19307*A1", 
+  "1000g_name": "NA19307", 
+  "sex": "Male", 
+  "gp_name": "GP263", 
+  "population": "LWK", 
+  "col": 11, 
+  "row": "B"
+ }, 
+ "GP260": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02645*1", 
+  "1000g_name": "HG02645", 
+  "sex": "Male", 
+  "gp_name": "GP260", 
+  "population": "GWD", 
+  "col": 11, 
+  "row": "C"
+ }, 
+ "GP261": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02643*1", 
+  "1000g_name": "HG02643", 
+  "sex": "Female", 
+  "gp_name": "GP261", 
+  "population": "GWD", 
+  "col": 10, 
+  "row": "C"
+ }, 
+ "GP301": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02610*1", 
+  "1000g_name": "HG02610", 
+  "sex": "Male", 
+  "gp_name": "GP301", 
+  "population": "GWD", 
+  "col": 9, 
+  "row": "B"
+ }, 
+ "GP300": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02595*1", 
+  "1000g_name": "HG02595", 
+  "sex": "Female", 
+  "gp_name": "GP300", 
+  "population": "GWD", 
+  "col": 8, 
+  "row": "B"
+ }, 
+ "GP303": {
+  "plate": "MGP00008b", 
+  "starred_name": "NA19457*1", 
+  "1000g_name": "NA19457", 
+  "sex": "Female", 
+  "gp_name": "GP303", 
+  "population": "LWK", 
+  "col": 11, 
+  "row": "A"
+ }, 
+ "GP302": {
+  "plate": "MGP00008b", 
+  "starred_name": "NA19456*1", 
+  "1000g_name": "NA19456", 
+  "sex": "Female", 
+  "gp_name": "GP302", 
+  "population": "LWK", 
+  "col": 10, 
+  "row": "A"
+ }, 
+ "GP305": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02582*1", 
+  "1000g_name": "HG02582", 
+  "sex": "Male", 
+  "gp_name": "GP305", 
+  "population": "GWD", 
+  "col": 1, 
+  "row": "B"
+ }, 
+ "GP304": {
+  "plate": "MGP00008b", 
+  "starred_name": "NA19461*1", 
+  "1000g_name": "NA19461", 
+  "sex": "Male", 
+  "gp_name": "GP304", 
+  "population": "LWK", 
+  "col": 12, 
+  "row": "A"
+ }, 
+ "GP307": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02819*2", 
+  "1000g_name": "HG02819", 
+  "sex": "Male", 
+  "gp_name": "GP307", 
+  "population": "GWD", 
+  "col": 10, 
+  "row": "F"
+ }, 
+ "GP306": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02836*1", 
+  "1000g_name": "HG02836", 
+  "sex": "Male", 
+  "gp_name": "GP306", 
+  "population": "GWD", 
+  "col": 12, 
+  "row": "F"
+ }, 
+ "GP310": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19318*A1", 
+  "1000g_name": "NA19318", 
+  "sex": "Male", 
+  "gp_name": "GP310", 
+  "population": "LWK", 
+  "col": 10, 
+  "row": "C"
+ }, 
+ "GP311": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19321*1", 
+  "1000g_name": "NA19321", 
+  "sex": "Female", 
+  "gp_name": "GP311", 
+  "population": "LWK", 
+  "col": 12, 
+  "row": "C"
+ }, 
+ "GP002": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18487*2", 
+  "1000g_name": "NA18487", 
+  "sex": "Male", 
+  "gp_name": "GP002", 
+  "population": "YRI", 
+  "col": 2, 
+  "row": "A"
+ }, 
+ "GP003": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18486*3", 
+  "1000g_name": "NA18486", 
+  "sex": "Male", 
+  "gp_name": "GP003", 
+  "population": "YRI", 
+  "col": 1, 
+  "row": "A"
+ }, 
+ "GP001": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18488*2", 
+  "1000g_name": "NA18488", 
+  "sex": "Female", 
+  "gp_name": "GP001", 
+  "population": "YRI", 
+  "col": 3, 
+  "row": "A"
+ }, 
+ "GP006": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18498*2", 
+  "1000g_name": "NA18498", 
+  "sex": "Male", 
+  "gp_name": "GP006", 
+  "population": "YRI", 
+  "col": 5, 
+  "row": "A"
+ }, 
+ "GP007": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18489*A1", 
+  "1000g_name": "NA18489", 
+  "sex": "Female", 
+  "gp_name": "GP007", 
+  "population": "YRI", 
+  "col": 4, 
+  "row": "A"
+ }, 
+ "GP004": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18501*C2", 
+  "1000g_name": "NA18501", 
+  "sex": "Male", 
+  "gp_name": "GP004", 
+  "population": "YRI", 
+  "col": 7, 
+  "row": "A"
+ }, 
+ "GP005": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18499*1", 
+  "1000g_name": "NA18499", 
+  "sex": "Female", 
+  "gp_name": "GP005", 
+  "population": "YRI", 
+  "col": 6, 
+  "row": "A"
+ }, 
+ "GP008": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18504*B4", 
+  "1000g_name": "NA18504", 
+  "sex": "Male", 
+  "gp_name": "GP008", 
+  "population": "YRI", 
+  "col": 9, 
+  "row": "A"
+ }, 
+ "GP009": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18502*B4", 
+  "1000g_name": "NA18502", 
+  "sex": "Female", 
+  "gp_name": "GP009", 
+  "population": "YRI", 
+  "col": 8, 
+  "row": "A"
+ }, 
+ "GP181": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19379*1", 
+  "1000g_name": "NA19379", 
+  "sex": "Female", 
+  "gp_name": "GP181", 
+  "population": "LWK", 
+  "col": 1, 
+  "row": "F"
+ }, 
+ "GP180": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19380*1", 
+  "1000g_name": "NA19380", 
+  "sex": "Male", 
+  "gp_name": "GP180", 
+  "population": "LWK", 
+  "col": 2, 
+  "row": "F"
+ }, 
+ "GP220": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18871*2", 
+  "1000g_name": "NA18871", 
+  "sex": "Male", 
+  "gp_name": "GP220", 
+  "population": "YRI", 
+  "col": 8, 
+  "row": "C"
+ }, 
+ "GP188": {
+  "plate": "MGP00008b", 
+  "starred_name": "NA19475*1", 
+  "1000g_name": "NA19475", 
+  "sex": "Female", 
+  "gp_name": "GP188", 
+  "population": "LWK", 
+  "col": 12, 
+  "row": "B"
+ }, 
+ "GP138": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02896*1", 
+  "1000g_name": "HG02896", 
+  "sex": "Female", 
+  "gp_name": "GP138", 
+  "population": "GWD", 
+  "col": 11, 
+  "row": "H"
+ }, 
+ "GP139": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02982*1", 
+  "1000g_name": "HG02982", 
+  "sex": "Male", 
+  "gp_name": "GP139", 
+  "population": "GWD", 
+  "col": 12, 
+  "row": "H"
+ }, 
+ "GP136": {
+  "plate": "MGP00019b", 
+  "starred_name": "HG03040*1", 
+  "1000g_name": "HG03040", 
+  "sex": "Female", 
+  "gp_name": "GP136", 
+  "population": "GWD", 
+  "col": 9, 
+  "row": "E"
+ }, 
+ "GP137": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02895*1", 
+  "1000g_name": "HG02895", 
+  "sex": "Male", 
+  "gp_name": "GP137", 
+  "population": "GWD", 
+  "col": 10, 
+  "row": "H"
+ }, 
+ "GP134": {
+  "plate": "MGP00019b", 
+  "starred_name": "HG03034*1", 
+  "1000g_name": "HG03034", 
+  "sex": "Female", 
+  "gp_name": "GP134", 
+  "population": "GWD", 
+  "col": 7, 
+  "row": "E"
+ }, 
+ "GP135": {
+  "plate": "MGP00019b", 
+  "starred_name": "HG03039*1", 
+  "1000g_name": "HG03039", 
+  "sex": "Male", 
+  "gp_name": "GP135", 
+  "population": "GWD", 
+  "col": 8, 
+  "row": "E"
+ }, 
+ "GP132": {
+  "plate": "MGP00019b", 
+  "starred_name": "HG03028*1", 
+  "1000g_name": "HG03028", 
+  "sex": "Female", 
+  "gp_name": "GP132", 
+  "population": "GWD", 
+  "col": 5, 
+  "row": "E"
+ }, 
+ "GP133": {
+  "plate": "MGP00019b", 
+  "starred_name": "HG03033*1", 
+  "1000g_name": "HG03033", 
+  "sex": "Male", 
+  "gp_name": "GP133", 
+  "population": "GWD", 
+  "col": 6, 
+  "row": "E"
+ }, 
+ "GP130": {
+  "plate": "MGP00019b", 
+  "starred_name": "HG03025*1", 
+  "1000g_name": "HG03025", 
+  "sex": "Female", 
+  "gp_name": "GP130", 
+  "population": "GWD", 
+  "col": 3, 
+  "row": "E"
+ }, 
+ "GP131": {
+  "plate": "MGP00019b", 
+  "starred_name": "HG03027*1", 
+  "1000g_name": "HG03027", 
+  "sex": "Male", 
+  "gp_name": "GP131", 
+  "population": "GWD", 
+  "col": 4, 
+  "row": "E"
+ }, 
+ "GP183": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19385*1", 
+  "1000g_name": "NA19385", 
+  "sex": "Male", 
+  "gp_name": "GP183", 
+  "population": "LWK", 
+  "col": 7, 
+  "row": "F"
+ }, 
+ "GP182": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19384*1", 
+  "1000g_name": "NA19384", 
+  "sex": "Male", 
+  "gp_name": "GP182", 
+  "population": "LWK", 
+  "col": 6, 
+  "row": "F"
+ }, 
+ "GP228": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02570*1", 
+  "1000g_name": "HG02570", 
+  "sex": "Male", 
+  "gp_name": "GP228", 
+  "population": "GWD", 
+  "col": 9, 
+  "row": "A"
+ }, 
+ "GP229": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02568*1", 
+  "1000g_name": "HG02568", 
+  "sex": "Female", 
+  "gp_name": "GP229", 
+  "population": "GWD", 
+  "col": 8, 
+  "row": "A"
+ }, 
+ "GP187": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02613*1", 
+  "1000g_name": "HG02613", 
+  "sex": "Male", 
+  "gp_name": "GP187", 
+  "population": "GWD", 
+  "col": 11, 
+  "row": "B"
+ }, 
+ "GP186": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02611*1", 
+  "1000g_name": "HG02611", 
+  "sex": "Female", 
+  "gp_name": "GP186", 
+  "population": "GWD", 
+  "col": 10, 
+  "row": "B"
+ }, 
+ "GP185": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02614*1", 
+  "1000g_name": "HG02614", 
+  "sex": "Female", 
+  "gp_name": "GP185", 
+  "population": "GWD", 
+  "col": 12, 
+  "row": "B"
+ }, 
+ "GP184": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19382*1", 
+  "1000g_name": "NA19382", 
+  "sex": "Male", 
+  "gp_name": "GP184", 
+  "population": "LWK", 
+  "col": 4, 
+  "row": "F"
+ }, 
+ "GP222": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18861*B2", 
+  "1000g_name": "NA18861", 
+  "sex": "Female", 
+  "gp_name": "GP222", 
+  "population": "YRI", 
+  "col": 3, 
+  "row": "C"
+ }, 
+ "GP223": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18859*B5", 
+  "1000g_name": "NA18859", 
+  "sex": "Male", 
+  "gp_name": "GP223", 
+  "population": "YRI", 
+  "col": 2, 
+  "row": "C"
+ }, 
+ "GP189": {
+  "plate": "MGP00008b", 
+  "starred_name": "NA19474*1", 
+  "1000g_name": "NA19474", 
+  "sex": "Female", 
+  "gp_name": "GP189", 
+  "population": "LWK", 
+  "col": 11, 
+  "row": "B"
+ }, 
+ "GP221": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18858*B1", 
+  "1000g_name": "NA18858", 
+  "sex": "Female", 
+  "gp_name": "GP221", 
+  "population": "YRI", 
+  "col": 1, 
+  "row": "C"
+ }, 
+ "GP226": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18870*A1", 
+  "1000g_name": "NA18870", 
+  "sex": "Female", 
+  "gp_name": "GP226", 
+  "population": "YRI", 
+  "col": 7, 
+  "row": "C"
+ }, 
+ "GP227": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02882*1", 
+  "1000g_name": "HG02882", 
+  "sex": "Female", 
+  "gp_name": "GP227", 
+  "population": "GWD", 
+  "col": 3, 
+  "row": "H"
+ }, 
+ "GP224": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18867*A2", 
+  "1000g_name": "NA18867", 
+  "sex": "Female", 
+  "gp_name": "GP224", 
+  "population": "YRI", 
+  "col": 5, 
+  "row": "C"
+ }, 
+ "GP225": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18862*C6", 
+  "1000g_name": "NA18862", 
+  "sex": "Male", 
+  "gp_name": "GP225", 
+  "population": "YRI", 
+  "col": 4, 
+  "row": "C"
+ }, 
+ "GP356": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02840*1", 
+  "1000g_name": "HG02840", 
+  "sex": "Female", 
+  "gp_name": "GP356", 
+  "population": "GWD", 
+  "col": 3, 
+  "row": "G"
+ }, 
+ "GP357": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02839*1", 
+  "1000g_name": "HG02839", 
+  "sex": "Male", 
+  "gp_name": "GP357", 
+  "population": "GWD", 
+  "col": 2, 
+  "row": "G"
+ }, 
+ "GP354": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02852*1", 
+  "1000g_name": "HG02852", 
+  "sex": "Female", 
+  "gp_name": "GP354", 
+  "population": "GWD", 
+  "col": 5, 
+  "row": "G"
+ }, 
+ "GP355": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02851*1", 
+  "1000g_name": "HG02851", 
+  "sex": "Male", 
+  "gp_name": "GP355", 
+  "population": "GWD", 
+  "col": 4, 
+  "row": "G"
+ }, 
+ "GP352": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02855*1", 
+  "1000g_name": "HG02855", 
+  "sex": "Female", 
+  "gp_name": "GP352", 
+  "population": "GWD", 
+  "col": 7, 
+  "row": "G"
+ }, 
+ "GP353": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02854*1", 
+  "1000g_name": "HG02854", 
+  "sex": "Male", 
+  "gp_name": "GP353", 
+  "population": "GWD", 
+  "col": 6, 
+  "row": "G"
+ }, 
+ "GP350": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02861*1", 
+  "1000g_name": "HG02861", 
+  "sex": "Female", 
+  "gp_name": "GP350", 
+  "population": "GWD", 
+  "col": 9, 
+  "row": "G"
+ }, 
+ "GP351": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02860*1", 
+  "1000g_name": "HG02860", 
+  "sex": "Male", 
+  "gp_name": "GP351", 
+  "population": "GWD", 
+  "col": 8, 
+  "row": "G"
+ }, 
+ "GP358": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02837*1", 
+  "1000g_name": "HG02837", 
+  "sex": "Female", 
+  "gp_name": "GP358", 
+  "population": "GWD", 
+  "col": 1, 
+  "row": "G"
+ }, 
+ "GP359": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19116*C5", 
+  "1000g_name": "NA19116", 
+  "sex": "Female", 
+  "gp_name": "GP359", 
+  "population": "YRI", 
+  "col": 3, 
+  "row": "F"
+ }, 
+ "GP112": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02804*1", 
+  "1000g_name": "HG02804", 
+  "sex": "Male", 
+  "gp_name": "GP112", 
+  "population": "GWD", 
+  "col": 12, 
+  "row": "E"
+ }, 
+ "GP113": {
+  "plate": "MGP00019b", 
+  "starred_name": "HG03048*1", 
+  "1000g_name": "HG03048", 
+  "sex": "Male", 
+  "gp_name": "GP113", 
+  "population": "GWD", 
+  "col": 12, 
+  "row": "E"
+ }, 
+ "GP293": {
+  "plate": "MGP00019b", 
+  "starred_name": "HG03538*1", 
+  "1000g_name": "HG03538", 
+  "sex": "Male", 
+  "gp_name": "GP293", 
+  "population": "GWD", 
+  "col": 10, 
+  "row": "F"
+ }, 
+ "GP292": {
+  "plate": "MGP00019b", 
+  "starred_name": "HG03539*1", 
+  "1000g_name": "HG03539", 
+  "sex": "Female", 
+  "gp_name": "GP292", 
+  "population": "GWD", 
+  "col": 11, 
+  "row": "F"
+ }, 
+ "GP172": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02762*1", 
+  "1000g_name": "HG02762", 
+  "sex": "Male", 
+  "gp_name": "GP172", 
+  "population": "GWD", 
+  "col": 4, 
+  "row": "E"
+ }, 
+ "GP173": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02769*1", 
+  "1000g_name": "HG02769", 
+  "sex": "Female", 
+  "gp_name": "GP173", 
+  "population": "GWD", 
+  "col": 7, 
+  "row": "E"
+ }, 
+ "GP170": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19028*A1", 
+  "1000g_name": "NA19028", 
+  "sex": "Male", 
+  "gp_name": "GP170", 
+  "population": "LWK", 
+  "col": 10, 
+  "row": "A"
+ }, 
+ "GP171": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02763*1", 
+  "1000g_name": "HG02763", 
+  "sex": "Female", 
+  "gp_name": "GP171", 
+  "population": "GWD", 
+  "col": 5, 
+  "row": "E"
+ }, 
+ "GP176": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02760*1", 
+  "1000g_name": "HG02760", 
+  "sex": "Female", 
+  "gp_name": "GP176", 
+  "population": "GWD", 
+  "col": 3, 
+  "row": "E"
+ }, 
+ "GP177": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02759*1", 
+  "1000g_name": "HG02759", 
+  "sex": "Male", 
+  "gp_name": "GP177", 
+  "population": "GWD", 
+  "col": 2, 
+  "row": "E"
+ }, 
+ "GP174": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02768*1", 
+  "1000g_name": "HG02768", 
+  "sex": "Male", 
+  "gp_name": "GP174", 
+  "population": "GWD", 
+  "col": 6, 
+  "row": "E"
+ }, 
+ "GP175": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02757*2", 
+  "1000g_name": "HG02757", 
+  "sex": "Female", 
+  "gp_name": "GP175", 
+  "population": "GWD", 
+  "col": 1, 
+  "row": "E"
+ }, 
+ "GP178": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02772*1", 
+  "1000g_name": "HG02772", 
+  "sex": "Female", 
+  "gp_name": "GP178", 
+  "population": "GWD", 
+  "col": 9, 
+  "row": "E"
+ }, 
+ "GP179": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02771*1", 
+  "1000g_name": "HG02771", 
+  "sex": "Male", 
+  "gp_name": "GP179", 
+  "population": "GWD", 
+  "col": 8, 
+  "row": "E"
+ }, 
+ "GP079": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19323*B1", 
+  "1000g_name": "NA19323", 
+  "sex": "Female", 
+  "gp_name": "GP079", 
+  "population": "LWK", 
+  "col": 1, 
+  "row": "D"
+ }, 
+ "GP078": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19334*1", 
+  "1000g_name": "NA19334", 
+  "sex": "Male", 
+  "gp_name": "GP078", 
+  "population": "LWK", 
+  "col": 7, 
+  "row": "D"
+ }, 
+ "GP073": {
+  "plate": "MGP00013b", 
+  "starred_name": "NA19248*2", 
+  "1000g_name": "NA19248", 
+  "sex": "Male", 
+  "gp_name": "GP073", 
+  "population": "YRI", 
+  "col": 10, 
+  "row": "D"
+ }, 
+ "GP072": {
+  "plate": "MGP00013b", 
+  "starred_name": "NA19256*2", 
+  "1000g_name": "NA19256", 
+  "sex": "Male", 
+  "gp_name": "GP072", 
+  "population": "YRI", 
+  "col": 11, 
+  "row": "D"
+ }, 
+ "GP071": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19118*2", 
+  "1000g_name": "NA19118", 
+  "sex": "Female", 
+  "gp_name": "GP071", 
+  "population": "YRI", 
+  "col": 5, 
+  "row": "F"
+ }, 
+ "GP070": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19117*2", 
+  "1000g_name": "NA19117", 
+  "sex": "Male", 
+  "gp_name": "GP070", 
+  "population": "YRI", 
+  "col": 4, 
+  "row": "F"
+ }, 
+ "GP077": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19332*1", 
+  "1000g_name": "NA19332", 
+  "sex": "Female", 
+  "gp_name": "GP077", 
+  "population": "LWK", 
+  "col": 6, 
+  "row": "D"
+ }, 
+ "GP076": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19331*1", 
+  "1000g_name": "NA19331", 
+  "sex": "Male", 
+  "gp_name": "GP076", 
+  "population": "LWK", 
+  "col": 5, 
+  "row": "D"
+ }, 
+ "GP075": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19328*1", 
+  "1000g_name": "NA19328", 
+  "sex": "Female", 
+  "gp_name": "GP075", 
+  "population": "LWK", 
+  "col": 4, 
+  "row": "D"
+ }, 
+ "GP074": {
+  "plate": "MGP00013b", 
+  "starred_name": "NA19257*1", 
+  "1000g_name": "NA19257", 
+  "sex": "Female", 
+  "gp_name": "GP074", 
+  "population": "YRI", 
+  "col": 12, 
+  "row": "D"
+ }, 
+ "GP062": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19312*B1", 
+  "1000g_name": "NA19312", 
+  "sex": "Male", 
+  "gp_name": "GP062", 
+  "population": "LWK", 
+  "col": 4, 
+  "row": "C"
+ }, 
+ "GP063": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19315*1", 
+  "1000g_name": "NA19315", 
+  "sex": "Female", 
+  "gp_name": "GP063", 
+  "population": "LWK", 
+  "col": 7, 
+  "row": "C"
+ }, 
+ "GP143": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19143*B5", 
+  "1000g_name": "NA19143", 
+  "sex": "Female", 
+  "gp_name": "GP143", 
+  "population": "YRI", 
+  "col": 6, 
+  "row": "G"
+ }, 
+ "GP142": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19144*B4", 
+  "1000g_name": "NA19144", 
+  "sex": "Male", 
+  "gp_name": "GP142", 
+  "population": "YRI", 
+  "col": 7, 
+  "row": "G"
+ }, 
+ "GP253": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02811*1", 
+  "1000g_name": "HG02811", 
+  "sex": "Female", 
+  "gp_name": "GP253", 
+  "population": "GWD", 
+  "col": 5, 
+  "row": "F"
+ }, 
+ "GP252": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02810*1", 
+  "1000g_name": "HG02810", 
+  "sex": "Male", 
+  "gp_name": "GP252", 
+  "population": "GWD", 
+  "col": 4, 
+  "row": "F"
+ }, 
+ "GP251": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02817*1", 
+  "1000g_name": "HG02817", 
+  "sex": "Female", 
+  "gp_name": "GP251", 
+  "population": "GWD", 
+  "col": 9, 
+  "row": "F"
+ }, 
+ "GP250": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02816*1", 
+  "1000g_name": "HG02816", 
+  "sex": "Male", 
+  "gp_name": "GP250", 
+  "population": "GWD", 
+  "col": 8, 
+  "row": "F"
+ }, 
+ "GP257": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02807*1", 
+  "1000g_name": "HG02807", 
+  "sex": "Male", 
+  "gp_name": "GP257", 
+  "population": "GWD", 
+  "col": 2, 
+  "row": "F"
+ }, 
+ "GP256": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02805*1", 
+  "1000g_name": "HG02805", 
+  "sex": "Female", 
+  "gp_name": "GP256", 
+  "population": "GWD", 
+  "col": 1, 
+  "row": "F"
+ }, 
+ "GP255": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02814*1", 
+  "1000g_name": "HG02814", 
+  "sex": "Female", 
+  "gp_name": "GP255", 
+  "population": "GWD", 
+  "col": 7, 
+  "row": "F"
+ }, 
+ "GP254": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02813*1", 
+  "1000g_name": "HG02813", 
+  "sex": "Male", 
+  "gp_name": "GP254", 
+  "population": "GWD", 
+  "col": 6, 
+  "row": "F"
+ }, 
+ "GP312": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19041*A1", 
+  "1000g_name": "NA19041", 
+  "sex": "Male", 
+  "gp_name": "GP312", 
+  "population": "LWK", 
+  "col": 6, 
+  "row": "B"
+ }, 
+ "GP313": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19043*B1", 
+  "1000g_name": "NA19043", 
+  "sex": "Male", 
+  "gp_name": "GP313", 
+  "population": "LWK", 
+  "col": 7, 
+  "row": "B"
+ }, 
+ "GP259": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02646*1", 
+  "1000g_name": "HG02646", 
+  "sex": "Female", 
+  "gp_name": "GP259", 
+  "population": "GWD", 
+  "col": 12, 
+  "row": "C"
+ }, 
+ "GP258": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02808*1", 
+  "1000g_name": "HG02808", 
+  "sex": "Female", 
+  "gp_name": "GP258", 
+  "population": "GWD", 
+  "col": 3, 
+  "row": "F"
+ }, 
+ "GP316": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19036*1", 
+  "1000g_name": "NA19036", 
+  "sex": "Female", 
+  "gp_name": "GP316", 
+  "population": "LWK", 
+  "col": 2, 
+  "row": "B"
+ }, 
+ "GP317": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19037*A1", 
+  "1000g_name": "NA19037", 
+  "sex": "Female", 
+  "gp_name": "GP317", 
+  "population": "LWK", 
+  "col": 3, 
+  "row": "B"
+ }, 
+ "GP314": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19038*1", 
+  "1000g_name": "NA19038", 
+  "sex": "Female", 
+  "gp_name": "GP314", 
+  "population": "LWK", 
+  "col": 4, 
+  "row": "B"
+ }, 
+ "GP315": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19039*1", 
+  "1000g_name": "NA19039", 
+  "sex": "Female", 
+  "gp_name": "GP315", 
+  "population": "LWK", 
+  "col": 5, 
+  "row": "B"
+ }, 
+ "GP309": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19319*A2", 
+  "1000g_name": "NA19319", 
+  "sex": "Male", 
+  "gp_name": "GP309", 
+  "population": "LWK", 
+  "col": 11, 
+  "row": "C"
+ }, 
+ "GP267": {
+  "plate": "MGP00008b", 
+  "starred_name": "NA19445*A1", 
+  "1000g_name": "NA19445", 
+  "sex": "Female", 
+  "gp_name": "GP267", 
+  "population": "LWK", 
+  "col": 1, 
+  "row": "A"
+ }, 
+ "GP039": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19439*1", 
+  "1000g_name": "NA19439", 
+  "sex": "Female", 
+  "gp_name": "GP039", 
+  "population": "LWK", 
+  "col": 8, 
+  "row": "H"
+ }, 
+ "GP038": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19438*1", 
+  "1000g_name": "NA19438", 
+  "sex": "Female", 
+  "gp_name": "GP038", 
+  "population": "LWK", 
+  "col": 7, 
+  "row": "H"
+ }, 
+ "GP037": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19437*1", 
+  "1000g_name": "NA19437", 
+  "sex": "Female", 
+  "gp_name": "GP037", 
+  "population": "LWK", 
+  "col": 6, 
+  "row": "H"
+ }, 
+ "GP036": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19436*1", 
+  "1000g_name": "NA19436", 
+  "sex": "Female", 
+  "gp_name": "GP036", 
+  "population": "LWK", 
+  "col": 5, 
+  "row": "H"
+ }, 
+ "GP035": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19435*1", 
+  "1000g_name": "NA19435", 
+  "sex": "Female", 
+  "gp_name": "GP035", 
+  "population": "LWK", 
+  "col": 4, 
+  "row": "H"
+ }, 
+ "GP034": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19434*1", 
+  "1000g_name": "NA19434", 
+  "sex": "Female", 
+  "gp_name": "GP034", 
+  "population": "LWK", 
+  "col": 3, 
+  "row": "H"
+ }, 
+ "GP033": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19432*1", 
+  "1000g_name": "NA19432", 
+  "sex": "Female", 
+  "gp_name": "GP033", 
+  "population": "LWK", 
+  "col": 2, 
+  "row": "H"
+ }, 
+ "GP032": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19431*1", 
+  "1000g_name": "NA19431", 
+  "sex": "Female", 
+  "gp_name": "GP032", 
+  "population": "LWK", 
+  "col": 1, 
+  "row": "H"
+ }, 
+ "GP031": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02574*1", 
+  "1000g_name": "HG02574", 
+  "sex": "Female", 
+  "gp_name": "GP031", 
+  "population": "GWD", 
+  "col": 12, 
+  "row": "A"
+ }, 
+ "GP030": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02571*1", 
+  "1000g_name": "HG02571", 
+  "sex": "Female", 
+  "gp_name": "GP030", 
+  "population": "GWD", 
+  "col": 10, 
+  "row": "A"
+ }, 
+ "GP268": {
+  "plate": "MGP00013b", 
+  "starred_name": "NA19222*B5", 
+  "1000g_name": "NA19222", 
+  "sex": "Female", 
+  "gp_name": "GP268", 
+  "population": "YRI", 
+  "col": 1, 
+  "row": "D"
+ }, 
+ "GP269": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19381*1", 
+  "1000g_name": "NA19381", 
+  "sex": "Female", 
+  "gp_name": "GP269", 
+  "population": "LWK", 
+  "col": 3, 
+  "row": "F"
+ }, 
+ "GP109": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19044*1", 
+  "1000g_name": "NA19044", 
+  "sex": "Male", 
+  "gp_name": "GP109", 
+  "population": "LWK", 
+  "col": 8, 
+  "row": "B"
+ }, 
+ "GP108": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19101*B2", 
+  "1000g_name": "NA19101", 
+  "sex": "Male", 
+  "gp_name": "GP108", 
+  "population": "YRI", 
+  "col": 8, 
+  "row": "E"
+ }, 
+ "GP103": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02666*1", 
+  "1000g_name": "HG02666", 
+  "sex": "Male", 
+  "gp_name": "GP103", 
+  "population": "GWD", 
+  "col": 1, 
+  "row": "D"
+ }, 
+ "GP102": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02675*1", 
+  "1000g_name": "HG02675", 
+  "sex": "Male", 
+  "gp_name": "GP102", 
+  "population": "GWD", 
+  "col": 3, 
+  "row": "D"
+ }, 
+ "GP101": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02667*1", 
+  "1000g_name": "HG02667", 
+  "sex": "Female", 
+  "gp_name": "GP101", 
+  "population": "GWD", 
+  "col": 2, 
+  "row": "D"
+ }, 
+ "GP100": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02715*1", 
+  "1000g_name": "HG02715", 
+  "sex": "Male", 
+  "gp_name": "GP100", 
+  "population": "GWD", 
+  "col": 9, 
+  "row": "D"
+ }, 
+ "GP107": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02678*1", 
+  "1000g_name": "HG02678", 
+  "sex": "Male", 
+  "gp_name": "GP107", 
+  "population": "GWD", 
+  "col": 5, 
+  "row": "D"
+ }, 
+ "GP106": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02676*1", 
+  "1000g_name": "HG02676", 
+  "sex": "Female", 
+  "gp_name": "GP106", 
+  "population": "GWD", 
+  "col": 4, 
+  "row": "D"
+ }, 
+ "GP105": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02702*1", 
+  "1000g_name": "HG02702", 
+  "sex": "Male", 
+  "gp_name": "GP105", 
+  "population": "GWD", 
+  "col": 7, 
+  "row": "D"
+ }, 
+ "GP104": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02679*1", 
+  "1000g_name": "HG02679", 
+  "sex": "Female", 
+  "gp_name": "GP104", 
+  "population": "GWD", 
+  "col": 6, 
+  "row": "D"
+ }, 
+ "GP217": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02890*1", 
+  "1000g_name": "HG02890", 
+  "sex": "Male", 
+  "gp_name": "GP217", 
+  "population": "GWD", 
+  "col": 8, 
+  "row": "H"
+ }, 
+ "GP216": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18909*1", 
+  "1000g_name": "NA18909", 
+  "sex": "Female", 
+  "gp_name": "GP216", 
+  "population": "YRI", 
+  "col": 3, 
+  "row": "D"
+ }, 
+ "GP215": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02879*1", 
+  "1000g_name": "HG02879", 
+  "sex": "Female", 
+  "gp_name": "GP215", 
+  "population": "GWD", 
+  "col": 1, 
+  "row": "H"
+ }, 
+ "GP214": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18908*1", 
+  "1000g_name": "NA18908", 
+  "sex": "Male", 
+  "gp_name": "GP214", 
+  "population": "YRI", 
+  "col": 2, 
+  "row": "D"
+ }, 
+ "GP213": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02881*1", 
+  "1000g_name": "HG02881", 
+  "sex": "Male", 
+  "gp_name": "GP213", 
+  "population": "GWD", 
+  "col": 2, 
+  "row": "H"
+ }, 
+ "GP212": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02885*1", 
+  "1000g_name": "HG02885", 
+  "sex": "Female", 
+  "gp_name": "GP212", 
+  "population": "GWD", 
+  "col": 5, 
+  "row": "H"
+ }, 
+ "GP211": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02884*1", 
+  "1000g_name": "HG02884", 
+  "sex": "Male", 
+  "gp_name": "GP211", 
+  "population": "GWD", 
+  "col": 4, 
+  "row": "H"
+ }, 
+ "GP210": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02888*1", 
+  "1000g_name": "HG02888", 
+  "sex": "Female", 
+  "gp_name": "GP210", 
+  "population": "GWD", 
+  "col": 7, 
+  "row": "H"
+ }, 
+ "GP219": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18873*1", 
+  "1000g_name": "NA18873", 
+  "sex": "Female", 
+  "gp_name": "GP219", 
+  "population": "YRI", 
+  "col": 9, 
+  "row": "C"
+ }, 
+ "GP218": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02891*1", 
+  "1000g_name": "HG02891", 
+  "sex": "Female", 
+  "gp_name": "GP218", 
+  "population": "GWD", 
+  "col": 9, 
+  "row": "H"
+ }, 
+ "GP198": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19026*1", 
+  "1000g_name": "NA19026", 
+  "sex": "Male", 
+  "gp_name": "GP198", 
+  "population": "LWK", 
+  "col": 8, 
+  "row": "A"
+ }, 
+ "GP199": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18916*1", 
+  "1000g_name": "NA18916", 
+  "sex": "Female", 
+  "gp_name": "GP199", 
+  "population": "YRI", 
+  "col": 8, 
+  "row": "D"
+ }, 
+ "GP194": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19020*1", 
+  "1000g_name": "NA19020", 
+  "sex": "Male", 
+  "gp_name": "GP194", 
+  "population": "LWK", 
+  "col": 3, 
+  "row": "A"
+ }, 
+ "GP195": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19019*1", 
+  "1000g_name": "NA19019", 
+  "sex": "Female", 
+  "gp_name": "GP195", 
+  "population": "LWK", 
+  "col": 2, 
+  "row": "A"
+ }, 
+ "GP196": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA18913*B3", 
+  "1000g_name": "NA18913", 
+  "sex": "Male", 
+  "gp_name": "GP196", 
+  "population": "YRI", 
+  "col": 6, 
+  "row": "D"
+ }, 
+ "GP197": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19027*A1", 
+  "1000g_name": "NA19027", 
+  "sex": "Male", 
+  "gp_name": "GP197", 
+  "population": "LWK", 
+  "col": 9, 
+  "row": "A"
+ }, 
+ "GP190": {
+  "plate": "MGP00008b", 
+  "starred_name": "NA19473*1", 
+  "1000g_name": "NA19473", 
+  "sex": "Female", 
+  "gp_name": "GP190", 
+  "population": "LWK", 
+  "col": 10, 
+  "row": "B"
+ }, 
+ "GP191": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19150*1", 
+  "1000g_name": "NA19150", 
+  "sex": "Male", 
+  "gp_name": "GP191", 
+  "population": "YRI", 
+  "col": 11, 
+  "row": "G"
+ }, 
+ "GP192": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19149*2", 
+  "1000g_name": "NA19149", 
+  "sex": "Female", 
+  "gp_name": "GP192", 
+  "population": "YRI", 
+  "col": 10, 
+  "row": "G"
+ }, 
+ "GP193": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19152*3", 
+  "1000g_name": "NA19152", 
+  "sex": "Female", 
+  "gp_name": "GP193", 
+  "population": "YRI", 
+  "col": 12, 
+  "row": "G"
+ }, 
+ "GP064": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19314*1", 
+  "1000g_name": "NA19314", 
+  "sex": "Female", 
+  "gp_name": "GP064", 
+  "population": "LWK", 
+  "col": 6, 
+  "row": "C"
+ }, 
+ "GP065": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19317*A1", 
+  "1000g_name": "NA19317", 
+  "sex": "Male", 
+  "gp_name": "GP065", 
+  "population": "LWK", 
+  "col": 9, 
+  "row": "C"
+ }, 
+ "GP066": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19316*B1", 
+  "1000g_name": "NA19316", 
+  "sex": "Female", 
+  "gp_name": "GP066", 
+  "population": "LWK", 
+  "col": 8, 
+  "row": "C"
+ }, 
+ "GP067": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19113*2", 
+  "1000g_name": "NA19113", 
+  "sex": "Male", 
+  "gp_name": "GP067", 
+  "population": "YRI", 
+  "col": 1, 
+  "row": "F"
+ }, 
+ "GP060": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19310*1", 
+  "1000g_name": "NA19310", 
+  "sex": "Female", 
+  "gp_name": "GP060", 
+  "population": "LWK", 
+  "col": 2, 
+  "row": "C"
+ }, 
+ "GP061": {
+  "plate": "MGP00008a", 
+  "starred_name": "NA19313*1", 
+  "1000g_name": "NA19313", 
+  "sex": "Female", 
+  "gp_name": "GP061", 
+  "population": "LWK", 
+  "col": 5, 
+  "row": "C"
+ }, 
+ "GP149": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19193*B4", 
+  "1000g_name": "NA19193", 
+  "sex": "Female", 
+  "gp_name": "GP149", 
+  "population": "YRI", 
+  "col": 12, 
+  "row": "H"
+ }, 
+ "GP148": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19146*1", 
+  "1000g_name": "NA19146", 
+  "sex": "Male", 
+  "gp_name": "GP148", 
+  "population": "YRI", 
+  "col": 8, 
+  "row": "G"
+ }, 
+ "GP147": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19147*1", 
+  "1000g_name": "NA19147", 
+  "sex": "Female", 
+  "gp_name": "GP147", 
+  "population": "YRI", 
+  "col": 9, 
+  "row": "G"
+ }, 
+ "GP146": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19137*B8", 
+  "1000g_name": "NA19137", 
+  "sex": "Female", 
+  "gp_name": "GP146", 
+  "population": "YRI", 
+  "col": 2, 
+  "row": "G"
+ }, 
+ "GP145": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19138*B5", 
+  "1000g_name": "NA19138", 
+  "sex": "Male", 
+  "gp_name": "GP145", 
+  "population": "YRI", 
+  "col": 3, 
+  "row": "G"
+ }, 
+ "GP144": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19131*2", 
+  "1000g_name": "NA19131", 
+  "sex": "Female", 
+  "gp_name": "GP144", 
+  "population": "YRI", 
+  "col": 1, 
+  "row": "G"
+ }, 
+ "GP068": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19119*2", 
+  "1000g_name": "NA19119", 
+  "sex": "Male", 
+  "gp_name": "GP068", 
+  "population": "YRI", 
+  "col": 6, 
+  "row": "F"
+ }, 
+ "GP069": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19121*2", 
+  "1000g_name": "NA19121", 
+  "sex": "Male", 
+  "gp_name": "GP069", 
+  "population": "YRI", 
+  "col": 7, 
+  "row": "F"
+ }, 
+ "GP141": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19140*B4", 
+  "1000g_name": "NA19140", 
+  "sex": "Female", 
+  "gp_name": "GP141", 
+  "population": "YRI", 
+  "col": 4, 
+  "row": "G"
+ }, 
+ "GP140": {
+  "plate": "MGP00013a", 
+  "starred_name": "NA19141*B6", 
+  "1000g_name": "NA19141", 
+  "sex": "Male", 
+  "gp_name": "GP140", 
+  "population": "YRI", 
+  "col": 5, 
+  "row": "G"
+ }, 
+ "GP099": {
+  "plate": "MGP00019a", 
+  "starred_name": "HG02703*1", 
+  "1000g_name": "HG02703", 
+  "sex": "Female", 
+  "gp_name": "GP099", 
+  "population": "GWD", 
+  "col": 8, 
+  "row": "D"
+ }, 
+ "GP098": {
+  "plate": "MGP00019b", 
+  "starred_name": "HG03249*1", 
+  "1000g_name": "HG03249", 
+  "sex": "Male", 
+  "gp_name": "GP098", 
+  "population": "GWD", 
+  "col": 6, 
+  "row": "F"
+ }, 
+ "GP091": {
+  "plate": "MGP00019b", 
+  "starred_name": "HG03258*1", 
+  "1000g_name": "HG03258", 
+  "sex": "Male", 
+  "gp_name": "GP091", 
+  "population": "GWD", 
+  "col": 8, 
+  "row": "F"
+ }, 
+ "GP090": {
+  "plate": "MGP00019b", 
+  "starred_name": "HG03259*1", 
+  "1000g_name": "HG03259", 
+  "sex": "Female", 
+  "gp_name": "GP090", 
+  "population": "GWD", 
+  "col": 9, 
+  "row": "F"
+ }, 
+ "GP093": {
+  "plate": "MGP00019b", 
+  "starred_name": "HG03241*1", 
+  "1000g_name": "HG03241", 
+  "sex": "Female", 
+  "gp_name": "GP093", 
+  "population": "GWD", 
+  "col": 3, 
+  "row": "F"
+ }, 
+ "GP092": {
+  "plate": "MGP00019b", 
+  "starred_name": "HG03049*1", 
+  "1000g_name": "HG03049", 
+  "sex": "Female", 
+  "gp_name": "GP092", 
+  "population": "GWD", 
+  "col": 1, 
+  "row": "F"
+ }, 
+ "GP095": {
+  "plate": "MGP00019b", 
+  "starred_name": "HG03247*B1", 
+  "1000g_name": "HG03247", 
+  "sex": "Female", 
+  "gp_name": "GP095", 
+  "population": "GWD", 
+  "col": 5, 
+  "row": "F"
+ }, 
+ "GP094": {
+  "plate": "MGP00019b", 
+  "starred_name": "HG03240*1", 
+  "1000g_name": "HG03240", 
+  "sex": "Male", 
+  "gp_name": "GP094", 
+  "population": "GWD", 
+  "col": 2, 
+  "row": "F"
+ }, 
+ "GP097": {
+  "plate": "MGP00019b", 
+  "starred_name": "HG03250*1", 
+  "1000g_name": "HG03250", 
+  "sex": "Female", 
+  "gp_name": "GP097", 
+  "population": "GWD", 
+  "col": 7, 
+  "row": "F"
+ }, 
+ "GP096": {
+  "plate": "MGP00019b", 
+  "starred_name": "HG03246*1", 
+  "1000g_name": "HG03246", 
+  "sex": "Male", 
+  "gp_name": "GP096", 
+  "population": "GWD", 
+  "col": 4, 
+  "row": "F"
+ }
+}

@@ -57,7 +57,7 @@ for gene_name in design_info:
         else:
             no_mip_genes.append(gene_name)
     except Exception as e:
-        unfinished_genes.append([gene_name, e])
+        unfinished_genes.append([gene_name, str(e)])
 
 resource_dir = args["resource_dir"]
 mip_ids_dir = os.path.join(resource_dir, "mip_ids")

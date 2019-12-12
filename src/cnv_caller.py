@@ -1,28 +1,16 @@
-import sys
-import mip_functions as mip
-import pickle
-import json
 import copy
-import os
 import numpy as np
-import subprocess
 import matplotlib.pyplot as plt
 import pandas as pd
-import seaborn as sns
-import warnings
 from rpy2.robjects.packages import importr
 import rpy2.robjects as robjects
 from sklearn.manifold import TSNE
-from sklearn.cluster import MeanShift, DBSCAN, KMeans
-from sklearn import metrics
-from sklearn import mixture
-from scipy.stats import fisher_exact, chi2_contingency
-from scipy.signal import medfilt, medfilt2d
+from sklearn.cluster import KMeans
 plt.style.use('ggplot')
 dnacopy = importr("DNAcopy")
 
 
-def filter_samples(barcode_counts, settings, probe_df, sample_threshold,
+def filter_samples(barcode_counts, settings, sample_threshold,
                    probe_threshold):
     filter_level = settings["copyStableLevel"]
     filter_values = settings["copyStableValues"]
@@ -58,7 +46,7 @@ def sample_normalize(masked_counts, settings):
 
 def probe_normalize(sample_normalized, settings):
     average_copy_count = int(settings["averageCopyCount"])
-    norm_percentiles = map(float(settings["normalizationPercentiles"]))
+    norm_percentiles = list(map(float, settings["normalizationPercentiles"]))
     copy_counts = sample_normalized.transform(
         lambda a: average_copy_count * a/(a.quantile(norm_percentiles).mean()))
     return copy_counts

@@ -15,9 +15,9 @@ From: amd64/ubuntu:18.04
     export PATH=$CONDA_DIR/bin:$PATH
 
     # install system packages
-    apt update \
-    && apt -yq dist-upgrade \
-    && apt install -yq --no-install-recommends \
+    apt-get update \
+    && apt-get -yq dist-upgrade \
+    && apt-get install -yq --no-install-recommends \
     wget \
     bzip2 \
     ca-certificates \
@@ -61,7 +61,7 @@ From: amd64/ubuntu:18.04
     locale-gen en_US.UTF-8
     update-locale LANG=en_US.UTF-8
 
-    # install bcl2fastq
+    # install bcl2fastq, if the file is there
     cd /opt/programs
     unzip bcl2fastq2*.zip || true
     alien bcl2fastq2*.rpm || true
@@ -112,8 +112,14 @@ From: amd64/ubuntu:18.04
     "matplotlib-venn=0.11.5" \
     "tblib=1.4.0" \
     "parallel=20190922" \
-    "scikit-allel=1.2.1"
+    "scikit-allel=1.2.1" \
+    "openpyxl"
 
+
+    # install R and epitools R library
+    conda install -qy -c r r rpy2
+    conda install -qy -c nnsrl r-epitools
+    conda clean -tipsy
 
     # install vt variant tool set
     cd /opt/programs
