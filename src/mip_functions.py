@@ -9665,9 +9665,6 @@ def combine_info_files(wdir,
         for k in ["sample_name", "sample_set", "replicate"]:
             current_run_meta[k] = current_run_meta[k].astype(str)
         current_run_meta["sheet_order"] = i
-        current_run_meta["capital_set"] = current_run_meta[
-            "sample_set"
-        ].apply(str.upper)
         current_run_meta["Original SID"] = current_run_meta[
             ["sample_name", "sample_set", "replicate"]
         ].apply(lambda a: "-".join(a), axis=1)
@@ -9682,8 +9679,8 @@ def combine_info_files(wdir,
         ).first().reset_index()[["sample_set", "probe_set"]]
     run_meta = run_meta.merge(sps, how="inner")
     run_meta_collapsed = run_meta.groupby(
-        ["sample_name", "capital_set", "replicate", "Library Prep"]
-    ).first().reset_index()[["sample_name", "capital_set",
+        ["sample_name", "sample_set", "replicate", "Library Prep"]
+    ).first().reset_index()[["sample_name", "sample_set",
                              "replicate", "Library Prep"]]
     # check if there are repeating sample_name, sample_set, replicate
     # combinations; which make up the sample ID. If there are, replicate
@@ -9717,11 +9714,11 @@ def combine_info_files(wdir,
         return pd.Series(replicates)
 
     run_meta_collapsed["new_replicate"] = run_meta_collapsed.groupby(
-        ["sample_name", "capital_set"])["replicate"].transform(
+        ["sample_name", "sample_set"])["replicate"].transform(
         assign_replicate).astype(str)
     run_meta = run_meta.merge(run_meta_collapsed)
     run_meta["Sample ID"] = run_meta[["sample_name",
-                                      "capital_set",
+                                      "sample_set",
                                       "new_replicate"]].apply(
         lambda a: "-".join(a), axis=1
     )
@@ -9799,12 +9796,10 @@ def combine_info_files(wdir,
             os.path.join(wdir, "unique_haplotypes.csv"), index=False)
     run_meta = run_meta.groupby("Sample ID").first().reset_index()
     run_meta = run_meta.drop(["Sample ID",
-                              "sample_set",
                               "sheet_order",
                               "replicate"],
                              axis=1).rename(
-        columns={"capital_set": "sample_set",
-                 "new_replicate": "replicate"}
+        columns={"new_replicate": "replicate"}
     )
     run_meta.to_csv(os.path.join(wdir, "samples.tsv"), sep="\t", index=False)
 
@@ -9825,9 +9820,6 @@ def process_info_file(wdir,
     for k in ["sample_name", "sample_set", "replicate"]:
         current_run_meta[k] = current_run_meta[k].astype(str)
     current_run_meta["sheet_order"] = 0
-    current_run_meta["capital_set"] = current_run_meta[
-        "sample_set"
-    ].apply(str.upper)
     current_run_meta["Original SID"] = current_run_meta[
         ["sample_name", "sample_set", "replicate"]
     ].apply(lambda a: "-".join(a), axis=1)
@@ -9898,11 +9890,7 @@ def process_info_file(wdir,
         "haplotype_sequence"].first().reset_index().to_csv(
             os.path.join(wdir, "unique_haplotypes.csv"), index=False)
     run_meta = run_meta.groupby("Sample ID").first().reset_index()
-    run_meta = run_meta.drop(["Sample ID",
-                              "sample_set"],
-                             axis=1).rename(
-        columns={"capital_set": "sample_set"}
-    )
+    run_meta = run_meta.drop("Sample ID", axis=1)
     run_meta.to_csv(os.path.join(wdir, "samples.tsv"), sep="\t", index=False)
 
 
