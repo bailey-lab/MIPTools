@@ -70,7 +70,7 @@ SETTINGS	minimum_trim	10	20	none
 SETTINGS	backbone	none	none	hybrid_split
 SETTINGS	alternative_arms	1	1	any
 SETTINGS	seed_len	16	16	18
-SETTINGS	bowtie_mode	-a	-a	-a
+SETTINGS	bowtie_mode	-k 500	-k 500	-k 500
 SETTINGS	hit_limit	50	50	50
 SETTINGS	upper_hit_limit	200	200	200
 SETTINGS	local	0	0	1
