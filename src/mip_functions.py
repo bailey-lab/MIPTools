@@ -8137,6 +8137,174 @@ def freebayes_worker(contig_dict):
         return (fres, )
 
 
+def gatk(options):
+    """
+    Run gatk program with the given options. Return the subprocess result.
+    """
+    return subprocess.run(["gatk", *options], stderr=subprocess.PIPE)
+
+
+def gatk_file_prep(bam_dir="/opt/analysis/padded_bams",
+                   fastq_dir="/opt/analysis/padded_fastqs", options=[],
+                   targets_file=None,
+                   settings=None, settings_file=None,
+                   bam_files=None, verbose=True,
+                   errors_file="/opt/analysis/gatk_file_prep_errors.txt"):
+    """ Prepare files for calling variants for MIP data using gatk.
+    A mapped haplotype file must be present in the working directory. This
+    is generated during haplotype processing. Per sample fastqs and bams
+    will be created. Fastqs are generated with a default 20 bp
+    padding on each side of the haplotype. This assumes that there were no
+    errors where the MIP arms bind to the DNA. It may cause some false negative
+    calls where there was imperfect binding, but it is crucial for determining
+    variants close to the MIP arms.
+
+    Parameters
+    ----------
+    bam_dir: str/path, /opt/analysis/padded_bams
+        path to the directory where per sample bam files are or where they
+        will be created if align=True.
+    fastq_dir: str/path, /opt/analysis/padded_fastqs
+        path to the directory where per sample fastq files are or  where they
+        will be created if align=True.
+    settings: dict, None
+        Analysis settings dictionary. Either this or settings_file must
+        be provided.
+    settings_file: str/path, None
+        Path to the analysis settings file. Either this or the settings dict
+        must be provided.
+    targets_file: str/path, None
+        Path to targets file to force calls on certain locations even if
+        those variants do not satisfy filter criteria. It must be a tab
+        separated text file with minimum columns CHROM, POS, REF, ALT.
+    bam_files: list, None
+        list of bam files within the bam_dir to pass to freebayes. If None (
+        default), all bam files in the bam_dir will be used.
+    verbose: bool, True
+        if set to True, print errors and warnings in addition to saving to
+        errors and warnings files.
+    errors_file: str/path, /opt/analysis/gatk_file_prep_errors.txt
+        file to save freebayes errors.
+    """
+    # get the analysis settings
+    # check if both settings and the settings file are None:
+    if (settings is None) and (settings_file is None):
+        print("settings or settings file must be provided for freebayes_call.")
+        return
+    else:
+        if settings is None:
+            settings = get_analysis_settings(settings_file)
+        else:
+            settings = copy.deepcopy(settings)
+    # get the working directory from settings
+    wdir = settings["workingDir"]
+    # load mapped haplotypes file. This file has the genomic locations
+    # of the haplotypes in mip data
+    mapped_haplotypes_file = os.path.join(wdir, "mapped_haplotypes.csv")
+    # get the mip data file location. This file has per sample haplotype
+    # information including counts.
+    mipster_file = os.path.join(wdir, settings["mipsterFile"])
+    # get the mip data file location. This file has per sample haplotype
+    # information including counts.
+    mipster_file = os.path.join(wdir, settings["mipsterFile"])
+    # create fastq files from MIP data. One read per UMI will be created.
+    generate_mapped_fastqs(fastq_dir, mipster_file,
+                           mapped_haplotypes_file, settings["species"],
+                           pro=int(settings["processorNumber"]))
+    # if there is a targets file provided, we'll create a hypothetical
+    # sample that has all of the targeted variants. This way, a variant site
+    # for each target will be created in the final vcf file even if a
+    # variant was not observed in the data.
+    if targets_file is not None:
+        # load the targets as dataframe converting field names to
+        # field names in a haplotypes file.
+        targets = pd.read_table(targets_file).rename(
+            columns={"CHROM": "Chrom", "POS": "capture_start",
+                     "ALT": "haplotype_sequence",
+                     "mutation_name": "haplotype_ID"})
+        # fill in orientation and copy number information for all targets.
+        targets["orientation"] = "forward"
+        targets["mapped_copy_number"] = 1
+        # create a haplotype file for the targeted mutations
+        haplotype_fields = ['capture_end', 'capture_start', 'Chrom',
+                            'orientation', 'haplotype_ID',
+                            'haplotype_sequence', 'mapped_copy_number']
+        mutant_haplotypes = "/opt/analysis/mutant_haplotypes.csv"
+        targets[haplotype_fields].to_csv(mutant_haplotypes, index=False)
+
+        # create a hypothetical sample that has all mutations and a
+        # corresponding mip data file that shows a UMI count of 20
+        # for each observation
+        targets["sample_name"] = "control_mutant"
+        targets["sequence_quality"] = targets["haplotype_sequence"].apply(
+            lambda a: "".join(["H" for i in range(len(a))]))
+        targets["barcode_count"] = 20
+        data_fields = ["sample_name", 'haplotype_ID', "haplotype_sequence",
+                       'sequence_quality', 'barcode_count']
+        mutant_data_file = "/opt/analysis/mutant_data.tsv"
+        targets[data_fields].to_csv(mutant_data_file, index=False, sep="\t")
+        # create a fastq file for the "control_mutant" sample
+        padding = 100
+        generate_mapped_fastqs(fastq_dir, mutant_data_file,
+                               mutant_haplotypes, settings["species"],
+                               pro=int(settings["processorNumber"]),
+                               pad_size=padding)
+    # map per sample fastqs to the reference genome, creating bam files.
+    # bam files will have sample groups added, which is required for
+    # calling variants across the samples.
+    bwa_multi([], "bam", fastq_dir, bam_dir,
+              settings["bwaOptions"], settings["species"],
+              int(settings["processorNumber"]),
+              int(settings["processorNumber"]))
+
+    # create an  intervals file to be used in gatk call
+    intervals_bed = "/opt/analysis/intervals.bed"
+    intervals_list = "/opt/analysis/intervals.list"
+    genome_dict = get_file_locations()[settings["species"]]["genome_dict"]
+    interval_call = gatk(["BedToIntervalList", "-I", intervals_bed,
+                          "-O", intervals_list, "-SD", genome_dict])
+    # check the return code and if not 0 print warning
+    if interval_call.returncode != 0:
+        print(("An error ocurred when creating the intervals list. "
+               "Please see the {} for details.").format(errors_file))
+    # save command output
+    with open(errors_file, "ab") as outfile:
+        outfile.write(interval_call.stderr)
+
+
+def gatk_haplotype_caller(
+        options, bam_dir, settings,
+        errors_file="/opt/analysis/gatk_file_prep_errors.txt"):
+    genome_fasta = get_file_locations()[settings["species"]]["fasta_genome"]
+    intervals_list = "/opt/analysis/intervals.list"
+    haplotype_caller_opts = ["HaplotypeCaller", "-R", genome_fasta,
+                             "--native-pair-hmm-threads", "1",
+                             "-L", intervals_list] + options
+    # scan the bam directory and get file paths. Assign an output name
+    # for each file (gvcf output)
+    bam_files = []
+    for f in os.scandir(bam_dir):
+        if os.path.splitext(f.name)[1] == ".bam":
+            base_name = os.path.splitext(f.name)[0]
+            gvcf = os.path.join(bam_dir, base_name + ".g.vcf.gz")
+            bam_files.append([f.path, gvcf])
+    pool = NoDaemonProcessPool(int(settings["processorNumber"]))
+    results = []
+    for bam in bam_files:
+        io_options = ["-I", bam[0], "-O", bam[1]]
+        pool.apply_async(gatk, (haplotype_caller_opts + io_options, ),
+                         callback=results.append)
+    for r in results:
+        if r.returncode != 0:
+            print(("An error ocurred when creating the intervals list. "
+                   "Please see the {} for details.").format(errors_file))
+        # save command output
+        with open(errors_file, "ab") as outfile:
+            outfile.write(r.stderr)
+
+
+def gatk_genotype_gvcfs()
+
 def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
                   geneid_to_genename=None, target_aa_annotation=None,
                   aggregate_aminoacids=False, target_nt_annotation=None,
