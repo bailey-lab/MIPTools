@@ -8145,11 +8145,10 @@ def gatk(options):
 
 
 def gatk_file_prep(bam_dir="/opt/analysis/padded_bams",
-                   fastq_dir="/opt/analysis/padded_fastqs", options=[],
+                   fastq_dir="/opt/analysis/padded_fastqs",
                    targets_file=None,
                    settings=None, settings_file=None,
-                   bam_files=None, verbose=True,
-                   errors_file="/opt/analysis/gatk_file_prep_errors.txt"):
+                   errors_file="/opt/analysis/gatk_file_prep_output.txt"):
     """ Prepare files for calling variants for MIP data using gatk.
     A mapped haplotype file must be present in the working directory. This
     is generated during haplotype processing. Per sample fastqs and bams
@@ -8177,12 +8176,6 @@ def gatk_file_prep(bam_dir="/opt/analysis/padded_bams",
         Path to targets file to force calls on certain locations even if
         those variants do not satisfy filter criteria. It must be a tab
         separated text file with minimum columns CHROM, POS, REF, ALT.
-    bam_files: list, None
-        list of bam files within the bam_dir to pass to freebayes. If None (
-        default), all bam files in the bam_dir will be used.
-    verbose: bool, True
-        if set to True, print errors and warnings in addition to saving to
-        errors and warnings files.
     errors_file: str/path, /opt/analysis/gatk_file_prep_errors.txt
         file to save freebayes errors.
     """
@@ -8225,6 +8218,8 @@ def gatk_file_prep(bam_dir="/opt/analysis/padded_bams",
         # fill in orientation and copy number information for all targets.
         targets["orientation"] = "forward"
         targets["mapped_copy_number"] = 1
+        targets["capture_end"] = (targets["capture_start"]
+                                  + targets["REF"].apply(len) - 1)
         # create a haplotype file for the targeted mutations
         haplotype_fields = ['capture_end', 'capture_start', 'Chrom',
                             'orientation', 'haplotype_ID',
@@ -8259,6 +8254,23 @@ def gatk_file_prep(bam_dir="/opt/analysis/padded_bams",
 
     # create an  intervals file to be used in gatk call
     intervals_bed = "/opt/analysis/intervals.bed"
+    call_file = settings["callInfoDictionary"]
+    with open(call_file) as infile:
+        call_dict = json.load(infile)
+    # create a dataframe that has the genomic coordinates of each MIP
+    probe_info = []
+    for g in call_dict:
+        for m in call_dict[g]:
+            for c in call_dict[g][m]["copies"]:
+                cdict = call_dict[g][m]["copies"][c]
+                probe_info.append([cdict["chrom"], cdict["capture_start"],
+                                   cdict["capture_end"]])
+    probe_info = pd.DataFrame(probe_info, columns=["chrom", "capture_start",
+                                                   "capture_end"])
+    probe_info["bed_start"] = probe_info["capture_start"] - 200
+    probe_info["bed_end"] = probe_info["capture_end"] + 200
+    probe_info[["chrom", "bed_start", "bed_end"]].to_csv(
+        intervals_bed, index=False, header=(None), sep="\t")
     intervals_list = "/opt/analysis/intervals.list"
     genome_dict = get_file_locations()[settings["species"]]["genome_dict"]
     interval_call = gatk(["BedToIntervalList", "-I", intervals_bed,
@@ -8274,7 +8286,7 @@ def gatk_file_prep(bam_dir="/opt/analysis/padded_bams",
 
 def gatk_haplotype_caller(
         options, bam_dir, settings,
-        errors_file="/opt/analysis/gatk_file_prep_errors.txt"):
+        errors_file="/opt/analysis/gatk_haplotype_caller_output.txt"):
     genome_fasta = get_file_locations()[settings["species"]]["fasta_genome"]
     intervals_list = "/opt/analysis/intervals.list"
     haplotype_caller_opts = ["HaplotypeCaller", "-R", genome_fasta,
@@ -8290,10 +8302,20 @@ def gatk_haplotype_caller(
             bam_files.append([f.path, gvcf])
     pool = NoDaemonProcessPool(int(settings["processorNumber"]))
     results = []
+    errors = []
     for bam in bam_files:
         io_options = ["-I", bam[0], "-O", bam[1]]
         pool.apply_async(gatk, (haplotype_caller_opts + io_options, ),
-                         callback=results.append)
+                         callback=results.append, error_callback=errors.append)
+    pool.close()
+    pool.join()
+    if len(errors) > 0:
+        print(("An error ocurred during haplotype calling . "
+               "Please see the {} for details.").format(errors_file))
+        # save command output
+        with open(errors_file, "ab") as outfile:
+            for e in errors:
+                outfile.write(str(e))
     for r in results:
         if r.returncode != 0:
             print(("An error ocurred when creating the intervals list. "
@@ -8301,9 +8323,82 @@ def gatk_haplotype_caller(
         # save command output
         with open(errors_file, "ab") as outfile:
             outfile.write(r.stderr)
+    return
 
 
-def gatk_genotype_gvcfs()
+def genotype_gvcfs(settings, bam_dir, options, gdb, vcf_file,
+                   sample_map=None, keep_control_mutant=False,
+                   errors_file="/opt/analysis/gatk_genotype_gvcfs_output.txt"):
+    if sample_map is None:
+        # scan the bam directory and get file paths. Assign an output name
+        # for each file (gvcf output)
+        bam_files = []
+        for f in os.scandir(bam_dir):
+            if os.path.splitext(f.name)[1] == ".bam":
+                base_name = os.path.splitext(f.name)[0]
+                gvcf = os.path.join(bam_dir, base_name + ".g.vcf.gz")
+                bam_files.append([f.path, gvcf])
+        sample_map = os.path.join(settings["workingDir"], "sample_map.txt")
+        with open(sample_map, "w") as outfile:
+            for f in bam_files:
+                sample_name = ".".join(os.path.basename(f[0]).split(".")[:-2])
+                outfile.write(sample_name + "\t" + f[1] + "\n")
+    intervals_list = "/opt/analysis/intervals.list"
+    gdb_path = os.path.join("/opt/analysis/", gdb)
+    gdb_import = ["--java-options", "-Xmx32G", "GenomicsDBImport",
+                  "--genomicsdb-workspace-path", gdb_path,
+                  "--sample-name-map", sample_map,
+                  "-L", intervals_list,
+                  "--max-num-intervals-to-import-in-parallel",
+                  settings["processorNumber"]]
+    gdb_result = gatk(gdb_import)
+    if gdb_result.returncode != 0:
+        print(("An error ocurred when during genomics DB import. "
+               "Please see the {} for details.").format(errors_file))
+    # save command output
+    with open(errors_file, "ab") as outfile:
+        outfile.write(gdb_result.stderr)
+
+    # genotype gvcfs
+    genome_fasta = get_file_locations()[settings["species"]][
+        "fasta_genome"]
+    gdb = "gendb://" + gdb
+    if keep_control_mutant:
+        temp_vcf_file = vcf_file
+    else:
+        temp_vcf_file = "/opt/analysis/temp.vcf.gz"
+    genotype_gvcfs = ["GenotypeGVCFs", "-R", genome_fasta,
+                      "-V", gdb, "-O", temp_vcf_file, "-L", intervals_list]
+    genotypes = gatk(genotype_gvcfs + options)
+    if genotypes.returncode != 0:
+        print(("An error ocurred during genotyping GVCFs. "
+               "Please see the {} for details.").format(errors_file))
+    # save command output
+    with open(errors_file, "ab") as outfile:
+        outfile.write(genotypes.stderr)
+
+    # remove control mutant sample if requested
+    if not keep_control_mutant:
+        res = subprocess.run(["bcftools", "view", "-s^control_mutant",
+                              "-Oz", "-o", vcf_file, temp_vcf_file,
+                              "--force-samples"],
+                             stderr=subprocess.PIPE)
+        if res.returncode != 0:
+            print(("An error ocurred while removing control mutant. "
+                   "Please see the {} for details.").format(errors_file))
+        # save command output
+        with open(errors_file, "ab") as outfile:
+            outfile.write(res.stderr)
+        # index the final vcf file
+        res = subprocess.run(["bcftools", "index", "-f", vcf_file],
+                             stderr=subprocess.PIPE)
+        if res.returncode != 0:
+            print(("An error ocurred while indexing the final vcf file. "
+                   "Please see the {} for details.").format(errors_file))
+        # save command output
+        with open(errors_file, "ab") as outfile:
+            outfile.write(res.stderr)
+
 
 def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
                   geneid_to_genename=None, target_aa_annotation=None,
