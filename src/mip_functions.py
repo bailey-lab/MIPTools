@@ -8891,6 +8891,18 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
         coverage.T.to_csv(os.path.join(wdir, "coverage_table.csv"))
 
 
+def get_mutation_position(change):
+    digits = []
+    found = False
+    for i in change:
+        if i.isdigit():
+            digits.append(i)
+            found = True
+        elif found:
+            break
+    return int("".join(digits))
+
+
 def merge_contigs(settings, contig_info_dict, results):
     # merge contig vcfs for each chromosome
     wdir = settings["workingDir"]
