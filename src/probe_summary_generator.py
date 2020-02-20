@@ -88,6 +88,10 @@ def get_probe_call_info(probe_set_keys=None, output_file=None,
                     copy_dict["Gene"] = g
                     copy_dict["MIP"] = m
                     copy_dict["Copy"] = c
+                    try:
+                        copy_dict.pop("genes")
+                    except KeyError:
+                        pass
                     info_list.append(pd.DataFrame(copy_dict, index=[0]))
     info_df = pd.concat(info_list, ignore_index=True)
     if output_file is not None:

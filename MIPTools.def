@@ -11,7 +11,7 @@ From: amd64/ubuntu:18.04
         LANG=en_US.UTF-8 \
         LANGUAGE=en_US.UTF-8 \
         LC_ALL=en_US.UTF-8 \
-        MINICONDA_VERSION=4.6.14
+        MINICONDA_VERSION=4.7.12.1
     export PATH=$CONDA_DIR/bin:$PATH
 
     # install system packages
@@ -76,11 +76,13 @@ From: amd64/ubuntu:18.04
     # install conda
     cd /tmp && \
         wget --quiet https://repo.continuum.io/miniconda/Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh && \
-        echo "718259965f234088d785cad1fbd7de03 *Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh" | md5sum -c - && \
+        echo "81c773ff87af5cfac79ab862942ab6b3 *Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh" | md5sum -c - && \
         /bin/bash Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh -f -b -p $CONDA_DIR && \
         rm Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh && \
+        $CONDA_DIR/bin/conda config --system --append channels r && \
+        $CONDA_DIR/bin/conda config --system --append channels bioconda && \
         $CONDA_DIR/bin/conda config --system --append channels conda-forge && \
-        $CONDA_DIR/bin/conda config --system --set auto_update_conda false && \
+        $CONDA_DIR/bin/conda config --system --set auto_update_conda true && \
         $CONDA_DIR/bin/conda config --system --set show_channel_urls true && \
         $CONDA_DIR/bin/conda install --quiet --yes conda="${MINICONDA_VERSION%.*}.*" && \
         $CONDA_DIR/bin/conda update --all --quiet --yes && \
@@ -88,37 +90,41 @@ From: amd64/ubuntu:18.04
 
     # install conda packages
     conda config --add channels bioconda
+    conda config --add channels r
     conda install -qy \
+    "r-epitools=0.5_10" \
+    "r=3.6.0" \
+    "rpy2=2.9.4" \
     "python=3.6.8" \
-    "notebook=5.7.0" \
-    "xlrd=1.1.0" \
-    "bcftools=1.9" \
-    "samtools=1.9" \
-    "htslib=1.9" \
+    "notebook=6.0.3" \
+    "xlrd=1.2.0" \
+    "bcftools=1.10" \
+    "samtools=1.10" \
+    "htslib=1.10" \
     "bwa=0.7.17" \
-    "bowtie2=2.3.4.3" \
-    "primer3=2.4.0" \
-    "numpy=1.15" \
-    "scipy=1.1" \
-    "biopython=1.70" \
+    "bowtie2=2.3.5" \
+    "primer3=2.5.0" \
+    "primer3-py=0.6.0" \
+    "numpy=1.17.5" \
+    "scipy=1.4.1" \
+    "biopython=1.76" \
     "pysam=0.15" \
-    "pandas=0.23" \
-    "matplotlib=3.0" \
+    "pandas=0.25" \
+    "matplotlib=3.1" \
     "seaborn=0.9" \
-    "scikit-learn=0.20" \
-    "scandir=1.9.0" \
-    "openpyxl=2.6.1" \
+    "scikit-learn=0.22.1" \
+    "scandir=1.10.0" \
+    "openpyxl=3.0.3" \
     "simplegeneric=0.8.1" \
     "matplotlib-venn=0.11.5" \
-    "tblib=1.4.0" \
-    "parallel=20190922" \
+    "tblib=1.6.0" \
+    "parallel=20191122" \
     "scikit-allel=1.2.1" \
-    "openpyxl"
+    "bioconductor-dnacopy=1.60" \
+    "basemap-data-hires=1.2.1" \
+    "seqtk=1.3"
 
 
-    # install R and epitools R library
-    conda install -qy -c r r rpy2
-    conda install -qy -c nnsrl r-epitools
     conda clean -tipsy
 
     # install vt variant tool set
@@ -128,15 +134,6 @@ From: amd64/ubuntu:18.04
     make -j $CPU_COUNT
     scp vt /opt/bin
 
-    # install seqtk
-    cd /opt/programs
-    git clone https://github.com/lh3/seqtk.git
-    cd seqtk
-    make -j $CPU_COUNT
-    scp seqtk /opt/bin
-
-    # install primer3 python wrapper
-    pip install primer3-py==0.5.7
 
     # install lastZ
     cd /opt/programs/lastz/src
@@ -164,7 +161,7 @@ From: amd64/ubuntu:18.04
     ./install.sh $CPU_COUNT
 
     # install gatk
-    gatk_ver="4.1.4.0"
+    gatk_ver="4.1.4.1"
     gatk_dir=/opt/programs/gatk-$gatk_ver
     gatk_filename=gatk-$gatk_ver".zip"
     cd /opt/programs

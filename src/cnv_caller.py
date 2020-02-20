@@ -6,12 +6,19 @@ from rpy2.robjects.packages import importr
 import rpy2.robjects as robjects
 from sklearn.manifold import TSNE
 from sklearn.cluster import KMeans
+import probe_summary_generator
+import mip_functions as mip
+import allel
+import subprocess
 plt.style.use('ggplot')
 dnacopy = importr("DNAcopy")
 
 
 def filter_samples(barcode_counts, settings, sample_threshold,
                    probe_threshold):
+    """ Filter a UMI count table based on per sample and per probe thresholds.
+    First, samples failing average UMI threshold are removed. Then, probes
+    failing the average UMI count are removed."""
     filter_level = settings["copyStableLevel"]
     filter_values = settings["copyStableValues"]
     col = barcode_counts.columns
@@ -31,6 +38,7 @@ def filter_samples(barcode_counts, settings, sample_threshold,
 
 
 def sample_normalize(masked_counts, settings):
+    """ Normalize a UMI count table sample-wise. """
     filter_level = settings["copyStableLevel"]
     filter_values = settings["copyStableValues"]
     col = masked_counts.columns
@@ -45,6 +53,10 @@ def sample_normalize(masked_counts, settings):
 
 
 def probe_normalize(sample_normalized, settings):
+    """ Probe-wise normalize a (sample normalized) count table assuming
+    the average (median or other specified value) probe represents a certain
+    copy number. For human samples, for example, assumes the average sample
+    will have 2 copies of each target."""
     average_copy_count = int(settings["averageCopyCount"])
     norm_percentiles = list(map(float, settings["normalizationPercentiles"]))
     copy_counts = sample_normalized.transform(
@@ -53,6 +65,8 @@ def probe_normalize(sample_normalized, settings):
 
 
 def call_copy_numbers(copy_counts, settings):
+    """ Call integer copy numbers based on normalized count tables.
+    Define breakpoints using DNACopy algorithm."""
     copy_calls = {}
     problem_genes = []
     try:
@@ -297,3 +311,130 @@ def call_copy_numbers(copy_counts, settings):
         except Exception as e:
             problem_genes.append([g, e])
     return [copy_calls, problem_genes]
+
+
+def update_count_columns(count_table):
+    """
+    Add genomic coordinates to UMI count table.
+    """
+    info_df = probe_summary_generator.get_probe_call_info()
+    info_dict = info_df.groupby(["MIP", "Copy"]).first().to_dict(
+        orient="index")
+    cols = count_table.columns
+    new_cols = [c + (info_dict[c]["chrom"], info_dict[c]["capture_start"],
+                info_dict[c]["capture_end"], info_dict[c]["Gene"])
+                for c in cols]
+    new_cols = pd.MultiIndex.from_tuples(
+        new_cols, names=["MIP", "Copy", "Chrom", "begin", "end", "Gene"])
+    count_table.columns = new_cols
+    count_table = count_table.sort_index(level=["Chrom", "begin"], axis=1)
+    return
+
+
+def control_normalize(control_cnv_vcf, sample_normalized_counts, settings):
+    """
+    Normalize a (sample normalized) count table based on known copy number
+    table of control samples.
+    """
+    # Create a cnv table from cnv vcf file. This is based on 1KG project's
+    # copy number call vcf file. It will not work for any other file.
+    ######
+    # Extract variants overlapping MIP captures
+    with open("regions.txt", "w") as outfile:
+        for c in sample_normalized_counts.columns:
+            outfile.write("\t".join(map(str, c[2:5])) + "\n")
+
+    res = subprocess.run(["bcftools", "view", "-R", "regions.txt",
+                          "-o", "regional.vcf", control_cnv_vcf],
+                         stderr=subprocess.PIPE)
+    if res.returncode != 0:
+        print(res.stderr)
+    kg_vcf = allel.read_vcf("regional.vcf",
+                            fields=["CHROM", "POS", "END", "ALT",
+                                    "samples", "calldata/*"],
+                            alt_number=20)
+
+    alts = []
+    for variant in kg_vcf["variants/ALT"]:
+        new_alt = [1]
+        for v in variant:
+            try:
+                new_alt.append(int(v[3:-1]))
+            except (ValueError, IndexError):
+                new_alt.append(np.nan)
+        new_alt.append(np.nan)
+        alts.append(new_alt)
+    alts = np.array(alts)
+    copy_counts = []
+    for i in range(len(alts)):
+        alt_alleles = alts[i]
+        sample_genotypes = kg_vcf["calldata/GT"][i]
+        variant_copy_counts = []
+        for s in sample_genotypes:
+            try:
+                sample_cn = alt_alleles[s[0]] + alt_alleles[s[1]]
+            except IndexError:
+                sample_cn = np.nan
+            variant_copy_counts.append(sample_cn)
+        copy_counts.append(variant_copy_counts)
+    cc_array = np.array(copy_counts)
+
+    variant_index = np.stack([kg_vcf["variants/CHROM"],
+                              kg_vcf["variants/POS"],
+                              kg_vcf["variants/END"]], axis=1)
+
+    vindex = pd.MultiIndex.from_arrays(variant_index.T)
+
+    vcf_df = pd.DataFrame(cc_array, index=vindex, columns=kg_vcf["samples"])
+    vcf_df = vcf_df.sort_index()
+    control_cnv_table = vcf_df.loc[(pd.IndexSlice[:, :, 0:]), :].T
+
+    id_to_name = {}
+    sample_names = set()
+    for s in sample_normalized_counts.index:
+        sn = "-".join(s.split("-")[:-2])
+        sample_names.add(sn)
+        id_to_name[s] = sn
+
+    control_sample_names = sample_names.intersection(control_cnv_table.index)
+    control_sample_ids = [s for s in sample_normalized_counts.index
+                          if id_to_name[s] in control_sample_names]
+    control_sample_index = [id_to_name[s] for s in control_sample_ids]
+    cont_sn = sample_normalized_counts.loc[control_sample_ids]
+    cont_cc = control_cnv_table.loc[control_sample_index]
+    cont_cc.index = control_sample_ids
+
+    def get_non_diploid(r):
+        if r.max() > 2:
+            if r.min() >= 2:
+                return r.max()
+            else:
+                return np.nan
+        else:
+            return r.min()
+    df_list = []
+    for c in cont_sn.columns:
+        chrom = c[2]
+        interval = [c[3], c[4]]
+        variant_list = []
+        for i in cont_cc.columns:
+            if (chrom == i[0]) and (len(mip.overlap(i[1:3], interval)) > 0):
+                variant_list.append(cont_cc.loc[:, i])
+        if len(variant_list) == 1:
+            df_list.extend(variant_list)
+        elif len(variant_list) > 1:
+            var_df = pd.concat(variant_list, axis=1)
+            var_df = var_df.apply(get_non_diploid, axis=1)
+            df_list.append(var_df)
+        else:
+            df_list.append(pd.Series(
+                [2 for j in range(len(control_sample_ids))],
+                index=control_sample_ids))
+
+    cont_cc = pd.concat(df_list, axis=1)
+    cont_cc.columns = sample_normalized_counts.columns
+    single_copy = cont_sn / cont_cc
+    norm_percentiles = list(map(float, settings["normalizationPercentiles"]))
+    normalizer = single_copy.quantile(norm_percentiles).mean()
+    control_normalized = sample_normalized_counts / normalizer
+    return control_normalized, cont_cc

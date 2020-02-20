@@ -7287,7 +7287,7 @@ def get_vcf_haplotypes(settings):
     print(("Out of {} initial haplotypes, {} were filtered using {}, {}, and "
            "{} as minimum total UMI count; number and fraction of samples "
            " the haplotype was observed in, respectively.").format(
-               initial_hap_count, len(hap_counts) - initial_hap_count,
+               initial_hap_count, initial_hap_count - len(hap_counts),
                haplotype_min_barcode_filter, haplotype_min_sample_filter,
                haplotype_min_sample_fraction_filter))
 
@@ -8586,7 +8586,7 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
         # first item of the above list is alt counts, then ref counts and
         # coverage.
         #############################
-        # split the compount mutations
+        # split the compound mutations
         split_variants = []
         split_calls = []
         for i in range(len(missense)):
@@ -8631,7 +8631,10 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
                         if site_qual < min_target_site_qual:
                             call_data[i][0][:] = 0
                     except KeyError:
-                        if site_qual < min_site_qual:
+                        # remove low quality non-target alleles as well as
+                        # synonymous changes
+                        if ((site_qual < min_site_qual)
+                                or (new_change == new_alternate)):
                             continue
                         mut_name = gene_name + "-" + new_change
                         targeted_mutation = "No"
@@ -8649,7 +8652,9 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
                     if site_qual < min_target_site_qual:
                         call_data[i][0][:] = 0
                 except KeyError:
-                    if site_qual < min_site_qual:
+                    # remove low qual or synonymous changes
+                    if ((site_qual < min_site_qual)
+                            or (mv[2] == "synonymous_variant")):
                         continue
                     mut_name = gene_name + "-" + aa_change
                     targeted_mutation = "No"
@@ -11682,6 +11687,21 @@ def iupac_converter(iupac_code):
             iupac_code, "".join(list(iupac_dict.keys()))
             ))
         return []
+
+
+def make_degenerate(base_set):
+    """
+    Return IUPAC code of degenerate nucleotide corresponding to given base set.
+    """
+    iupac_dict = {"A": "A", "C": "C", "G": "G", "T": "T", "R": "AG", "Y": "CT",
+                  "S": "GC", "W": "AT", "K": "GT", "M": "AC", "B": "CGT",
+                  "D": "AGT", "H": "ACT", "V": "ACG", "N": "ACGT"}
+    reverse_iupac = {frozenset(list(v)): k for k, v in iupac_dict.items()}
+    try:
+        base_set = frozenset(map(str.upper, frozenset(base_set)))
+        return reverse_iupac[base_set]
+    except (ValueError, KeyError, TypeError):
+        return np.nan
 
 
 def iupac_fasta_converter(header, sequence):
