@@ -8634,7 +8634,7 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
                         # remove low quality non-target alleles as well as
                         # synonymous changes
                         if ((site_qual < min_site_qual)
-                                or (new_change == new_alternate)):
+                                or (new_reference == new_alternate)):
                             continue
                         mut_name = gene_name + "-" + new_change
                         targeted_mutation = "No"
@@ -8782,7 +8782,8 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
                 if site_qual < min_target_site_qual:
                     call_data[i][0][:] = 0
             except KeyError:
-                if site_qual < min_site_qual:
+                # remove low qual and nonvariant sites
+                if ((site_qual < min_site_qual) or (vd[2] == vd[3])):
                     continue
                 t_anno = ":".join(map(str, vd))
                 targeted_mutation = "No"
