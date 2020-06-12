@@ -9968,6 +9968,14 @@ def combine_info_files(wdir,
     # numbers will need to be re-assigned so that each library has a unique
     # ID. If no overlap, they should be left as they are.
     repeat_found = False
+    # check if replicates are to be ignored, i.e. merge all libraries from
+    # the same DNA source.
+    merge_replicates = False
+    try:
+        if int(settings["mergeReplicates"]):
+            merge_replicates = True
+    except KeyError:
+        pass
 
     def assign_replicate(replicates):
         replicates = list(map(int, replicates))
@@ -9983,7 +9991,9 @@ def combine_info_files(wdir,
                 rep = int(reps_available.pop())
                 replicates[i] = rep
                 reps_used.add(rep)
-                if not repeat_found:
+                # print a warning unless the replicates will eventually
+                # be merged
+                if not (repeat_found or merge_replicates):
                     repeat_found
                     print("Sample ID will change for a sample because there "
                           "was another sample with the same ID. Please check "
@@ -10056,6 +10066,13 @@ def combine_info_files(wdir,
     info = pd.DataFrame(data, columns=c_vals + ["Library Prep"])
     info["barcode_count"] = info["barcode_count"].astype(int)
     info["read_count"] = info["read_count"].astype(int)
+    # check if replicates are to be ignored, i.e. merge all libraries from
+    # the same DNA source.
+    if merge_replicates:
+        info["original_sample_name"] = info["sample_name"]
+        info["sample_name"] = info["sample_name"].apply(
+            lambda a: "-".join(a.split("-")[:-1]) + "-1")
+        info["Library Prep"] = "merged"
     info = info.groupby(
         ["sample_name", "haplotype_sequence", "Library Prep"]
     ).apply(combine_sample_data).reset_index()
@@ -10082,6 +10099,8 @@ def combine_info_files(wdir,
                              axis=1).rename(
         columns={"new_replicate": "replicate"}
     )
+    if merge_replicates:
+        run_meta["replicate"] = 1
     run_meta.to_csv(os.path.join(wdir, "samples.tsv"), sep="\t", index=False)
 
 
