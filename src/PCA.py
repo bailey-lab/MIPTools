@@ -3,8 +3,9 @@ from sklearn import decomposition
 from itertools import cycle
 import matplotlib.pyplot as plt
 
+
 def call_genotypes(count_table, coverage_table, min_count,
-                   min_coverage, min_freq, remove_zero=False):
+                   min_coverage, min_freq):
     # filter mutation counts for minimum count parameter
     # by setting counts to zero if it is below threshold
     filtered_mutation_counts = count_table.applymap(
@@ -16,11 +17,6 @@ def call_genotypes(count_table, coverage_table, min_count,
     # calculate within sample frequency
     freq = filtered_mutation_counts / filtered_mutation_coverage
     freq.replace(np.inf, np.nan, inplace=True)
-    # filter variants that have 0 frequency across all samples
-    if remove_zero:
-        allele_sums = freq.sum(axis=0)
-        allele_filter = allele_sums > 0
-        freq = freq.loc[:, allele_filter]
     # call genotypes using the minimum within sample
     # allele frequency parameter
     genotypes = freq.applymap(
@@ -39,8 +35,14 @@ def call_genotypes(count_table, coverage_table, min_count,
 
 
 def filter_variants(variant_table, sample_drop=None, variant_drop=None,
-                    variant_filters=None, impute_func=None):
+                    variant_filters=None, impute_func=None, remove_zero=False):
     variant_table = variant_table.sort_index(axis=1)
+    # filter variants that have 0 frequency across all samples
+    if remove_zero:
+        allele_sums = variant_table.sum(axis=0)
+        allele_filter = allele_sums > 0
+        variant_table = variant_table.loc[:, allele_filter]
+
     # filter data based on specified variant properties
     if variant_filters is not None:
         vf = []
@@ -53,13 +55,14 @@ def filter_variants(variant_table, sample_drop=None, variant_drop=None,
         tab = variant_table
     # filter samples that have less than % of loci called
     if sample_drop is not None:
-        table_filt = tab.dropna(axis=0, thresh=tab.shape[1] * sample_drop)
+        table_filt = tab.dropna(axis=0,
+                                thresh=tab.shape[1] * (1 - sample_drop))
     else:
         table_filt = tab
     # filter variants that are missing in > % of the samples
     if variant_drop is not None:
         table_filt = table_filt.dropna(
-            axis=1, thresh=table_filt.shape[0] * variant_drop)
+            axis=1, thresh=table_filt.shape[0] * (1 - variant_drop))
     # impute missing values with given function
     if impute_func is not None:
         if impute_func == "mode":
