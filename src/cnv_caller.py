@@ -16,9 +16,11 @@ dnacopy = importr("DNAcopy")
 
 def filter_samples(barcode_counts, settings, sample_threshold,
                    probe_threshold):
-    """ Filter a UMI count table based on per sample and per probe thresholds.
+    """Filter a UMI count table based on per sample and per probe thresholds.
+
     First, samples failing average UMI threshold are removed. Then, probes
-    failing the average UMI count are removed."""
+    failing the average UMI count are removed.
+    """
     filter_level = settings["copyStableLevel"]
     filter_values = settings["copyStableValues"]
     col = barcode_counts.columns
@@ -38,7 +40,7 @@ def filter_samples(barcode_counts, settings, sample_threshold,
 
 
 def sample_normalize(masked_counts, settings):
-    """ Normalize a UMI count table sample-wise. """
+    """Normalize a UMI count table sample-wise."""
     filter_level = settings["copyStableLevel"]
     filter_values = settings["copyStableValues"]
     col = masked_counts.columns
@@ -53,10 +55,13 @@ def sample_normalize(masked_counts, settings):
 
 
 def probe_normalize(sample_normalized, settings):
-    """ Probe-wise normalize a (sample normalized) count table assuming
+    """Probe-wise normalize a (sample normalized) count table.
+
+    Probe-wise normalize a (sample normalized) count table assuming
     the average (median or other specified value) probe represents a certain
     copy number. For human samples, for example, assumes the average sample
-    will have 2 copies of each target."""
+    will have 2 copies of each target.
+    """
     average_copy_count = int(settings["averageCopyCount"])
     norm_percentiles = list(map(float, settings["normalizationPercentiles"]))
     copy_counts = sample_normalized.transform(
@@ -65,8 +70,10 @@ def probe_normalize(sample_normalized, settings):
 
 
 def call_copy_numbers(copy_counts, settings):
-    """ Call integer copy numbers based on normalized count tables.
-    Define breakpoints using DNACopy algorithm."""
+    """Call integer copy numbers based on normalized count tables.
+
+    Define breakpoints using DNACopy algorithm.
+    """
     copy_calls = {}
     problem_genes = []
     try:
@@ -314,9 +321,7 @@ def call_copy_numbers(copy_counts, settings):
 
 
 def update_count_columns(count_table):
-    """
-    Add genomic coordinates to UMI count table.
-    """
+    """Add genomic coordinates to UMI count table."""
     info_df = probe_summary_generator.get_probe_call_info()
     info_dict = info_df.groupby(["MIP", "Copy"]).first().to_dict(
         orient="index")
@@ -332,9 +337,10 @@ def update_count_columns(count_table):
 
 
 def control_normalize(control_cnv_vcf, sample_normalized_counts, settings):
-    """
-    Normalize a (sample normalized) count table based on known copy number
-    table of control samples.
+    """Probe-wise normalize a (sample normalized) count table.
+
+    Probewise normalization based on known copy number of control samples.
+    This is specifically designed for use with 1KG project control samples.
     """
     # Create a cnv table from cnv vcf file. This is based on 1KG project's
     # copy number call vcf file. It will not work for any other file.
@@ -438,3 +444,24 @@ def control_normalize(control_cnv_vcf, sample_normalized_counts, settings):
     normalizer = single_copy.quantile(norm_percentiles).mean()
     control_normalized = sample_normalized_counts / normalizer
     return control_normalized, cont_cc
+
+
+def simple_copy_caller(gene_name, count_table, probe_threshold):
+    """Make simple copy calls based on UMI counts for a gene."""
+    sample_normalized = count_table.div(count_table.mean(axis=1), axis=0)
+    geno_counts = count_table.xs(
+        gene_name, level="Gene", drop_level=False, axis=1)
+    probe_medians = geno_counts.median(axis=1)
+    filtered_samples = probe_medians.loc[
+        probe_medians >= probe_threshold].index
+    normalized = sample_normalized.xs(
+        gene_name, level="Gene", drop_level=False, axis=1)
+    normalized = normalized.loc[filtered_samples]
+    probe_medians = normalized.median()
+    normalized = normalized.div(probe_medians, axis=1)
+    std_base = normalized.median(axis=1).std()
+    normalized = normalized.loc[:, normalized.std() < (4 * std_base)]
+    mip.plot_coverage(normalized, save=False)
+    return {"median_copy_count": normalized.median(axis=1).sort_values(),
+            "mean_copy_count": normalized.mean(axis=1).sort_values(),
+            "normalized_coverage": normalized}
