@@ -446,7 +446,8 @@ def control_normalize(control_cnv_vcf, sample_normalized_counts, settings):
     return control_normalized, cont_cc
 
 
-def simple_copy_caller(gene_name, count_table, probe_threshold):
+def simple_copy_caller(gene_name, count_table, probe_threshold,
+                       sd_multiplier=4):
     """Make simple copy calls based on UMI counts for a gene."""
     sample_normalized = count_table.div(count_table.mean(axis=1), axis=0)
     geno_counts = count_table.xs(
@@ -460,8 +461,8 @@ def simple_copy_caller(gene_name, count_table, probe_threshold):
     probe_medians = normalized.median()
     normalized = normalized.div(probe_medians, axis=1)
     std_base = normalized.median(axis=1).std()
-    normalized = normalized.loc[:, normalized.std() < (4 * std_base)]
-    mip.plot_coverage(normalized, save=False)
+    normalized = normalized.loc[
+        :, normalized.std() < (sd_multiplier * std_base)]
     return {"median_copy_count": normalized.median(axis=1).sort_values(),
             "mean_copy_count": normalized.mean(axis=1).sort_values(),
             "normalized_coverage": normalized}

@@ -7356,6 +7356,10 @@ def get_vcf_haplotypes(settings):
                         call_dict.pop("genes")
                     except KeyError:
                         pass
+                    try:
+                        call_dict.pop("variants")
+                    except KeyError:
+                        pass
                     call_dict["gene"] = g
                     call_dict["MIP"] = m
                     call_dict["copy"] = c
