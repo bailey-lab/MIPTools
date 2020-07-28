@@ -362,21 +362,3 @@ From: amd64/ubuntu:18.04
         esac
     done
     python /opt/src/demux_qc.py -p $platform
-
-# Create a few test apps to use in development
-%apprun test1
-        set -e
-        set -u
-        echo "Testing 1."
-
-
-%apprun test2
-        set -e
-        set -u
-        echo "Testing 2."
-
-
-%apprun test3
-        set -e
-        set -u
-        echo "Testing 3."
