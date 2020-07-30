@@ -1,5 +1,5 @@
 Bootstrap: docker
-From: amd64/ubuntu:18.04
+From: amd64/ubuntu:20.04
 
 %post
     # set number of cpus to use in build
