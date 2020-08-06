@@ -122,6 +122,7 @@ From: amd64/ubuntu:20.04
     "scikit-allel=1.2.1" \
     "bioconductor-dnacopy=1.60" \
     "basemap-data-hires=1.2.1" \
+    "geopandas=0.8.1" \
     "seqtk=1.3"
 
 
@@ -150,7 +151,7 @@ From: amd64/ubuntu:20.04
     cd /opt/programs
     git clone https://github.com/bailey-lab/MIPWrangler
     cd MIPWrangler
-    git checkout develop
+    git checkout git checkout v1.2.0
     ./upgradeDevelop.sh $CPU_COUNT
 
     # install elucidator
