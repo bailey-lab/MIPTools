@@ -152,7 +152,7 @@ From: amd64/ubuntu:20.04
     git clone https://github.com/bailey-lab/MIPWrangler
     cd MIPWrangler
     git checkout git checkout v1.2.0
-    ./upgradeDevelop.sh $CPU_COUNT
+    ./install.sh $CPU_COUNT
 
     # install elucidator
     cd /opt/programs
