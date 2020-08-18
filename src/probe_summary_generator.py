@@ -219,4 +219,5 @@ def generate_mip_arms_file(probe_set_key, probe_sets_file=None,
 
     mip_arms.to_csv(os.path.join("/opt/project_resources/mip_ids",
                                  mip_arms_file), index=False, sep="\t")
+    update_probe_sets()
     return

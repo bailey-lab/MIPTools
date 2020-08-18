@@ -6284,7 +6284,8 @@ def process_results(wdir,
                                            * multi_df["Copy Average"]
                                            / multi_df["copy_sum"])
     # Combine unique and multimapping data
-    combined_df = pd.concat([unique_df, multi_df], ignore_index=True)
+    combined_df = pd.concat([unique_df, multi_df], ignore_index=True,
+                            sort=True)
     combined_df.rename(
         columns={
             "Barcode Count": "Raw Barcode Count",
@@ -7366,7 +7367,7 @@ def get_vcf_haplotypes(settings):
                     call_dict["mip_number"] = mip_number
                     call_dict["sub_number"] = sub_number
                     call_df_list.append(pd.DataFrame(call_dict, index=[0]))
-    call_df = pd.concat(call_df_list)
+    call_df = pd.concat(call_df_list, ignore_index=True, sort=True)
     # combine alignment information with design information (call_info)
     haplotype_maps = call_df.merge(
         sam[["MIP", "haplotype_ID", "CHROM", "POS", "best_alignment",
@@ -7576,7 +7577,8 @@ def get_haplotype_counts(settings):
                                            / multi_df["copy_sum"])
 
     # Combine unique and multimapping data
-    combined_df = pd.concat([unique_df, multi_df], ignore_index=True)
+    combined_df = pd.concat([unique_df, multi_df], ignore_index=True,
+                            sort=True)
     combined_df.rename(
         columns={
             "Barcode Count": "Raw Barcode Count",
@@ -7797,12 +7799,13 @@ def split_contigs(settings):
 def freebayes_call(bam_dir="/opt/analysis/padded_bams",
                    fastq_dir="/opt/analysis/padded_fastqs", options=[],
                    vcf_file="/opt/analysis/variants.vcf.gz",
-                   targets_file=None,
+                   targets_file=None, make_fastq=True,
                    align=True, settings=None, settings_file=None,
                    bam_files=None, verbose=True,
                    errors_file="/opt/analysis/freebayes_errors.txt",
                    warnings_file="/opt/analysis/freebayes_warnings.txt"):
-    """ Call variants for MIP data using freebayes.
+    """Call variants for MIP data using freebayes.
+
     A mapped haplotype file must be present in the working directory. This
     is generated during haplotype processing. Per sample fastqs and bams
     will be created if align=True. Fastqs are generated with a default 20 bp
@@ -7867,11 +7870,12 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
     # get the mip data file location. This file has per sample haplotype
     # information including counts.
     mipster_file = os.path.join(wdir, settings["mipsterFile"])
-    if align:
+    if make_fastq:
         # create fastq files from MIP data. One read per UMI will be created.
         generate_mapped_fastqs(fastq_dir, mipster_file,
                                mapped_haplotypes_file, settings["species"],
                                pro=int(settings["processorNumber"]))
+    if align:
         # map per sample fastqs to the reference genome, creating bam files.
         # bam files will have sample groups added, which is required for
         # calling variants across the samples.
