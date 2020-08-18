@@ -7801,7 +7801,7 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
                    vcf_file="/opt/analysis/variants.vcf.gz",
                    targets_file=None, make_fastq=True,
                    align=True, settings=None, settings_file=None,
-                   bam_files=None, verbose=True,
+                   bam_files=None, bam_list=None, verbose=True,
                    errors_file="/opt/analysis/freebayes_errors.txt",
                    warnings_file="/opt/analysis/freebayes_warnings.txt"):
     """Call variants for MIP data using freebayes.
@@ -7993,15 +7993,17 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
     # after the bam files.
     if bam_files is not None:
         options.extend(bam_files)
+    if bam_list is not None:
+        options.extend(["-L", bam_list])
     # create a file list in the bam_dir that has full path to all bam files
     # if all bam files are to be used
     else:
-        bam_file_list = os.path.join(bam_dir, "bamlist.txt")
-        with open(bam_file_list, "w") as outfile:
+        bam_list = os.path.join(bam_dir, "bamlist.txt")
+        with open(bam_list, "w") as outfile:
             for f in os.scandir(bam_dir):
                 if os.path.splitext(f.name)[1] == ".bam":
                     outfile.write(f.path + "\n")
-        options.extend(["-L", bam_file_list])
+        options.extend(["-L", bam_list])
 
     # create a list for keeping all contig vcf file paths to concatanate
     # them at the end.
