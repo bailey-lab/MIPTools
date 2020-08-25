@@ -7797,11 +7797,13 @@ def split_contigs(settings):
 
 
 def freebayes_call(bam_dir="/opt/analysis/padded_bams",
-                   fastq_dir="/opt/analysis/padded_fastqs", options=[],
+                   fastq_dir="/opt/analysis/padded_fastqs",
+                   options=[],
                    vcf_file="/opt/analysis/variants.vcf.gz",
                    targets_file=None, make_fastq=True,
                    align=True, settings=None, settings_file=None,
                    bam_files=None, bam_list=None, verbose=True,
+                   fastq_padding=20, min_base_quality=1,
                    errors_file="/opt/analysis/freebayes_errors.txt",
                    warnings_file="/opt/analysis/freebayes_warnings.txt"):
     """Call variants for MIP data using freebayes.
@@ -7874,7 +7876,8 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
         # create fastq files from MIP data. One read per UMI will be created.
         generate_mapped_fastqs(fastq_dir, mipster_file,
                                mapped_haplotypes_file, settings["species"],
-                               pro=int(settings["processorNumber"]))
+                               pro=int(settings["processorNumber"]),
+                               pad_size=fastq_padding)
     if align:
         # map per sample fastqs to the reference genome, creating bam files.
         # bam files will have sample groups added, which is required for
@@ -8004,7 +8007,8 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
                 if os.path.splitext(f.name)[1] == ".bam":
                     outfile.write(f.path + "\n")
         options.extend(["-L", bam_list])
-
+    # add minimum base quality parameter to options
+    options.extend(["-q", str(min_base_quality)])
     # create a list for keeping all contig vcf file paths to concatanate
     # them at the end.
     contig_vcf_paths = []
@@ -8116,9 +8120,8 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
 
 
 def freebayes_worker(contig_dict):
-    """ Run freebayes program with the specified options and return a
-    subprocess.CompletedProcess object.
-    """
+    """Run freebayes program with the specified options and return a
+    subprocess.CompletedProcess object."""
     options = contig_dict["options"]
     command = ["freebayes"]
     command.extend(options)
@@ -10388,8 +10391,13 @@ def generate_mapped_fastqs(fastq_dir, mipster_file,
         else:
             return left_pad + h_seq + right_pad
 
-    mapped_haplotypes["padded_haplotype_sequence"] = mapped_haplotypes.apply(
-        get_padded_haplotype_sequence, args=(pad_size, species), axis=1)
+    if pad_size > 0:
+        mapped_haplotypes["padded_haplotype_sequence"] = (
+            mapped_haplotypes.apply(get_padded_haplotype_sequence,
+                                    args=(pad_size, species), axis=1))
+    else:
+        mapped_haplotypes["padded_haplotype_sequence"] = (
+            mapped_haplotypes["haplotype_sequence"])
     mipster = mipster.merge(mapped_haplotypes[["haplotype_ID",
                                                "padded_haplotype_sequence",
                                                "mapped_copy_number"]])
@@ -10397,7 +10405,7 @@ def generate_mapped_fastqs(fastq_dir, mipster_file,
     mipster["haplotype_sequence"] = mipster["padded_haplotype_sequence"]
     mipster["raw_sequence_quality"] = mipster["sequence_quality"]
     mipster["sequence_quality"] = (
-        pad_size * "H" + mipster["sequence_quality"] + pad_size * "H")
+        pad_size * "!" + mipster["sequence_quality"] + pad_size * "!")
     mipster["adjusted_barcode_count"] = (
         mipster["barcode_count"] / mipster["mapped_copy_number"]).astype(int)
     mipster["raw_barcode_count"] = mipster["barcode_count"]

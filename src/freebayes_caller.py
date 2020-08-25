@@ -46,6 +46,15 @@ parser.add_argument("-t", "--threads",
                     help="Number of CPU threads to use.",
                     type=int,
                     default=1)
+parser.add_argument("-f", "--fastq-padding",
+                    help=("Number of reference genome bases to flank "
+                          "haplotypes."),
+                    type=int,
+                    default=20)
+parser.add_argument("-q", "--min-base-quality",
+                    help=("Minimum base qual to consider an allele"),
+                    type=int,
+                    default=1)
 # parse arguments from command line
 args = vars(parser.parse_args())
 
@@ -75,4 +84,6 @@ mip.freebayes_call(bam_dir=args["bam_dir"],
                    align=args["skip_align"],
                    settings=settings,
                    bam_files=args["bam_files"],
-                   bam_list=args["bam_list"])
+                   bam_list=args["bam_list"],
+                   fastq_padding=args["fastq_padding"],
+                   min_base_quality=args["min_base_quality"])
