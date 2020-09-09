@@ -1,7 +1,9 @@
 Bootstrap: docker
-From: amd64/ubuntu:18.04
+From: amd64/ubuntu:20.04
 
 %post
+    # set number of cpus to use in build
+    CPU_COUNT=20
     # set build environment
     export DEBIAN_FRONTEND=noninteractive \
         CONDA_DIR=/opt/conda \
@@ -9,13 +11,13 @@ From: amd64/ubuntu:18.04
         LANG=en_US.UTF-8 \
         LANGUAGE=en_US.UTF-8 \
         LC_ALL=en_US.UTF-8 \
-        MINICONDA_VERSION=4.5.4
+        MINICONDA_VERSION=4.8.3
     export PATH=$CONDA_DIR/bin:$PATH
 
     # install system packages
-    apt update \
-    && apt -yq dist-upgrade \
-    && apt install -yq --no-install-recommends \
+    apt-get update \
+    && apt-get -yq dist-upgrade \
+    && apt-get install -yq --no-install-recommends \
     wget \
     bzip2 \
     ca-certificates \
@@ -48,7 +50,8 @@ From: amd64/ubuntu:18.04
     libssl-dev \
     libcurl4-gnutls-dev \
     alien \
-    unzip
+    unzip \
+    tree
 
     # set environment locale
     echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
@@ -58,7 +61,7 @@ From: amd64/ubuntu:18.04
     locale-gen en_US.UTF-8
     update-locale LANG=en_US.UTF-8
 
-    # install bcl2fastq
+    # install bcl2fastq, if the file is there
     cd /opt/programs
     unzip bcl2fastq2*.zip || true
     alien bcl2fastq2*.rpm || true
@@ -72,74 +75,108 @@ From: amd64/ubuntu:18.04
 
     # install conda
     cd /tmp && \
-        wget --quiet https://repo.continuum.io/miniconda/Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh && \
-        echo "a946ea1d0c4a642ddf0c3a26a18bb16d *Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh" | md5sum -c - && \
-        /bin/bash Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh -f -b -p $CONDA_DIR && \
-        rm Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh && \
-        $CONDA_DIR/bin/conda config --system --prepend channels conda-forge && \
-        $CONDA_DIR/bin/conda config --system --set auto_update_conda false && \
+        wget --quiet https://repo.continuum.io/miniconda/Miniconda3-py38_${MINICONDA_VERSION}-Linux-x86_64.sh && \
+        echo "d63adf39f2c220950a063e0529d4ff74 *Miniconda3-py38_${MINICONDA_VERSION}-Linux-x86_64.sh" | md5sum -c - && \
+        /bin/bash Miniconda3-py38_${MINICONDA_VERSION}-Linux-x86_64.sh -f -b -p $CONDA_DIR && \
+        rm Miniconda3-py38_${MINICONDA_VERSION}-Linux-x86_64.sh && \
+        $CONDA_DIR/bin/conda config --add channels defaults && \
+        $CONDA_DIR/bin/conda config --add channels bioconda && \
+        $CONDA_DIR/bin/conda config --add channels conda-forge && \
+        $CONDA_DIR/bin/conda config --add channels r && \
         $CONDA_DIR/bin/conda config --system --set show_channel_urls true && \
         $CONDA_DIR/bin/conda install --quiet --yes conda="${MINICONDA_VERSION%.*}.*" && \
-        $CONDA_DIR/bin/conda update --all --quiet --yes && \
         conda clean -tipsy
 
-    # install conda packages
-    conda config --add channels bioconda
-    conda install -qy "notebook=5.7.0" \
-    "xlrd=1.1.0" \
-    "bcftools=1.9" \
-    "samtools=1.9" \
-    "bwa=0.7.17" \
-    "bowtie2=2.3.4.3" \
-    "primer3=2.4.0" \
-    "numpy=1.15" \
-    "scipy=1.1" \
-    "biopython=1.70" \
-    "pysam=0.15" \
-    "pandas=0.23" \
-    "matplotlib=3.0" \
-    "seaborn=0.9" \
-    "scikit-learn=0.20" \
-    "scandir=1.9.0"
+    # install mamba
+    conda install mamba -c conda-forge
+
+    # install conda packages using mamba
+    mamba install -qy\
+      "r-epitools" \
+      "r" \
+      "rpy2" \
+      "python" \
+      "notebook" \
+      "xlrd" \
+      "bcftools" \
+      "samtools" \
+      "vcftools" \
+      "htslib" \
+      "bwa" \
+      "bowtie2" \
+      "primer3" \
+      "primer3-py" \
+      "numpy" \
+      "scipy" \
+      "biopython" \
+      "pysam" \
+      "pandas" \
+      "matplotlib" \
+      "seaborn" \
+      "scikit-learn" \
+      "scandir" \
+      "openpyxl" \
+      "simplegeneric" \
+      "matplotlib-venn" \
+      "tblib" \
+      "parallel" \
+      "scikit-allel" \
+      "bioconductor-dnacopy" \
+      "basemap-data-hires" \
+      "seqtk=1.3"
 
 
-    # install R and epitools R library
-    conda install -qy -c r r rpy2
-    conda install -qy -c nnsrl r-epitools
-    conda install -qy openpyxl bioconductor-decipher
-    conda clean -tipsy
 
-    # install primer3 python wrapper
-    pip install primer3-py==0.5.7
-    pip install simplegeneric
+    # install vt variant tool set
+    cd /opt/programs
+    git clone https://github.com/atks/vt.git
+    cd vt
+    make -j $CPU_COUNT
+    scp vt /opt/bin
+
 
     # install lastZ
     cd /opt/programs/lastz/src
     make lastz_32 && install lastz_32 /usr/bin/
 
+    # install freebayes
+    cd /opt/bin
+    freebayes_ver="v1.3.1"
+    freebayes_file=freebayes-$freebayes_ver
+    wget https://github.com/ekg/freebayes/releases/download/$freebayes_ver/$freebayes_file
+    mv $freebayes_file freebayes
+
     # install MIPWrangler
     cd /opt/programs
     git clone https://github.com/bailey-lab/MIPWrangler
     cd MIPWrangler
-    git checkout develop
-    ./upgradeDevelop.sh 20
+    git checkout v1.2.0
+    ./install.sh $CPU_COUNT
 
     # install elucidator
     cd /opt/programs
     git clone https://github.com/nickjhathaway/elucidator
     cd elucidator
     git checkout develop
-    ./install.sh 20
+    ./install.sh $CPU_COUNT
+
+    # install gatk
+    gatk_ver="4.1.4.1"
+    gatk_dir=/opt/programs/gatk-$gatk_ver
+    gatk_filename=gatk-$gatk_ver".zip"
+    cd /opt/programs
+    wget https://github.com/broadinstitute/gatk/releases/download/$gatk_ver/$gatk_filename
+    unzip $gatk_filename
+    rm $gatk_filename
+    mv gatk-$gatk_ver gatk
+
+    # install parasight
+    scp /opt/programs/parasight_v7.6/parasight.pl /opt/bin/parasight76.pl
 
     # add executable flag to executables
     chmod -R +xr /usr/bin
     chmod -R +xr /opt/bin
 
-
-    # create symlinks to executables in /usr/bin so everything will be in
-    # $PATH for users.
-    ln -sf /opt/programs/parasight_v7.6/parasight.pl /usr/bin/parasight76.pl
-    ln -sf /opt/programs/annovar-20180416/*.pl /usr/bin
 
     # create work and resources directories in /opt
     mkdir /opt/resources \
@@ -148,6 +185,7 @@ From: amd64/ubuntu:18.04
         /opt/species_resources \
         /opt/data \
         /opt/analysis \
+        /opt/host_species \
         /opt/extras
 
 
@@ -158,7 +196,7 @@ From: amd64/ubuntu:18.04
 
 %environment
     path=/opt/bin:/opt/conda/bin:/opt/programs/MIPWrangler/bin:
-    path=$path/opt/programs/elucidator/bin:
+    path=$path/opt/programs/elucidator/bin:/opt/programs/gatk:
     path=$path$PATH
     export PATH=$path
     export XDG_RUNTIME_DIR=""
@@ -202,9 +240,10 @@ From: amd64/ubuntu:18.04
     cluster_script="runMIPWranglerCurrent.sh"
     server_number=1
     cpu_count=1
+    min_capture_length="none"
     stitch_options="none"
     keep_files=""
-    while getopts p:l:e:s:w:n:c:x:k OPT; do
+    while getopts p:l:e:s:w:n:c:x:m:k OPT; do
         case "$OPT" in
             e)
               experiment_id="$OPTARG";;
@@ -225,17 +264,21 @@ From: amd64/ubuntu:18.04
             k)
               keep_files="-k";;
 
+            m)
+              min_capture_length="$OPTARG";;
+
             *)
               echo "Invalid option. Use 'wrangler \
               -e experiment_id -l sample_list.file -p  probe_sets\
               -s sample_sets -w cluster_script -n server_number \
-              -c  cpu_count -x additinal_stitch_options'  [-k]"
+              -c  cpu_count -x additional_stitch_options'  \
+              -m min_capture_length [-k]"
         esac
     done
     python /opt/src/generate_wrangler_scripts.py \
     -e $experiment_id -l /opt/analysis/$sample_list \
     -p $probe_sets -s $sample_sets -w $cluster_script -n $server_number \
-    -c $cpu_count -x $stitch_options $keep_files
+    -c $cpu_count -x $stitch_options -m $min_capture_length $keep_files
     script_name=$sample_sets"_"$(echo $probe_sets|tr "," "_")".sh"
     . /opt/analysis/$script_name
 
@@ -300,7 +343,7 @@ From: amd64/ubuntu:18.04
     # create a fastq directory for saving fastqs
     mkdir -p /opt/analysis/fastq
     # increase limit of open number of files.
-    ulimit -n 9999
+    ulimit -Sn $(ulimit -Hn)
     nohup bcl2fastq -o /opt/analysis/fastq \
         --sample-sheet /opt/analysis/SampleSheet.csv \
         --no-lane-splitting
@@ -319,21 +362,3 @@ From: amd64/ubuntu:18.04
         esac
     done
     python /opt/src/demux_qc.py -p $platform
-
-# Create a few test apps to use in development
-%apprun test1
-        set -e
-        set -u
-        echo "Testing 1."
-
-
-%apprun test2
-        set -e
-        set -u
-        echo "Testing 2."
-
-
-%apprun test3
-        set -e
-        set -u
-        echo "Testing 3."

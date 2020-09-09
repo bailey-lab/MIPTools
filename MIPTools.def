@@ -11,7 +11,7 @@ From: amd64/ubuntu:20.04
         LANG=en_US.UTF-8 \
         LANGUAGE=en_US.UTF-8 \
         LC_ALL=en_US.UTF-8 \
-        MINICONDA_VERSION=4.7.12.1
+        MINICONDA_VERSION=4.8.3
     export PATH=$CONDA_DIR/bin:$PATH
 
     # install system packages
@@ -75,58 +75,57 @@ From: amd64/ubuntu:20.04
 
     # install conda
     cd /tmp && \
-        wget --quiet https://repo.continuum.io/miniconda/Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh && \
-        echo "81c773ff87af5cfac79ab862942ab6b3 *Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh" | md5sum -c - && \
-        /bin/bash Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh -f -b -p $CONDA_DIR && \
-        rm Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh && \
-        $CONDA_DIR/bin/conda config --system --append channels r && \
-        $CONDA_DIR/bin/conda config --system --append channels bioconda && \
-        $CONDA_DIR/bin/conda config --system --append channels conda-forge && \
-        $CONDA_DIR/bin/conda config --system --set auto_update_conda true && \
+        wget --quiet https://repo.continuum.io/miniconda/Miniconda3-py38_${MINICONDA_VERSION}-Linux-x86_64.sh && \
+        echo "d63adf39f2c220950a063e0529d4ff74 *Miniconda3-py38_${MINICONDA_VERSION}-Linux-x86_64.sh" | md5sum -c - && \
+        /bin/bash Miniconda3-py38_${MINICONDA_VERSION}-Linux-x86_64.sh -f -b -p $CONDA_DIR && \
+        rm Miniconda3-py38_${MINICONDA_VERSION}-Linux-x86_64.sh && \
+        $CONDA_DIR/bin/conda config --add channels defaults && \
+        $CONDA_DIR/bin/conda config --add channels bioconda && \
+        $CONDA_DIR/bin/conda config --add channels conda-forge && \
+        $CONDA_DIR/bin/conda config --add channels r && \
         $CONDA_DIR/bin/conda config --system --set show_channel_urls true && \
         $CONDA_DIR/bin/conda install --quiet --yes conda="${MINICONDA_VERSION%.*}.*" && \
-        $CONDA_DIR/bin/conda update --all --quiet --yes && \
         conda clean -tipsy
 
-    # install conda packages
-    conda config --add channels bioconda
-    conda config --add channels r
-    conda install -qy \
-    "r-epitools=0.5_10" \
-    "r=3.6.0" \
-    "rpy2=2.9.4" \
-    "python=3.6.8" \
-    "notebook=6.0.3" \
-    "xlrd=1.2.0" \
-    "bcftools=1.10" \
-    "samtools=1.10" \
-    "htslib=1.10" \
-    "bwa=0.7.17" \
-    "bowtie2=2.3.5" \
-    "primer3=2.5.0" \
-    "primer3-py=0.6.0" \
-    "numpy=1.17.5" \
-    "scipy=1.4.1" \
-    "biopython=1.76" \
-    "pysam=0.15" \
-    "pandas=0.25" \
-    "matplotlib=3.1" \
-    "seaborn=0.9" \
-    "scikit-learn=0.22.1" \
-    "scandir=1.10.0" \
-    "openpyxl=3.0.3" \
-    "simplegeneric=0.8.1" \
-    "matplotlib-venn=0.11.5" \
-    "tblib=1.6.0" \
-    "parallel=20191122" \
-    "scikit-allel=1.2.1" \
-    "bioconductor-dnacopy=1.60" \
-    "basemap-data-hires=1.2.1" \
-    "geopandas=0.8.1" \
-    "seqtk=1.3"
+    # install mamba
+    conda install mamba -c conda-forge
+
+    # install conda packages using mamba
+    mamba install -qy\
+      "r-epitools" \
+      "r" \
+      "rpy2" \
+      "python" \
+      "notebook" \
+      "xlrd" \
+      "bcftools" \
+      "samtools" \
+      "vcftools" \
+      "htslib" \
+      "bwa" \
+      "bowtie2" \
+      "primer3" \
+      "primer3-py" \
+      "numpy" \
+      "scipy" \
+      "biopython" \
+      "pysam" \
+      "pandas" \
+      "matplotlib" \
+      "seaborn" \
+      "scikit-learn" \
+      "scandir" \
+      "openpyxl" \
+      "simplegeneric" \
+      "matplotlib-venn" \
+      "tblib" \
+      "parallel" \
+      "scikit-allel" \
+      "bioconductor-dnacopy" \
+      "basemap-data-hires" \
+      "seqtk=1.3"
 
 
-    conda clean -tipsy
 
     # install vt variant tool set
     cd /opt/programs
@@ -151,7 +150,7 @@ From: amd64/ubuntu:20.04
     cd /opt/programs
     git clone https://github.com/bailey-lab/MIPWrangler
     cd MIPWrangler
-    git checkout git checkout v1.2.0
+    git checkout v1.2.0
     ./install.sh $CPU_COUNT
 
     # install elucidator
