@@ -8007,8 +8007,9 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
                 if os.path.splitext(f.name)[1] == ".bam":
                     outfile.write(f.path + "\n")
         options.extend(["-L", bam_list])
-    # add minimum base quality parameter to options
-    options.extend(["-q", str(min_base_quality)])
+    # add minimum base quality parameter to options if not already provided
+    if ("--min-base-quality" not in options) and ("-q" not in options):
+        options.extend(["-q", str(min_base_quality)])
     # create a list for keeping all contig vcf file paths to concatanate
     # them at the end.
     contig_vcf_paths = []
@@ -9027,8 +9028,9 @@ def vcf_to_tables_fb(vcf_file, settings=None, settings_file=None,
         # specify fields of interest from individual level data
         # that is basically the count data for tables. AO: alt allele count,
         # RO ref count, DP: coverage.
-        call_data_fields = ['calldata/AO', 'calldata/RO',
-                            'calldata/DP', 'calldata/GT']
+        call_data_fields = ['calldata/AO', 'calldata/RO', 'calldata/DP',
+                            'calldata/GT', 'calldata/GQ', 'calldata/QA',
+                            'calldata/QR']
         variants["calldata/GT"] = variants["calldata/GT"].sum(axis=2)
         # zip variant level  information together, so we have a single value
         # for each variant
@@ -9055,6 +9057,31 @@ def vcf_to_tables_fb(vcf_file, settings=None, settings_file=None,
             vd = vd + (g_ann, p_ann)
             split_variants.append(vd)
             split_calls.append(call_data[i])
+
+            # get individual level data
+            genotype_quals = call_data[i][4]
+            ao_count = call_data[i][0]
+            alt_quals = call_data[i][5]
+            average_alt_quals = alt_quals / ao_count
+            ro_count = call_data[i][1]
+            ref_quals = call_data[i][6]
+            average_ref_quals = ref_quals / ro_count
+            gq_mask = genotype_quals < min_genotype_qual
+            qa_mask = alt_quals < min_alt_qual
+            qr_mask = ref_quals < min_ref_qual
+            av_qa_mask = average_alt_quals < min_mean_alt_qual
+            av_qr_mask = average_ref_quals < min_mean_ref_qual
+            # replace count data for individuals failing quality thresholds
+            # alt allele count AO
+            call_data[i][0][qa_mask] = 0
+            call_data[i][0][av_qa_mask] = 0
+            # ref allele count RO
+            call_data[i][1][qr_mask] = 0
+            call_data[i][1][av_qr_mask] = 0
+            # reset coverage for gq failure
+            call_data[i][2][gq_mask] = 0
+            # reset genotypes for gq failure
+            call_data[i][3][gq_mask] = -2
         # first item of the above list is alt counts, then ref counts and
         # coverage.
         #############################
