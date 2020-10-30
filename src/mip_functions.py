@@ -25,7 +25,7 @@ from msa_to_vcf import msa_to_vcf as msa_to_vcf
 import itertools
 import sys
 import allel
-import time
+from Bio import SeqIO
 
 print("functions reloading")
 # backbone dictionary
@@ -1323,7 +1323,7 @@ def align_targets(res_dir, target_regions, species, flank, fasta_files,
     # even if they overlap. Positive values lead to merging targets.
     # However, the alignments are already carried out with flanking
     # sequence so increasing that merge distance is avoided by setting the
-    # merge_distance 0 here for negative values.
+    # merge_distance 0 here for positive values.
     if merge_distance > 0:
         merge_distance = 0
     genome_alignment = alignment_parser(res_dir, "merged",
@@ -1947,9 +1947,13 @@ def make_boulder(fasta, primer3_input_DIR, exclude_list=[],
 
 
 def make_primers_worker(l):
-    """ A worker function to make primers for multiple regions
-    using separate processors. Read boulder record in given input
-    directory and creates primer output files in output directory"""
+    """
+    Worker function to make_primers_multi.
+
+    A worker function to make primers for multiple regions using separate
+    processors. Read boulder record in given input directory and creates primer
+    output files in output directory
+    """
     # function arguments should be given as a list due to single
     # iterable limitation of map_async function of multiprocessor.Pool
     # input boulder record name
@@ -1962,18 +1966,29 @@ def make_primers_worker(l):
     primer3_input_DIR = l[3]
     primer3_output_DIR = l[4]
     primer3_settings_DIR = l[5]
+    subregion_name = l[6]
+    paralog_name = l[7]
+    primer_type = l[8]
     input_file = os.path.join(primer3_input_DIR, input_file)
     output_file = os.path.join(primer3_output_DIR, output_file)
     settings = os.path.join(primer3_settings_DIR, settings)
     # call primer3 program using the input and settings file
-    primer3_output = subprocess.check_output(
-        ["primer3_core",
-         "-p3_settings_file=" + settings, input_file]
-    )
-    # write boulder record to file.
-    with open(output_file, 'w') as outfile:
-        outfile.write(primer3_output.decode("UTF-8"))
-    return
+    res = subprocess.run(["primer3_core",
+                          "-p3_settings_file=" + settings, input_file],
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                         check=True)
+
+    if res.returncode != 0:
+        print(("Primer design for the gene {} subregion {} {} arm failed "
+               "with error {}").format(paralog_name, subregion_name,
+                                       primer_type, res.stderr))
+        return
+    else:
+        primer3_output = res.stdout
+        # write boulder record to file.
+        with open(output_file, 'w') as outfile:
+            outfile.write(primer3_output.decode("UTF-8"))
+        return
 
 
 def make_primers_multi(ext_list, lig_list, pro):
@@ -2623,6 +2638,12 @@ def process_bowtie(primers, primer_out, primer3_output_DIR,
     alt_arm = int(settings["alternative_arms"])
     bowtie_key = "bowtie_information_" + species
     alt_keys = set([])
+    # get reference chromosome lengths
+    genome_file = get_file_locations()[species]["fasta_genome"]
+    reference_lengths = {}
+    genome_sam = pysam.FastaFile(genome_file)
+    for r in genome_sam.references:
+        reference_lengths[r] = genome_sam.get_reference_length(r)
     # read bowtie hits
     for primer_name in primers['primer_information']:
         try:
@@ -2701,6 +2722,9 @@ def process_bowtie(primers, primer_out, primer3_output_DIR,
                             # Do this only if alternative MIP arms are allowed
                             # specified by alt_arm setting.
                             if alt_arm:
+                                # get chromosome length to avoid setting
+                                # alt arms beyon chromosome ends
+                                para_chr_length = reference_lengths[para_chr]
                                 al = {}
                                 al["ref"] = {"ALT_SEQUENCE": primer_seq}
                                 al["ref"]["ALT_TM"] = calcHeterodimerTm(
@@ -2716,7 +2740,9 @@ def process_bowtie(primers, primer_out, primer3_output_DIR,
                                         continue
                                     alt_start = bt_begin + j
                                     alt_end = bt_end
-                                    if (alt_start < 0) or (alt_end < 0):
+                                    if ((alt_start < 0) or (alt_end < 0)
+                                            or (alt_start > para_chr_length)
+                                            or (alt_end > para_chr_length)):
                                         continue
                                     if para_ori == "forward":
                                         alt_primer_key = create_region(
@@ -2769,6 +2795,9 @@ def process_bowtie(primers, primer_out, primer3_output_DIR,
                         para_end = para[k]["GENOMIC_END"]
                         para[k]["BOWTIE_BOUND"] = False
                         if alt_arm:
+                            # get chromosome length to avoid setting
+                            # alt arms beyon chromosome ends
+                            para_chr_length = reference_lengths[para_chr]
                             al = {}
                             al["ref"] = {"ALT_SEQUENCE": primer_seq}
                             al["ref"]["ALT_TM"] = calcHeterodimerTm(
@@ -2784,7 +2813,9 @@ def process_bowtie(primers, primer_out, primer3_output_DIR,
                                     continue
                                 alt_start = para_begin + j
                                 alt_end = para_end
-                                if (alt_start < 0) or (alt_end < 0):
+                                if ((alt_start < 0) or (alt_end < 0)
+                                        or (alt_start > para_chr_length)
+                                        or (alt_end > para_chr_length)):
                                     continue
                                 if para_ori == "forward":
                                     alt_primer_key = create_region(
@@ -7551,7 +7582,7 @@ def get_haplotype_counts(settings):
     # data for all MIPs within the gene.
     cc = copy_counts.groupby(level=["Gene", "Copy"], axis=1).sum()
     gc = copy_counts.groupby(level=["Gene"], axis=1).sum()
-    ac = cc/gc
+    ac = cc.div(gc, level="Gene")
     # 4) Distribute multi mapping data proportional to
     # Paralog's copy number determined from the
     # uniquely mapping data
@@ -10655,24 +10686,25 @@ def trim_overlap(region_list, low=0.1, high=0.9, spacer=0):
     return region_list
 
 
-def fasta_parser(fasta):
-    """ Convert a fasta file with multiple sequences to a dictionary with fasta
-    headers as keys and sequences as values.
+def fasta_parser(fasta_file, use_description=False):
+    """Convert a fasta file to python dict.
+
+    Convert a fasta file with multiple sequences to a dictionary with fasta
+    id as keys and sequences as values. The fasta id is the text in the fasta
+    header before the first space character. If the entire header line is
+    to be used, use_description=True should be passed.
     """
     fasta_dic = {}
-    with open(fasta) as infile:
-        for line in infile:
-            # find the headers
-            if line.startswith(">"):
-                header = line[1:-1].split(" ")[0]
-                if header in fasta_dic:
-                    print(("%s occurs multiple times in fasta file" % header))
-                fasta_dic[header] = ""
-                continue
-            try:
-                fasta_dic[header] = fasta_dic[header] + line.strip()
-            except KeyError:
-                fasta_dic[header] = line.strip()
+    with open(fasta_file) as infile:
+        records = SeqIO.parse(fasta_file, format="fasta")
+        for rec in records:
+            if use_description:
+                header = rec.description
+            else:
+                header = rec.id
+            if header in fasta_dic:
+                print(("%s occurs multiple times in fasta file" % header))
+            fasta_dic[header] = rec.seq
     return fasta_dic
 
 
@@ -11498,7 +11530,11 @@ def plot_coverage(barcode_counts,
                   xtick_freq=None,
                   xtick_rotation=90,
                   tick_genes=False,
-                  gene_name_index=None):
+                  gene_name_index=None,
+                  figure_title="Coverage",
+                  ylabel="Samples",
+                  xlabel="Probes",
+                  fig_size=None):
     """
     Plot presence/absence plot for a mip run.
     """
@@ -11547,9 +11583,9 @@ def plot_coverage(barcode_counts,
         ticklabel.set_fontsize(tick_label_size)
     for ticklabel in ax.get_yticklabels():
         ticklabel.set_fontsize(tick_label_size)
-    ax.set_ylabel("Samples")
-    ax.set_xlabel("Probes")
-    fig.suptitle("Coverage", verticalalignment="bottom")
+    ax.set_ylabel(ylabel)
+    ax.set_xlabel(xlabel)
+    fig.suptitle(figure_title, verticalalignment="bottom")
     fig.tight_layout()
     cbar = fig.colorbar(heat, shrink=0.5)
     cbar.ax.tick_params(labelsize=cbar_label_size)
@@ -11557,6 +11593,8 @@ def plot_coverage(barcode_counts,
                        fontsize=cbar_label_size,
                        rotation=90)
     fig.set_dpi(dpi)
+    if fig_size is not None:
+        fig.set_size_inches(fig_size)
     fig.tight_layout()
     if save:
         fig.savefig(os.path.join(wdir, "coverage.png"),
@@ -13017,3 +13055,22 @@ def id_generator(N):
     """
     return ''.join(random.SystemRandom().choice(
         string.ascii_uppercase + string.digits) for _ in range(N))
+
+
+def alphanumerize(text, allowed_chars=["-"], replacement_char="-",
+                  verbose=False):
+    """Replace special characters, spaces etc in a text.
+
+    Replace characters which are not alphanumeric or in the allowed characters
+    list with the provided replacement character.
+    """
+    clist = []
+    for ch in text:
+        if ch.isalnum() or (ch in allowed_chars):
+            clist.append(ch)
+        else:
+            clist.append(replacement_char)
+    newtext = "".join(clist)
+    if verbose and (newtext != text):
+        print(("{} is replaced with {}.").format(text, newtext))
+    return newtext

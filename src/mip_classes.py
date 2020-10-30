@@ -752,11 +752,12 @@ class Locus:
                      columns=["chrom", "position"])
             for diff_index in diff_df.index]
         try:
-            split_diff_df = pd.concat(split_diff_list).drop_duplicates()
+            split_diff_df = pd.concat(split_diff_list,
+                                      ignore_index=True).drop_duplicates()
         except ValueError:
             split_diff_df = pd.DataFrame(split_diff_list,
                                          columns=["chrom", "position"])
-        self.split_pdiffs = split_diff_df
+        self.split_pdiffs = split_diff_df.reset_index(drop=True)
 
         ######################################################################
         # prepare a dataframe with potential size variation in the region
@@ -993,9 +994,11 @@ class Locus:
             ligation_out = self.subregions[s].fullname + "_lig"
             primer_settings_dir = self.paralog.resource_dir
             ext_list.append([extension_boulder, ext_set, extension_out, dir_in,
-                             dir_out, primer_settings_dir])
+                             dir_out, primer_settings_dir,
+                             s, self.paralog_name, "extension"])
             lig_list.append([ligation_boulder, lig_set, ligation_out, dir_in,
-                             dir_out, primer_settings_dir])
+                             dir_out, primer_settings_dir,
+                             s, self.paralog_name, "ligation"])
             self.subregions[s].primers = {"original": {
                 "extension": extension_out, "ligation": ligation_out}}
         mip.make_primers_multi(ext_list, lig_list, processors)
@@ -1519,6 +1522,7 @@ class Paralog(Locus):
                        pdiffs[s]["position"] + 1, "pdiffs",
                        info["pdiffs"]["color"], info["pdiffs"]["offset"],
                        info["pdiffs"]["width"], s]
+            outfile_list.append("\t".join(map(str, outlist)))
         for sbr in primers:
             ext_primers = primers[sbr]["extension"]["primer_information"]
             lig_primers = primers[sbr]["ligation"]["primer_information"]

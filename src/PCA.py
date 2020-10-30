@@ -31,7 +31,9 @@ def call_genotypes(count_table, coverage_table, min_count,
         else 0 if x == 0
         else 0 if x < min_freq
         else 1).sort_index(axis=1)
-    return {"genotypes": genotypes, "prevalences": prev, "wsaf": freq}
+    return {"genotypes": genotypes, "prevalences": prev, "wsaf": freq,
+            "filtered_mutation_counts": filtered_mutation_counts,
+            "filtered_mutation_coverage": filtered_mutation_coverage}
 
 
 def filter_variants(variant_table, sample_drop=None, variant_drop=None,
