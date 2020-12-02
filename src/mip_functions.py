@@ -307,6 +307,36 @@ def parse_alignment(reg_file):
     return reg_dic
 
 
+def update_rinfo_file(rinfo_file, update_file, output_file):
+    """Update a rinfo file with the lines provided in the update_file.
+
+    This function will read all lines from a rinfo file and an update file.
+    First two columns of rinfo files describe the parameters while the
+    rest assign values. All the lines in the update file which share the
+    first column with a line in the original file will replace that line
+    in the original file. All other lines in the original file will remain.
+    """
+    # read the update file
+    update_dict = {}
+    with open(update_file) as infile:
+        for line in infile:
+            if not line.startswith("#"):
+                newline = line.strip().split("\t")
+                update_dict[(newline[0], newline[1])] = line
+    # read the rinfo file and update as appropriate
+    with open(rinfo_file) as infile, open(output_file, "w") as outfile:
+        for line in infile:
+            if not line.startswith("#"):
+                newline = line.strip().split("\t")
+                line_key = (newline[0], newline[1])
+                try:
+                    outfile.write(update_dict[line_key])
+                except KeyError:
+                    outfile.write(line)
+            else:
+                outfile.write(line)
+
+
 def get_target_coordinates(res_dir, species, capture_size,
                            coordinates_file=None, snps_file=None,
                            genes_file=None):

@@ -963,7 +963,7 @@ class Locus:
         return settings_dict
 
     def get_gene_names(self, rinfo):
-        """ Currently Unused """
+        """Currently Unused."""
         gene_names = []
         region_dic = rinfo["REGION"]
         for r in region_dic:
@@ -976,7 +976,7 @@ class Locus:
         return r
 
     def add_subregion(self, name, subregion):
-        """ Add a subregion object to subregions dictionary of a segment."""
+        """Add a subregion object to subregions dictionary of a segment."""
         self.subregions[name] = Subregion(self, name, subregion)
 
     def make_primers(self):
