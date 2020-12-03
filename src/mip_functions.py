@@ -3698,7 +3698,7 @@ def make_mips(pairs, output_file, primer3_output_DIR, mfold_input_DIR,
 
 
 def check_hairpin(pairs, output_file, settings, output_dir, outp=1):
-    """ Check possible hiybridization between the MIP arms themselves or
+    """Check possible hiybridization between the MIP arms themselves or
     between the MIP arms and the probe backbone. Remove MIPs with likely
     hairpins.
     """
@@ -4417,7 +4417,7 @@ def parasight_print(resource_dir, design_dir, design_info_file,
 
 
 def get_analysis_settings(settings_file):
-    """ Convert analysis settings file to dictionary"""
+    """Convert analysis settings file to dictionary."""
     settings = {}
     with open(settings_file) as infile:
         for line in infile:
@@ -4438,7 +4438,7 @@ def get_analysis_settings(settings_file):
 
 
 def write_analysis_settings(settings, settings_file):
-    """ Create a settings file from a settings dictionary."""
+    """Create a settings file from a settings dictionary."""
     outfile_list = [["# Setting Name", "Setting Value"]]
     for k, v in settings.items():
         if isinstance(v, list):

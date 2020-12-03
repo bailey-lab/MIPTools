@@ -14,6 +14,7 @@ import copy
 import numpy as np
 import pandas as pd
 import traceback
+import primer3
 print("Classes reloading.")
 
 
@@ -2993,55 +2994,77 @@ class Mip():
         return
 
     def score_mip_object(self):
-        """
-        Score a mip object technically and functionally. Technical scores would
-        estimate how well we think the mip will work. Functional scores would
-        reflect how informative the capture will be, assuming the mip works.
+        """Score a mip object technically and functionally.
+
+        Technical scores estimates how well we think the mip will work.
+        Functional scores  reflect how informative the capture will be,
+        assuming the mip works.
         """
         # TECHNICAL SCORING
-        # arm scores are already calculated at primer level
-        arm_scores = (self.mip_dic["ligation_primer_information"]["SCORE"]
-                      + self.mip_dic["extension_primer_information"]["SCORE"])
-        if arm_scores < 0:
-            arm_scores = 0
-        # capture gc content score matrix
-        # define best to worst values for gc content. Best bracket has the
-        # GC content that works most efficienty based on prior mips and so
-        # has a very high impact on the functional score.
-        best = 2000
-        mid = 1000
-        low = 500
-        worse = 100
-        worst = 0
-        # define matrix
-        cap_gc_con = {}
-        for i in range(100):
-            if i < 20:
-                cap_gc_con[i] = worst
-            elif i < 35:
-                cap_gc_con[i] = mid
-            elif i < 55:
-                    cap_gc_con[i] = best
-            elif i < 60:
-                    cap_gc_con[i] = mid
-            elif i < 70:
-                cap_gc_con[i] = low
-            elif i < 80:
-                cap_gc_con[i] = worse
-            else:
-                cap_gc_con[i] = worst
-        gc_scores = []
+        # technical scoring coefficients were calculated based on
+        # linear models of various parameters and provided as a dict
+        with open("/opt/resources/mip_scores.dict", "rb") as infile:
+            linear_coefs = pickle.load(infile)
+        # the model was developed using specific reaction conditions as below.
+        # actual conditions may be different from these but we'll use these
+        # for the model.
+        na = 25  # Sodium concentration
+        mg = 10  # magnesium concentration
+        conc = 0.04  # oligo concentration
+        # get extension arm sequence
+        extension_arm = self.mip_dic[
+            "extension_primer_information"]["SEQUENCE"]
+        # calculate gc content of extension arm
+        extension_gc = mip.calculate_gc(extension_arm)
+        # count lowercase masked nucleotides. These would likely be masked
+        # for variation underneath.
+        extension_lowercase = sum([c.islower() for c in extension_arm])
+        # calculate TM with the model parameters for TM
+        ext_TM = primer3.calcTm(extension_arm, mv_conc=na, dv_conc=mg,
+                                dna_conc=conc, dntp_conc=0)
+        # get ligation arm parameters
+        ligation_arm = self.mip_dic["ligation_primer_information"]["SEQUENCE"]
+        ligation_gc = mip.calculate_gc(ligation_arm)
+        # only the 3' end of the ligation arm was important in terms of
+        # lowercase masking.
+        ligation_lowercase_end = sum([c.islower() for c in ligation_arm[-5:]])
+        # calculate TM of ligation sequence (actual ligation probe arm)
+        # agains probe backbone.
+        ligation_bb_TM = primer3.calcHeterodimerTm(
+            mip.reverse_complement(ligation_arm),
+            self.backbone.replace("N", ""),
+            mv_conc=na, dv_conc=mg, dna_conc=conc, dntp_conc=0)
+        # calculate free energy between extension and ligation arms
+        probe_dg = primer3.calcHeterodimer(
+            extension_arm, mip.reverse_complement(ligation_arm),
+            mv_conc=na, dv_conc=mg, dna_conc=conc, dntp_conc=0).dg
+        # calculate gc content of the captured sequences
         gc_values = []
         for c in self.mip:
             capture_gc = mip.calculate_gc(self.mip[c]["capture_sequence"])
-            if self.subregion.species.startswith("pf"):
-                gc_scores.append(capture_gc * 100 - 2000)
-            else:
-                gc_scores.append(cap_gc_con[capture_gc])
             gc_values.append(capture_gc)
-        mean_gc_value = float(sum(gc_values)/len(gc_values))
-        mean_gc_score = int(sum(gc_scores)/len(gc_scores))
-        tech_score = mean_gc_score + int(arm_scores/10)
+        capture_gc = sum(gc_values)/len(gc_values)
+        # create a mip parameter dict
+        score_features = {"extension_gc": extension_gc,
+                          "extension_lowercase": extension_lowercase,
+                          "ext_TM": ext_TM,
+                          "ligation_gc": ligation_gc,
+                          "ligation_lowercase_end": ligation_lowercase_end,
+                          "ligation_bb_TM": ligation_bb_TM,
+                          "probe_dg": probe_dg,
+                          "capture_gc": capture_gc}
+        # calculate technical score using the linear model provided
+        tech_score = 0
+        for feature in linear_coefs:
+            degree = linear_coefs[feature]["degree"]
+            mip_feature = score_features[feature]
+            poly_feat = [pow(mip_feature, i) for i in range(degree + 1)]
+            tech_score += sum(linear_coefs[feature]["coef"] * poly_feat)
+            tech_score += linear_coefs[feature]["intercept"]
+        # The score calculated in the model is generally between 0 and 1
+        # older scores were between 0 and 2000. So we'll multiply the new
+        # score to be comparable to the old.
+        tech_score = round(tech_score * 2000)
         # FUNCTIONAL SCORING
         func_score = 0
         diff_scores = self.subregion.scoring["diff_scores"]
@@ -3068,5 +3091,5 @@ class Mip():
         self.tech_score = self.subregion.scoring[
             "technical_score_coefficient"] * tech_score
         self.func_score = func_score
-        self.capture_gc = mean_gc_value
+        self.capture_gc = capture_gc
         return
