@@ -20,6 +20,7 @@ import pandas as pd
 from pandas.errors import MergeError
 import gzip
 from primer3 import calcHeterodimerTm
+import primer3
 import traceback
 from msa_to_vcf import msa_to_vcf as msa_to_vcf
 import itertools
@@ -2005,8 +2006,7 @@ def make_primers_worker(l):
     # call primer3 program using the input and settings file
     res = subprocess.run(["primer3_core",
                           "-p3_settings_file=" + settings, input_file],
-                         stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                         check=True)
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     if res.returncode != 0:
         print(("Primer design for the gene {} subregion {} {} arm failed "
@@ -2022,7 +2022,7 @@ def make_primers_worker(l):
 
 
 def make_primers_multi(ext_list, lig_list, pro):
-
+    """Design primers in parallel using the make_primers_worker function."""
     # create a pool of twice the number of targets (for extension and ligation)
     # p = Pool(2*pro)
     p = Pool(pro)
@@ -2039,14 +2039,18 @@ def make_primers_multi(ext_list, lig_list, pro):
 
 def primer_parser3(input_file, primer3_output_DIR, bowtie2_input_DIR,
                    parse_out, fasta=1, outp=1):
-    """ parse a primer3 output file and generate a fasta file in bowtie
-    input directory that only contains primer names and sequences to be
+    """
+    Parse a primer3 output file and generate a primer fasta file.
+
+    The fasta file for the primers that only contains primer names and
+    sequences will be placed in the bowtie input directory  to be
     used as bowtie2 input.
     Return a dictionary {sequence_information:{}, primer_information{}}
     first dict has tag:value pairs for input sequence while second dict
     has as many dicts as the primer number returned with primer name keys
     and dicts as values {"SEQUENCE": "AGC..", "TM":"58"...}. Also write
-    this dictionary to a json file in primer3_output_DIR. """
+    this dictionary to a json file in primer3_output_DIR.
+    """
     primer_dic = {}
     # all target sequence related information will be placed in
     # sequence_information dictionary.
@@ -2054,7 +2058,7 @@ def primer_parser3(input_file, primer3_output_DIR, bowtie2_input_DIR,
     # primer information will be kept in primer_information dicts.
     primer_dic["primer_information"] = {}
     # load the whole input file into a list.
-    infile = open(primer3_output_DIR+input_file, 'r')
+    infile = open(primer3_output_DIR + input_file, 'r')
     lines = []
     for line in infile:
         # if a line starts with "=" that line is a record separator
@@ -2185,64 +2189,14 @@ def primer_parser3(input_file, primer3_output_DIR, bowtie2_input_DIR,
     return primer_dic
 
 
-def paralog_primer_worker(chores):
-    p_name = chores[0]
-    p_dic = chores[1]
-    p_coord = chores[2]
-    p_copies = chores[3]
-    chroms = p_coord["C0"]["chromosomes"]
-    start = p_dic["GENOMIC_START"]
-    end = p_dic["GENOMIC_END"]
-    ref_coord = p_dic["COORDINATES"]
-    primer_ori = p_dic["ORI"]
-    p_dic["PARALOG_COORDINATES"] = {}
-    primer_seq = p_dic["SEQUENCE"]
-    # add reference copy as paralog
-    p_dic["PARALOG_COORDINATES"]["C0"] = {"SEQUENCE": primer_seq,
-                                          "ORI": primer_ori,
-                                          "CHR": chroms["C0"],
-                                          "NAME": p_name,
-                                          "GENOMIC_START": start,
-                                          "GENOMIC_END": end,
-                                          "COORDINATES": ref_coord}
-    for c in p_copies:
-        if c != "C0":
-            # check if both ends of the primer has aligned with the reference
-            try:
-                para_start = p_coord["C0"][c][start]
-                para_end = p_coord["C0"][c][end]
-            except KeyError:
-                # do not add that copy if it is not aligned
-                continue
-            para_primer_ori = para_start < para_end
-            if para_primer_ori:
-                para_primer_key = (chroms[c] + ":" + str(para_start) + "-"
-                                   + str(para_end))
-                p_dic["PARALOG_COORDINATES"][c] = {"ORI": "forward",
-                                                   "CHR": chroms[c],
-                                                   "NAME": p_name,
-                                                   "GENOMIC_START": para_start,
-                                                   "GENOMIC_END": para_end,
-                                                   "COORDINATES": ref_coord,
-                                                   "KEY": para_primer_key}
-            else:
-                para_primer_key = chroms[c] + ":" + str(para_end) + "-" + str(
-                   para_start)
-                p_dic["PARALOG_COORDINATES"][c] = {"ORI": "reverse",
-                                                   "CHR": chroms[c],
-                                                   "NAME": p_name,
-                                                   "GENOMIC_START": para_start,
-                                                   "GENOMIC_END": para_end,
-                                                   "COORDINATES": ref_coord,
-                                                   "KEY": para_primer_key}
+def paralog_primers(primer_dict, copies, coordinate_converter, settings,
+                    primer3_output_DIR, outname, species, outp=0):
+    """
+    Process primers generated for paralogs.
 
-    return [p_name, p_dic]
-
-
-def paralog_primers_multi(primer_dict, copies, coordinate_converter, settings,
-                          primer3_output_DIR, outname, species, outp=0):
-    """ Take a primer dictionary file and add genomic start and end coordinates
-    of all its paralogs."""
+    Take a primer dictionary file and add genomic start and end coordinates
+    of all its paralogs.
+    """
     # uncomment for using json object instead of dic
     # load the primers dictionary from file
     # with open(primer_file, "r") as infile:
@@ -2319,9 +2273,7 @@ def paralog_primers_multi(primer_dict, copies, coordinate_converter, settings,
 def bowtie2_run(fasta_file, output_file, bowtie2_input_DIR,
                 bowtie2_output_DIR, species, process_num=4,
                 seed_MM=1, mode="-a", seed_len=18, gbar=1, local=0):
-    """ Extract primer sequences from the fasta file,
-    check alignments for given species genome(s), create
-    sam output file(s). Species must be a list!"""
+    """Align primers from a fasta file to specified species genome."""
     file_locations = get_file_locations()
     # check if entered species is supported
     genome = file_locations[species]["bowtie2_genome"]
@@ -2348,9 +2300,7 @@ def bowtie2_run(fasta_file, output_file, bowtie2_input_DIR,
 
 def bowtie(fasta_file, output_file, bowtie2_input_DIR, bowtie2_output_DIR,
            options, species, process_num=4, mode="-a", local=0, fastq=0):
-    """ Extract primer sequences from the fasta file,
-    check alignments for given species genome(s), create
-    sam output file(s). Species must be a list!"""
+    """Align a fasta or fastq file to a genome using bowtie2."""
     file_locations = get_file_locations()
     # check if entered species is supported
     genome = file_locations[species]["bowtie2_genome"]
@@ -2376,13 +2326,16 @@ def bowtie(fasta_file, output_file, bowtie2_input_DIR, bowtie2_output_DIR,
 
 def bwa(fastq_file, output_file, output_type, input_dir,
         output_dir, options, species, base_name="None"):
-    """ Run bwa alignment on given fastq file using the species bwa indexed genome.
+    """
+    Align a fastq file to species genome using bwa.
+
     Options should be a list that starts with the command (e.g. mem, aln etc).
     Additional options should be appended as strings of "option value",
     for example, "-t 30" to use 30 threads. Output type can be sam or bam.
     Recommended options ["-t30", "-L500", "-T100"]. Here L500 penalizes
     clipping severely so the alignment becomes end-to-end and T100 stops
-    reporting secondary alignments, assuming their score is below 100."""
+    reporting secondary alignments, assuming their score is below 100.
+    """
     genome_file = get_file_locations()[species]["bwa_genome"]
     read_group = ("@RG\\tID:" + base_name + "\\tSM:" + base_name + "\\tLB:"
                   + base_name + "\\tPL:ILLUMINA")
@@ -2413,6 +2366,7 @@ def bwa(fastq_file, output_file, output_type, input_dir,
 
 def bwa_multi(fastq_files, output_type, fastq_dir, bam_dir, options, species,
               processor_number, parallel_processes):
+    """Align fastq files to species genome using bwa in parallel."""
     if len(fastq_files) == 0:
         fastq_files = [f.name for f in os.scandir(fastq_dir)]
     if output_type == "sam":
@@ -2454,7 +2408,10 @@ def bwa_multi(fastq_files, output_type, fastq_dir, bam_dir, options, species,
 
 
 def parse_cigar(cigar):
-    """ Parse a cigar string which is made up of numbers followed
+    """
+    Parse a CIGAR string.
+
+    CIGAR string is made up of numbers followed
     by key letters that represent a sequence alignment; return a dictionary
     with alignment keys and number of bases with that alignment key as values.
     Below is some more information about cigar strings.
@@ -2484,8 +2441,7 @@ def parse_cigar(cigar):
 
 
 def get_cigar_length(cigar):
-    """ Get the length of the reference sequence that a read is aligned to,
-    given their cigar string."""
+    """Get the length of the reference sequence from CIGAR string."""
     try:
         # parse cigar string and find out how many insertions are in the
         # alignment
@@ -2502,7 +2458,9 @@ def get_cigar_length(cigar):
 
 def parse_bowtie(primer_dict, bt_file, primer_out, primer3_output_DIR,
                  bowtie2_output_DIR, species, settings, outp=1):
-    """ Take a bowtie output (sam) file and filter top N hits per primer.
+    """
+    Take a bowtie output (sam) file and filter top N hits per primer.
+
     When a primer has more than "upper_hit_limit" bowtie hits,
     remove that primer.
     Add the bowtie hit information, including hit sequence to
@@ -2651,7 +2609,9 @@ def parse_bowtie(primer_dict, bt_file, primer_out, primer3_output_DIR,
 
 def process_bowtie(primers, primer_out, primer3_output_DIR,
                    bowtie2_output_DIR, species, settings, host=False, outp=1):
-    """ Take a primer dict with bowtie information added.
+    """
+    Process a primer dict with bowtie information added.
+
     Look at bowtie hits for each primer, determine if they
     are on intended targets or nonspecific. In cases of paralogus
     regions, check all paralogs and determine if the primer
@@ -2915,8 +2875,11 @@ def process_bowtie(primers, primer_out, primer3_output_DIR,
 
 def filter_bowtie(primers, output_file, primer3_output_DIR, species, TM=46,
                   hit_threshold=0, lower_tm=46, lower_hit_threshold=3, outp=1):
-    """ Check TMs of bowtie hits of given primers, on a given genome.
-    Filter the primers with too many nonspecific hits."""
+    """
+    Check TMs of bowtie hits of given primers, on a given genome.
+
+    Filter the primers with too many nonspecific hits.
+    """
     for primer in list(primers["primer_information"].keys()):
         # create a hit count parameter for hits with significant tm
         # there are two parameters specified in the rinfo file
@@ -2961,9 +2924,11 @@ def filter_bowtie(primers, output_file, primer3_output_DIR, species, TM=46,
 
 def alternative(primer_dic, output_file,
                 primer3_output_DIR, tm_diff, outp=1):
-    """ Pick the best alternative arm for primers that do not bind all
-    paralogs. This is done picking the alternative primer with melting
-    temperature that is closest to the original primer.
+    """
+    Pick the best alternative arm for primers that do not bind all paralogs.
+
+    This is done by picking the alternative primer with melting temperature
+    that is closest to the original primer.
     """
     primers = primer_dic["primer_information"]
     try:
@@ -3006,162 +2971,82 @@ def alternative(primer_dic, output_file,
 
 
 def score_paralog_primers(primer_dict, output_file, primer3_output_DIR,
-                          ext, mask_penalty, species, outp=1):
-    """ Score primers in a dictionary according to a scoring matrix.
+                          ext, mask_penalty, species, backbone, outp=1):
+    """
+    Score primers in a dictionary according to a scoring matrix.
+
     Scoring matrices are somewhat crude at this time.
     Arm GC content weighs the most, then arms GC clamp and arm length
-    Next_base values are last."""
+    Next_base values are last.
+    """
     primers = primer_dict["primer_information"]
-    sequence = primer_dict["sequence_information"]
     extension = (ext == "extension")
-    # extract template sequence
-    seq_template = sequence["SEQUENCE_TEMPLATE"]
-    # find the coordinates of next bases
-    for p in primers:
-        # get coordinates of primers in the form of "start_base, len"
-        coord = primers[p]["COORDINATES"]
-        strand = primers[p]["ORI"]
-        if strand == "forward":
-            primer_end = (int(coord.split(",")[0])
-                          + int(coord.split(",")[1]) - 1)
-            # 1 is added or subtracted due to sequence index being zero based.
-            next_bases = seq_template[(primer_end+1):(primer_end+3)]
-        elif strand == "reverse":
-            primer_end = (int(coord.split(",")[0])
-                          - int(coord.split(",")[1]) + 1)
-            next_bases = reverse_complement(seq_template[
-                                               (primer_end - 2):primer_end
-                                               ])
-        # add "NEXT_BASES" key and its value to mip dictionary
-        primers[p]["NEXT_BASES"] = next_bases
-    # define scoring matrices
-    # arm gc content score matrix
-    # define best to worst values for gc content.
-    best = 1000
-    mid = 100
-    low = 10
-    worst = 0
-    # define matrix
-    arm_gc_con = {}
-    if species.startswith("pf"):
-        for i in range(100):
-            if i < 15:
-                arm_gc_con[i] = worst
-            elif i < 20:
-                arm_gc_con[i] = low
-            elif i < 25:
-                arm_gc_con[i] = mid
-            elif i < 60:
-                arm_gc_con[i] = best
-            elif i < 65:
-                arm_gc_con[i] = mid
-            elif i < 70:
-                arm_gc_con[i] = low
-            else:
-                arm_gc_con[i] = worst
+    # primer scoring coefficients were calculated based on
+    # linear models of various parameters and provided as a dict
+    with open("/opt/resources/mip_scores.dict", "rb") as infile:
+        linear_coefs = pickle.load(infile)
+    # the model was developed using specific reaction conditions as below.
+    # actual conditions may be different from these but we'll use these
+    # for the model.
+    na = 25  # Sodium concentration
+    mg = 10  # magnesium concentration
+    conc = 0.04  # oligo concentration
+
+    # get extension arm sequence
+    if extension:
+        for p in primers:
+            extension_arm = primers[p]["SEQUENCE"]
+            # calculate gc content of extension arm
+            extension_gc = calculate_gc(extension_arm)
+            # count lowercase masked nucleotides. These would likely be masked
+            # for variation underneath.
+            extension_lowercase = sum([c.islower() for c in extension_arm])
+            # calculate TM with the model parameters for TM
+            ext_TM = primer3.calcTm(extension_arm, mv_conc=na, dv_conc=mg,
+                                    dna_conc=conc, dntp_conc=0)
+            # create a mip parameter dict
+            score_features = {"extension_gc": extension_gc,
+                              "extension_lowercase": extension_lowercase,
+                              "ext_TM": ext_TM}
+            # calculate primer score using the linear model provided
+            tech_score = 0
+            for feature in score_features:
+                degree = linear_coefs[feature]["degree"]
+                primer_feature = score_features[feature]
+                poly_feat = [pow(primer_feature, i) for i in range(degree + 1)]
+                tech_score += sum(linear_coefs[feature]["coef"] * poly_feat)
+                tech_score += linear_coefs[feature]["intercept"]
+            primers[p]["SCORE"] = tech_score
+
+    # get ligation arm parameters
     else:
-        for i in range(100):
-            if i < 35:
-                arm_gc_con[i] = worst
-            elif i < 40:
-                arm_gc_con[i] = low
-            elif i < 45:
-                arm_gc_con[i] = mid
-            elif i < 60:
-                arm_gc_con[i] = best
-            elif i < 65:
-                arm_gc_con[i] = mid
-            elif i < 70:
-                arm_gc_con[i] = low
-            else:
-                arm_gc_con[i] = worst
-    # next base score matrix
-    # define best to worst values for next bases.
-    # This parameter should be important only when comparing mips with equally
-    # good gc contents. Therefore, the values are low and does not give a mip
-    # a big +.
-    best = 10
-    mid = 5
-    low = 2
-    worst = 0
-    # define matrix
-    next_bases = ({"": worst, "A": worst, "T": worst, "G": worst, "C": worst,
-                   "GG": best, "CC": best, "GC": best, "CG": best,
-                   "GA": mid, "CA": mid, "GT": mid, "CT": mid,
-                   "AG": low, "TG": low, "AC": low, "TC": low,
-                   "AA": worst, "AT": worst, "TA": worst, "TT": worst})
-    # gc clamp matrix
-    # gc clamp will be updated taking into account that although G/C base
-    # pairs are the most stable, G/X mismatches are also the most stable.
-    # mismatch stability order is G>T>A>C with C being the most discriminating
-    # base.
-    ext_gc_clamp = {"G": 0, "C": 200, "A": 50, "T": 100}
-    lig_gc_clamp = {"G": 0, "C": 200, "A": 50, "T": 100}
-    # extension arm lengths score matrix
-    # this is added for plasmodium since length is more relaxed
-    # to get best possible mips with higher TMs
-    # which sometimes leads to very long arms.
-    best = 50
-    mid = 25
-    low = 5
-    worst = 0
-    extension_len_matrix = {}
-    for i in range(18, 36):
-        if (i == 18) or (25 <= i <= 28):
-            extension_len_matrix[i] = mid
-        elif (19 <= i <= 24):
-            extension_len_matrix[i] = best
-        elif (30 > i > 28):
-            extension_len_matrix[i] = low
-        elif (i > 29):
-            extension_len_matrix[i] = worst
-    # ligation arm lengths score matrix
-    best = 50
-    mid = 25
-    low = 10
-    worst = 0
-    ligation_len_matrix = {}
-    for i in range(18, 36):
-        if (i == 18) or (i == 19):
-            ligation_len_matrix[i] = mid
-        elif (20 <= i <= 26):
-            ligation_len_matrix[i] = best
-        elif (27 <= i <= 30):
-            ligation_len_matrix[i] = low
-        elif (i > 30):
-            ligation_len_matrix[i] = worst
-    # score all mips using above matrices
-    for p in list(primers.keys()):
-        # get arm sequences
-        seq = primers[p]["SEQUENCE"]
-        # count lower case masked nucleotides
-        mask_count = sum(-1 for n in seq if n.islower())
-        mask_score = mask_count * mask_penalty
-        # arm lengths
-        if extension:
-            len_score = extension_len_matrix[len(seq)]
-        else:
-            len_score = ligation_len_matrix[len(seq)]
-        # gc clamp
-        if extension:
-            gc_clamp = ext_gc_clamp[seq[-1].upper()]
-        else:
-            gc_clamp = lig_gc_clamp[seq[-1].upper()]
-        # get gc percentages and convert to int.
-        gc = int(float(primers[p]["GC_PERCENT"]))
-        # get next base values
-        next_b = primers[p]["NEXT_BASES"]
-        all_scores = {"arm_len": [len(seq), len_score],
-                      "arm_gc": [gc, arm_gc_con[gc]],
-                      "mask_penalty": mask_penalty,
-                      "gc_clamp": gc_clamp,
-                      "next_bases": [next_b, next_bases[next_b.upper()]]}
-        # calculate total score
-        score = (len_score + arm_gc_con[gc] + mask_score
-                 + next_bases[next_b.upper()])
-        # add score to dictionary
-        primers[p]["SCORE"] = score
-        primers[p]["all_scores"] = all_scores
+        for p in primers:
+            ligation_arm = primers[p]["SEQUENCE"]
+            # calculate gc content of extension arm
+            ligation_gc = calculate_gc(ligation_arm)
+            # only the 3' end of the ligation arm was important in terms of
+            # lowercase masking.
+            ligation_lowercase_end = sum([c.islower()
+                                          for c in ligation_arm[-5:]])
+            # calculate TM of ligation sequence (actual ligation probe arm)
+            # agains probe backbone.
+            ligation_bb_TM = primer3.calcHeterodimerTm(
+                reverse_complement(ligation_arm), backbone,
+                mv_conc=na, dv_conc=mg, dna_conc=conc, dntp_conc=0)
+            # create a mip parameter dict
+            score_features = {"ligation_gc": ligation_gc,
+                              "ligation_lowercase_end": ligation_lowercase_end,
+                              "ligation_bb_TM": ligation_bb_TM}
+            # calculate primer score using the linear model provided
+            tech_score = 0
+            for feature in score_features:
+                degree = linear_coefs[feature]["degree"]
+                primer_feature = score_features[feature]
+                poly_feat = [pow(primer_feature, i) for i in range(degree + 1)]
+                tech_score += sum(linear_coefs[feature]["coef"] * poly_feat)
+                tech_score += linear_coefs[feature]["intercept"]
+            primers[p]["SCORE"] = tech_score
+
     if outp:
         # write dictionary to json file
         outfile = open(os.path.join(primer3_output_DIR, output_file), "w")
@@ -3172,10 +3057,15 @@ def score_paralog_primers(primer_dict, output_file, primer3_output_DIR,
 
 def filter_primers(primer_dict, output_file,
                    primer3_output_DIR, n, bin_size, outp=1):
-    """ Filter primers so that only top n scoring primers
-    ending within the same subregion (determined by bin_size) remain.
+    """
+    Filter primers so that only top n scoring primers remain for each bin.
+
+    Primers are divided into bins of the given size based on the 3' end of
+    the primer. Only top performing n primers ending in the same bin will
+    remain after filtering.
     For example, bin_size=3 and n=1 would chose the best scoring primer
-    among primers that end within 3 bps of each other."""
+    among primers that end within 3 bps of each other.
+    """
     # load extension and ligation primers from file
     template_seq = primer_dict["sequence_information"]["SEQUENCE_TEMPLATE"]
     template_len = len(template_seq)
@@ -3249,17 +3139,14 @@ def pick_paralog_primer_pairs(extension, ligation, output_file,
                               primer3_output_DIR, min_size, max_size,
                               alternative_arms, region_insertions,
                               subregion_name, outp=1):
-    """ Pick primer pairs from extension and ligation arm candidate
-    dictionary files for a given size range."""
+    """Pick primer pairs satisfying a given size range."""
     # assign primer information dictionaries to a shorter name
     ext = extension["primer_information"]
     lig = ligation["primer_information"]
     # check if extension and ligation dictionaries have primers
     if len(ext) == 0:
-        print("There are no extension primers.")
         return 1
     if len(lig) == 0:
-        print("There are no ligation primers.")
         return 1
     # create a primer pairs dic. This dictionary is similar to primer dic
     primer_pairs = {}
@@ -3429,6 +3316,10 @@ def pick_paralog_primer_pairs(extension, ligation, output_file,
                             if (adjusted_max_size
                                     >= pairs[p]["capture_size"] >= 0):
                                 captured_copies.append(p)
+                        # C0 must be in the captured copies because the
+                        # reference copy is used for picking mip sets
+                        if "C0" not in captured_copies:
+                            continue
                         # create a pair name as
                         # PAIR_extension primer number_ligation primer number
                         ext_name = e.split('_')[2]
@@ -3577,8 +3468,9 @@ def pick_paralog_primer_pairs(extension, ligation, output_file,
 def add_capture_sequence(primer_pairs, output_file, primer3_output_DIR,
                          species, outp=1):
     """
-    Extract the sequence between primers using the genome sequence and
-    primer coordinates.
+    Extract the sequence between primers.
+
+    Get captured sequence using the primer coordinates.
     """
     capture_keys = set()
     for p_pair in primer_pairs["pair_information"]:
@@ -3608,15 +3500,18 @@ def add_capture_sequence(primer_pairs, output_file, primer3_output_DIR,
 
 def make_mips(pairs, output_file, primer3_output_DIR, mfold_input_DIR,
               backbone, outp=1):
-    """ Make mips from primer pairs by taking reverse complement
-    of ligation primer sequence, adding a backbone sequence and
-    the extension primer. Standard backbone is used if none
-    specified. Add a new key to each primer pair:
+    """
+    Make mips from primer pairs.
+
+    Take the reverse complement of ligation primer sequence, add the backbone
+    sequence and the extension primer. Standard backbone is used if none
+    specified.
+    Add a new key to each primer pair:
     "mip_information" with a dictionary that has SEQUENCE key
-    and mip sequence as value."""
+    and mip sequence as value.
+    """
     # check if the primer dictionary is empty
     if len(pairs["pair_information"]) == 0:
-        print("There are no primer pairs in dictionary")
         return 1
     # get primer sequences for each primer pair
     for primers in pairs["pair_information"]:
@@ -3698,9 +3593,10 @@ def make_mips(pairs, output_file, primer3_output_DIR, mfold_input_DIR,
 
 
 def check_hairpin(pairs, output_file, settings, output_dir, outp=1):
-    """Check possible hiybridization between the MIP arms themselves or
-    between the MIP arms and the probe backbone. Remove MIPs with likely
-    hairpins.
+    """Check possible hairpin formation in MIP probe.
+
+    Calculate possible hiybridization between the MIP arms or between the MIP
+    arms and the probe backbone. Remove MIPs with likely hairpins.
     """
     pairs = copy.deepcopy(pairs)
     # get Na, Mg and oligo concentrations these are specified in M but primer3
@@ -3789,8 +3685,10 @@ def check_hairpin(pairs, output_file, settings, output_dir, outp=1):
 
 def filter_mips(mip_dic, bin_size, mip_limit):
     """
-    Filter mips in "mip_dic" so that only top scoring mip ending within the
-    "bin_size" nucleotides on the same strand remain.
+    Filter MIPs covering similar regions.
+
+    Filter MIPs so that only top scoring mip ending within the "bin_size"
+    nucleotides on the same strand remain.
     """
     # load extension and ligation primers from file
     shuffled = list(mip_dic.keys())
@@ -4280,6 +4178,8 @@ def design_mips_worker(design_list):
         rinfo_file = os.path.join(design_dir, g, "resources", g + ".rinfo")
         Par = mod.Paralog(rinfo_file)
         Par.run_paralog()
+        if len(Par.mips) == 0:
+            return
         if Par.copies_captured:
             print(("All copies were captured for paralog ", Par.paralog_name))
         else:
