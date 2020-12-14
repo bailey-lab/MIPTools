@@ -123,28 +123,12 @@ From: amd64/ubuntu:20.04
       "scikit-allel" \
       "bioconductor-dnacopy" \
       "basemap-data-hires" \
-      "seqtk=1.3"
+      "seqtk=1.3" \
+      "vt" \
+      "gatk4" \
+      "freebayes" \
+      "lastz"
 
-
-
-    # install vt variant tool set
-    cd /opt/programs
-    git clone https://github.com/atks/vt.git
-    cd vt
-    make -j $CPU_COUNT
-    scp vt /opt/bin
-
-
-    # install lastZ
-    cd /opt/programs/lastz/src
-    make lastz_32 && install lastz_32 /usr/bin/
-
-    # install freebayes
-    cd /opt/bin
-    freebayes_ver="v1.3.1"
-    freebayes_file=freebayes-$freebayes_ver
-    wget https://github.com/ekg/freebayes/releases/download/$freebayes_ver/$freebayes_file
-    mv $freebayes_file freebayes
 
     # install MIPWrangler
     cd /opt/programs
@@ -159,16 +143,6 @@ From: amd64/ubuntu:20.04
     cd elucidator
     git checkout develop
     ./install.sh $CPU_COUNT
-
-    # install gatk
-    gatk_ver="4.1.4.1"
-    gatk_dir=/opt/programs/gatk-$gatk_ver
-    gatk_filename=gatk-$gatk_ver".zip"
-    cd /opt/programs
-    wget https://github.com/broadinstitute/gatk/releases/download/$gatk_ver/$gatk_filename
-    unzip $gatk_filename
-    rm $gatk_filename
-    mv gatk-$gatk_ver gatk
 
     # install parasight
     scp /opt/programs/parasight_v7.6/parasight.pl /opt/bin/parasight76.pl
