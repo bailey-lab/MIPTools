@@ -95,6 +95,7 @@ From: amd64/ubuntu:20.04
       "r-epitools" \
       "r" \
       "rpy2" \
+      "r-irkernel" \
       "python" \
       "notebook" \
       "xlrd" \
