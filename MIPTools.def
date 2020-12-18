@@ -96,6 +96,13 @@ From: amd64/ubuntu:20.04
       "r" \
       "rpy2" \
       "r-irkernel" \
+      "r-plotly" \
+      "r-knitr" \
+      "r-shiny" \
+      "r-ggplot2" \
+      "r-devtools" \
+      "r-dplyr" \
+      "r-dt" \
       "python" \
       "notebook" \
       "xlrd" \
@@ -128,8 +135,11 @@ From: amd64/ubuntu:20.04
       "vt" \
       "gatk4" \
       "freebayes" \
-      "lastz"
+      "lastz" \
+      "plotly"
 
+    # install RealMcCoilR
+    Rscript -e 'devtools::install_github("OJWatson/McCOILR")'
 
     # install MIPWrangler
     cd /opt/programs
