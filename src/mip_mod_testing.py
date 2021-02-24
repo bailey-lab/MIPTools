@@ -1786,7 +1786,7 @@ class Paralog(Locus):
                                                self.species)
                     if ori == "reverse":
                         cap_seq = mip.reverse_complement(cap_seq)
-                    minfo[c]["capture_sequence"] = cap_seq
+                minfo[c]["capture_sequence"] = cap_seq
                 copies[c] = {"capture_sequence": cap_seq,
                              "chrom": chrom,
                              "capture_start": capture_start,
@@ -3046,5 +3046,9 @@ class Mip():
 
 
 class Gene(Paralog):
+    def __init__(self):
+        pass
+
+class Segment(Paralog):
     def __init__(self):
         pass

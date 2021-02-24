@@ -108,7 +108,6 @@ if __name__ == "__main__":
     parser.add_argument(
         "-d", "--stats-dir",
         help=("Path to directory where demultiplexing stats are saved."),
-        required=True,
         default="/opt/analysis/Stats"
     )
 

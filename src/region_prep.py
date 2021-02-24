@@ -154,7 +154,7 @@ target_alignments = mip.align_targets(
     res_dir, target_regions, species, flank, fasta_files, fasta_capture_type,
     genome_identity, genome_coverage, num_process, gene_names,
     max_allowed_indel_size, intra_identity, intra_coverage, capture_types,
-    min_target_size, merge_distance)
+    min_target_size, merge_distance, "alignment_results.json")
 
 # get alignment results. Run alignments again in case there are remaining
 # unaligned targets.
@@ -169,7 +169,7 @@ extra_target_alignments = mip.align_targets(
     res_dir, target_regions, species, flank, [], fasta_capture_type,
     genome_identity, genome_coverage, num_process, gene_names,
     max_allowed_indel_size, intra_identity, intra_coverage, capture_types,
-    min_target_size, merge_distance)
+    min_target_size, merge_distance, "extra_alignment_results.json")
 
 # update initial alignment results with the new alignment results
 final_target_regions.update(target_alignments["target_regions"])

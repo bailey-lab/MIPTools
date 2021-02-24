@@ -622,7 +622,7 @@ def set_genomic_target_alignment_options(target_regions, fasta_sequences,
 
 
 def align_region_multi(alignment_list, pro):
-    """ Parallelize a list of lastz alignments."""
+    """Parallelize a list of lastz alignments."""
     p = Pool(pro)
     p.map_async(align_region_worker, alignment_list)
     p.close()
@@ -631,8 +631,10 @@ def align_region_multi(alignment_list, pro):
 
 
 def align_region_worker(l):
-    """ Worker function for align_region_multi.
-    Aligns a single fasta file to a target fasta file.
+    """Worker function for align_region_multi.
+
+    Aligns a single fasta query file to a target fasta file. Both query
+    and target fasta files  can be multi sequence files.
     """
     # get parameters from the input list
     # first item is the fasta file name, including file extension
@@ -694,7 +696,11 @@ def align_region_worker(l):
 def align_genes_for_design(fasta_list, res_dir,
                            alignment_types=["differences", "general"],
                            species="hs", num_processor=30):
-    """ Align sequences given in an alignment dict which contains alignment
+    """Perform specified alignments given in an alignment dict.
+
+    This functions is called from align_targets function for the initial
+    target alignment to the reference genome.
+    It align sequences given in an alignment dict which contains alignment
     specifics. Each entry in this dict must have a corresponding fasta file in
     the res_dir specified. The alignment is performed against the reference
     genome. This function merely prepares a list of commands to pass to
@@ -942,7 +948,7 @@ def alignment_parser(wdir, name, spacer=0, gene_names=[]):
     if exit_counter > 9999:
         print("Overlap removal while loop limit is reached.")
     # clean up overlapping region lists by removing duplicates.
-    for o in overlaps:
+    for o in list(overlaps.keys()):
         overlaps[o] = sorted(list(set(overlaps[o])))
     ##########################################################################
     # create a new dictionary for target regions.
@@ -977,7 +983,7 @@ def alignment_parser(wdir, name, spacer=0, gene_names=[]):
     # it is not absolutely necessary and it would not behave as expected
     # when chromosome names do not follow that convention, i.e, chr6 and
     # chr6_altXYZ
-    for ar in aligned_regions:
+    for ar in list(aligned_regions.keys()):
         regs = aligned_regions[ar]
         for r in regs:
             r.append(0 - len(r[0]))
@@ -1047,7 +1053,7 @@ def alignment_parser(wdir, name, spacer=0, gene_names=[]):
     # after the alignments are done, some regions will not have proper names
     # and some will have "na". We'll change those to avoid repeating
     # names.
-    for r in region_names:
+    for r in list(region_names.keys()):
         rnames = region_names[r]
         nnames = []
         rn_counts = {}
@@ -1082,9 +1088,8 @@ def alignment_parser(wdir, name, spacer=0, gene_names=[]):
 
 
 def set_intra_alignment_options(target_regions, identity, coverage,
-                                max_allowed_indel_size,
-                                match_score=1, mismatch_score=5,
-                                gap_open_penalty=20, gap_extend_penalty=5):
+                                max_allowed_indel_size):
+    """Set lastZ alignment options for intraparalog_aligner function."""
     alignment_options_dict = {}
     for t in target_regions:
         temp_dict = {"gene_name": t, "identity": identity}
@@ -1104,11 +1109,11 @@ def set_intra_alignment_options(target_regions, identity, coverage,
                    " to a value smaller than this value to align all regions."
                    ).format(small_target, t, smallest_target))
         cover = round(coverage * 100 / reference_len, 1)
+        gap_open_penalty = 400
+        gap_extend_penalty = 30
         ydrop = max_allowed_indel_size * gap_extend_penalty + gap_open_penalty
-        alignment_opts = ["--match=" + str(match_score) + "," + str(
-            mismatch_score), "--gap=" + str(gap_open_penalty) + "," + str(
-            gap_extend_penalty), "--ydrop=" + str(ydrop), "--notransition",
-            "--ambiguous=iupac", "--noytrim"]
+        alignment_opts = ["--ydrop=" + str(ydrop), "--notransition",
+                          "--ambiguous=iupac", "--noytrim"]
         temp_dict["options"] = alignment_opts
         if cover > 100:
             cover = 100
@@ -1125,7 +1130,9 @@ def intraparalog_aligner(resource_dir,
                          species,
                          num_process,
                          alignment_options_dict={}):
-    """ Align all regions within a target group to the region selected
+    """Align all regions within a target group.
+
+    Align all regions within a target group to the region selected
     as the reference region.
 
     Returns
@@ -1191,7 +1198,10 @@ def intraparalog_aligner(resource_dir,
 
 def intra_alignment_checker(family_name, res_dir, target_regions,
                             region_names):
-    """ Following a within group alignment, check if any individual region
+    """
+    Parse intraparalog_aligner results.
+
+    Following a within group alignment, check if any individual region
     within the group has multiple aligned parts. If found, split that region
     into multiple regions to be re-aligned by intraparalog_aligner.
     """
@@ -1225,11 +1235,25 @@ def intra_alignment_checker(family_name, res_dir, target_regions,
                     except KeyError:
                         new_regions[cn] = [[tr[0], start, end,
                                            0 - len(tr[0]), size]]
+    # check if any paralog is missing after aligning to the reference copy
+    targeted_copies = list(range(len(target_regions)))
+    missing_copies = set(targeted_copies).difference(new_regions.keys())
+    if len(missing_copies) > 0:
+        print(("Paralog copies {} were not successfully aligned to "
+               "the reference copy for the target {}. You may consider "
+               "relaxing the alignment filters '--local-coverage' "
+               "and '--local-identity'").format(
+                   ", ".join(map(str, sorted(missing_copies))), family_name))
     ret_regions = []
     rnames = []
     for ci in sorted(new_regions):
         ret_regions.extend(sorted(new_regions[ci]))
         if len(new_regions[ci]) > 1:
+            print(("Paralog copy {} for target region {} was aligned "
+                   "to the reference copy multiple times. This copy will "
+                   "be treated as multiple independent paralog copies and "
+                   "realigned to the reference copy as separate "
+                   "targets.").format(ci, family_name))
             for i in range(len(new_regions[ci])):
                 rnames.append(region_names[ci] + "-" + str(i))
         else:
@@ -1318,7 +1342,7 @@ def align_targets(res_dir, target_regions, species, flank, fasta_files,
                   fasta_capture_type, genome_identity, genome_coverage,
                   num_process, gene_names, max_allowed_indel_size,
                   intra_identity, intra_coverage, capture_types,
-                  min_target_size, merge_distance):
+                  min_target_size, merge_distance, savefile):
     # create fasta files for each target coordinate
     create_target_fastas(res_dir, target_regions, species, flank)
 
@@ -1362,9 +1386,9 @@ def align_targets(res_dir, target_regions, species, flank, fasta_files,
                                         gene_names=gene_names)
     target_regions = copy.deepcopy(genome_alignment[0])
     region_names = copy.deepcopy(genome_alignment[1])
-    imperfect_aligners = genome_alignment[2]
-    aligned_regions = genome_alignment[3]
-    overlaps = genome_alignment[4]
+    imperfect_aligners = copy.deepcopy(genome_alignment[2])
+    aligned_regions = copy.deepcopy(genome_alignment[3])
+    overlaps = copy.deepcopy(genome_alignment[4])
 
     # align sequences within target groups (paralog sequences)
     align_paralogs(res_dir, target_regions, region_names, imperfect_aligners,
@@ -1379,7 +1403,11 @@ def align_targets(res_dir, target_regions, species, flank, fasta_files,
                            aligned_regions, min_target_size, flank,
                            capture_types))
 
-    out_dict = {"original_target_regions": original_target_regions,
+    out_dict = {"original_target_regions": genome_alignment[0],
+                "original_region_names": genome_alignment[1],
+                "original_imperfect_aligners": genome_alignment[2],
+                "original_aligned_regions": genome_alignment[3],
+                "original_overlaps": genome_alignment[4],
                 "target_regions": target_regions,
                 "region_names": region_names,
                 "aligned_regions": aligned_regions,
@@ -1389,12 +1417,13 @@ def align_targets(res_dir, target_regions, species, flank, fasta_files,
                 "missed_target_regions": missed_target_regions,
                 "missed_target_names": missed_target_names,
                 "missed_capture_types": missed_capture_types}
+    with open(os.path.join(res_dir, savefile), "w") as outfile:
+        json.dump(out_dict, outfile, indent=1)
     return out_dict
 
 
 def alignment_mapper(family_name, res_dir):
-    """ Create a coordinate map of within group alignments.
-    """
+    """Create a coordinate map of within group alignments."""
     alignment_file = family_name + ".aligned"
     difference_file = family_name + ".differences"
     with open(os.path.join(res_dir, alignment_file), "r") as alignment, open(
@@ -10625,21 +10654,22 @@ def fasta_parser(fasta_file, use_description=False):
     to be used, use_description=True should be passed.
     """
     fasta_dic = {}
-    with open(fasta_file) as infile:
-        records = SeqIO.parse(fasta_file, format="fasta")
-        for rec in records:
-            if use_description:
-                header = rec.description
-            else:
-                header = rec.id
-            if header in fasta_dic:
-                print(("%s occurs multiple times in fasta file" % header))
-            fasta_dic[header] = rec.seq
+    records = SeqIO.parse(fasta_file, format="fasta")
+    for rec in records:
+        if use_description:
+            header = rec.description
+        else:
+            header = rec.id
+        if header in fasta_dic:
+            print(("%s occurs multiple times in fasta file" % header))
+        fasta_dic[header] = str(rec.seq)
     return fasta_dic
 
 
 def fasta_parser_verbatim(fasta):
-    """ Convert a fasta file with multiple sequences to a dictionary with fasta
+    """Convert a fasta file with multiple sequences to a dictionary.
+
+    Convert a fasta file with multiple sequences to a dictionary with fasta
     headers as keys and sequences as values. Spaces are allowed in keys.
     """
     fasta_dic = {}
@@ -11454,6 +11484,8 @@ def plot_coverage(barcode_counts,
                   cbar_label_size=5,
                   dpi=300,
                   log=None,
+                  log_constant=1,
+                  linthresh=0.0001,
                   save=False,
                   wdir=None,
                   ytick_freq=None,
@@ -11462,12 +11494,12 @@ def plot_coverage(barcode_counts,
                   tick_genes=False,
                   gene_name_index=None,
                   figure_title="Coverage",
+                  title_fontdict=None,
                   ylabel="Samples",
                   xlabel="Probes",
-                  fig_size=None):
-    """
-    Plot presence/absence plot for a mip run.
-    """
+                  fig_size=None,
+                  cbar_title=None):
+    """Plot presence/absence plot for a mip run."""
     if xtick_freq is None:
         xtick_freq = barcode_counts.shape[1]//30
         if xtick_freq == 0:
@@ -11479,22 +11511,25 @@ def plot_coverage(barcode_counts,
     fig, ax = plt.subplots()
     if log is None:
         heat = ax.pcolormesh(barcode_counts)
-        cbar_title = ""
+        if cbar_title is None:
+            cbar_title = ""
     elif log == 2:
-        cbar_title = "log2"
-        heat = ax.pcolormesh(barcode_counts.transform(
-            lambda a: np.log2(a + 1)
-        ))
+        if cbar_title is None:
+            cbar_title = "log2"
+        heat = ax.pcolormesh(np.log2(barcode_counts + log_constant))
     elif log == 10:
-        cbar_title = "log10"
-        heat = ax.pcolormesh(barcode_counts.transform(
-            lambda a: np.log10(a + 1)
-        ))
+        if cbar_title is None:
+            cbar_title = "log10"
+        heat = ax.pcolormesh(np.log10(barcode_counts + log_constant))
     elif log == "ln":
-        cbar_title = "log"
-        heat = ax.pcolormesh(barcode_counts.transform(
-            lambda a: np.log(a + 1)
-        ))
+        if cbar_title is None:
+            cbar_title = "log"
+        heat = ax.pcolormesh(np.log(barcode_counts + log_constant))
+    elif log == "symlog":
+        if cbar_title is None:
+            cbar_title = ""
+        heat = ax.pcolormesh(barcode_counts,
+                             norm=colors.SymLogNorm(linthresh=linthresh))
     else:
         print("log can only be None, 2, 10, 'log', {} provided.".format(log))
     sample_ids = list(barcode_counts.index)
@@ -11515,8 +11550,7 @@ def plot_coverage(barcode_counts,
         ticklabel.set_fontsize(tick_label_size)
     ax.set_ylabel(ylabel)
     ax.set_xlabel(xlabel)
-    fig.suptitle(figure_title, verticalalignment="bottom")
-    fig.tight_layout()
+    ax.set_title(figure_title, fontdict=title_fontdict)
     cbar = fig.colorbar(heat, shrink=0.5)
     cbar.ax.tick_params(labelsize=cbar_label_size)
     cbar.ax.set_ylabel(cbar_title,
