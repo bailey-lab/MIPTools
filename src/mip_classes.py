@@ -1962,7 +1962,7 @@ class Subregion(Locus):
             self.end = self.intervals[1] + self.flank
         else:
             self.end = self.segment_end
-        self.region_key = (self.chrom + ":" + str(self.begin)
+        self.region_key = (self.chrom + ":" + str(self.begin + 1)
                            + "-" + str(self.end))
         self.fullname = (self.locus.paralog.paralog_name
                          + "_" + self.locus.segment_name

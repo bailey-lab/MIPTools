@@ -978,11 +978,12 @@ def alignment_parser(wdir, name, spacer=0, gene_names=[]):
     # target names. Assign a reference target.
     ###########################################
     # sort target regions based on the length of
-    # chromosome name and the length of region. Chromosome name is used
+    # chromosome name and the length of region. Sort is based on the region
+    # size and chromosome name is used as a tie-breaker
     # to distinguish alternate contigs and not use them as reference, but
     # it is not absolutely necessary and it would not behave as expected
     # when chromosome names do not follow that convention, i.e, chr6 and
-    # chr6_altXYZ
+    # chr6_altXYZ.
     for ar in list(aligned_regions.keys()):
         regs = aligned_regions[ar]
         for r in regs:
