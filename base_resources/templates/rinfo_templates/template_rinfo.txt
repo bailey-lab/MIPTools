@@ -53,14 +53,14 @@ SETTINGS	Na	0.025	0.025	0.025
 SETTINGS	Mg	0.01	0.01	0.01
 SETTINGS	oligo_conc	4.00E-10	4.00E-10	4.00E-10
 SETTINGS	primer_tm	none	none	none
-SETTINGS	filter_tm	47	47	none
+SETTINGS	filter_tm	49	49	none
 SETTINGS	hit_threshold	0	0	none
-SETTINGS	lower_filter_tm	42	42	none
-SETTINGS	lower_hit_threshold	20	20	none
+SETTINGS	lower_filter_tm	45	45	none
+SETTINGS	lower_hit_threshold	1000	1000	none
 SETTINGS	tm_diff	2	2	none
 SETTINGS	bin_size	3	3	none
 SETTINGS	pick_size	1	1	none
-SETTINGS	hairpin_tm	47	47	47
+SETTINGS	hairpin_tm	49	49	49
 SETTINGS	mipset_size	none	none	200
 SETTINGS	umi_length	10	4	none
 SETTINGS	read_length	150	150	none
@@ -71,8 +71,8 @@ SETTINGS	backbone	none	none	hybrid_split
 SETTINGS	alternative_arms	1	1	any
 SETTINGS	seed_len	16	16	18
 SETTINGS	bowtie_mode	-k 500	-k 500	-k 500
-SETTINGS	hit_limit	50	50	50
-SETTINGS	upper_hit_limit	200	200	200
+SETTINGS	hit_limit	500	500	500
+SETTINGS	upper_hit_limit	2000	2000	2000
 SETTINGS	local	0	0	1
 SETTINGS	processors	TBD	TBD	TBD
 #########################################################
