@@ -1,0 +1,17 @@
+## Locations of various genome files
+#############################################################################
+##################################    pf 3d7 v3 files  ######################
+pf	fasta_genome	/opt/species_resources/genomes/genome.fa
+pf	bowtie2_genome	/opt/species_resources/genomes/genome
+pf	bwa_genome	/opt/species_resources/genomes/genome
+pf	genome_dict	/opt/species_resources/genomes/genome.dict
+pf	snps	/opt/species_resources/SNPs/AFR_QualityPF.vcf.gz
+pf	refgene	/opt/species_resources/genomes/refGene.txt
+pf	refgene_tabix	/opt/species_resources/genomes/refGene.txt.sorted.gz
+pf	alias	/opt/species_resources/genomes/alias.dic
+pf	snpeff_dir	/opt/species_resources/snpEff/
+pf	snpeff_db	pf
+############################################################################
+##################################    hg38 Files      ######################
+hg38	bowtie2_genome	/opt/host_species/genome
+hg38	fasta_genome	/opt/host_species/genome.fa.gz
