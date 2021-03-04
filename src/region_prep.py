@@ -73,6 +73,7 @@ def region_prep(design_name, species, host_species=None, processor_number=7,
     final_region_names.update(extra_target_alignments["region_names"])
     imperfect_aligners.extend(extra_target_alignments["imperfect_aligners"])
     overlaps.update(extra_target_alignments["overlaps"])
+    final_capture_types.update(extra_target_alignments["capture_types"])
     unaligned_target_regions = extra_target_alignments["missed_target_regions"]
     if len(unaligned_target_regions) > 0:
         unaligned_targets_file = os.path.join(resource_dir,
@@ -151,8 +152,7 @@ def region_prep(design_name, species, host_species=None, processor_number=7,
                 region_capture_types[t] = c
                 break
         else:
-            print(("Capture type not found for {}. "
-                   "Setting capture type to 'whole'").format(t))
+            region_capture_types[t] = "whole"
 
     # create a rinfo file for each target using the rinfo template
     # save the target_dict to be used in the design module
