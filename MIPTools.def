@@ -103,6 +103,8 @@ From: amd64/ubuntu:20.04
       "r-devtools" \
       "r-dplyr" \
       "r-dt" \
+      "r-pkgbuild" \
+      "gxx_linux-64" \
       "python" \
       "notebook" \
       "xlrd" \
@@ -138,7 +140,6 @@ From: amd64/ubuntu:20.04
       "lastz" \
       "plotly"
 
-    # install RealMcCoilR
     Rscript -e 'devtools::install_github("OJWatson/McCOILR")'
 
     # install MIPWrangler
@@ -256,7 +257,7 @@ From: amd64/ubuntu:20.04
               echo "Invalid option. Use 'wrangler \
               -e experiment_id -l sample_list.file -p  probe_sets\
               -s sample_sets -w cluster_script -n server_number \
-              -c  cpu_count -x additional_stitch_options'  \
+              -c  cpu_count -x stitch_options'  \
               -m min_capture_length [-k]"
         esac
     done
