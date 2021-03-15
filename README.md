@@ -23,7 +23,7 @@ This method of creating the MIPTools container would give you the latest version
 
 By default, build process is going to use 6 CPU cores. This should pose no problem with most modern computers, but if the computer used for building the container has less then 6 cpu cores available, change the "CPU_COUNT=6" value at the top of the MIPTools.def file to a suitable number before running the following code. On the other hand, if you have access to more CPU power, by all means, use them by setting the same parameter to a higher value.
 
-You must have **sudo** privelege to _build_ the image. You do not need sudo to _use_ the image. So if you want to run the container on an environment without sudo, build the container on your own machine and copy the image file to the computer without sudo. Note that Singularity program itself must have been installed with sudo.  
+You must have **sudo** privelege to _build_ the image. You do not need sudo to _use_ the image. So if you want to run the container on an environment without sudo, either download a prebuilt image (see above) or build the container on your own machine where you _do_ have sudo privilege and copy the image file to the computer without sudo. Note that Singularity program itself must have been installed with sudo.  
 
 Clone the repository with:
 ```bash
