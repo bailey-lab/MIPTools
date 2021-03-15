@@ -4385,17 +4385,15 @@ def write_analysis_settings(settings, settings_file):
 # New contig based analysis for vcf generation
 ###############################################################################
 
-def get_vcf_haplotypes(settings):
-    """ 1) Extract all haplotypes from new data.
-        2) Remove known haplotypes using previous data (if any).
-        3) Map haplotypes to species genome to get the best hit(s)
-        4) Crosscheck best bowtie hit with the targeted region
-        5) Output haplotypes dictionary and off_targets dictionary
+def map_haplotypes(settings):
+    """Bwa-map haplotypes from MIPWrangler output to the reference genome.
 
-        Once this function is called, we will get the new haplotypes present
-        in this data set that are on target and where they map on the genome.
-        Mapping haplotypes to specific targets/copies is not accomplished here
-        """
+    Extract each unique haplotype sequence from the MIPWrangler output and
+    map to reference genome. MIPWrangler maps the sequencing data to the MIPs
+    used for an experiment based on the probe arms. We compare here whether
+    the best genomic loci for a given haplotype matches to the MIPWrangler
+    assignment. If not, we consider those off target and remove.
+    """
     wdir = settings["workingDir"]
     haplotypes_fq_file = os.path.join(wdir, settings["haplotypesFastqFile"])
     haplotypes_sam_file = os.path.join(wdir, settings["haplotypesSamFile"])
@@ -4455,11 +4453,12 @@ def get_vcf_haplotypes(settings):
         "haplotype_sequence"].first().reset_index()
     # fill in fake sequence quality scores for each haplotype. These scores
     # will be used for mapping only and the real scores for each haplotype
-    # for each sample will be added later.
+    # for each sample will be added later.This step is probably unnecessary
+    # as the bwa mem algorithm does not seem to use the quality scores.
     hap_df["quality"] = hap_df["haplotype_sequence"].apply(
         lambda a: "H" * len(a))
     haps = hap_df.set_index("haplotype_ID").to_dict(orient="index")
-    # BWA alignment ####
+    # BWA alignment
     # create a fastq file for bwa input
     with open(haplotypes_fq_file, "w") as outfile:
         for h in haps:
@@ -4586,6 +4585,22 @@ def get_vcf_haplotypes(settings):
 
 
 def get_haplotype_counts(settings):
+    """Get UMI and read counts for each on target haplotype for each sample.
+
+    MIPWrangler output has the UMI and read counts per haplotype but some of
+    those are off target and some are mapping to multiple loci by design.
+    The decision on whether a haplotype sequence is on or off target and where
+    it maps best or if it maps to multiple loci are made by the map_haplotypes
+    function. This function distributes the UMI and read counts in the
+    MIPWrangler output using the mapped haplotypes data for each sample.
+    If a haplotype sequence is uniquely mapping to a targeted locus, we
+    allocate all reads for that sample and haplotype sequence to that locus.
+    If it is mapping to multiple places, we determine the ratios of those
+    'paralogous copies' for that sample based on the average mapping around
+    each locus and allocate the reads for that sample and that haplotype
+    sequence proportionally to the mapped loci. If a haplotype sequence is
+    mapping best to an unintended locus, we remove those.
+    """
     wdir = settings["workingDir"]
     ##########################################################
     ##########################################################
@@ -4611,6 +4626,9 @@ def get_haplotype_counts(settings):
         run_meta.drop("Sample Set", inplace=True, axis=1)
     except (ValueError, KeyError):
         pass
+    # a change to the formatting of sample sheets uses library_prep
+    # instead of Library Prep, so the below line is for backwards compatibility
+    run_meta.rename(columns={"library_prep": "Library Prep"}, inplace=True)
     # drop duplicate values originating from
     # multiple sequencing runs of the same libraries
     run_meta = run_meta.drop_duplicates()
@@ -7824,6 +7842,7 @@ def combine_info_files(wdir,
             ["sample_set", "probe_set"]
         ).first().reset_index()[["sample_set", "probe_set"]]
     run_meta = run_meta.merge(sps, how="inner")
+    run_meta.rename(columns={"library_prep": "Library Prep"}, inplace=True)
     run_meta_collapsed = run_meta.groupby(
         ["sample_name", "sample_set", "replicate", "Library Prep"]
     ).first().reset_index()[["sample_name", "sample_set",
@@ -7996,6 +8015,7 @@ def process_info_file(wdir,
         ["sample_name", "sample_set", "replicate"]
     ].apply(lambda a: "-".join(a), axis=1)
     run_meta = current_run_meta
+    run_meta.rename(columns={"library_prep": "Library Prep"}, inplace=True)
     if sample_sets is not None:
         sps = pd.DataFrame(sample_sets, columns=["sample_set",
                                                  "probe_set"])
