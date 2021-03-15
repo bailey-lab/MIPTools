@@ -4774,6 +4774,31 @@ def get_haplotype_counts(settings):
         )
     )
     combined_df.to_csv(os.path.join(wdir, "haplotype_counts.csv"), index=False)
+    # So far the count data only includes MIPs that has at least one read
+    # in at least one sample. We would like to include MIPs with no reads
+    # as well. So we'll create a dataframe that has all the intended MIPs
+    # and merge with the count data.
+    # create call_info data frame for all used probes in the experiment
+    call_info_file = settings["callInfoDictionary"]
+    probe_sets_file = settings["mipSetsDictionary"]
+    probe_set_keys = settings["mipSetKey"]
+    used_probes = set()
+    for psk in probe_set_keys:
+        with open(probe_sets_file) as infile:
+            used_probes.update(json.load(infile)[psk])
+    with open(call_info_file) as infile:
+        call_info = json.load(infile)
+    call_df_list = []
+    for g in call_info:
+        for m in call_info[g]:
+            if m in used_probes:
+                for c in call_info[g][m]["copies"]:
+                    call_dict = {"MIP": m, "copy": c}
+                    call_df_list.append(pd.DataFrame(call_dict, index=[0]))
+    call_df = pd.concat(call_df_list, ignore_index=True, sort=True)
+
+    # merge the count data with probe data. Fill missing values with 0.
+    combined_df = call_df.merge(combined_df, how="left").fillna(0)
     # Create pivot table of combined barcode counts
     # This is a per MIP per sample barcode count table
     # of the samples with sequencing data
@@ -4803,21 +4828,27 @@ def get_haplotype_counts(settings):
     )
     all_barcode_counts.fillna(0, inplace=True)
     print("There are {} total samples.".format(all_barcode_counts.shape[0]))
-    all_barcode_counts.to_csv(os.path.join(wdir, "all_barcode_counts.csv"))
-    # Continue working with the barcode counts that does not include the
-    # samples which did not have any data.
-    barcode_counts.columns = pd.MultiIndex.from_tuples(bc_cols,
-                                                       names=["MIP", "Copy"])
-    barcode_counts.fillna(0, inplace=True)
-    barcode_counts.to_csv(os.path.join(wdir, "barcode_counts.csv"))
+    all_barcode_counts.to_csv(os.path.join(wdir, "barcode_counts.csv"))
     # Create an overview statistics file for samples including
     # total read count, barcode count, and how well they cover each MIP.
     sample_counts = combined_df.groupby("Sample ID")[["Read Count",
                                                       "Barcode Count"]].sum()
+    # Find samples without any data and print the number
+    no_data = run_meta.loc[
+        ~run_meta["Sample ID"].isin(sample_counts.index)
+    ]
+    print(("{} out of {} samples had no data and they will be excluded from "
+           "the variant calls.").format(no_data.shape[0], run_meta.shape[0]))
+
+    # add samples with no data
+    sample_counts = pd.merge(
+        run_meta[["Sample ID", "replicate"]].set_index("Sample ID"),
+        sample_counts, left_index=True, right_index=True, how="left")
+    sample_counts.drop("replicate", axis=1, inplace=True)
     target_cov = pd.concat(
-        [(barcode_counts >= 1).sum(axis=1),
-         (barcode_counts >= 5).sum(axis=1),
-         (barcode_counts >= 10).sum(axis=1)],
+        [(all_barcode_counts >= 1).sum(axis=1),
+         (all_barcode_counts >= 5).sum(axis=1),
+         (all_barcode_counts >= 10).sum(axis=1)],
         axis=1,
     ).rename(
         columns={
@@ -4833,14 +4864,6 @@ def get_haplotype_counts(settings):
     target_cov_file = os.path.join(wdir, "sample_summary.csv")
     sample_counts.to_csv(target_cov_file)
 
-    # Create a file with meta data for samples without any data
-    no_data = run_meta.loc[
-        ~run_meta["Sample ID"].isin(sample_counts.index)
-    ]
-    print(("{} out of {} samples had no data and they were excluded from the"
-           " variant calls.").format(no_data.shape[0], run_meta.shape[0]))
-    no_data_file = os.path.join(wdir, "samples_without_data.csv")
-    no_data.to_csv(no_data_file)
     return
 
 
