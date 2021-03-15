@@ -10418,7 +10418,7 @@ def get_fasta_list(regions, species):
         return {}
     file_locations = get_file_locations()
     genome_fasta = file_locations[species]["fasta_genome"]
-    region_file = "/tmp/regions_" + id_generator(10) + ".txt"
+    region_file = "/tmp/region s_" + id_generator(10) + ".txt"
     with open(region_file, "w") as outfile:
         for r in regions:
             outfile.write(r + "\n")
@@ -12562,8 +12562,9 @@ def make_degenerate(base_set):
         return np.nan
 
 
-def iupac_fasta_converter(header, sequence):
-    """
+def iupac_fasta_converter(header, sequence, max_ns=10):
+    """Convert IUPAC degenerate nucleotides to ATGC.
+
     Given a sequence (header and sequence itself) containing iupac characters,
     return a dictionary with all possible sequences converted to ATCG.
     """
@@ -12572,7 +12573,7 @@ def iupac_fasta_converter(header, sequence):
                   "N": "ACGT"}
     iupac_dict = {k: list(iupac_dict[k])
                   for k in list(iupac_dict.keys())}
-    if sequence.upper().count("N") >= 10:
+    if sequence.upper().count("N") >= max_ns:
         return {header: sequence}
     sequence = list(sequence.upper())
     result_list = []
@@ -12597,7 +12598,7 @@ def iupac_fasta_converter(header, sequence):
 
 
 def save_fasta_dict(fasta_dict, fasta_file, linewidth=60):
-    """ Save a fasta dictionary to file. """
+    """Save a fasta dictionary to file."""
     with open(fasta_file, "w") as outfile:
         for header in fasta_dict:
             outfile.write(">" + str(header) + "\n")

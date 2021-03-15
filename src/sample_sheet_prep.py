@@ -99,6 +99,16 @@ def main(capture_384, sample_plates, sheets_96, output_file,
               "the 'sample_name' and 'sample_set' fields have "
               "valid, non-empty values in all provided files.")
 
+    # check whether all required columns have valid values
+    required_columns = ["sample_name", "sample_set", "probe_set",
+                        "replicate", "fw", "rev", "Library Prep"]
+    missing_values = com[required_columns].isnull().any()
+    missing_values = missing_values.loc[missing_values].index.to_list()
+    if len(missing_values) > 0:
+        print(("Error: Required column(s) {} cannot have missing values."
+               ).format(", ".join(missing_values)))
+        return
+
     if com.shape[0] != (com.groupby(["fw", "rev"]).first().shape[0]):
         size_file = os.path.join(wdir, "repeating_primers.csv")
         print(("There are repeating forward/reverse primer pairs.\n"

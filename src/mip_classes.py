@@ -381,15 +381,16 @@ class Locus:
                              "orientation": diff_ori,
                              "copy_base": copy_base,
                              "size_difference": begin - end}
-                copy_snps[d["copy_chrom"]
-                          + ":" + str(d["copy_begin"])
+                copy_snps[c + ":" + str(d["begin"])
                           + d["copy_base"] + ":"
                           + ref_base] = d
         return {"pdiffs": diffs,
                 "extra_snps": extra_snps}
 
     def get_snps_from_table(self):
-        """ Return SNPs within a Locus object using a UCSC style SNP table.
+        """Return SNPs from a UCSC style SNP table.
+
+        Return SNPs within a Locus object using a UCSC style SNP table.
         This is deprecated in favor of using get_snps function which takes
         a vcf file instead.
         """
