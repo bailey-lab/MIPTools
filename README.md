@@ -109,6 +109,6 @@ Resources required vary widely depending on the project. Both designs and data a
 Further documentation for MIPTools is available [here](https://drive.google.com/drive/folders/1Tmu7hdRYrdw-jqAN35lZpIjG2lBebuCK?usp=sharing) for various use cases (MIP design, data analysis, etc.)
 
 ## Troubleshooting
-Please send any questions/comments to: miptools@googlegroups.com 
+Please send any questions/comments to: miptools@googlegroups.com  
 Join our Google Group: https://groups.google.com/g/miptools
 
