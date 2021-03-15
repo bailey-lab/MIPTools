@@ -12,7 +12,7 @@ Note: Snap package install is a rapid way to install the go language required by
 ### Obtaining MIPTools program
 
 #### Download container 
-A recent version of MIPTools container, built and ready to use, can be downloaded [here](http://baileylab.brown.edu/MIPTools/resources/miptools.sif).  
+A recent version of MIPTools container, built and ready to use, can be downloaded [here](http://baileylab.brown.edu/MIPTools/resources/).  
 
 Please note that this pre-build version does not include bcl2fastq software due to its license. If you plan to use MIPTools to demultiplex bcl files, then please built the container yourself as described in the next section. You will not need bcl2fastq if you are not planning to download your sequencing data in bcl format and do your own demultiplexing. 
 
