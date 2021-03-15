@@ -47,22 +47,14 @@ def main(capture_384, sample_plates, sheets_96, output_file,
         sheets_96 = pd.concat(sheets_96, ignore_index=True, axis=0)
         sheets_96 = sheets_96.drop_duplicates()
 
-    capture_columns = ["sample_name", "sample_set", "probe_set",
-                       "replicate", "fw", "rev", "owner", "Library Prep",
-                       "sample_plate", "capture_plate",
-                       "capture_plate_row", "capture_plate_column",
-                       "quadrant", "FW_plate", "REV_plate", "384 Column"]
-
     if (capture_384 is not None) and (sheets_96 is not None):
         com = pd.concat([captures, sheets_96], axis=0, ignore_index=True,
                         sort=False)
-        com = com.loc[:, capture_columns]
     elif capture_384 is not None:
         # "replicate" column is only available in 96 well format
         # this will need to be set to NaN value if no 96 well sample sheet
         # was used.
         captures["replicate"] = np.nan
-        com = captures.loc[:, capture_columns]
     elif sheets_96 is not None:
         com = sheets_96
     else:
@@ -98,10 +90,10 @@ def main(capture_384, sample_plates, sheets_96, output_file,
         print("Error in assigning replicates. Please make sure "
               "the 'sample_name' and 'sample_set' fields have "
               "valid, non-empty values in all provided files.")
-
+    com.rename(columns={"Library Prep": "library_prep"}, inplace=True)
     # check whether all required columns have valid values
     required_columns = ["sample_name", "sample_set", "probe_set",
-                        "replicate", "fw", "rev", "Library Prep"]
+                        "replicate", "fw", "rev", "library_prep"]
     missing_values = com[required_columns].isnull().any()
     missing_values = missing_values.loc[missing_values].index.to_list()
     if len(missing_values) > 0:
