@@ -12,7 +12,7 @@ Note: Snap package install is a rapid way to install the go language required by
 ### Obtaining MIPTools program
 
 #### Download container 
-A recent version of MIPTools container, built and ready to use, can be downloaded [here](http://baileylab.brown.edu/MIPTools/resources/miptools.sif).  
+A recent version of MIPTools container, built and ready to use, can be downloaded [here](http://baileylab.brown.edu/MIPTools/resources/).  
 
 Please note that this pre-build version does not include bcl2fastq software due to its license. If you plan to use MIPTools to demultiplex bcl files, then please built the container yourself as described in the next section. You will not need bcl2fastq if you are not planning to download your sequencing data in bcl format and do your own demultiplexing. 
 
@@ -23,7 +23,7 @@ This method of creating the MIPTools container would give you the latest version
 
 By default, build process is going to use 6 CPU cores. This should pose no problem with most modern computers, but if the computer used for building the container has less then 6 cpu cores available, change the "CPU_COUNT=6" value at the top of the MIPTools.def file to a suitable number before running the following code. On the other hand, if you have access to more CPU power, by all means, use them by setting the same parameter to a higher value.
 
-You must have **sudo** privelege to _build_ the image. You do not need sudo to _use_ the image. So if you want to run the container on an environment without sudo, build the container on your own machine and copy the image file to the computer without sudo. Note that Singularity program itself must have been installed with sudo.  
+You must have **sudo** privelege to _build_ the image. You do not need sudo to _use_ the image. So if you want to run the container on an environment without sudo, either download a prebuilt image (see above) or build the container on your own machine where you _do_ have sudo privilege and copy the image file to the computer without sudo. Note that Singularity program itself must have been installed with sudo.  
 
 Clone the repository with:
 ```bash
@@ -102,11 +102,13 @@ data_dir and analysis_dir will have different content for different apps/operati
 </details>
 <br>
 
-## Usage for MIP design
-A detailed explanation of how to use the design pipeline can be found on the [Bailey Lab website](http://baileylab.brown.edu/MIPTools/Running_MIP_Design.html). A test design is also provided [here](http://baileylab.brown.edu/MIPTools/Running_MIP_Design_Test.html). Please read the "how to" first and run the test design on your compute environment to make sure everything is working as expected before attempting a novel design.
-
-## Usage for data analysis
-MIPTools usage for data analysis is detailed on the [Bailey Lab website](http://baileylab.brown.edu/MIPTools/MIP_analysis_pipeline.html). A test data set with insturctions is also included. Please run the test in your compute environment before attempting the first real data analysis.
-
 ## Resource requirements
 Resources required vary widely depending on the project. Both designs and data analysis can be parallelized, so the more cpus you have the better. Plenty of storage is also  recommended. For designs on large target regions (>5kb), files can take up 10 GB or more per region. Consider allocating > 5 GB RAM for a large design region (multiply the RAM requirement by cpu number if parallelizing). For a typical MIP data analysis involving ~1000 MIPs and ~1000 samples, consider using at least 20 cpus, 20 GB RAM to get the analysis done within 10-12 h. You should expect ~200 GB disk space used for such an analysis as well, although most files can be removed after processing steps to reduce long term disk usage.
+
+## Further documentation
+Further documentation for MIPTools is available [here](https://drive.google.com/drive/folders/1Tmu7hdRYrdw-jqAN35lZpIjG2lBebuCK?usp=sharing) for various use cases (MIP design, data analysis, etc.)
+
+## Troubleshooting
+Please send any questions/comments to: miptools@googlegroups.com  
+Join our Google Group: https://groups.google.com/g/miptools
+
