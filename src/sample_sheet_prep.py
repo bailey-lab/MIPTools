@@ -14,51 +14,86 @@ def sample_sheet_prep(
     forward_plates = pd.read_csv(forward_plates)
     reverse_plates = pd.read_csv(reverse_plates)
     if capture_plates is not None:
-        capture_plates = [os.path.join(wdir, p) for p in capture_plates]
-        capture_plates = [pd.read_table(p) for p in capture_plates]
-        capture_plates = pd.concat(capture_plates, ignore_index=True, axis=0)
-        sample_plates = [os.path.join(wdir, p) for p in sample_plates]
-        sample_plates = [pd.read_table(p) for p in sample_plates]
-        sample_plates = pd.concat(sample_plates, ignore_index=True, axis=0)
-        sample_plates["row"] = sample_plates["sample_well"].apply(
-            lambda a: a[0])
-        sample_plates["column"] = sample_plates["sample_well"].apply(
-            lambda a: int(a[1:]))
-        plating_cols = ["sample_name", "sample_plate", "row", "column"]
-        sample_plates = sample_plates.loc[:, plating_cols]
-        plates_without_samples = set(
-            capture_plates["sample_plate"]).difference(
-                sample_plates["sample_plate"])
-        if len(plates_without_samples) > 0:
-            print(("{} does not have corresponding sample plates.").format(
-                plates_without_samples))
-        samples_without_plates = set(sample_plates["sample_plate"]).difference(
-            capture_plates["sample_plate"])
-        if len(samples_without_plates) > 0:
-            print(("{} does not have corresponding capture plates.").format(
-                samples_without_plates))
-        captures = capture_plates.merge(sample_plates)
-        captures = captures.merge(forward_plates)
-        captures = captures.merge(reverse_plates)
-        captures = captures.merge(quad)
-        captures = captures.drop_duplicates()
+        capture_paths = [os.path.join(wdir, p) for p in capture_plates]
+        capture_plates = []
+        for p in capture_paths:
+            try:
+                capture_plates.append(pd.read_table(p))
+            except IOError:
+                print(("Warning: Capture plate file {} does not exist in the "
+                       "run directory {} and will not be used.").format(
+                           p, wdir))
+        if len(capture_plates) > 0:
+            capture_plates = pd.concat(capture_plates, ignore_index=True,
+                                       axis=0)
+            sample_paths = [os.path.join(wdir, p) for p in sample_plates]
+            sample_plates = []
+            for p in sample_paths:
+                try:
+                    sample_plates.append(pd.read_table(p))
+                except IOError:
+                    print(("Warning:Sample plate file {} does not exist in the"
+                           " run directory {} and will not be used.").format(
+                               p, wdir))
+            if len(sample_plates) > 0:
+                sample_plates = pd.concat(sample_plates, ignore_index=True,
+                                          axis=0)
+                sample_plates["row"] = sample_plates["sample_well"].apply(
+                    lambda a: a[0])
+                sample_plates["column"] = sample_plates["sample_well"].apply(
+                    lambda a: int(a[1:]))
+                plating_cols = ["sample_name", "sample_plate", "row", "column"]
+                sample_plates = sample_plates.loc[:, plating_cols]
+                plates_without_samples = set(
+                    capture_plates["sample_plate"]).difference(
+                        sample_plates["sample_plate"])
+                if len(plates_without_samples) > 0:
+                    print(("Warning: {} does not have corresponding sample "
+                           "plates.").format(plates_without_samples))
+                samples_without_plates = set(
+                    sample_plates["sample_plate"]).difference(
+                        capture_plates["sample_plate"])
+                if len(samples_without_plates) > 0:
+                    print(("Warning: {} does not have corresponding capture "
+                           "plates.").format(samples_without_plates))
+                captures = capture_plates.merge(sample_plates)
+                captures = captures.merge(forward_plates)
+                captures = captures.merge(reverse_plates)
+                captures = captures.merge(quad)
+                captures = captures.drop_duplicates()
+            else:
+                print("Warning: No valid sample plate was found.")
+        else:
+            print("Warning: No valid capture plate was found.")
+    else:
+        capture_plates = []
 
     if legacy_sheets is not None:
-        legacy_sheets = [os.path.join(wdir, p) for p in legacy_sheets]
-        legacy_sheets = [pd.read_table(p) for p in legacy_sheets]
-        legacy_sheets = pd.concat(legacy_sheets, ignore_index=True, axis=0)
-        legacy_sheets = legacy_sheets.drop_duplicates()
+        legacy_paths = [os.path.join(wdir, p) for p in legacy_sheets]
+        legacy_sheets = []
+        for p in legacy_paths:
+            try:
+                legacy_sheets.append(pd.read_table(p))
+            except IOError:
+                print(("Warning:Sample sheet file {} does not exist in the"
+                       " run directory {} and will not be used.").format(
+                           p, wdir))
+        if len(legacy_sheets) > 0:
+            legacy_sheets = pd.concat(legacy_sheets, ignore_index=True, axis=0)
+            legacy_sheets = legacy_sheets.drop_duplicates()
+    else:
+        legacy_sheets = []
 
-    if (capture_plates is not None) and (legacy_sheets is not None):
+    if (len(capture_plates) > 0) and (len(legacy_sheets) > 0):
         com = pd.concat([captures, legacy_sheets], axis=0, ignore_index=True,
                         sort=False)
-    elif capture_plates is not None:
+    elif len(capture_plates) > 0:
         # "replicate" column is only available in 96 well format
         # this will need to be set to NaN value if no 96 well sample sheet
         # was used.
         captures["replicate"] = np.nan
         com = captures
-    elif legacy_sheets is not None:
+    elif len(legacy_sheets) > 0:
         com = legacy_sheets
     else:
         print("At least one sample sheet must be provided.")
