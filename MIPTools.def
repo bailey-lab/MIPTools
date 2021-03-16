@@ -179,6 +179,7 @@ From: amd64/ubuntu:20.04
     programs /opt
     bin /opt
     src /opt
+    base_resources/ /opt/resources
 
 %environment
     path=/opt/bin:/opt/conda/bin:/opt/programs/MIPWrangler/bin:
