@@ -1,0 +1,8 @@
+sample_plate	sample_set	probe_set	capture_plate	quadrant	FW_plate	REV_plate	library_prep	sample_name	row	column	fw	rev	capture_plate_row	capture_plate_column	replicate
+SP1	PRJ1	PS1,PS2	CP1	1	FW-37	REV-2	210309	Sam1	A	1	289	97	A	1	1
+SP2	PRJ1	PS1,PS2	CP1	2	FW-38	REV-2	210309	Sam4	A	1	290	97	E	1	1
+SP5	PRJ2	PS3	CP2	0	FW-41	REV-2	210309	Sam7	A	1	293	97	A	1	1
+SP1	PRJ1	PS1,PS2	CP1	1	FW-37	REV-2	210309	Sam2	A	2	290	98	A	3	1
+SP1	PRJ1	PS1,PS2	CP1	1	FW-37	REV-2	210309	Sam3	B	2	302	110	A	4	1
+SP3	PRJ1	PS1,PS2	CP1	3	FW-39	REV-2	210309	Sam5	H	12	374	192	L	24	1
+SP4	PRJ1	PS1,PS2	CP1	4	FW-40	REV-2	210309	Sam6	C	3	318	123	N	5	1

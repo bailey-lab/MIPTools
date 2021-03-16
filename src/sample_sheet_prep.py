@@ -4,18 +4,19 @@ import os
 import numpy as np
 
 
-def main(capture_384, sample_plates, sheets_96, output_file,
-         wdir="/opt/analysis",
-         quadrants="/opt/resources/sample_prep/quadrants.csv",
-         forward_plates="/opt/resources/sample_prep/forward_plates.csv",
-         reverse_plates="/opt/resources/sample_prep/reverse_plates.csv"):
+def sample_sheet_prep(
+        capture_plates, sample_plates, legacy_sheets, output_file,
+        wdir="/opt/analysis",
+        quadrants="/opt/resources/sample_prep/quadrants.csv",
+        forward_plates="/opt/resources/sample_prep/forward_plates.csv",
+        reverse_plates="/opt/resources/sample_prep/reverse_plates.csv"):
     quad = pd.read_csv(quadrants)
     forward_plates = pd.read_csv(forward_plates)
     reverse_plates = pd.read_csv(reverse_plates)
-    if capture_384 is not None:
-        capture_384 = [os.path.join(wdir, p) for p in capture_384]
-        capture_384 = [pd.read_table(p) for p in capture_384]
-        capture_384 = pd.concat(capture_384, ignore_index=True, axis=0)
+    if capture_plates is not None:
+        capture_plates = [os.path.join(wdir, p) for p in capture_plates]
+        capture_plates = [pd.read_table(p) for p in capture_plates]
+        capture_plates = pd.concat(capture_plates, ignore_index=True, axis=0)
         sample_plates = [os.path.join(wdir, p) for p in sample_plates]
         sample_plates = [pd.read_table(p) for p in sample_plates]
         sample_plates = pd.concat(sample_plates, ignore_index=True, axis=0)
@@ -25,38 +26,40 @@ def main(capture_384, sample_plates, sheets_96, output_file,
             lambda a: int(a[1:]))
         plating_cols = ["sample_name", "sample_plate", "row", "column"]
         sample_plates = sample_plates.loc[:, plating_cols]
-        plates_without_samples = set(capture_384["sample_plate"]).difference(
-            sample_plates["sample_plate"])
+        plates_without_samples = set(
+            capture_plates["sample_plate"]).difference(
+                sample_plates["sample_plate"])
         if len(plates_without_samples) > 0:
             print(("{} does not have corresponding sample plates.").format(
                 plates_without_samples))
         samples_without_plates = set(sample_plates["sample_plate"]).difference(
-            capture_384["sample_plate"])
+            capture_plates["sample_plate"])
         if len(samples_without_plates) > 0:
             print(("{} does not have corresponding capture plates.").format(
                 samples_without_plates))
-        captures = capture_384.merge(sample_plates)
+        captures = capture_plates.merge(sample_plates)
         captures = captures.merge(forward_plates)
         captures = captures.merge(reverse_plates)
         captures = captures.merge(quad)
         captures = captures.drop_duplicates()
 
-    if sheets_96 is not None:
-        sheets_96 = [os.path.join(wdir, p) for p in sheets_96]
-        sheets_96 = [pd.read_table(p) for p in sheets_96]
-        sheets_96 = pd.concat(sheets_96, ignore_index=True, axis=0)
-        sheets_96 = sheets_96.drop_duplicates()
+    if legacy_sheets is not None:
+        legacy_sheets = [os.path.join(wdir, p) for p in legacy_sheets]
+        legacy_sheets = [pd.read_table(p) for p in legacy_sheets]
+        legacy_sheets = pd.concat(legacy_sheets, ignore_index=True, axis=0)
+        legacy_sheets = legacy_sheets.drop_duplicates()
 
-    if (capture_384 is not None) and (sheets_96 is not None):
-        com = pd.concat([captures, sheets_96], axis=0, ignore_index=True,
+    if (capture_plates is not None) and (legacy_sheets is not None):
+        com = pd.concat([captures, legacy_sheets], axis=0, ignore_index=True,
                         sort=False)
-    elif capture_384 is not None:
+    elif capture_plates is not None:
         # "replicate" column is only available in 96 well format
         # this will need to be set to NaN value if no 96 well sample sheet
         # was used.
         captures["replicate"] = np.nan
-    elif sheets_96 is not None:
-        com = sheets_96
+        com = captures
+    elif legacy_sheets is not None:
+        com = legacy_sheets
     else:
         print("At least one sample sheet must be provided.")
         return
@@ -172,6 +175,7 @@ if __name__ == "__main__":
                                  "reverse_plates.csv"))
     args = vars(parser.parse_args())
 
-    main(args["capture_plates"], args["sample_plates"], args["sample_sheets"],
-         args["output_file"], args["working_directory"], args["quadrants"],
-         args["forward_plates"], args["reverse_plates"])
+    sample_sheet_prep(args["capture_plates"], args["sample_plates"],
+                      args["sample_sheets"], args["output_file"],
+                      args["working_directory"], args["quadrants"],
+                      args["forward_plates"], args["reverse_plates"])
