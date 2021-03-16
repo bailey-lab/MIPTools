@@ -165,8 +165,7 @@ From: amd64/ubuntu:20.04
 
 
     # create work and resources directories in /opt
-    mkdir /opt/resources \
-        /opt/work \
+    mkdir /opt/work \
         /opt/project_resources \
         /opt/species_resources \
         /opt/data \
@@ -266,8 +265,7 @@ From: amd64/ubuntu:20.04
     -e $experiment_id -l /opt/analysis/$sample_list \
     -p $probe_sets -s $sample_sets -w $cluster_script -n $server_number \
     -c $cpu_count -x $stitch_options -m $min_capture_length $keep_files
-    script_name=$sample_sets"_"$(echo $probe_sets|tr "," "_")".sh"
-    . /opt/analysis/$script_name
+    . /opt/analysis/wrangle.sh
 
 %apprun download
     set -e

@@ -18,7 +18,8 @@ def sample_sheet_prep(
         capture_plates = []
         for p in capture_paths:
             try:
-                capture_plates.append(pd.read_table(p))
+                capture_plates.append(pd.read_table(p).rename(
+                    columns={"Library Prep": "library_prep"}))
             except IOError:
                 print(("Warning: Capture plate file {} does not exist in the "
                        "run directory {} and will not be used.").format(
@@ -73,7 +74,8 @@ def sample_sheet_prep(
         legacy_sheets = []
         for p in legacy_paths:
             try:
-                legacy_sheets.append(pd.read_table(p))
+                legacy_sheets.append(pd.read_table(p).rename(
+                    columns={"Library Prep": "library_prep"}))
             except IOError:
                 print(("Warning:Sample sheet file {} does not exist in the"
                        " run directory {} and will not be used.").format(
@@ -128,7 +130,6 @@ def sample_sheet_prep(
         print("Error in assigning replicates. Please make sure "
               "the 'sample_name' and 'sample_set' fields have "
               "valid, non-empty values in all provided files.")
-    com.rename(columns={"Library Prep": "library_prep"}, inplace=True)
     # check whether all required columns have valid values
     required_columns = ["sample_name", "sample_set", "probe_set",
                         "replicate", "fw", "rev", "library_prep"]
