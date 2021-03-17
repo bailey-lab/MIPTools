@@ -62,6 +62,7 @@ def sample_sheet_prep(
                 captures = captures.merge(reverse_plates)
                 captures = captures.merge(quad)
                 captures = captures.drop_duplicates()
+                captures["replicate"] = np.nan
             else:
                 print("Warning: No valid sample plate was found.")
         else:
