@@ -4876,7 +4876,8 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
                    bam_files=None, bam_list=None, verbose=True,
                    fastq_padding=20, min_base_quality=1,
                    errors_file="/opt/analysis/freebayes_errors.txt",
-                   warnings_file="/opt/analysis/freebayes_warnings.txt"):
+                   warnings_file="/opt/analysis/freebayes_warnings.txt",
+                   merge_distance=1000, contig_padding=500):
     """Call variants for MIP data using freebayes.
 
     A mapped haplotype file must be present in the working directory. This
@@ -4924,6 +4925,11 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
         file to save freebayes errors.
     warnings_file: str/path, /opt/analysis/freebayes_warnings
         file to save freebayes warnings
+    merge_distance: int, 200
+        When creating contigs from MIP target regions, merge targets closer
+        to each other than this distance.
+    contig_padding: int, 50
+        Add this much padding to the contigs when calling freebayes.
     """
     # get the analysis settings
     # check if both settings and the settings file are None:
@@ -4980,7 +4986,7 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
     def get_contig(g):
         intervals = zip(g["capture_start"], g["capture_end"])
         return pd.DataFrame(merge_overlap(
-            [list(i) for i in intervals], spacer=1000))
+            [list(i) for i in intervals], spacer=merge_distance))
 
     # create contigs per chromosome
     contigs = call_df.groupby("chrom").apply(get_contig)
@@ -4990,11 +4996,25 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
     contigs["contig_name"] = contigs["chrom"] + "_" + contigs["contig"].astype(
         str)
     # we'll call freebayes on each contig by providing a region string in the
-    # form chrx:begin-end. Create those strings for each contig with 500 bp
-    # padding.
+    # form chrx:begin-end. Create those strings for each contig with some
+    # padding. It is important to check that we don't end up with a start
+    # position of <1 or end position longer than chom length.
+    # Begin by adding chromosome length to contig info.
+    # get reference chromosome lengths
+    genome_file = get_file_locations()[settings["species"]]["fasta_genome"]
+    reference_lengths = {}
+    genome_sam = pysam.FastaFile(genome_file)
+    for r in genome_sam.references:
+        reference_lengths[r] = genome_sam.get_reference_length(r)
+    contigs["chromosome_length"] = contigs["chrom"].map(reference_lengths)
+    contigs["region_start"] = contigs["contig_capture_start"] - contig_padding
+    contigs.loc[contigs["region_start"] < 1, "region_start"] = 1
+    contigs["region_end"] = contigs["contig_capture_end"] + contig_padding
+    contigs["region_end"] = contigs[
+        ["region_end", "chromosome_length"]].min().values
     contigs["region"] = contigs["chrom"] + ":" + (
-        contigs["contig_capture_start"] - 500).astype(str) + "-" + (
-        contigs["contig_capture_end"] + 500).astype(str)
+        contigs["region_start"]).astype(str) + "-" + (
+        contigs["region_end"]).astype(str)
     # we'll force calls on targeted variants if so specified
     if targets_file is not None:
         # each contig must include at least one of the targets, otherwise
@@ -5541,7 +5561,7 @@ def vcf_to_tables_fb(vcf_file, settings=None, settings_file=None,
                      target_aa_annotation=None, aggregate_aminoacids=False,
                      target_nt_annotation=None, aggregate_nucleotides=False,
                      decompose_options=[], annotated_vcf=False,
-                     aggregate_none=True, min_site_qual=-1,
+                     aggregate_none=False, min_site_qual=-1,
                      min_target_site_qual=-1, min_genotype_qual=-1,
                      min_alt_qual=-1, min_ref_qual=-1, min_mean_alt_qual=-1,
                      min_mean_ref_qual=-1, output_prefix=""):
@@ -5604,7 +5624,7 @@ def vcf_to_tables_fb(vcf_file, settings=None, settings_file=None,
         involves decomposing all variants to the smallest units possible,
         breaking all haplotype data. The level of decomposition should be
         specified with the decompose_options parameter.
-    aggregate_none: bool, True.
+    aggregate_none: bool, False.
         Do no aggregation on counts, save the original (annotated if requested)
         vcf file as 3  count tables. Three aggregation options are compatible
         with each other and can be used all at once.
@@ -6196,7 +6216,7 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
                   geneid_to_genename=None, target_aa_annotation=None,
                   aggregate_aminoacids=False, target_nt_annotation=None,
                   aggregate_nucleotides=False, decompose_options=[],
-                  annotated_vcf=False, aggregate_none=True, min_site_qual=-1,
+                  annotated_vcf=False, aggregate_none=False, min_site_qual=-1,
                   min_target_site_qual=-1, min_genotype_qual=None,
                   output_prefix=""):
     """Create various tables from a vcf file.
@@ -6258,7 +6278,7 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
         involves decomposing all variants to the smallest units possible,
         breaking all haplotype data. The level of decomposition should be
         specified with the decompose_options parameter.
-    aggregate_none: bool, True.
+    aggregate_none: bool, False.
         Do no aggregation on counts, save the original (annotated if requested)
         vcf file as 3  count tables. Three aggregation options are compatible
         with each other and can be used all at once.
@@ -7524,8 +7544,10 @@ def create_fasta_file(region, species, output_file):
 
 
 def merge_overlap(intervals, spacer=0):
-    """ Merge overlapping intervals. Take a list of lists of 2 elements,
-    [start, stop], check if any [start, stop] pairs overlap and merge if any.
+    """Merge overlapping intervals.
+
+    Take a list of lists of 2 elements, [start, stop],
+    check if any [start, stop] pairs overlap and merge if any.
     Return the merged [start, stop] list.
     """
     # reuse a piece of code from get_exons:
