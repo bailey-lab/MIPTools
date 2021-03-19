@@ -107,6 +107,7 @@ From: amd64/ubuntu:20.04
       "gxx_linux-64" \
       "python" \
       "notebook" \
+      "jupyter_contrib_nbextensions" \
       "xlrd" \
       "bcftools" \
       "samtools" \
@@ -134,11 +135,17 @@ From: amd64/ubuntu:20.04
       "bioconductor-dnacopy" \
       "basemap-data-hires" \
       "seqtk=1.3" \
-      "vt" \
       "gatk4" \
       "freebayes" \
       "lastz" \
       "plotly"
+
+    # install vt variant tool set
+    cd /opt/programs
+    git clone https://github.com/atks/vt.git
+    cd vt
+    make -j $CPU_COUNT
+    scp vt /opt/bin
 
     Rscript -e 'devtools::install_github("OJWatson/McCOILR")'
 
