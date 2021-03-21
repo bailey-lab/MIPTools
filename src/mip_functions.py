@@ -5011,7 +5011,7 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
     contigs.loc[contigs["region_start"] < 1, "region_start"] = 1
     contigs["region_end"] = contigs["contig_capture_end"] + contig_padding
     contigs["region_end"] = contigs[
-        ["region_end", "chromosome_length"]].min().values
+        ["region_end", "chromosome_length"]].min(axis=1).values
     contigs["region"] = contigs["chrom"] + ":" + (
         contigs["region_start"]).astype(str) + "-" + (
         contigs["region_end"]).astype(str)

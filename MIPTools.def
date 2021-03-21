@@ -144,6 +144,7 @@ From: amd64/ubuntu:20.04
     cd /opt/programs
     git clone https://github.com/atks/vt.git
     cd vt
+    git checkout 0.577
     make -j $CPU_COUNT
     scp vt /opt/bin
 
