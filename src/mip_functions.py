@@ -4584,6 +4584,17 @@ def map_haplotypes(settings):
     return
 
 
+def get_vcf_haplotypes(settings):
+    """
+    Reverse compatibile map_haplotypes function.
+
+    This is the old name for map_haplotypes function. Some notebooks might
+    use the old name. So this will just run the map_haplotypes when called
+    by the old name.
+    """
+    map_haplotypes(settings)
+
+
 def get_haplotype_counts(settings):
     """Get UMI and read counts for each on target haplotype for each sample.
 
