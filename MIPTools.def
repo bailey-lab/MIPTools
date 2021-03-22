@@ -51,7 +51,9 @@ From: amd64/ubuntu:20.04
     libcurl4-gnutls-dev \
     alien \
     unzip \
-    tree
+    tree \
+    pandoc \
+    texlive-xetex texlive-fonts-recommended texlive-generic-recommended
 
     # set environment locale
     echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
@@ -92,8 +94,8 @@ From: amd64/ubuntu:20.04
 
     # install conda packages using mamba
     mamba install -qy\
-      "r-epitools" \
       "r" \
+      "r-epitools" \
       "rpy2" \
       "r-irkernel" \
       "r-plotly" \
@@ -107,6 +109,7 @@ From: amd64/ubuntu:20.04
       "gxx_linux-64" \
       "python" \
       "notebook" \
+      "nbconvert" \
       "jupyter_contrib_nbextensions" \
       "xlrd" \
       "bcftools" \
@@ -224,6 +227,7 @@ From: amd64/ubuntu:20.04
     echo $port_fw
     port_fw="ssh -N -f -L localhost:$nb_port:$server_ip:$nb_port $server_user"
     echo $port_fw
+
     jupyter notebook --notebook-dir=$nb_dir --ip=$server_ip \
             --port=$nb_port --no-browser
 
