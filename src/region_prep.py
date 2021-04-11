@@ -15,7 +15,7 @@ def region_prep(design_name, species, host_species=None, processor_number=7,
                 single_mip_threshold=0, genes_file=None, snps_file=None,
                 coordinates_file=None, fasta_files=[],
                 fasta_capture_type="whole",
-                max_indel_size=50, min_target_size=150, genome_coverage=1000,
+                max_indel_size=50, min_target_size=150, genome_coverage=250,
                 genome_identity=100, local_coverage=100, local_identity=100,
                 targets_rinfo_template=("/opt/resources/templates/"
                                         "rinfo_templates/template_rinfo.txt"),

@@ -52,8 +52,7 @@ From: amd64/ubuntu:20.04
     alien \
     unzip \
     tree \
-    pandoc \
-    texlive-xetex texlive-fonts-recommended texlive-generic-recommended
+    pandoc
 
     # set environment locale
     echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
@@ -141,7 +140,8 @@ From: amd64/ubuntu:20.04
       "gatk4" \
       "freebayes" \
       "lastz" \
-      "plotly"
+      "plotly" \
+      "texlive-core"
 
     # install vt variant tool set
     cd /opt/programs

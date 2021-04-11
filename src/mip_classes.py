@@ -1450,6 +1450,7 @@ class Paralog(Locus):
         outfile.close()
         with open(summary_file, "w") as outfile:
             outfile.write("\n".join(summary_list) + "\n")
+        print("\n".join(summary_list) + "\n")
         self.locus_info = locus_info
         return
 

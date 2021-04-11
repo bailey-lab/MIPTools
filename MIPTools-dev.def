@@ -51,7 +51,8 @@ From: amd64/ubuntu:20.04
     libcurl4-gnutls-dev \
     alien \
     unzip \
-    tree
+    tree \
+    pandoc
 
     # set environment locale
     echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
@@ -92,11 +93,11 @@ From: amd64/ubuntu:20.04
 
     # install conda packages using mamba
     mamba install -qy\
-      "r-epitools" \
-      "r" \
-      "rpy2" \
+      "gxx_linux-64" \
       "python" \
       "notebook" \
+      "nbconvert" \
+      "jupyter_contrib_nbextensions" \
       "xlrd" \
       "bcftools" \
       "samtools" \
@@ -108,7 +109,6 @@ From: amd64/ubuntu:20.04
       "primer3-py" \
       "numpy" \
       "scipy" \
-      "biopython" \
       "pysam" \
       "pandas" \
       "matplotlib" \
@@ -123,52 +123,19 @@ From: amd64/ubuntu:20.04
       "scikit-allel" \
       "bioconductor-dnacopy" \
       "basemap-data-hires" \
-      "seqtk=1.3"
-
-
+      "seqtk=1.3" \
+      "freebayes" \
+      "lastz" \
+      "plotly" \
+      "texlive-core"
 
     # install vt variant tool set
     cd /opt/programs
     git clone https://github.com/atks/vt.git
     cd vt
+    git checkout 0.577
     make -j $CPU_COUNT
     scp vt /opt/bin
-
-
-    # install lastZ
-    cd /opt/programs/lastz/src
-    make lastz_32 && install lastz_32 /usr/bin/
-
-    # install freebayes
-    cd /opt/bin
-    freebayes_ver="v1.3.1"
-    freebayes_file=freebayes-$freebayes_ver
-    wget https://github.com/ekg/freebayes/releases/download/$freebayes_ver/$freebayes_file
-    mv $freebayes_file freebayes
-
-    # install MIPWrangler
-    cd /opt/programs
-    git clone https://github.com/bailey-lab/MIPWrangler
-    cd MIPWrangler
-    git checkout v1.2.0
-    ./install.sh $CPU_COUNT
-
-    # install elucidator
-    cd /opt/programs
-    git clone https://github.com/nickjhathaway/elucidator
-    cd elucidator
-    git checkout develop
-    ./install.sh $CPU_COUNT
-
-    # install gatk
-    gatk_ver="4.1.4.1"
-    gatk_dir=/opt/programs/gatk-$gatk_ver
-    gatk_filename=gatk-$gatk_ver".zip"
-    cd /opt/programs
-    wget https://github.com/broadinstitute/gatk/releases/download/$gatk_ver/$gatk_filename
-    unzip $gatk_filename
-    rm $gatk_filename
-    mv gatk-$gatk_ver gatk
 
     # install parasight
     scp /opt/programs/parasight_v7.6/parasight.pl /opt/bin/parasight76.pl
@@ -179,8 +146,7 @@ From: amd64/ubuntu:20.04
 
 
     # create work and resources directories in /opt
-    mkdir /opt/resources \
-        /opt/work \
+    mkdir /opt/work \
         /opt/project_resources \
         /opt/species_resources \
         /opt/data \
@@ -193,6 +159,7 @@ From: amd64/ubuntu:20.04
     programs /opt
     bin /opt
     src /opt
+    base_resources/ /opt/resources
 
 %environment
     path=/opt/bin:/opt/conda/bin:/opt/programs/MIPWrangler/bin:
@@ -230,6 +197,14 @@ From: amd64/ubuntu:20.04
     echo $port_fw
     port_fw="ssh -N -f -L localhost:$nb_port:$server_ip:$nb_port $server_user"
     echo $port_fw
+
+    jupyter nbextension enable plotlywidget/extension
+    jupyter nbextension enable toc2/main
+    jupyter nbextension enable codefolding/main
+    jupyter nbextension enable highlighter/highlighter
+    jupyter nbextension enable keyboard_shortcut_editor/main
+    jupyter nbextension enable spellchecker/main
+
     jupyter notebook --notebook-dir=$nb_dir --ip=$server_ip \
             --port=$nb_port --no-browser
 
@@ -271,7 +246,7 @@ From: amd64/ubuntu:20.04
               echo "Invalid option. Use 'wrangler \
               -e experiment_id -l sample_list.file -p  probe_sets\
               -s sample_sets -w cluster_script -n server_number \
-              -c  cpu_count -x additional_stitch_options'  \
+              -c  cpu_count -x stitch_options'  \
               -m min_capture_length [-k]"
         esac
     done
@@ -279,8 +254,7 @@ From: amd64/ubuntu:20.04
     -e $experiment_id -l /opt/analysis/$sample_list \
     -p $probe_sets -s $sample_sets -w $cluster_script -n $server_number \
     -c $cpu_count -x $stitch_options -m $min_capture_length $keep_files
-    script_name=$sample_sets"_"$(echo $probe_sets|tr "," "_")".sh"
-    . /opt/analysis/$script_name
+    . /opt/analysis/wrangle.sh
 
 %apprun download
     set -e
