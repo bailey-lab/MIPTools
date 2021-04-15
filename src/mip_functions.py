@@ -4804,7 +4804,7 @@ def get_haplotype_counts(settings):
         for m in call_info[g]:
             if m in used_probes:
                 for c in call_info[g][m]["copies"]:
-                    call_dict = {"MIP": m, "copy": c}
+                    call_dict = {"MIP": m, "Copy": c}
                     call_df_list.append(pd.DataFrame(call_dict, index=[0]))
     call_df = pd.concat(call_df_list, ignore_index=True, sort=True)
 
@@ -4819,6 +4819,12 @@ def get_haplotype_counts(settings):
                                              "Copy"],
                                     values=["Barcode Count"],
                                     aggfunc=np.sum)
+    # Sample name for probes without data would be NA and replaced to 0
+    # remove that if it exists
+    try:
+        barcode_counts.drop(0, inplace=True)
+    except KeyError:
+        pass
     print("There are {} samples with sequence data".format(
         barcode_counts.shape[0]
     ))
