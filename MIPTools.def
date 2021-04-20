@@ -351,6 +351,8 @@ From: amd64/ubuntu:20.04
     cd /opt/data
     # create a fastq directory for saving fastqs
     mkdir -p /opt/analysis/fastq
+    # copy sample list to fastq directory
+    scp $sample_list /opt/analysis/fastq/samples.tsv
     # increase limit of open number of files.
     ulimit -Sn $(ulimit -Hn)
     nohup bcl2fastq -o /opt/analysis/fastq \
