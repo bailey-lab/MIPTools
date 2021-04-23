@@ -31,19 +31,25 @@ find $fastq_dirs -name '*_R1*' -printf '%f\n'|cut -d_ -f1 |sort|uniq > \
      sample_ids.txt
 
 
-if [ $parallel > 1 ]
+if command -v parallel &> /dev/null
 then
-	cat sample_ids.txt |parallel -I samplename find $fastq_dirs \
-	    -name samplename'*_R1_*' -exec cat '{}' + '>' samplename_R1_001.fastq.gz
-	cat sample_ids.txt |parallel -I samplename find $fastq_dirs \
-	    -name samplename'*_R2_*' -exec cat '{}' + '>' samplename_R2_001.fastq.gz
+  cat sample_ids.txt |parallel -I samplename -j $parallel find \
+      $fastq_dirs -name samplename'*_R1_*' -exec cat '{}' + '>' \
+      samplename_R1_001.fastq.gz
+  cat sample_ids.txt |parallel -I samplename -j $parallel find \
+      $fastq_dirs -name samplename'*_R2_*' -exec cat '{}' + '>' \
+      samplename_R2_001.fastq.gz
 else
-while read samplename; do
-    find $fastq_dirs -name ${samplename}'*_R1_*' |xargs cat > \
-        ${samplename}_R1_001.fastq.gz
-    find $fastq_dirs -name ${samplename}'*_R2_*' |xargs cat > \
-        ${samplename}_R2_001.fastq.gz
-done < sample_ids.txt
+  if [ $parallel > 1 ]
+    then
+      echo "'parallel' program is not available. A single cpu will be used!"
+  fi
+  while read samplename; do
+      find $fastq_dirs -name ${samplename}'*_R1_*' |xargs cat > \
+          ${samplename}_R1_001.fastq.gz
+      find $fastq_dirs -name ${samplename}'*_R2_*' |xargs cat > \
+          ${samplename}_R2_001.fastq.gz
+  done < sample_ids.txt
 fi
 find $fastq_dirs -name '*_samples.tsv' -exec scp '{}' . ';'
 cat *_samples.tsv> "concatenated_samples.tsv"
