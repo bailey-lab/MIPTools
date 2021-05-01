@@ -341,7 +341,7 @@ def update_rinfo_file(rinfo_file, update_file, output_file):
 def get_target_coordinates(res_dir, species, capture_size,
                            coordinates_file=None, snps_file=None,
                            genes_file=None):
-    """ Extract MIP target coordinates from provided files. """
+    """Extract MIP target coordinates from provided files."""
     capture_types = {}
     # Get target coordinates specified as genomic coordinates
     if coordinates_file is None:
@@ -481,7 +481,7 @@ def get_target_coordinates(res_dir, species, capture_size,
 
 
 def merge_coordinates(coordinates, capture_size):
-    """ Merge overlapping coordinates for MIP targets.
+    """Merge overlapping coordinates for MIP targets.
 
     Parameters
     ----------

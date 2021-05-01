@@ -100,7 +100,7 @@ def region_prep(design_name, species, host_species=None, processor_number=7,
         snp_end = snp["end"]
         snp_chrom = snp["chrom"]
         snp["name"] = s
-        snp["size_difference"] = snp["InsertionLength"]
+        snp["size_difference"] = snp["MaxInsertionLength"]
         for t in final_target_regions:
             for i in range(len(final_target_regions[t])):
                 r = final_target_regions[t][i]
