@@ -4,7 +4,7 @@ MIPTools is a suit of computational tools that are used for molecular inversion 
 ## Installation
 ### Dependencies
 A working copy of Singularity is required: https://www.sylabs.io/docs/  
-Singularity is best installed with **sudo**. While it is said to be possible to install with unpriveledged user with some features missing, MIPTools hasn't been tested on such an installation.
+Singularity is best installed with **sudo**. While it is said to be possible to install with unprivileged user with some features missing, MIPTools hasn't been tested on such an installation.
 Singularity is available for most Linux systems. It is also possible to install and use on Mac OS using virtual machines with a little bit of extra work.
 
 Note: Snap package install is a rapid way to install the go language required by Singularity (e.g. on Ubuntu/Debian: `sudo snap install go --classic`)
@@ -19,11 +19,11 @@ Please note that this pre-build version does not include bcl2fastq software due 
 #### Alternatively, build MIPTools from the definition file
 MIPTools can also be built from scratch using the definition file provided in this GitHub repository.
 
-This method of creating the MIPTools container would give you the latest version. It can take about 10-30 minutes to build, depending on number of cpu cores available.  
+This method of creating the MIPTools container would give you the latest version. It can take about 10-30 minutes to build, depending on number of CPU cores available.  
 
-By default, build process is going to use 6 CPU cores. This should pose no problem with most modern computers, but if the computer used for building the container has less then 6 cpu cores available, change the "CPU_COUNT=6" value at the top of the MIPTools.def file to a suitable number before running the following code. On the other hand, if you have access to more CPU power, by all means, use them by setting the same parameter to a higher value.
+By default, build process is going to use 6 CPU cores. This should pose no problem with most modern computers, but if the computer used for building the container has less then 6 CPU cores available, change the "CPU_COUNT=6" value at the top of the MIPTools.def file to a suitable number before running the following code. On the other hand, if you have access to more CPU power, by all means, use them by setting the same parameter to a higher value.
 
-You must have **sudo** privelege to _build_ the image. You do not need sudo to _use_ the image. So if you want to run the container on an environment without sudo, either download a prebuilt image (see above) or build the container on your own machine where you _do_ have sudo privilege and copy the image file to the computer without sudo. Note that Singularity program itself must have been installed with sudo.  
+You must have **sudo** privilege to _build_ the image. You do not need sudo to _use_ the image. So if you want to run the container on an environment without sudo, either download a prebuilt image (see above) or build the container on your own machine where you _do_ have sudo privilege and copy the image file to the computer without sudo. Note that Singularity program itself must have been installed with sudo.  
 
 Clone the repository with:
 ```bash
@@ -103,7 +103,7 @@ data_dir and analysis_dir will have different content for different apps/operati
 <br>
 
 ## Resource requirements
-Resources required vary widely depending on the project. Both designs and data analysis can be parallelized, so the more cpus you have the better. Plenty of storage is also  recommended. For designs on large target regions (>5kb), files can take up 10 GB or more per region. Consider allocating > 5 GB RAM for a large design region (multiply the RAM requirement by cpu number if parallelizing). For a typical MIP data analysis involving ~1000 MIPs and ~1000 samples, consider using at least 20 cpus, 20 GB RAM to get the analysis done within 10-12 h. You should expect ~200 GB disk space used for such an analysis as well, although most files can be removed after processing steps to reduce long term disk usage.
+Resources required vary widely depending on the project. Both designs and data analysis can be parallelized, so the more CPUs you have the better. Plenty of storage is also  recommended. For designs on large target regions (>5kb), files can take up 10 GB or more per region. Consider allocating > 5 GB RAM for a large design region (multiply the RAM requirement by CPU number if parallelizing). For a typical MIP data analysis involving ~1000 MIPs and ~1000 samples, consider using at least 20 CPUs, 20 GB RAM to get the analysis done within 10-12 h. You should expect ~200 GB disk space used for such an analysis as well, although most files can be removed after processing steps to reduce long term disk usage.
 
 ## Further documentation
 Further documentation for MIPTools is available [here](https://drive.google.com/drive/folders/1Tmu7hdRYrdw-jqAN35lZpIjG2lBebuCK?usp=sharing) for various use cases (MIP design, data analysis, etc.)
