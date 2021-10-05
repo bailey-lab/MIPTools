@@ -57,19 +57,20 @@ def main(platform, stats_dir):
                                     columns=sample_sheet_list[0])
         sample_sheet["Sample_ID"] = sample_sheet["Sample_ID"].astype(int)
         sample_sheet = sample_sheet.rename(
-            columns={"Sample_ID": "SampleNumber", "Sample_Name": "Sample ID"})
+            columns = {"Sample_ID": "SampleNumber", "Sample_Name": "Sample ID"})
         sample_sums = fsums.groupby(["SampleNumber", "Lane"], as_index=False)[
             ["NumberOfReadsRaw", "NumberOfReadsPF"]].sum()
         sample_sums = sample_sums.merge(sample_sheet)
-        sample_sums.to_csv(os.path.join(stats_dir, "PerSampleReadCounts.csv"),
-                           index=False)
+        sample_sums.to_csv(
+            os.path.join(stats_dir, "PerSampleReadCounts.csv"),
+            index = False)
     except IOError:
         pass
     # Print out read number summary.
     fsums = fsums[["NumberOfReadsRaw", "NumberOfReadsPF", "Lane"]].groupby(
         "Lane").sum().reset_index()
     print(("Total number of raw reads and reads passing filter were "
-           "{0[NumberOfReadsRaw]} and {0[NumberOfReadsPF]}, "
+           "{0[NumberOfReadsRaw]:,} and {0[NumberOfReadsPF]:,}, "
            "respectively.").format(
         fsums.sum()
     ))
@@ -87,7 +88,7 @@ def main(platform, stats_dir):
     # separate 999 values which do not correspond to our indexes
     caught = dsums.loc[(dsums["Fw"] != 999)
                        & (dsums["Rev"] != 999)]
-    print(("There were {} undetermined reads. {} of these belong to "
+    print(("There were {:,} undetermined reads. {:,} of these belong to "
           "possible primer pairs.").format(dsums["Read Count"].sum(),
                                            caught["Read Count"].sum()))
     dsums.to_csv(os.path.join(stats_dir, "UndeterminedIndexSummary.csv"))
