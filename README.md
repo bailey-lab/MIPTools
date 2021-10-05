@@ -25,16 +25,16 @@ By default, build process is going to use 6 CPU cores. This should pose no probl
 
 You must have **sudo** privelege to _build_ the image. You do not need sudo to _use_ the image. So if you want to run the container on an environment without sudo, either download a prebuilt image (see above) or build the container on your own machine where you _do_ have sudo privilege and copy the image file to the computer without sudo. Note that Singularity program itself must have been installed with sudo.  
 
-Clone the repository with:
+You can install the most recent release using the following:
 ```bash
-git clone git@github.com:bailey-lab/MIPTools.git
+# Install stable version
+git clone https://github.com/bailey-lab/MIPTools.git
 ```
 
-
-Some computers, such as servers/clusters managed by IT departments, may have restrictions on ports which may lead to a permission error for the above command. **If the above command fails**, try the command below.
-
+You can alternatively install the development version:
 ```bash
-git clone https://github.com/bailey-lab/MIPTools.git
+# Install dev version
+git clone --b v1.0.0 https://github.com/bailey-lab/MIPTools.git
 ```
 
 bcl2fastq software is not included in the container by default due to its license. You will not need bcl2fastq if you are not planning to download your sequencing data in bcl format and do your own demultiplexing. Only if you plan to use MIPTools to demultiplex bcl files, please download the program and place it in the `MIPTools/programs` directory. Currently, you can download it from [here](https://support.illumina.com/downloads/bcl2fastq-conversion-software-v2-20.html), but it may change in the future. You must download the file: **bcl2fastq2 Conversion Software v2.20 Installer (Linux rpm)**. 
