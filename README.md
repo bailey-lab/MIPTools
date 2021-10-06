@@ -7,7 +7,7 @@ probe design, data processing, and analysis.
 ## Installation
 
 ### Dependencies
-A working copy of Singularity is required: https://www.sylabs.io/docs/
+A working copy of Singularity is required: https://www.sylabs.io/docs/.
 Singularity is best installed with **sudo**. While it is said to be possible to
 install with unpriveledged user with some features missing, MIPTools hasn't
 been tested on such an installation.
@@ -54,14 +54,14 @@ been installed with sudo.
 
 You can install the most recent release using the following:
 ```bash
-# Install stable version
-git clone https://github.com/bailey-lab/MIPTools.git
+# Install stable version v1.0.0
+git clone --b v1.0.0 https://github.com/bailey-lab/MIPTools.git
 ```
 
 You can alternatively install the development version:
 ```bash
 # Install dev version
-git clone --b v1.0.0 https://github.com/bailey-lab/MIPTools.git
+git clone https://github.com/bailey-lab/MIPTools.git
 ```
 
 Note that the bcl2fastq software is not included in the container by default
