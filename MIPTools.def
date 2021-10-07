@@ -86,7 +86,7 @@ From: amd64/ubuntu:20.04
         $CONDA_DIR/bin/conda config --add channels r && \
         $CONDA_DIR/bin/conda config --system --set show_channel_urls true && \
         $CONDA_DIR/bin/conda install --quiet --yes conda="${MINICONDA_VERSION%.*}.*" && \
-        conda clean -tipsy
+        conda clean --all -f -y
 
     # install mamba
     conda install mamba -c conda-forge
