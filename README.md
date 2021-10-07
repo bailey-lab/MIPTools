@@ -9,7 +9,7 @@ probe design, data processing, and analysis.
 ### Dependencies
 A working copy of Singularity is required: https://www.sylabs.io/docs/.
 Singularity is best installed with **sudo**. While it is said to be possible to
-install with unpriveledged user with some features missing, MIPTools hasn't
+install with unprivileged user with some features missing, MIPTools hasn't
 been tested on such an installation.
 
 Singularity is available for most Linux systems. It is also possible to install
