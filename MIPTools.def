@@ -1,9 +1,20 @@
 Bootstrap: docker
 From: amd64/ubuntu:20.04
 
+##################################################################
+##                        Labels Section                        ##
+##################################################################
+%labels
+    Author Bailey Lab
+    Version v1.0.0.9000
+
+##################################################################
+##                         Post Section                         ##
+##################################################################
 %post
     # set number of cpus to use in build
     CPU_COUNT=20
+
     # set build environment
     export DEBIAN_FRONTEND=noninteractive \
         CONDA_DIR=/opt/conda \
@@ -179,7 +190,6 @@ From: amd64/ubuntu:20.04
     chmod -R +xr /usr/bin
     chmod -R +xr /opt/bin
 
-
     # create work and resources directories in /opt
     mkdir /opt/work \
         /opt/project_resources \
@@ -189,13 +199,18 @@ From: amd64/ubuntu:20.04
         /opt/host_species \
         /opt/extras
 
-
+#################################################################
+##                        Files Section                        ##
+#################################################################
 %files
     programs /opt
     bin /opt
     src /opt
     base_resources/ /opt/resources
 
+#################################################################
+##                     Environment Section                     ##
+#################################################################
 %environment
     path=/opt/bin:/opt/conda/bin:/opt/programs/MIPWrangler/bin:
     path=$path/opt/programs/elucidator/bin:/opt/programs/gatk:
@@ -207,13 +222,21 @@ From: amd64/ubuntu:20.04
     export LANGUAGE="en_US.UTF-8"
     export LC_ALL="en_US.UTF-8"
 
+#################################################################
+##                         Jupyter App                         ##
+#################################################################
 %apprun jupyter
+    # Modify shell behavior
     set -e
     set -u
+
+    # Port forwarding setup
     nb_port=$(shuf -i 8000-9999 -n 1)
     server_ip=$(hostname -i)
     server_user=$(whoami)@$(hostname -f)
     nb_dir=/opt
+
+    # Parse options
     while getopts p:d: OPT; do
         case "$OPT" in
             p)
@@ -225,14 +248,19 @@ From: amd64/ubuntu:20.04
                    -d to specify notebook directory."
         esac
     done
+
+    # Save templates
     rsync /opt/resources/*.ipynb /opt/analysis --ignore-existing \
         --ignore-missing-args
+
+    # Inform the user how to acess the notebook    
     port_fw="Use the following command if you are running this notebook from "
     port_fw=$port_fw"a remote server. Ignore if using a local computer."
     echo $port_fw
     port_fw="ssh -N -f -L localhost:$nb_port:$server_ip:$nb_port $server_user"
     echo $port_fw
 
+    # Setup juptyr notebook settings
     jupyter nbextension enable plotlywidget/extension
     jupyter nbextension enable toc2/main
     jupyter nbextension enable codefolding/main
@@ -240,19 +268,27 @@ From: amd64/ubuntu:20.04
     jupyter nbextension enable keyboard_shortcut_editor/main
     jupyter nbextension enable spellchecker/main
 
+    # Run notebook
     jupyter notebook --notebook-dir=$nb_dir --ip=$server_ip \
             --port=$nb_port --no-browser
 
+##################################################################
+##                         Wrangler App                         ##
+##################################################################
 %apprun wrangler
+    # Modify shell behavior
     set -e
     set -u
-    # set defaults
+    
+    # Set defaults
     cluster_script="runMIPWranglerCurrent.sh"
     server_number=1
     cpu_count=1
     min_capture_length="none"
     stitch_options="none"
     keep_files=""
+
+    # Parse options
     while getopts p:l:e:s:w:n:c:x:m:k OPT; do
         case "$OPT" in
             e)
@@ -285,13 +321,23 @@ From: amd64/ubuntu:20.04
               -m min_capture_length [-k]"
         esac
     done
+
+    # Create wrangler bash scripts using python
     python /opt/src/generate_wrangler_scripts.py \
     -e $experiment_id -l /opt/analysis/$sample_list \
     -p $probe_sets -s $sample_sets -w $cluster_script -n $server_number \
     -c $cpu_count -x $stitch_options -m $min_capture_length $keep_files
+
+    # Run wrangler scripts.
+    # The dot space is used to let the sourced script modify the current
+    # environment. If this is not needed, can just write the path.
     . /opt/analysis/wrangle.sh
 
+##################################################################
+##                         Download App                         ##
+##################################################################
 %apprun download
+    # Parse options
     set -e
     set -u
     while getopts r: opt; do
@@ -308,17 +354,28 @@ From: amd64/ubuntu:20.04
                 exit 1;;
         esac
     done
+
+    # Print to CLI
     echo "Downloading NextSeq run $run_id from BaseSpace."
     echo "Depending on the data size, this can take very long (up to 10 h)"
     echo "It is recommended to run this app in a screen (GNU screen)."
     echo "A message indicating the end of download will be printed when done."
     echo "Check nohup.out file in your output directory for the download log."
+    
+    # cd and run app
+    # Use nohup to make command keep running even if get hangup signal
     cd /opt/analysis
     nohup python /opt/bin/BaseSpaceRunDownloader_v2.py \
      -r $run_id -a "$(cat /opt/resources/access_token.txt)"
+
+    # Print to CLI 
     echo "Download finished."
 
+#################################################################
+##                          Demux App                          ##
+#################################################################
 %apprun demux
+    # Parse options
     set -e
     set -u
     while getopts s:p: opt; do
@@ -336,7 +393,8 @@ From: amd64/ubuntu:20.04
                 exit 1;;
         esac
     done
-    # create a sample sheet for demultiplexing
+
+    # Define variables
     cd /opt/src
     template_dir="/opt/resources/templates/sample_sheet_templates/"
     platform_template="$platform"_sample_sheet_template.csv
@@ -344,22 +402,35 @@ From: amd64/ubuntu:20.04
     bc_dict="/opt/resources/barcode_dict.json"
     output_dir="/opt/analysis"
     sample_list="/opt/analysis/$sample_list"
+    
+    # Create a sample sheet for demultiplexing
     python -c 'import mip_functions as mip; mip.generate_sample_sheet(
         "'"$sample_list"'", "'"$bc_dict"'", "'"$template"'", "'"$platform"'",
         "'"$output_dir"'")'
+
     # cd to where bcl files are.
     cd /opt/data
-    # create a fastq directory for saving fastqs
+    
+    # Create a fastq directory for saving fastqs
     mkdir -p /opt/analysis/fastq
-    # copy sample list to fastq directory
+    
+    # Copy sample list to fastq directory
     scp $sample_list /opt/analysis/fastq/
-    # increase limit of open number of files.
+    
+    # Increase limit of open number of files.
     ulimit -Sn $(ulimit -Hn)
+    
+    # Run bcl2fastq
+    # Use nohup to make command keep running even if get hangup signal
     nohup bcl2fastq -o /opt/analysis/fastq \
         --sample-sheet /opt/analysis/SampleSheet.csv \
         --no-lane-splitting
 
+##################################################################
+##                         Demux QC App                         ##
+##################################################################
 %apprun demux_qc
+    # Parse options
     set -e
     set -u
     while getopts p: opt; do
@@ -372,4 +443,6 @@ From: amd64/ubuntu:20.04
                 exit 1;;
         esac
     done
+
+    # Run app
     python /opt/src/demux_qc.py -p $platform
