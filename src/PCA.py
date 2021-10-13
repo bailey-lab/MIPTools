@@ -1,3 +1,5 @@
+"""Contains functions required for variant calling and PCA analysis"""
+
 import numpy as np
 from sklearn import decomposition
 from itertools import cycle
