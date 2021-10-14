@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 
 def call_genotypes(count_table, coverage_table, min_count,
                    min_coverage, min_freq):
+    """Calls genotypes filtered by tallies and calculates prevalences""" 
     # filter mutation counts for minimum count parameter
     # by setting counts to zero if it is below threshold
     filtered_mutation_counts = count_table.applymap(
@@ -41,6 +42,7 @@ def call_genotypes(count_table, coverage_table, min_count,
 def filter_variants(variant_table, sample_drop=None, variant_drop=None,
                     variant_filters=None, impute_func=None, remove_zero=False):
     variant_table = variant_table.sort_index(axis=1)
+    """Filters variants, imputes missing values, and prints summary"""
     # filter variants that have 0 frequency across all samples
     if remove_zero:
         allele_sums = variant_table.sum(axis=0)
@@ -100,6 +102,7 @@ def plot_PCA(variant_table, n_components=3, meta_data=None, hue_column=None,
                          'tab:purple', 'tab:brown', 'tab:pink', 'tab:gray',
                          'tab:olive', 'tab:cyan'), scatter_size=15,
              fontsize=16, fig_size=(4, 12), fig_dpi=150):
+    """Perform principal component analysis (PCA) and plots results""" 
     # PCA and plot first 3 components
     pca = decomposition.PCA(n_components=n_components)
     pca.fit(variant_table)
