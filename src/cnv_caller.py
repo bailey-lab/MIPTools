@@ -1,3 +1,5 @@
+"""Contains a suite of functions for copy number variation"""
+
 import copy
 import numpy as np
 import matplotlib.pyplot as plt
