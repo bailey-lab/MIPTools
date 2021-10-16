@@ -37,9 +37,10 @@ on:
 
 # Set path to definition file
 env:
-  DEF_PATH: Singularity
+  DEF_PATH: MIPTools.def
 
 jobs:
+  # Check if def file exists
   check-file-existence:
     runs-on: ubuntu-latest
     steps:
@@ -52,6 +53,7 @@ jobs:
           files: ${{ env.DEF_PATH }}
           allow_failure: true
 
+  # Determine tag for github package
   generate-tag:
     runs-on: ubuntu-latest
     outputs:
@@ -82,6 +84,7 @@ jobs:
           echo "::set-output name=tag::${{ env.TAG }}"
           echo "Tag is ${{ env.TAG }}"
 
+  # Build the container
   build-container:
     needs: [check-file-existence, generate-tag]
     runs-on: ubuntu-latest
@@ -147,6 +150,8 @@ jobs:
           echo ${{ secrets.GITHUB_TOKEN }} | singularity remote login -u ${{ secrets.GHCR_USERNAME }} --password-stdin oras://ghcr.io
           singularity push container.sif oras://ghcr.io/${GITHUB_REPOSITORY}:${{ needs.generate-tag.outputs.tag }}
 
+  # This does not work because we need singularity installed on the worker
+  # to login and deploy to github
   # deploy-container:
   #   needs: [check-file-existence, generate-tag, build-container]
   #   runs-on: ubuntu-latest
@@ -156,3 +161,9 @@ jobs:
   #       uses: actions/download-artifact@v2
   #       with:
   #         name: container
+  #
+  #     - name: Login and deploy container
+  #      if: github.event_name != 'pull_request'
+  #      run: |
+  #        echo ${{ secrets.GITHUB_TOKEN }} | singularity remote login -u ${{ secrets.GHCR_USERNAME }} --password-stdin oras://ghcr.io
+  #        singularity push container.sif oras://ghcr.io/${GITHUB_REPOSITORY}:${{ needs.generate-tag.outputs.tag }}
