@@ -7,3 +7,5 @@ miptools/
 build_logs/
 src/__pycache__/
 base_resources/.ipynb_checkpoints/
+
+.pre-commit-config.yaml
