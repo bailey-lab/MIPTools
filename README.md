@@ -24,11 +24,9 @@ by Singularity (e.g. on Ubuntu/Debian: `sudo snap install go --classic`)
 A recent version of MIPTools container, built and ready to use, can be
 downloaded [here](http://baileylab.brown.edu/MIPTools/resources/).
 
-Please note that this pre-build version does not include bcl2fastq software due
-to its license. If you plan to use MIPTools to demultiplex bcl files, then
-please built the container yourself as described in the next section. You will
-not need bcl2fastq if you are not planning to download your sequencing data in
-bcl format and do your own demultiplexing.
+Note that this pre-built version does not include `bcl2fastq` software due
+to its license. If you plan to use MIPTools to demultiplex bcl files,
+you must build the container yourself as described in the next section.
 
 #### Alternatively, build MIPTools from the definition file
 MIPTools can also be built from scratch using the definition file provided in
@@ -52,6 +50,15 @@ your own machine where you _do_ have sudo privilege and copy the image file to
 the computer without sudo. Note that the Singularity program itself must have
 been installed with sudo.
 
+If you plan to use MIPTools to demultiplex bcl files,
+you should download `bcl2fastq` separately.
+Currently, you can download
+it from
+[here](https://support.illumina.com/downloads/bcl2fastq-conversion-software-v2-20.html),
+but this may change in the future. You must download the file: **`bcl2fastq2
+Conversion Software v2.20 Installer (Linux rpm)`**
+and place it in the `MIPTools/programs` directory.
+
 You can install the most recent release using the following:
 ```bash
 # Install stable version v1.0.0
@@ -63,16 +70,6 @@ You can alternatively install the development version:
 # Install dev version
 git clone https://github.com/bailey-lab/MIPTools.git
 ```
-
-Note that the bcl2fastq software is not included in the container by default
-due to its license. You will not need bcl2fastq if you are not planning to
-download your sequencing data in bcl format and do your own demultiplexing. If
-you plan to use MIPTools to demultiplex bcl files, please download the program
-and place it in the `MIPTools/programs` directory. Currently, you can download
-it from
-[here](https://support.illumina.com/downloads/bcl2fastq-conversion-software-v2-20.html),
-but it may change in the future. You must download the file: **`bcl2fastq2
-Conversion Software v2.20 Installer (Linux rpm)`**.
 
 Build the container.  
 ```bash
