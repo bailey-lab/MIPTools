@@ -8,32 +8,35 @@ on:
         required: true
         default: "dev"
 
-  # Trigger on push
-  # Only triggers if anything in src/, bin/, programs/, a .ipynb file, or a .def
-  # file at the root of the repo changes
-  push:
-    branches: [main, master]
-    paths:
-      - "src/**"
-      - "bin/**"
-      - "programs/**"
-      - "*.def"
-      - "**.ipynb"
+  # TODO: Uncomment the following lines of code when we have reduced the memory
+  # usage of MIPTools.
+  # Github issue: https://github.com/bailey-lab/MIPTools/issues/9
+  # # Trigger on push
+  # # Only triggers if anything in src/, bin/, programs/, a .ipynb file, or a .def
+  # # file at the root of the repo changes
+  # push:
+  #   branches: [main, master]
+  #   paths:
+  #     - "src/**"
+  #     - "bin/**"
+  #     - "programs/**"
+  #     - "*.def"
+  #     - "**.ipynb"
 
-  # Trigger on PR
-  # Only triggers if anything in src/, bin/, programs/, a .ipynb file, or a .def
-  # file at the root of the repo changes
-  pull_request:
-    paths:
-      - "src/**"
-      - "bin/**"
-      - "programs/**"
-      - "*.def"
-      - "**.ipynb"
+  # # Trigger on PR
+  # # Only triggers if anything in src/, bin/, programs/, a .ipynb file, or a .def
+  # # file at the root of the repo changes
+  # pull_request:
+  #   paths:
+  #     - "src/**"
+  #     - "bin/**"
+  #     - "programs/**"
+  #     - "*.def"
+  #     - "**.ipynb"
 
-  # Trigger on published release
-  release:
-    types: [published]
+  # # Trigger on published release
+  # release:
+  #   types: [published]
 
 # Set path to definition file
 env:
