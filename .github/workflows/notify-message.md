@@ -11,5 +11,5 @@ Steps to deploy:
 ```bash
 singularity remote login
 singularity sign miptools.sif
-singularity push miptools.sif library://apascha1/MIPTools/miptools:{tag}
+singularity push miptools.sif library://apascha1/miptools/miptools:{tag}
 ```
