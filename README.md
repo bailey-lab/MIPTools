@@ -1,7 +1,6 @@
 # MIPTools
 
-[![Build
-Singularity](https://github.com/bailey-lab/MIPTools/actions/workflows/build-container.yaml/badge.svg)](https://github.com/bailey-lab/MIPTools/actions/workflows/build-container.yaml)
+[![Build Singularity](https://github.com/bailey-lab/MIPTools/actions/workflows/build-container.yaml/badge.svg)](https://github.com/bailey-lab/MIPTools/actions/workflows/build-container.yaml)
 ![GitHub release (latest
 SemVer)](https://img.shields.io/github/v/release/bailey-lab/MIPTools)
 ![GitHub](https://img.shields.io/github/license/bailey-lab/MIPTools)
@@ -21,35 +20,43 @@ tested on such an installation.
 Singularity is available for most Linux systems. It is also possible to install
 and use on Mac OS using virtual machines with a little bit of extra work.
 
-Note: Snap package install is a rapid way to install the go language required
-by Singularity (e.g. on Ubuntu/Debian: `sudo snap install go --classic`)
+Note that the `snap` package is a rapid way to install the go language required
+by Singularity (e.g. on Ubuntu/Debian: `sudo snap install go --classic`).
 
-### Obtaining MIPTools program
+### Obtaining MIPTools
 
-#### Download container
+#### Download prebuilt container
 
-A recent version of MIPTools container, built and ready to use, can be
-downloaded [here](http://baileylab.brown.edu/MIPTools/resources/).
+The MIPTools container, built and ready to use, can be
+downloaded from the [Sylabs Cloud](https://cloud.sylabs.io/). You can download
+either the development version or the most recent stable release:
 
-Note that this pre-built version does not include `bcl2fastq` software due
-to its license. If you plan to use MIPTools to demultiplex bcl files,
-you must build the container yourself as described in the next section.
+```bash
+# Download the development version
+# The development version is updated every two weeks
+singularity pull library://apascha1/miptools/miptools:dev
 
-#### Alternatively, build MIPTools from the definition file
+# Download the latest stable release
+singularity pull library://apascha1/miptools/miptools:v1.0.0
+```
 
-MIPTools can also be built from scratch using the definition file provided in
-this GitHub repository.
+Note that these prebuilt versions do not include the `bcl2fastq` software due
+to its license. If you plan to use MIPTools to demultiplex bcl files, you must
+build the container yourself.
 
-This method of creating the MIPTools container would give you the latest
-version. It can take about 10-30 minutes to build, depending on the number of
-CPU cores available.
+#### Install from source
 
-By default, the build process will use 6 CPU cores. This should pose no problem
-with most modern computers, but if the computer used for building the container
-has less then 6 cpu cores available, change the `"CPU_COUNT=6"` value at the
-top of the `MIPTools.def` file to a suitable number before running the
-following code. On the other hand, if you have access to more CPU power, by all
-means, use them by setting the same parameter to a higher value.
+MIPTools can also be built from source code using the definition file provided
+in this [GitHub repository](https://github.com/bailey-lab/MIPTools).
+
+The process can take about 10-30 minutes to build, depending on the number of
+CPU cores available. By default, the build process will use 6 CPU cores. This
+should pose no problems with most modern computers, but if the computer used
+for building the container has less then 6 cpu cores available, change the
+`"CPU_COUNT=6"` value at the top of the `MIPTools.def` file to a suitable
+number before running the following code. On the other hand, if you have access
+to more CPU power, by all means, use them by setting the same parameter to a
+higher value.
 
 You must have **sudo** privelege to _build_ the image. You do not need sudo to
 _use_ the image. So if you want to run the container on an environment without
@@ -58,13 +65,11 @@ your own machine where you _do_ have sudo privilege and copy the image file to
 the computer without sudo. Note that the Singularity program itself must have
 been installed with sudo.
 
-If you plan to use MIPTools to demultiplex bcl files,
-you should download `bcl2fastq` separately.
-Currently, you can download
-it from
+If you plan to use MIPTools to demultiplex bcl files, you should download
+`bcl2fastq` separately. Currently, you can download it from
 [here](https://support.illumina.com/downloads/bcl2fastq-conversion-software-v2-20.html),
-but this may change in the future. You must download the file: **`bcl2fastq2 Conversion Software v2.20 Installer (Linux rpm)`**
-and place it in the `MIPTools/programs` directory.
+but this may change in the future. You must download the file: **`bcl2fastq2 Conversion Software v2.20 Installer (Linux rpm)`** and place it in the
+`MIPTools/programs` directory.
 
 You can install the most recent release using the following:
 
@@ -80,7 +85,8 @@ You can alternatively install the development version:
 git clone https://github.com/bailey-lab/MIPTools.git
 ```
 
-Build the container.
+Next, simply build the container and you should be all set to get started using
+MIPTools!
 
 ```bash
 cd MIPTools
@@ -97,7 +103,7 @@ Although `miptools.sif` contains all programs needed, it does not include the
 data to be analyzed or other resources to be used. Every time we run
 Singularity we will **bind** needed directories to the container. There are
 three resources directories which are required for most operations. In addition
-to those, some apps need a `data_dir` and `analysis_dir`. **`-B`** option is
+to those, some apps need a `data_dir` and `analysis_dir`. The **`-B`** option is
 used for each binding:
 
 ```bash
@@ -109,15 +115,14 @@ directory is and the right side is the location in the container where the
 directory should be bound (mounted) to. You should only change the left side of
 the column according to the location of the resource you are providing, and
 should _never_ change the path on the right side. Each binding is specified
-with a separate -B option. See below for examples.
+with a separate `-B` option. See below for examples.
 
 ### Directory Structure
 
 Three resource directories are required for most operations. These live outside
 the container and must be **bound** to the container at run time with the `-B`
-option.
-
-In addition, a data directory and an analysis directory will be used for most
+option. In addition, a data directory and an analysis directory will be used for
+most
 operations.
 
 <details><summary>Expand for details on the directory structure and container
@@ -243,7 +248,7 @@ long term disk usage.
 
 Further documentation for MIPTools is available
 [here](https://drive.google.com/drive/folders/1Tmu7hdRYrdw-jqAN35lZpIjG2lBebuCK?usp=sharing)
-for various use cases (MIP design, data analysis, etc.)
+for various use cases (MIP design, data analysis, etc.).
 
 ## Troubleshooting
 
