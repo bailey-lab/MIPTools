@@ -6,32 +6,17 @@ on:
   workflow_dispatch:
 
 jobs:
-  comment_on_issue:
-    name: Comment on issue
+  notify-maintainers:
     runs-on: ubuntu-latest
     permissions:
       issues: write
     steps:
-      - name: Open issue
-        uses: actions-cool/issues-helper@v2
-        with:
-          actions: "open-issue"
-          token: ${{ secrets.GITHUB_TOKEN }}
-          issue-number: 12
+      - uses: actions/checkout@v2
 
-      - name: Create comment
-        uses: actions-cool/issues-helper@v2
-        with:
-          actions: "create-comment"
-          token: ${{ secrets.GITHUB_TOKEN }}
-          issue-number: 12
-          body: |
-            Please build the container and deploy it to the Sylabs Cloud. It has been two weeks since the last reminder.
-
-
-            Steps to deploy:
-            ```bash
-            singularity remote login
-            singularity sign container.sif
-            singularity push container.sif library://apascha1/MIPTools/MIPTools:{tag}
-            ```
+      - name: Notify maintainers
+        run: |
+          gh issue reopen ${{ env.ISSUE_NUMBER }}
+          gh issue comment ${{ env.ISSUE_NUMBER }} -F .github/workflows/notify-message.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: 12
