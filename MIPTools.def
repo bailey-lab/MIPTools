@@ -347,15 +347,26 @@ From: amd64/ubuntu:20.04
     output_path="/opt/analysis"
     config_path="/opt/resources/basespace.cfg"
 
-                echo "           -B /path_to_output_dir:/opt/analysis \\"
-                echo "           -B /path_to_base_resources:/opt/resources \\"
-                echo "            mycontainer.sif -r my_Illumina_run_ID"
-                echo "An 'access_token.txt' file with a valid access token is "
-                echo "required. It must be present in base_resources directory."
-                echo "A data directory where the data will be downloaded to"
-                echo "must be mounted to /opt/data."
-                exit 1;;
-        esac
+    help() {
+        echo "Download data from the Illumina BaseSpace Sequence Hub"
+        echo ""
+        echo "Usage:"
+        echo "  singularity run [options] --app bs_download <container>"\
+        "[app_options]"
+        echo ""
+        echo "Options:"
+        echo "  See 'singularity run'"
+        echo ""
+        echo "App Options:"
+        echo "  -i    Required. The run ID of the data to download."
+        echo "  -o    The path to the output directory."
+        echo "        Default: '/opt/analysis'."
+        echo "  -c    The path to the authentication credentials file."
+        echo "        This file is created by 'bs auth'. For additional"
+        echo "        information see the help page for that command."
+        echo "        Default: '/opt/resources/basespace.cfg'."
+        echo "  -h    Print the help page."
+    }
     
     # Argument handling using getopts
     # Could alternatively use manual processing. This would allow for longer
@@ -365,6 +376,10 @@ From: amd64/ubuntu:20.04
         i) run_id=${OPTARG} ;;
         o) ouput_path=${OPTARG} ;;
         c) config_path="${OPTARG}" ;;
+        h) help
+           exit 1 ;;
+        *) help
+           exit 1 ;;
       esac
     done
     
