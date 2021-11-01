@@ -348,14 +348,14 @@ From: amd64/ubuntu:20.04
     config_path="/opt/resources/basespace.cfg"
 
     help() {
-        echo "Download data from the Illumina BaseSpace Sequence Hub"
+        echo "Download data from the Illumina BaseSpace Sequence Hub."
         echo ""
         echo "Usage:"
         echo "  singularity run [options] --app bs_download <container>"\
         "[app_options]"
         echo ""
         echo "Options:"
-        echo "  See 'singularity run'"
+        echo "  See 'singularity run'."
         echo ""
         echo "App Options:"
         echo "  -i    Required. The run ID of the data to download."
@@ -366,11 +366,22 @@ From: amd64/ubuntu:20.04
         echo "        information see the help page for that command."
         echo "        Default: '/opt/resources/basespace.cfg'."
         echo "  -h    Print the help page."
+        echo ""
+        echo "Examples:"
+        echo "  # Set paths"
+        echo "  $ resource_dir=/bin/MIPTools/base_resources"
+        echo "  $ run_dir=/work/usr/example"
+        echo ""
+        echo "  # Run app"
+        echo "  $ singularity run \\"
+        echo "    -B \$resource_dir:/opt/resources"\
+        "-B \$run_dir:/opt/analysis \\"
+        echo "    --app bs_download <container> -i <run_id>"
     }
     
     # Argument handling using getopts
-    # Could alternatively use manual processing. This would allow for longer
-    # formed inputs.
+    # Could alternatively use manual processing. This would allow for long
+    # form inputs.
     while getopts 'i:o:c:h' opt; do
       case "${opt}" in
         i) run_id=${OPTARG} ;;
