@@ -338,16 +338,15 @@ From: amd64/ubuntu:20.04
     . /opt/analysis/wrangle.sh
 
 ##################################################################
-##                         Download App                         ##
+##                    Basespace Download App                    ##
 ##################################################################
-%apprun download
-    # Parse options
+%apprun bs_download
     set -e
-    set -u
-    while getopts r: opt; do
-        case $opt in
-            r)  run_id=$OPTARG;;
-            ?)  echo "Usage: singularity run --app download \\"
+
+    # Set default values for paths
+    output_path="/opt/analysis"
+    config_path="/opt/resources/basespace.cfg"
+
                 echo "           -B /path_to_output_dir:/opt/analysis \\"
                 echo "           -B /path_to_base_resources:/opt/resources \\"
                 echo "            mycontainer.sif -r my_Illumina_run_ID"
@@ -357,23 +356,31 @@ From: amd64/ubuntu:20.04
                 echo "must be mounted to /opt/data."
                 exit 1;;
         esac
-    done
-
-    # Print to CLI
-    echo "Downloading NextSeq run $run_id from BaseSpace."
-    echo "Depending on the data size, this can take very long (up to 10 h)"
-    echo "It is recommended to run this app in a screen (GNU screen)."
-    echo "A message indicating the end of download will be printed when done."
-    echo "Check nohup.out file in your output directory for the download log."
     
-    # cd and run app
-    # Use nohup to make command keep running even if get hangup signal
-    cd /opt/analysis
-    nohup python /opt/bin/BaseSpaceRunDownloader_v2.py \
-     -r $run_id -a "$(cat /opt/resources/access_token.txt)"
+    # Argument handling using getopts
+    # Could alternatively use manual processing. This would allow for longer
+    # formed inputs.
+    while getopts 'i:o:c:' opt; do
+      case "${opt}" in
+        i) run_id=${OPTARG} ;;
+        o) ouput_path=${OPTARG} ;;
+        c) config_path="${OPTARG}" ;;
+      esac
+    done
+    
+    # Ensure run_id is specified
+    if [ ! "$run_id" ]; then
+      echo "Argument -i must be provided"
+      echo "$usage" >&2; exit 1
+    fi
 
-    # Print to CLI 
-    echo "Download finished."
+    # Read data from config file
+    # Remove whitespace from each line and export each line as a variable
+    export BASESPACE_API_SERVER=$(sed '1q;d' ${config_path} | sed 's/.*=.//g')
+    export BASESPACE_ACCESS_TOKEN=$(sed '2q;d' ${config_path} | sed 's/.*=.//g')
+
+    # Download data
+    bs download run -i ${run_id} -o ${output_path}
 
 #################################################################
 ##                          Demux App                          ##
