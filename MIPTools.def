@@ -371,7 +371,7 @@ From: amd64/ubuntu:20.04
     # Argument handling using getopts
     # Could alternatively use manual processing. This would allow for longer
     # formed inputs.
-    while getopts 'i:o:c:' opt; do
+    while getopts 'i:o:c:h' opt; do
       case "${opt}" in
         i) run_id=${OPTARG} ;;
         o) ouput_path=${OPTARG} ;;
