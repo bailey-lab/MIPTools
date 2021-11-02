@@ -341,6 +341,7 @@ From: amd64/ubuntu:20.04
 ##                    Basespace Download App                    ##
 ##################################################################
 %apprun bs_download
+    # Exit if something fails
     set -e
 
     # Set default values for paths
@@ -382,11 +383,11 @@ From: amd64/ubuntu:20.04
     # Argument handling using getopts
     # Could alternatively use manual processing. This would allow for long
     # form inputs.
-    while getopts 'i:o:c:h' opt; do
+    while getopts "i:o:c:h" opt; do
       case "${opt}" in
         i) run_id=${OPTARG} ;;
         o) ouput_path=${OPTARG} ;;
-        c) config_path="${OPTARG}" ;;
+        c) config_path=${OPTARG} ;;
         h) help
            exit 1 ;;
         *) help
@@ -395,15 +396,16 @@ From: amd64/ubuntu:20.04
     done
     
     # Ensure run_id is specified
-    if [ ! "$run_id" ]; then
+    if [ ! $run_id ]; then
       echo "Argument -i must be provided"
-      echo "$usage" >&2; exit 1
+      echo "$usage" >&2
+      exit 1
     fi
 
     # Read data from config file
     # Remove whitespace from each line and export each line as a variable
-    export BASESPACE_API_SERVER=$(sed '1q;d' ${config_path} | sed 's/.*=.//g')
-    export BASESPACE_ACCESS_TOKEN=$(sed '2q;d' ${config_path} | sed 's/.*=.//g')
+    export BASESPACE_API_SERVER=$(sed "1q;d" ${config_path} | sed "s/.*=.//g")
+    export BASESPACE_ACCESS_TOKEN=$(sed "2q;d" ${config_path} | sed "s/.*=.//g")
 
     # Download data
     bs download run -i ${run_id} -o ${output_path}
