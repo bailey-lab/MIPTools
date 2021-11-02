@@ -422,7 +422,6 @@ From: amd64/ubuntu:20.04
             s)  sample_list=$OPTARG;;
             p)  platform=$OPTARG;;
             ?)  echo "Usage: singularity run --app demux \\"
-                echo "           -B /path_to_run_dir:/opt/data \\"
                 echo "           -B /path_to_output_dir:/opt/analysis \\"
                 echo "           -B /path_to_base_resources:/opt/resources \\"
                 echo "            mycontainer.sif -s sample_list_file \\"
@@ -448,7 +447,7 @@ From: amd64/ubuntu:20.04
         "'"$output_dir"'")'
 
     # cd to where bcl files are.
-    cd /opt/data
+    cd /opt/analysis
     
     # Create a fastq directory for saving fastqs
     mkdir -p /opt/analysis/fastq
