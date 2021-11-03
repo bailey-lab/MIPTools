@@ -430,19 +430,46 @@ From: amd64/ubuntu:20.04
 ##                         Demux QC App                         ##
 ##################################################################
 %apprun demux_qc
-    # Parse options
-    set -e
-    set -u
-    while getopts p: opt; do
-        case $opt in
-            p)  platform=$OPTARG;;
-            ?)  echo "Usage: singularity run --app demux_qc\\"
-                echo "           -B /path_to_base_resources:/opt/resources \\"
-                echo "           -B /path_to_fastq_dir:/opt/analysis "
-                echo "            mycontainer.sif -p sequencing_platform"
-                exit 1;;
+    # Exit if something fails or if have unset object
+    set -eu
+
+    help() {
+        echo "Run quality control on demultiplexed data."
+        echo ""
+        echo "Usage:"
+        echo "  singularity run [options] --app demux_qc <container>"\
+        "[app_options]"
+        echo ""
+        echo "Options:"
+        echo "  See 'singularity run'."
+        echo ""
+        echo "App Options:"
+        echo "  -p    Required. The sequencing platform used. Either 'miseq'"
+        echo "        or 'nextseq'."
+        echo "  -h    Print the help page."
+        echo ""
+        echo "Examples:"
+        echo "  # Set paths"
+        echo "  $ resource_dir=/bin/MIPTools/base_resources"
+        echo "  $ fastq_dir=/work/usr/example"
+        echo ""
+        echo "  # Run app"
+        echo "  $ singularity run \\"
+        echo "    -B \$resource_dir:/opt/resources"\
+        "-B \$fastq_dir:/opt/analysis \\"
+        echo "    --app demux_qc <container> -p nextseq"
+    }
+
+    # Argument handling
+    while getopts "p:h" opt; do
+        case ${opt} in
+            p) platform=${OPTARG} ;;
+            h) help
+               exit 1 ;;
+            *) help
+               exit 1 ;;
         esac
     done
 
-    # Run app
-    python /opt/src/demux_qc.py -p $platform
+    # Run python script
+    python /opt/src/demux_qc.py -p ${platform}

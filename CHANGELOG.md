@@ -13,6 +13,7 @@
 
 ### Documentation Overhaul
 
+- Add better documentation for the `demux_qc` app.
 - Add doc-strings to python functions.
 - Improve clarity of README and add additional instructions on downloading or
   building the container.
