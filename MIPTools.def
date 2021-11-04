@@ -375,47 +375,78 @@ From: amd64/ubuntu:20.04
 ##                          Demux App                          ##
 #################################################################
 %apprun demux
-    # Parse options
-    set -e
-    set -u
-    while getopts s:p: opt; do
-        case $opt in
-            s)  sample_list=$OPTARG;;
-            p)  platform=$OPTARG;;
-            ?)  echo "Usage: singularity run --app demux \\"
-                echo "           -B /path_to_run_dir:/opt/data \\"
-                echo "           -B /path_to_output_dir:/opt/analysis \\"
-                echo "           -B /path_to_base_resources:/opt/resources \\"
-                echo "            mycontainer.sif -s sample_list_file \\"
-                echo "            -p sequencing_platform (nextseq or miseq) \\"
-                echo "The sample list file must be present in the output"
-                echo "directory mounted to /opt/analysis."
-                exit 1;;
+    # Exit if something fails or if have unset object
+    set -eu
+
+    help() {
+        echo "Demultiplex data. Generates per-sample fastq files from the raw" 
+        echo "sequence data consisting of bcl files."
+        echo ""
+        echo "Usage:"
+        echo "  singularity run [options] --app demux <container> [app_options]"
+        echo ""
+        echo "Options:"
+        echo "  See 'singularity run'."
+        echo ""
+        echo "App Options:"
+        echo "  -s    Required. The list of samples. Contains the samples used"
+        echo "        in the study, the primers used, etc. This file must be "
+        echo "        present in the directory mounted to '/opt/analysis'."
+        echo "  -p    Required. The sequencing platform used. Either 'miseq'"
+        echo "        or 'nextseq'."
+        echo "  -h    Print the help page."
+        echo ""
+        echo "Examples:"
+        echo "  # Set paths"
+        echo "  $ resource_dir=/bin/MIPTools/base_resources"
+        echo "  $ bcl_dir=/work/usr/downloaded"
+        echo "  $ fastq_dir=/work/usr/fastq"
+        echo ""
+        echo "  # Run app"
+        echo "  $ singularity run \\"
+        echo "    -B \${resource_dir}:/opt/resources \\"
+        echo "    -B \${bcl_dir}:/opt/data \\"
+        echo "    -B \${fastq_dir}:/opt/analysis \\"
+        echo "    --app demux <container> -s sample_list.tsv -p nextseq"
+    }
+
+    while getopts "s:p:h" opt; do
+        case ${opt} in
+            s) sample_list=${OPTARG} ;;
+            p) platform=${OPTARG} ;;
+            h) help
+               exit 1 ;;
+            *) help
+               exit 1 ;;
         esac
     done
 
     # Define variables
     cd /opt/src
     template_dir="/opt/resources/templates/sample_sheet_templates/"
-    platform_template="$platform"_sample_sheet_template.csv
-    template="$template_dir$platform_template"
+    platform_template="${platform}"_sample_sheet_template.csv
+    template="${template_dir}${platform_template}"
     bc_dict="/opt/resources/barcode_dict.json"
     output_dir="/opt/analysis"
-    sample_list="/opt/analysis/$sample_list"
+    sample_list="/opt/analysis/${sample_list}"
     
     # Create a sample sheet for demultiplexing
     python -c 'import mip_functions as mip; mip.generate_sample_sheet(
-        "'"$sample_list"'", "'"$bc_dict"'", "'"$template"'", "'"$platform"'",
-        "'"$output_dir"'")'
+        "'"${sample_list}"'", 
+        "'"${bc_dict}"'", 
+        "'"${template}"'", 
+        "'"${platform}"'", 
+        "'"${output_dir}"'"
+    )'
 
-    # cd to where bcl files are.
+    # cd to where bcl files are
     cd /opt/data
     
     # Create a fastq directory for saving fastqs
     mkdir -p /opt/analysis/fastq
     
     # Copy sample list to fastq directory
-    scp $sample_list /opt/analysis/fastq/
+    scp ${sample_list} /opt/analysis/fastq/
     
     # Increase limit of open number of files.
     ulimit -Sn $(ulimit -Hn)
@@ -455,8 +486,8 @@ From: amd64/ubuntu:20.04
         echo ""
         echo "  # Run app"
         echo "  $ singularity run \\"
-        echo "    -B \$resource_dir:/opt/resources"\
-        "-B \$fastq_dir:/opt/analysis \\"
+        echo "    -B \${resource_dir}:/opt/resources"\
+        "-B \${fastq_dir}:/opt/analysis \\"
         echo "    --app demux_qc <container> -p nextseq"
     }
 
