@@ -186,6 +186,10 @@ From: amd64/ubuntu:20.04
     # install parasight
     scp /opt/programs/parasight_v7.6/parasight.pl /opt/bin/parasight76.pl
 
+    # install basespace cli
+    BS_PATH="https://launch.basespace.illumina.com/CLI/latest/amd64-linux/bs"
+    wget $BS_PATH -O /opt/bin/bs
+
     # add executable flag to executables
     chmod -R +xr /usr/bin
     chmod -R +xr /opt/bin
@@ -334,88 +338,122 @@ From: amd64/ubuntu:20.04
     . /opt/analysis/wrangle.sh
 
 ##################################################################
-##                         Download App                         ##
+##                    Basespace Download App                    ##
 ##################################################################
-%apprun download
-    # Parse options
+%apprun bs_download
+    # Exit if something fails
     set -e
-    set -u
-    while getopts r: opt; do
-        case $opt in
-            r)  run_id=$OPTARG;;
-            ?)  echo "Usage: singularity run --app download \\"
-                echo "           -B /path_to_output_dir:/opt/analysis \\"
-                echo "           -B /path_to_base_resources:/opt/resources \\"
-                echo "            mycontainer.sif -r my_Illumina_run_ID"
-                echo "An 'access_token.txt' file with a valid access token is "
-                echo "required. It must be present in base_resources directory."
-                echo "A data directory where the data will be downloaded to"
-                echo "must be mounted to /opt/data."
-                exit 1;;
-        esac
-    done
 
-    # Print to CLI
-    echo "Downloading NextSeq run $run_id from BaseSpace."
-    echo "Depending on the data size, this can take very long (up to 10 h)"
-    echo "It is recommended to run this app in a screen (GNU screen)."
-    echo "A message indicating the end of download will be printed when done."
-    echo "Check nohup.out file in your output directory for the download log."
+    # Set default values for paths
+    output_path="/opt/analysis"
+    config_path="/opt/resources/basespace.cfg"
+
+    help() {
+        echo "Download data from the Illumina BaseSpace Sequence Hub."
+        echo ""
+        echo "Usage:"
+        echo "  singularity run [options] --app bs_download <container>"\
+        "[app_options]"
+        echo ""
+        echo "Options:"
+        echo "  See 'singularity run'."
+        echo ""
+        echo "App Options:"
+        echo "  -i    Required. The run ID of the data to download."
+        echo "  -o    The path to the output directory."
+        echo "        Default: '/opt/analysis'."
+        echo "  -c    The path to the authentication credentials file."
+        echo "        This file is created by 'bs auth'. For additional"
+        echo "        information see the help page for that command."
+        echo "        Default: '/opt/resources/basespace.cfg'."
+        echo "  -h    Print the help page."
+        echo ""
+        echo "Examples:"
+        echo "  # Set paths"
+        echo "  $ resource_dir=/bin/MIPTools/base_resources"
+        echo "  $ run_dir=/work/usr/example"
+        echo ""
+        echo "  # Run app"
+        echo "  $ singularity run \\"
+        echo "    -B \$resource_dir:/opt/resources"\
+        "-B \$run_dir:/opt/analysis \\"
+        echo "    --app bs_download <container> -i <run_id>"
+    }
     
-    # cd and run app
-    # Use nohup to make command keep running even if get hangup signal
-    cd /opt/analysis
-    nohup python /opt/bin/BaseSpaceRunDownloader_v2.py \
-     -r $run_id -a "$(cat /opt/resources/access_token.txt)"
+    # Argument handling using getopts
+    # Could alternatively use manual processing. This would allow for long
+    # form inputs.
+    while getopts "i:o:c:h" opt; do
+      case "${opt}" in
+        i) run_id=${OPTARG} ;;
+        o) ouput_path=${OPTARG} ;;
+        c) config_path=${OPTARG} ;;
+        h) help
+           exit 1 ;;
+        *) help
+           exit 1 ;;
+      esac
+    done
+    
+    # Ensure run_id is specified
+    if [ ! $run_id ]; then
+      echo "Argument -i must be provided"
+      echo "$usage" >&2
+      exit 1
+    fi
 
-    # Print to CLI 
-    echo "Download finished."
+    # Read data from config file
+    # Remove whitespace from each line and export each line as a variable
+    export BASESPACE_API_SERVER=$(sed "1q;d" ${config_path} | sed "s/.*=.//g")
+    export BASESPACE_ACCESS_TOKEN=$(sed "2q;d" ${config_path} | sed "s/.*=.//g")
+
+    # Download data
+    bs download run -i ${run_id} -o ${output_path}
 
 #################################################################
 ##                          Demux App                          ##
 #################################################################
 %apprun demux
-    # Parse options
-    set -e
-    set -u
-    while getopts s:p: opt; do
-        case $opt in
-            s)  sample_list=$OPTARG;;
-            p)  platform=$OPTARG;;
+    # Exit if something fails or if have unset object
+    set -eu
+
+    while getopts "s:p:" opt; do
+        case ${opt} in
+            s)  sample_list=${OPTARG} ;;
+            p)  platform=${OPTARG} ;;
             ?)  echo "Usage: singularity run --app demux \\"
-                echo "           -B /path_to_run_dir:/opt/data \\"
                 echo "           -B /path_to_output_dir:/opt/analysis \\"
                 echo "           -B /path_to_base_resources:/opt/resources \\"
                 echo "            mycontainer.sif -s sample_list_file \\"
                 echo "            -p sequencing_platform (nextseq or miseq) \\"
                 echo "The sample list file must be present in the output"
                 echo "directory mounted to /opt/analysis."
-                exit 1;;
+                exit 1 ;;
         esac
     done
 
     # Define variables
     cd /opt/src
     template_dir="/opt/resources/templates/sample_sheet_templates/"
-    platform_template="$platform"_sample_sheet_template.csv
-    template="$template_dir$platform_template"
+    platform_template="${platform}"_sample_sheet_template.csv
+    template="${template_dir}${platform_template}"
     bc_dict="/opt/resources/barcode_dict.json"
     output_dir="/opt/analysis"
-    sample_list="/opt/analysis/$sample_list"
+    sample_list="/opt/analysis/${sample_list}"
     
     # Create a sample sheet for demultiplexing
     python -c 'import mip_functions as mip; mip.generate_sample_sheet(
         "'"$sample_list"'", "'"$bc_dict"'", "'"$template"'", "'"$platform"'",
         "'"$output_dir"'")'
 
-    # cd to where bcl files are.
-    cd /opt/data
+    # cd to where bcl files are
+    cd /opt/analysis
     
     # Create a fastq directory for saving fastqs
     mkdir -p /opt/analysis/fastq
     
     # Copy sample list to fastq directory
-    scp $sample_list /opt/analysis/fastq/
+    scp ${sample_list} /opt/analysis/fastq/
     
     # Increase limit of open number of files.
     ulimit -Sn $(ulimit -Hn)
