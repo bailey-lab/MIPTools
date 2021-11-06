@@ -226,9 +226,8 @@ From: amd64/ubuntu:20.04
 ##                         Jupyter App                         ##
 #################################################################
 %apprun jupyter
-    # Modify shell behavior
-    set -e
-    set -u
+    # Exit if something fails or if have unset object
+    set -eu
 
     # Port forwarding setup
     nb_port=$(shuf -i 8000-9999 -n 1)
@@ -236,16 +235,49 @@ From: amd64/ubuntu:20.04
     server_user=$(whoami)@$(hostname -f)
     nb_dir=/opt
 
+    help() {
+        echo "Open an interactive Jupyter Notebook. The notebook can be used"
+        echo "for post-wrangler mapping and variant calling." 
+        echo ""
+        echo "Usage:"
+        echo "  singularity run [options] --app jupyter <container>"\
+        "[app_options]"
+        echo ""
+        echo "Options:"
+        echo "  See 'singularity run'."
+        echo ""
+        echo "App Options:"
+        echo "  -d    The port to be used to load the Jupyter Notebook."
+        echo "  -h    Print the help page."
+        echo "  -p    The notebook directory."
+        echo ""
+        echo "Examples:"
+        echo "  # Set paths"
+        echo "  $ resource_dir=/bin/MIPTools/base_resources"
+        echo "  $ project_resources=/work/usr/DR1_project_resources"
+        echo "  $ species_resources=/work/usr/pf_species_resources"
+        echo "  $ wrangler_dir=/work/usr/wrangler"
+        echo "  $ variant_dir=/work/usr/variant"
+        echo ""
+        echo "  # Run app"
+        echo "  $ singularity run \\"
+        echo "    -B \${resource_dir}:/opt/resources \\"
+        echo "    -B \${project_resources}:/opt/project_resources \\"
+        echo "    -B \${species_resources}:/opt/species_resources \\"
+        echo "    -B \${wrangler_dir}:/opt/data \\"
+        echo "    -B \${variant_dir}:/opt/analysis \\"
+        echo "    --app jupyter <container>"
+    }
+
     # Parse options
-    while getopts p:d: OPT; do
-        case "$OPT" in
-            p)
-              nb_port="$OPTARG";;
-            d)
-              nb_dir="$OPTARG";;
-            *)
-              echo "Invalid option. Use -p to specify notebook port \
-                   -d to specify notebook directory."
+    while getopts "d:hp:" opt; do
+        case ${opt} in
+            d) nb_dir=${OPTARG} ;;
+            h) help
+               exit 1 ;;
+            p) nb_port=${OPTARG} ;;
+            *) help
+               exit 1 ;;
         esac
     done
 
@@ -253,12 +285,11 @@ From: amd64/ubuntu:20.04
     rsync /opt/resources/*.ipynb /opt/analysis --ignore-existing \
         --ignore-missing-args
 
-    # Inform the user how to acess the notebook    
-    port_fw="Use the following command if you are running this notebook from "
-    port_fw=$port_fw"a remote server. Ignore if using a local computer."
-    echo $port_fw
-    port_fw="ssh -N -f -L localhost:$nb_port:$server_ip:$nb_port $server_user"
-    echo $port_fw
+    # Inform the user how to access the notebook 
+    echo "Use the following command if you are running this notebook from a"
+    echo "remote server. Ignore if using a local computer."
+    echo "ssh -f -N -L localhost:${nb_port}:${server_ip}:${nb_port}"\
+    "${server_user}"
 
     # Setup juptyr notebook settings
     jupyter nbextension enable plotlywidget/extension
@@ -269,8 +300,8 @@ From: amd64/ubuntu:20.04
     jupyter nbextension enable spellchecker/main
 
     # Run notebook
-    jupyter notebook --notebook-dir=$nb_dir --ip=$server_ip \
-            --port=$nb_port --no-browser
+    jupyter notebook --notebook-dir=${nb_dir} --ip=${server_ip} \
+            --port=${nb_port} --no-browser
 
 ##################################################################
 ##                         Wrangler App                         ##
