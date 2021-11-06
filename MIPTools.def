@@ -358,19 +358,19 @@ From: amd64/ubuntu:20.04
 
     # Parse options
     while getopts "c:e:hkl:m:n:p:s:w:x:" opt; do
-        case "${opt}" in
-            c) cpu_count="${OPTARG}" ;;
-            e) experiment_id="${OPTARG}" ;;
+        case ${opt} in
+            c) cpu_count=${OPTARG} ;;
+            e) experiment_id=${OPTARG} ;;
             h) help
                exit 1 ;;
-            k) keep_files="-k" ;;
-            l) sample_list="${OPTARG}" ;;
-            m) min_capture_length="${OPTARG}" ;;
-            n) server_number="${OPTARG}" ;;
-            p) probe_sets="${OPTARG}" ;;
-            s) sample_sets="${OPTARG}" ;;
-            w) cluster_script="${OPTARG}" ;;
-            x) stitch_options="${OPTARG}" ;;
+            k) keep_files=-k ;;
+            l) sample_list=${OPTARG} ;;
+            m) min_capture_length=${OPTARG} ;;
+            n) server_number=${OPTARG} ;;
+            p) probe_sets=${OPTARG} ;;
+            s) sample_sets=${OPTARG} ;;
+            w) cluster_script=${OPTARG} ;;
+            x) stitch_options=${OPTARG} ;;
             *) help
                exit 1 ;;
         esac
@@ -406,8 +406,8 @@ From: amd64/ubuntu:20.04
         echo "  See 'singularity run'."
         echo ""
         echo "App Options:"
-        echo "  -r    Required. The run ID of the data to download."
         echo "  -h    Print the help page."
+        echo "  -r    Required. The run ID of the data to download."
         echo ""
         echo "Additional Details:"
         echo "  An 'access_token.txt' file with a valid access token is"
@@ -427,11 +427,11 @@ From: amd64/ubuntu:20.04
         echo "    --app download <container> -r <run_id>"
     }
 
-    while getopts "r:h" opt; do
+    while getopts "hr:" opt; do
         case ${opt} in
-            r) run_id=${OPTARG} ;;
             h) help
                exit 1 ;;
+            r) run_id=${OPTARG} ;;
             *) help
                exit 1 ;;
         esac
@@ -471,12 +471,12 @@ From: amd64/ubuntu:20.04
         echo "  See 'singularity run'."
         echo ""
         echo "App Options:"
+        echo "  -h    Print the help page."
+        echo "  -p    Required. The sequencing platform used. Either 'miseq'"
+        echo "        or 'nextseq'."
         echo "  -s    Required. The list of samples. Contains the samples used"
         echo "        in the study, the primers used, etc. This file must be "
         echo "        present in the directory mounted to '/opt/analysis'."
-        echo "  -p    Required. The sequencing platform used. Either 'miseq'"
-        echo "        or 'nextseq'."
-        echo "  -h    Print the help page."
         echo ""
         echo "Examples:"
         echo "  # Set paths"
@@ -492,12 +492,12 @@ From: amd64/ubuntu:20.04
         echo "    --app demux <container> -s sample_list.tsv -p nextseq"
     }
 
-    while getopts "s:p:h" opt; do
+    while getopts "hp:s:" opt; do
         case ${opt} in
-            s) sample_list=${OPTARG} ;;
-            p) platform=${OPTARG} ;;
             h) help
                exit 1 ;;
+            p) platform=${OPTARG} ;;
+            s) sample_list=${OPTARG} ;;
             *) help
                exit 1 ;;
         esac
@@ -557,9 +557,9 @@ From: amd64/ubuntu:20.04
         echo "  See 'singularity run'."
         echo ""
         echo "App Options:"
+        echo "  -h    Print the help page."
         echo "  -p    Required. The sequencing platform used. Either 'miseq'"
         echo "        or 'nextseq'."
-        echo "  -h    Print the help page."
         echo ""
         echo "Examples:"
         echo "  # Set paths"
@@ -574,11 +574,11 @@ From: amd64/ubuntu:20.04
     }
 
     # Argument handling
-    while getopts "p:h" opt; do
+    while getopts "hp:" opt; do
         case ${opt} in
-            p) platform=${OPTARG} ;;
             h) help
                exit 1 ;;
+            p) platform=${OPTARG} ;;
             *) help
                exit 1 ;;
         esac
