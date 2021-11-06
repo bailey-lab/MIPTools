@@ -1,9 +1,10 @@
 # MIPTools
 
 [![Build Singularity](https://github.com/bailey-lab/MIPTools/actions/workflows/build-container.yaml/badge.svg)](https://github.com/bailey-lab/MIPTools/actions/workflows/build-container.yaml)
+[![Documentation Status](https://readthedocs.org/projects/miptools/badge/?version=latest)](https://miptools.readthedocs.io/en/latest/?badge=latest)
 ![GitHub release (latest
 SemVer)](https://img.shields.io/github/v/release/bailey-lab/MIPTools)
-![GitHub](https://img.shields.io/github/license/bailey-lab/MIPTools)
+![License](https://img.shields.io/github/license/bailey-lab/MIPTools)
 
 MIPTools is a suite of computational tools that are used for molecular
 inversion probe design, data processing, and analysis.
