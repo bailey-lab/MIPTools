@@ -12,7 +12,7 @@ Singularity is best installed with **sudo**. While it is said to be possible to
 install with unprivileged user with some features missing, MIPTools hasn't been
 tested on such an installation.
 
-Singularity is available for most Linux systems. It is also possible to install
+Singularity is available for most Linux systems including high-performance clusters. It is also possible to install
 and use on Mac OS using virtual machines with a little bit of extra work.
 
 Note that the :code:`snap` package is a rapid way to install the go language
