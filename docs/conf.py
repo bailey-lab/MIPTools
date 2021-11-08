@@ -20,6 +20,7 @@
 project = "MIPTools"
 copyright = "2021, Bailey Lab"
 author = "Bailey Lab"
+version = "v0.4.0.9000"
 
 
 # -- General configuration ---------------------------------------------------
@@ -51,3 +52,10 @@ html_theme = "sphinx_rtd_theme"
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
+
+html_context = {
+    "display_github": True,
+    "github_user": "bailey-lab",
+    "github_repo": "MIPTools",
+    "github_version": "master/docs/",
+}
