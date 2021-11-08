@@ -1,7 +1,7 @@
 # MIPTools
 
 [![Build Singularity](https://github.com/bailey-lab/MIPTools/actions/workflows/build-container.yaml/badge.svg)](https://github.com/bailey-lab/MIPTools/actions/workflows/build-container.yaml)
-[![Documentation Status](https://readthedocs.org/projects/miptools/badge/?version=latest)](https://miptools.readthedocs.io/en/latest/?badge=latest)
+[![Deploy Docs](https://github.com/bailey-lab/MIPTools/actions/workflows/deploy-docs.yaml/badge.svg)](https://github.com/bailey-lab/MIPTools/actions/workflows/deploy-docs.yaml)
 ![GitHub release (latest
 SemVer)](https://img.shields.io/github/v/release/bailey-lab/MIPTools)
 ![License](https://img.shields.io/github/license/bailey-lab/MIPTools)
