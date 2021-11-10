@@ -1,6 +1,6 @@
 ---
 name: Feature Request
-about: Suggest an idea or feature
+about: Suggest an idea or feature.
 title: ""
 labels: "feature :sparkles:"
 assignees: ""
