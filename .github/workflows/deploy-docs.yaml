@@ -6,6 +6,10 @@ on:
     branches: [main, master]
     paths:
       - "docs/**"
+  pull_request:
+    branches: [main, master]
+    paths:
+      - "docs/**"
 
 jobs:
   deploy-docs:
@@ -55,4 +59,4 @@ jobs:
         with:
           branch: gh-pages
           folder: docs/_build/html
-          commit-message: Update documentation from latest commit
+          commit-message: Update docs site
