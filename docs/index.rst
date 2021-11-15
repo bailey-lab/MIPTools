@@ -13,6 +13,12 @@ inversion probe design, data processing, and analysis.
    installation
    quick_start
 
+.. toctree::
+  :caption: Glossary
+  :maxdepth: 1
+
+  files-generated
+
 Need Help?
 ----------
 
