@@ -7,7 +7,7 @@ import argparse
 
 def main(platform, stats_dir):
     """Generate demultiplexing statistics after a sequencing run."""
-    bc_dict = "/opt/resources/barcode_dict.json"
+    bc_dict = "/opt/resources/sample_prep/barcode_dict.pickle"
 
     # load barcode dict to be passed to the header-primer conversion function
     with open(bc_dict, "rb") as infile:
