@@ -176,8 +176,13 @@ for p_name in probe_sets:
                "/opt/project_resources/mip_ids/mip_info.json").format(
                    arm_file, p_name))
         try:
+            # generate the probe arm file from the mip info file
             probe_summary_generator.generate_mip_arms_file(
                 p_name, probe_sets_file=mipset_table)
+            # load the arm file generated
+            with open(arm_file) as infile:
+                mip_arms_list.append(pd.read_table(infile))
+                probes.update(temp_probes)
         except Exception as e:
             print(("MIP arm file generation for probe set {} "
                    "failed due to {}.")).format(p_name, e)
