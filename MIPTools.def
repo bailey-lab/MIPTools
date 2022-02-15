@@ -163,6 +163,9 @@ From: amd64/ubuntu:20.04
     make -j $CPU_COUNT
     scp vt /opt/bin
 
+    # install magrittr
+    Rscript -e 'install.packages("magrittr", repos = "https://cloud.r-project.org")'
+
     # install RealMcCoil
     # Rscript -e 'devtools::install_github("OJWatson/McCOILR")'
 
