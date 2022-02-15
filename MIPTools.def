@@ -167,7 +167,7 @@ From: amd64/ubuntu:20.04
     Rscript -e 'install.packages("magrittr", repos = "https://cloud.r-project.org")'
 
     # install RealMcCoil
-    # Rscript -e 'devtools::install_github("OJWatson/McCOILR")'
+    Rscript -e 'devtools::install_github("OJWatson/McCOILR")'
 
     # install rehh
     Rscript -e 'install.packages("rehh", repos="https://cloud.r-project.org")'
