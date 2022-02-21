@@ -240,7 +240,7 @@ From: amd64/ubuntu:20.04
 
     help() {
         echo "Open an interactive Jupyter Notebook. The notebook can be used"
-        echo "for post-wrangler mapping and variant calling." 
+        echo "for post-wrangler mapping and variant calling."
         echo ""
         echo "Usage:"
         echo "  singularity run [options] --app jupyter <container>"\
@@ -288,7 +288,7 @@ From: amd64/ubuntu:20.04
     rsync /opt/resources/*.ipynb /opt/analysis --ignore-existing \
         --ignore-missing-args
 
-    # Inform the user how to access the notebook 
+    # Inform the user how to access the notebook
     echo "Use the following command if you are running this notebook from a"
     echo "remote server. Ignore if using a local computer."
     echo "ssh -f -N -L localhost:${nb_port}:${server_ip}:${nb_port}"\
@@ -350,7 +350,7 @@ From: amd64/ubuntu:20.04
         echo "    -m min_capture_length -p probe_sets -s sample_sets \\"
         echo "    -x stitch_options -k"
     }
-    
+
     # Set defaults
     cluster_script="runMIPWranglerCurrent.sh"
     server_number=1
@@ -446,14 +446,14 @@ From: amd64/ubuntu:20.04
     echo "It is recommended to run this app in a screen (GNU screen)."
     echo "A message indicating the end of download will be printed when done."
     echo "Check nohup.out file in your output directory for the download log."
-    
+
     # cd and run app
     # Use nohup to make command keep running even if get hangup signal
     cd /opt/analysis
     nohup python /opt/bin/BaseSpaceRunDownloader_v2.py \
      -r ${run_id} -a "$(cat /opt/resources/access_token.txt)"
 
-    # Print to CLI 
+    # Print to CLI
     echo "Download finished."
 
 #################################################################
@@ -464,7 +464,7 @@ From: amd64/ubuntu:20.04
     set -eu
 
     help() {
-        echo "Demultiplex data. Generates per-sample fastq files from the raw" 
+        echo "Demultiplex data. Generates per-sample fastq files from the raw"
         echo "sequence data consisting of bcl files."
         echo ""
         echo "Usage:"
@@ -475,31 +475,28 @@ From: amd64/ubuntu:20.04
         echo ""
         echo "App Options:"
         echo "  -h    Print the help page."
-        echo "  -p    Required. The sequencing platform used. Either 'miseq'"
-        echo "        or 'nextseq'."
-        echo "  -s    Required. The list of samples. Contains the samples used"
-        echo "        in the study, the primers used, etc. This file must be "
-        echo "        present in the directory mounted to '/opt/analysis'."
+        echo "  -s    Required. Sample sheet for demultiplexing. "
+        echo "        This file must be present in the directory mounted to "
+        echo "        '/opt/analysis'."
         echo ""
         echo "Examples:"
         echo "  # Set paths"
         echo "  $ resource_dir=/bin/MIPTools/base_resources"
         echo "  $ bcl_dir=/work/usr/downloaded"
-        echo "  $ fastq_dir=/work/usr/fastq"
+        echo "  $ fastq_root_dir=/work/usr/"
         echo ""
         echo "  # Run app"
         echo "  $ singularity run \\"
         echo "    -B \${resource_dir}:/opt/resources \\"
         echo "    -B \${bcl_dir}:/opt/data \\"
-        echo "    -B \${fastq_dir}:/opt/analysis \\"
-        echo "    --app demux <container> -s sample_list.tsv -p nextseq"
+        echo "    -B \${fastq_root_dir}:/opt/analysis \\"
+        echo "    --app demux <container> -s SampleSheet.csv"
     }
 
-    while getopts "hp:s:" opt; do
+    while getopts "hs:" opt; do
         case ${opt} in
             h) help
                exit 1 ;;
-            p) platform=${OPTARG} ;;
             s) sample_list=${OPTARG} ;;
             *) help
                exit 1 ;;
@@ -507,39 +504,20 @@ From: amd64/ubuntu:20.04
     done
 
     # Define variables
-    cd /opt/src
-    template_dir="/opt/resources/templates/sample_sheet_templates/"
-    platform_template="${platform}"_sample_sheet_template.csv
-    template="${template_dir}${platform_template}"
-    bc_dict="/opt/resources/barcode_dict.json"
-    output_dir="/opt/analysis"
-    sample_list="/opt/analysis/${sample_list}"
-    
-    # Create a sample sheet for demultiplexing
-    python -c 'import mip_functions as mip; mip.generate_sample_sheet(
-        "'"${sample_list}"'", 
-        "'"${bc_dict}"'", 
-        "'"${template}"'", 
-        "'"${platform}"'", 
-        "'"${output_dir}"'"
-    )'
-
+    sample_sheet="/opt/analysis/${sample_list}"
     # cd to where bcl files are
     cd /opt/data
-    
+
     # Create a fastq directory for saving fastqs
     mkdir -p /opt/analysis/fastq
-    
-    # Copy sample list to fastq directory
-    scp ${sample_list} /opt/analysis/fastq/
-    
+
     # Increase limit of open number of files.
     ulimit -Sn $(ulimit -Hn)
-    
+
     # Run bcl2fastq
     # Use nohup to make command keep running even if get hangup signal
     nohup bcl2fastq -o /opt/analysis/fastq \
-        --sample-sheet /opt/analysis/SampleSheet.csv \
+        --sample-sheet ${sample_sheet} \
         --no-lane-splitting
 
 ##################################################################
