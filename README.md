@@ -38,7 +38,7 @@ either the development version or the most recent stable release:
 singularity pull library://apascha1/miptools/miptools:dev
 
 # Download the latest stable release
-singularity pull library://apascha1/miptools/miptools:v1.0.0
+singularity pull library://apascha1/miptools/miptools:v0.4.0
 ```
 
 Note that these prebuilt versions do not include the `bcl2fastq` software due
