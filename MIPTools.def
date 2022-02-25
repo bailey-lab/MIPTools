@@ -396,9 +396,76 @@ From: amd64/ubuntu:20.04
     . /opt/analysis/wrangle.sh
 
 ##################################################################
-##                         Download App                         ##
+##                    Basespace Download App                    ##
 ##################################################################
 %apprun download
+    # Exit if something fails
+    set -e
+
+    # Set default values for paths
+    output_path="/opt/analysis"
+    config_path="/opt/resources/basespace.cfg"
+
+    help() {
+        echo "Download data from the Illumina BaseSpace Sequence Hub."
+        echo ""
+        echo "Usage:"
+        echo "  singularity run [options] --app bs_download <container>"\
+        "[app_options]"
+        echo ""
+        echo "Options:"
+        echo "  See 'singularity run'."
+        echo ""
+        echo "App Options:"
+        echo "  -i    Required. The run ID of the data to download."
+        echo "  -o    The path to the output directory."
+        echo "        Default: '/opt/analysis'."
+        echo "  -c    The path to the authentication credentials file."
+        echo "        This file is created by 'bs auth'. For additional"
+        echo "        information see the help page for that command."
+        echo "        Default: '/opt/resources/basespace.cfg'."
+        echo "  -h    Print the help page."
+        echo ""
+        echo "Examples:"
+        echo "  # Set paths"
+        echo "  $ resource_dir=/bin/MIPTools/base_resources"
+        echo "  $ run_dir=/work/usr/example"
+        echo ""
+        echo "  # Run app"
+        echo "  $ singularity run \\"
+        echo "    -B \$resource_dir:/opt/resources \\"
+        echo "    -B \$run_dir:/opt/analysis \\"
+        echo "    --app bs_download <container> -i <run_id>"
+    }
+    
+    # Parse options
+    while getopts "i:o:c:h" opt; do
+      case "${opt}" in
+        c) config_path=${OPTARG} ;;
+        h) help
+           exit 1 ;;
+        i) run_id=${OPTARG} ;;
+        o) ouput_path=${OPTARG} ;;
+        *) help
+           exit 1 ;;
+      esac
+    done
+    
+    # Ensure run_id is specified
+    if [ ! $run_id ]; then
+      echo "Argument -i must be provided"
+      echo "$usage" >&2
+      exit 1
+    fi
+
+    # Read data from config file
+    # Remove whitespace from each line and export each line as a variable
+    export BASESPACE_API_SERVER=$(sed "1q;d" ${config_path} | sed "s/.*=.//g")
+    export BASESPACE_ACCESS_TOKEN=$(sed "2q;d" ${config_path} | sed "s/.*=.//g")
+
+    # Download data
+    bs download run -i ${run_id} -o ${output_path}
+
 #################################################################
 ##                   Superseded Download App                   ##
 #################################################################
