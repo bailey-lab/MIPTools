@@ -189,6 +189,10 @@ From: amd64/ubuntu:20.04
     # install parasight
     scp /opt/programs/parasight_v7.6/parasight.pl /opt/bin/parasight76.pl
 
+    # install basespace cli
+    BS_PATH="https://launch.basespace.illumina.com/CLI/latest/amd64-linux/bs"
+    wget $BS_PATH -O /opt/bin/bs
+
     # add executable flag to executables
     chmod -R +xr /usr/bin
     chmod -R +xr /opt/bin
