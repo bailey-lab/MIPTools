@@ -395,11 +395,20 @@ From: amd64/ubuntu:20.04
 ##                         Download App                         ##
 ##################################################################
 %apprun download
+#################################################################
+##                   Superseded Download App                   ##
+#################################################################
+%apprun download_superseded
     # Exit if something fails or if have unset object
     set -eu
 
     help() {
         echo "Download data from the Illumina BaseSpace Sequence Hub."
+        echo ""
+        echo "Superseded Note:"
+        echo "  Please note that this app has been superseded by the download" 
+        echo "  app, which uses the basespace command line interface for" 
+        echo "  downloading data."
         echo ""
         echo "Usage:"
         echo "  singularity run [options] --app download <container>"\
