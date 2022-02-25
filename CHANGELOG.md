@@ -2,6 +2,13 @@
 
 ## MIPTools (development version)
 
+### New Features
+
+- New `download` app supersedes the previous `download` app, which has been
+  renamed to `download_superseded`. The new app improves the method for
+  downloading data from the Illumina BaseSpace Sequence Hub by using the
+  official command line tool (@arisp99, #25, #13).
+
 ### Bug Fixes
 
 - Fix missing file error when MIP arms file is created from the MIP info
