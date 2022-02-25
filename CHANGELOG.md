@@ -2,11 +2,19 @@
 
 ## MIPTools (development version)
 
-- Automatically build and deploy container using Github Actions (@arisp99, #11).
-- Fix build failure due to dependency changes (#7).
+### Bug Fixes
+
+- Fix missing file error when MIP arms file is created from the MIP info
+  dictionary (@aydemiro, #23).
+- Improve sample sheet preparation. Avoid errors when sample file columns are
+  empty. Throw an error if there are invalid samples or input fields
+  (@aydemiro, #22).
+- Fix build failure due to dependency changes in the McCOILR R package (#7).
 
 ### Maintenance
 
+- Update LICENSE year.
+- Store copies of container on Sylabs Cloud (#12).
 - Remove duplicated files.
 - Improve bash errors.
 - Make strings human readable (@arisp99, #5).
