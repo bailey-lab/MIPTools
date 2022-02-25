@@ -464,7 +464,7 @@ From: amd64/ubuntu:20.04
     export BASESPACE_ACCESS_TOKEN=$(sed "2q;d" ${config_path} | sed "s/.*=.//g")
 
     # Download data
-    bs download run -i ${run_id} -o ${output_path}/${run_id}
+    bs download run --summary -i ${run_id} -o ${output_path}/${run_id}
 
 #################################################################
 ##                   Superseded Download App                   ##
