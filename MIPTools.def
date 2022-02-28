@@ -452,7 +452,7 @@ From: amd64/ubuntu:20.04
     done
     
     # Ensure run_id is specified
-    if [ ! -z ${run_id} ]; then
+    if [ -z ${run_id} ]; then
       echo "Argument -i must be provided"
       help >&2
       exit 1
