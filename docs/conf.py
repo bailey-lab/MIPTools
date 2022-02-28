@@ -32,6 +32,7 @@ extensions = [
     "sphinx.ext.githubpages",  # add .nojekyll to gh-pages
     "myst_parser",  # write docs using MyST (a flavor of markdown)
     "sphinx_copybutton",  # add copy button to code chunks
+    "sphinx_toolbox.github",  # link to github
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -60,3 +61,7 @@ html_context = {
     "github_repo": "MIPTools",
     "github_version": "master/docs/",
 }
+
+# -- Sphinx Toolbox configuration-----------------------------------------------
+github_username = "bailey-lab"
+github_repository = "MIPTools"
