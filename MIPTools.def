@@ -400,7 +400,7 @@ From: amd64/ubuntu:20.04
 ##################################################################
 %apprun download
     # Exit if something fails
-    set -e
+    set -eu
 
     # Set default values for paths
     output_path="/opt/analysis"
@@ -410,7 +410,7 @@ From: amd64/ubuntu:20.04
         echo "Download data from the Illumina BaseSpace Sequence Hub."
         echo ""
         echo "Usage:"
-        echo "  singularity run [options] --app bs_download <container>"\
+        echo "  singularity run [options] --app download <container>"\
         "[app_options]"
         echo ""
         echo "Options:"
@@ -435,7 +435,7 @@ From: amd64/ubuntu:20.04
         echo "  $ singularity run \\"
         echo "    -B \$resource_dir:/opt/resources \\"
         echo "    -B \$run_dir:/opt/analysis \\"
-        echo "    --app bs_download <container> -i <run_id>"
+        echo "    --app download <container> -i <run_id>"
     }
     
     # Parse options
@@ -482,8 +482,8 @@ From: amd64/ubuntu:20.04
         echo "  downloading data."
         echo ""
         echo "Usage:"
-        echo "  singularity run [options] --app download <container>"\
-        "[app_options]"
+        echo "  singularity run [options] --app download_superseded \\"
+        echo "  <container> [app_options]"
         echo ""
         echo "Options:"
         echo "  See 'singularity run'."
@@ -507,7 +507,7 @@ From: amd64/ubuntu:20.04
         echo "  $ singularity run \\"
         echo "    -B \${resource_dir}:/opt/resources"\
         "-B \${output_dir}:/opt/analysis \\"
-        echo "    --app download <container> -r <run_id>"
+        echo "    --app download_superseded <container> -r <run_id>"
     }
 
     while getopts "hr:" opt; do
