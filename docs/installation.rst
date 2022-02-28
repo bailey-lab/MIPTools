@@ -37,6 +37,8 @@ Note that these prebuilt versions do not include the :code:`bcl2fastq` software
 due to its license. If you plan to use MIPTools to demultiplex bcl files, you
 must build the container yourself.
 
+.. _install-source:
+
 Install From Source 
 ===================
 MIPTools can also be built from source code using the definition file provided
