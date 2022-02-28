@@ -19,6 +19,7 @@ inversion probe design, data processing, and analysis.
   :maxdepth: 1
 
   app-reference/download-app
+  app-reference/download-superseded-app
 
 .. toctree::
   :caption: Changelog
