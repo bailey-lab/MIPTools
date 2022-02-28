@@ -55,7 +55,7 @@ be used for most operations.
 	  	  For example, the line 
 	  	  *"pf fasta_genome /opt/species_resources/genomes/genome.fa"* would mean 
 	  	  that the fasta genome file for the species 'pf' will be found at 
-	  	  :code:'/opt/species_resources/genomes/genome.fa' within the container. 
+	  	  :code:`/opt/species_resources/genomes/genome.fa` within the container. 
 	  	  This also means that there is a file at
 	  	  :code:`/home/pf3d/genomes/genome.fa` in my computer, assuming I bound
 	  	  :code:`/home/pf3d` to :code:`/opt/species_resources` in the container.
@@ -107,11 +107,13 @@ be used for most operations.
   		  an arbitrary value (none, for example) but not left empty. The order of
   		  columns must not be changed.
 
-  		  Note: If you have gff3/gtf formatted files, they can be converted to
-  		  GenePred format using Jim Kent's programs [gff3ToGenePred]
-  		  (http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/gff3ToGenePred)
-  		  and
-  		  [gtfToGenePred](http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/gtfToGenePred).
+  		  .. note::
+
+  		  	If you have gff3/gtf formatted files, they can be converted to
+  		  	GenePred format using Jim Kent's programs `gff3ToGenePred
+  		  	<http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/gff3ToGenePred>`_
+  		  	and `gtfToGenePred
+  		  	<http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/gtfToGenePred>`_.
 
   		- *refgene_tabix*: RefGen file, sorted and indexed using tabix. File
   		  requirement is the same as the refgene file. tabix is available within
