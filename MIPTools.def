@@ -496,7 +496,7 @@ From: amd64/ubuntu:20.04
         echo "  An 'access_token.txt' file with a valid access token is"
         echo "  required. It must be present in the 'base_resources' directory."
         echo "  A data directory where the data will be downloaded to must be"
-        echo "  mounted to '/opt/data'."
+        echo "  mounted to '/opt/analysis'."
         echo ""
         echo "Examples:"
         echo "  # Set paths"
