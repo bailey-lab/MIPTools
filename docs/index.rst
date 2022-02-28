@@ -8,10 +8,17 @@ MIPTools is a suite of computational tools that are used for molecular
 inversion probe design, data processing, and analysis.
               
 .. toctree::
-   :maxdepth: 2
+  :caption: Quick Start
+  :maxdepth: 2
               
-   installation
-   quick_start
+  installation
+  quick_start
+
+.. toctree::
+  :caption: Changelog
+  :maxdepth: 1
+  
+  CHANGELOG
 
 Need Help?
 ----------
