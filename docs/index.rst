@@ -21,6 +21,7 @@ inversion probe design, data processing, and analysis.
   app-reference/download-app
   app-reference/download-superseded-app
   app-reference/demux-app
+  app-reference/demux-qc-app
 
 .. toctree::
   :caption: Changelog
