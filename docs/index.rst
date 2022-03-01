@@ -23,6 +23,7 @@ inversion probe design, data processing, and analysis.
   app-reference/demux-app
   app-reference/demux-qc-app
   app-reference/wrangler-app
+  app-reference/jupyter-app
 
 .. toctree::
   :caption: Changelog
