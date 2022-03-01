@@ -318,7 +318,7 @@ From: amd64/ubuntu:20.04
     set -eu
 
     help() {
-        echo "Run quality control on demultiplexed data."
+        echo "Run MIPWrangler on demultiplexed data."
         echo ""
         echo "Usage:"
         echo "  singularity run [options] --app wrangler <container>"\
