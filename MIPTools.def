@@ -404,6 +404,14 @@ From: amd64/ubuntu:20.04
     sample_sets=${sample_sets//[[:space:]]/}
     stitch_options=${stitch_options//[[:space:]]/}
     
+    # Ensure that stitch options begin with a comma if not the default value
+    # This is done as the arguments are fed in with leading dashes and the
+    # python script will crash if dashes are fed in. By adding a leading comma,
+    # the script will run.
+    if [ ${stitch_options:0:1} != "," ] && [ ${stitch_options} != "none" ]; then
+        stitch_options=",${stitch_options}"
+    fi
+
     # Create wrangler bash scripts using python
     python /opt/src/generate_wrangler_scripts.py \
     -c ${cpu_count} -e ${experiment_id} ${keep_files} \

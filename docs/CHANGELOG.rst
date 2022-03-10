@@ -8,6 +8,8 @@ MIPTools (development version)
 New Features
 ------------
 
+-  Perform additional argument parsing to ensure arguments are formatted
+   correctly (:github:issue:`28`).
 -  New ``download`` app supersedes the previous ``download`` app, which has
    been renamed to ``download_superseded``. The new app improves the method for
    downloading data from the Illumina BaseSpace Sequence Hub by using the
