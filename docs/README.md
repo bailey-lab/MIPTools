@@ -14,3 +14,23 @@ We use the documentation tool,
 [sphinx](https://www.sphinx-doc.org/en/master/index.html), to build our
 documentation, and host our final product on [Github
 Pages](https://bailey-lab.github.io/MIPTools/).
+
+## Contributing
+
+Please feel free to contribute by submitting a pull request! To build and
+preview your changes, you may use the `Makefile` provided.
+
+```shell
+# Build html docs
+make html
+
+# Preview docs
+open _build/html/index.html
+```
+
+You may also use [sphinx autobuild](https://pypi.org/project/sphinx-autobuild/)
+to view changes live.
+
+```shell
+sphinx-autobuild . _build/html
+```
