@@ -76,24 +76,24 @@ project_resource_dir = os.path.abspath(args["project_resource_dir"])
 base_resource_dir = os.path.abspath(args["base_resource_dir"])
 sample_list_file = os.path.join(analysis_dir, args["sample_list"])
 raw_mip_ids_dir = os.path.join(analysis_dir, "mip_ids")
-# get sample sets and probe sets to be processed.
-# sample sets should be provided as a comma separated text
-# sometimes semicolon is used and spaces may be included by mistake
-# we'll check for these potential mistakes and create a list of sample sets
-# to process.
+
+# Get sample sets and probe sets to be processed.
+# These sets should be provided as comma separated text, however, sometimes a
+# semicolon is used by mistake. We split on commas and semicolons.
 sam_set = args["sample_sets"]
 sam_set = sam_set.split(",")
 sample_sets = []
 for s in sam_set:
-    sample_sets.extend(s.strip().split(";"))
-sample_sets = set([s.strip() for s in sample_sets])
-# probe sets are provided and will be processed similarly to sample sets
+    sample_sets.extend(s.split(";"))
+sample_sets = set(sample_sets)
+
 pr_set = args["probe_sets"]
 pr_set = pr_set.split(",")
 probe_sets = []
 for p in pr_set:
-    probe_sets.extend(p.strip().split(";"))
-probe_sets = set([p.strip() for p in probe_sets])
+    probe_sets.extend(p.split(";"))
+probe_sets = set(probe_sets)
+
 # get mipwrangler options
 keep_files = args["keep_files"]
 stitch_options = args["stitch_options"]

@@ -383,6 +383,11 @@ From: amd64/ubuntu:20.04
         esac
     done
 
+    # Remove whitespace from arguments
+    probe_sets=${probe_sets//[[:space:]]/}
+    sample_sets=${sample_sets//[[:space:]]/}
+    stitch_options=${stitch_options//[[:space:]]/}
+    
     # Create wrangler bash scripts using python
     python /opt/src/generate_wrangler_scripts.py \
     -c ${cpu_count} -e ${experiment_id} ${keep_files} \

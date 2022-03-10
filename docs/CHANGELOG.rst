@@ -17,6 +17,7 @@ New Features
 Bug Fixes
 ---------
 
+-  Fix error when app arguments have whitespace characters (:github:issue:`26`).
 -  Fix missing file error when MIP arms file is created from the MIP
    info dictionary (:github:user:`aydemiro`, :github:pull:`23`).
 -  Improve sample sheet preparation. Avoid errors when sample file
