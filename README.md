@@ -75,8 +75,8 @@ but this may change in the future. You must download the file: **`bcl2fastq2 Con
 You can install the most recent release using the following:
 
 ```bash
-# Install stable version v1.0.0
-git clone --b v1.0.0 https://github.com/bailey-lab/MIPTools.git
+# Install stable version v0.4.0
+git clone --branch v0.4.0 https://github.com/bailey-lab/MIPTools.git
 ```
 
 You can alternatively install the development version:
@@ -248,6 +248,8 @@ long term disk usage.
 ## Further documentation
 
 Further documentation for MIPTools is available
+[online](https://bailey-lab.github.io/MIPTools/) and in a public Google Drive
+folder
 [here](https://drive.google.com/drive/folders/1Tmu7hdRYrdw-jqAN35lZpIjG2lBebuCK?usp=sharing)
 for various use cases (MIP design, data analysis, etc.).
 

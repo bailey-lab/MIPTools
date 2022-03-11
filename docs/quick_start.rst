@@ -9,7 +9,7 @@ three resources directories which are required for most operations. In addition
 to those, some apps need a :code:`data_dir` and :code:`analysis_dir`. The
 :code:`-B` option is used for each binding:
 
-.. code-block:: bash
+.. code-block:: shell
 
 	singularity some-command -B path_on_host:path_on_container path_to_container
 
@@ -142,7 +142,7 @@ analysis can be parallelized, so the more CPUs you have the better. Plenty of
 storage is also recommended. For designs on large target regions (>5kb), files
 can take up 10 GB or more per region. Consider allocating > 5 GB RAM for a
 large design region (multiply the RAM requirement by CPU number if
-parallelizing). For a typical MIP data analysis involving ~1000 MIPs and ~1000
+parallelizing). For a typical MIP data analysis involving ~1,000 MIPs and ~1,000
 samples, consider using at least 20 CPUs and 20 GB RAM to get the analysis done
 within 10-12 h. You should expect ~200 GB disk space used for such an analysis
 as well, although most files can be removed after processing steps to reduce

@@ -349,7 +349,7 @@ From: amd64/ubuntu:20.04
         echo "Examples:"
         echo "  # Define variables"
         echo "  $ probe_sets='DR1,VAR4'"
-        echo "  $ sample_sets=JJJ"
+        echo "  $ sample_sets='JJJ'"
         echo "  $ stitch_options='--stitchGapExtend=1,--overWriteDirs'"
         echo ""
         echo "  $ singularity run "
@@ -357,8 +357,8 @@ From: amd64/ubuntu:20.04
         echo "    -B fastq_dir:/opt/data \\"
         echo "    -B wrangler_dir:/opt/analysis \\"
         echo "    --app wrangler <container> \\"
-        echo "    -e <experiment_id> -l <sample_list.file> -p ${probe_sets} \\"
-        echo "    -s ${sample_sets} -x ${stitch_options}"
+        echo "    -e <experiment_id> -l <sample_list.file> -p \${probe_sets} \\"
+        echo "    -s \${sample_sets} -x \${stitch_options}"
         echo ""
         echo "  # Run app"
         echo "  $ singularity run "
@@ -367,8 +367,8 @@ From: amd64/ubuntu:20.04
         echo "    -B wrangler_dir:/opt/analysis \\"
         echo "    --app wrangler <container> \\"
         echo "    -c <cpu_count> -e <experiment_id> -l <sample_list.file> \\"
-        echo "    -m <min_capture_length> -p ${probe_sets} -s ${sample_sets} \\"
-        echo "    -x ${stitch_options} -k"
+        echo "    -m <min_capture_length> -p \${probe_sets} -s \\"
+        echo "    \${sample_sets} -x \${stitch_options} -k"
     }
 
     # Set defaults
@@ -462,8 +462,8 @@ From: amd64/ubuntu:20.04
         echo ""
         echo "  # Run app"
         echo "  $ singularity run \\"
-        echo "    -B \$resource_dir:/opt/resources \\"
-        echo "    -B \$run_dir:/opt/analysis \\"
+        echo "    -B \${resource_dir}:/opt/resources \\"
+        echo "    -B \${run_dir}:/opt/analysis \\"
         echo "    --app download <container> -i <run_id>"
     }
     
@@ -512,7 +512,7 @@ From: amd64/ubuntu:20.04
         echo ""
         echo "Usage:"
         echo "  singularity run [options] --app download_superseded \\"
-        echo "  <container> [app_options]"
+        echo "    <container> [app_options]"
         echo ""
         echo "Options:"
         echo "  See 'singularity run'."
@@ -660,7 +660,7 @@ From: amd64/ubuntu:20.04
         echo "  $ singularity run \\"
         echo "    -B \${resource_dir}:/opt/resources"\
         "-B \${fastq_dir}:/opt/analysis \\"
-        echo "    --app demux_qc <container> -p nextseq"
+        echo "    --app demux_qc <container> -p 'nextseq'"
     }
 
     # Argument handling

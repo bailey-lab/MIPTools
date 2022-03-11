@@ -14,14 +14,16 @@ Run MIPWrangler on demultiplexed data.
 
 Options
 =======
-.. code-block:: shell
+.. code-block:: none
 	
 	# Required
 	-e    A unique ID given to each sequencing run by the user.
 	-l    File providing a list of samples with associated information.
 	-p    Probe sets to be processed.
 	-s    Sample sets to be processed.
-	-x    Probe set to be processed.
+	-x    Additional arguments passed to MIPWrangler mipSetupAndExtractByArm,
+              which extracts sequences and stitches paired end reads to single
+              sequences.
 
 	# Optional
 	-c    Number of available processors to use.
@@ -36,24 +38,38 @@ Defaults
 .. code-block:: shell
 	
 	# Required
-	-c    Default: 1.
-	-n    Default: 1.
-	-w    Default: '/opt/bin/runMIPWranglerCurrent.sh'.
+	-x    Default: 'none'
+
+	# Optional
+	-c    Default: 1
+	-k    Default: false
+	-m    Default: 100
+	-n    Default: 1
+	-w    Default: '/opt/bin/runMIPWranglerCurrent.sh'
 
 Examples
 ========
 
 .. code-block:: shell
 
-	# Set paths
-	container=/work/bin/MIPTools/miptools.sif
+	# Define variables 
+	probe_sets='DR1,VAR4' 
+	sample_sets='JJJ' 
+	stitch_options='--stitchGapExtend=1,--overWriteDirs'
 
 	# Run app
-	singularity run --app wrangler ${container} \\
-	  -e experiment_id -l sample_list.file -p probe_sets \\
-	  -s sample_sets -x stitch_options
+	singularity run \
+	  -B project_resources:/opt/project_resources \
+	  -B fastqs:/opt/data \
+	  -B wrangler_dir:/opt/analysis \
+	  --app wrangler miptools.sif \
+	  -e 'example' -l 'sample_list.tsv' -p ${probe_sets} \
+	  -s ${sample_sets} -x ${stitch_options}
 
-	singularity run --app wrangler ${container} \\
-	  -c cpu_count -e experiment_id -l sample_list.file \\
-	  -m min_capture_length -p probe_sets -s sample_sets \\
-	  -x stitch_options -k
+	singularity run \
+	  -B project_resources:/opt/project_resources \
+	  -B fastqs:/opt/data \
+	  -B wrangler_dir:/opt/analysis \
+	  --app wrangler miptools.sif \
+	  -c 10 -e 'example2' -l 'sample_list.tsv' -p ${probe_sets} \
+	  -s ${sample_sets} -x ${stitch_options} -k

@@ -23,7 +23,7 @@ consisting of BCL files.
 
 Options
 =======
-.. code-block:: shell
+.. code-block:: none
 	
 	# Required
 	-s    Path to the sample sheet for demultiplexing.
@@ -42,15 +42,8 @@ Examples
 
 .. code-block:: shell
 
-	# Set paths
-	resource_dir=/bin/MIPTools/base_resources
-	bcl_dir=/work/usr/download
-	fastq_root_dir=/work/usr/
-	container=/work/bin/MIPTools/miptools.sif
-
-	# Run app
-	singularity run \\
-	  -B ${resource_dir}:/opt/resources \\
-	  -B ${bcl_dir}:/opt/data \\
-	  -B ${fastq_root_dir}:/opt/analysis \\
-	  --app demux ${container} -s SampleSheet.csv
+	singularity run \
+	  -B base_resources:/opt/resources \
+	  -B bcl_dir:/opt/data \
+	  -B fastq_root_dir:/opt/analysis \
+	  --app demux miptools.sif -s SampleSheet.csv

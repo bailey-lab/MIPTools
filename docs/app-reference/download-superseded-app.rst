@@ -19,7 +19,7 @@ Download data from the Illumina BaseSpace Sequence Hub.
 
 Options
 =======
-.. code-block:: shell
+.. code-block:: none
 	
 	# Required
 	-r    The run ID of the data to download.
@@ -60,13 +60,7 @@ Examples
 
 .. code-block:: shell
 
-	# Set paths
-	resource_dir=/bin/MIPTools/base_resources
-	run_dir=/work/usr/download
-	container=/work/bin/MIPTools/miptools.sif
-
-	# Run app
-	singularity run \\
-	  -B ${resource_dir}:/opt/resources \\
-	  -B ${run_dir}:/opt/analysis \\
-	  --app download_superseded ${container} -r <run_id>
+	singularity run \
+	  -B base_resources:/opt/resources \
+	  -B downloaded:/opt/analysis \
+	  --app download_superseded miptools.sif -r 12345

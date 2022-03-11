@@ -19,7 +19,7 @@ just faulty reads from the sequencer.
 
 Options
 =======
-.. code-block:: shell
+.. code-block:: none
 	
 	# Required
 	-s    The sequencing platform used. Can either be 'nextseq' or 'miseq'.
@@ -32,18 +32,12 @@ Examples
 
 .. code-block:: shell
 
-	# Set paths
-	resource_dir=/bin/MIPTools/base_resources
-	fastq_root=/work/usr/download
-	container=/work/bin/MIPTools/miptools.sif
+	singularity run \
+	  -B base_resources:/opt/resources \
+	  -B downloaded:/opt/analysis \
+	  --app demux_qc miptools.sif -p 'nextseq'
 
-	# Run app
-	singularity run \\
-	  -B ${resource_dir}:/opt/resources \\
-	  -B ${fastq_root}:/opt/analysis \\
-	  --app demux_qc ${container} -p nextseq
-
-	singularity run \\
-	  -B ${resource_dir}:/opt/resources \\
-	  -B ${fastq_root}:/opt/analysis \\
-	  --app demux_qc ${container} -p miseq
+	singularity run \
+	  -B base_resources:/opt/resources \
+	  -B downloaded:/opt/analysis \
+	  --app demux_qc miptools.sif -p 'miseq'

@@ -66,15 +66,15 @@ You must download the file: :code:`bcl2fastq2 Conversion Software v2.20 Installe
 
 You can install the most recent release using the following:
 
-.. code-block:: bash
+.. code-block:: shell
 
 	# Install stable version
-	git clone --b v0.4.0 https://github.com/bailey-lab/MIPTools.git
+	git clone --branch v0.4.0 https://github.com/bailey-lab/MIPTools.git
 
 
 You can alternatively install the development version:
 
-.. code-block:: bash
+.. code-block:: shell
 
 	# Install dev version
 	git clone https://github.com/bailey-lab/MIPTools.git
@@ -82,7 +82,7 @@ You can alternatively install the development version:
 Next, simply build the container and you should be all set to get started using
 MIPTools!
 
-.. code-block:: bash
+.. code-block:: shell
 
 	cd MIPTools
 	sudo singularity build miptools.sif MIPTools.def

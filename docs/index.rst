@@ -34,5 +34,15 @@ inversion probe design, data processing, and analysis.
 Need Help?
 ----------
 
-- See our `Github Issues Page
-  <https://github.com/bailey-lab/MIPTools/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-desc>`_
+- Join our |Google Group|
+- See our |issues page|
+
+.. |Google Group| raw:: html
+
+  <a href="https://groups.google.com/g/miptools" target="_blank">Google
+  Group</a>
+  
+.. |issues page| raw:: html
+
+  <a href="https://github.com/bailey-lab/MIPTools/issues"
+  target="_blank">Github Issues Page</a>

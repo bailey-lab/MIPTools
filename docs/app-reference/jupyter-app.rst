@@ -15,7 +15,7 @@ post-wrangler mapping and variant calling.
 
 Options
 =======
-.. code-block:: shell
+.. code-block:: none
 	
 	# Optional
 	-d    The port to be used to load the Jupyter Notebook.
@@ -27,22 +27,13 @@ Examples
 
 .. code-block:: shell
 
-	# Set paths
-	resource_dir=/bin/MIPTools/base_resources
-	project_resources=/work/usr/DR1_project_resources
-	species_resources=/work/usr/pf_species_resources
-	wrangler_dir=/work/usr/wrangler
-	variant_dir=/work/usr/variant
-	container=/work/bin/MIPTools/miptools.sif
-
-	# Run app
-	singularity run \\
-	  -B ${resource_dir}:/opt/resources \\
-	  -B ${project_resources}:/opt/project_resources \\
-	  -B ${species_resources}:/opt/species_resources \\
-	  -B ${wrangler_dir}:/opt/data \\
-		-B ${variant_dir}:/opt/analysis \\
-	  --app jupyter ${container}
+	singularity run \
+	  -B base_resources:/opt/resources \
+	  -B project_resources:/opt/project_resources \
+	  -B pf_species_resources:/opt/species_resources \
+	  -B wrangler_dir:/opt/data \
+	  -B variant_dir:/opt/analysis \
+	  --app jupyter miptools.sif
 
 Accessing the Notebooks
 =======================
