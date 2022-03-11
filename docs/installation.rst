@@ -19,17 +19,21 @@ required by Singularity (e.g. on Ubuntu/Debian: :code:`sudo snap install go
 
 Quick Start
 ===========
-The MIPTools container, built and ready to use, can be
-downloaded from the `Sylabs Cloud <https://cloud.sylabs.io/>`_. You can download
-either the development version or the most recent stable release:
+The MIPTools container, built and ready to use, can be downloaded |download|.
+You can download the development version or any previous release:
 
-.. code-block:: bash
+.. |download| raw:: html
+
+  <a href="https://baileylab.brown.edu/MIPTools/download/"
+  target="_blank">here</a>
+
+.. code-block:: shell
 	
-	# Download the development version
-	singularity pull library://apascha1/miptools/miptools:dev
-
 	# Download the latest stable release
-	singularity pull library://apascha1/miptools/miptools:v0.4.0
+	wget https://baileylab.brown.edu/MIPTools/download/miptools_v0.4.0.sif
+
+	# Download the development version
+	wget https://baileylab.brown.edu/MIPTools/download/miptools_dev.sif
 
 .. note::
 	

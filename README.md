@@ -28,17 +28,17 @@ by Singularity (e.g. on Ubuntu/Debian: `sudo snap install go --classic`).
 
 #### Download prebuilt container
 
-The MIPTools container, built and ready to use, can be
-downloaded from the [Sylabs Cloud](https://cloud.sylabs.io/). You can download
-either the development version or the most recent stable release:
+The MIPTools container, built and ready to use, can be downloaded
+[here](https://baileylab.brown.edu/MIPTools/download/). You can download the
+development version or any previous release:
 
 ```bash
+# Download the latest stable release
+wget https://baileylab.brown.edu/MIPTools/download/miptools_v0.4.0.sif
+
 # Download the development version
 # The development version is updated every two weeks
-singularity pull library://apascha1/miptools/miptools:dev
-
-# Download the latest stable release
-singularity pull library://apascha1/miptools/miptools:v0.4.0
+wget https://baileylab.brown.edu/MIPTools/download/miptools_dev.sif
 ```
 
 Note that these prebuilt versions do not include the `bcl2fastq` software due

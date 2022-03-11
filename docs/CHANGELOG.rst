@@ -32,7 +32,7 @@ Maintenance
 -----------
 
 -  Update LICENSE year.
--  Store copies of container on Sylabs Cloud (:github:issue:`12`).
+-  Store containers using an HTTP directory (:github:issue:`12`).
 -  Remove duplicated files.
 -  Improve bash errors.
 -  Make strings human readable (:github:user:`arisp99`, :github:pull:`5`).
