@@ -1,3 +1,5 @@
+.. _demux-app:
+
 =====
 demux
 =====
