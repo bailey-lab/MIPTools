@@ -2,6 +2,36 @@
 Quick Start
 ===========
 
+Using MIPTools
+==============
+
+MIPTools provides users a suite of computational tools that can be used for
+molecular inversion probe design, data processing, and analysis. MIPTools is
+packaged as a `Singularity container <https://www.sylabs.io/docs/>`_. The most
+common method for running a MIPTools command is to run one of the **apps**
+defined by MIPTools. The general command structure is as follows:
+
+.. code-block:: shell
+	
+	singularity run [run options...] --app <app-name> <container> [app options...]
+
+In addition to providing several apps, MIPTools also defines several python
+functions—often called by the apps—which can be run using :code:`singularity exec`. The general command structure is as follows:
+
+.. code-block:: shell
+	
+	singularity exec [exec options...] <container> <command>
+
+Users may also want to run a shell within the MIPTools container. This can be 
+done as follows:
+
+.. code-block:: shell
+	
+	singularity shell [shell options...] <container>
+
+Binding Paths
+=============
+
 Although :code:`miptools.sif` contains all programs needed, it does not include
 the data to be analyzed or other resources to be used. Every time we run
 Singularity we will **bind** needed directories to the container. There are
@@ -11,17 +41,17 @@ to those, some apps need a :code:`data_dir` and :code:`analysis_dir`. The
 
 .. code-block:: shell
 
-	singularity some-command -B path_on_host:path_on_container path_to_container
+	singularity <command> -B <path/on/host>:<path/on/container> <container>
 
 The path on the left side of the colon specifies where on *your* computer the
 directory is and the right side is the location in the container where the
 directory should be bound (mounted) to. You should only change the left side of
 the column according to the location of the resource you are providing, and
 should *never* change the path on the right side. Each binding is specified
-with a separate :code:`-B` option. See below for examples.
+with a separate :code:`-B` option.
 
 Directory Structure
-===================
+-------------------
 
 Three resource directories are required for most operations. These live outside
 the container and must be **bound** to the container at run time with the
