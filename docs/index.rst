@@ -15,6 +15,12 @@ inversion probe design, data processing, and analysis.
   quick_start
 
 .. toctree::
+  :caption: Guides
+  :maxdepth: 2
+
+  guides/example-analysis
+
+.. toctree::
   :caption: Man Pages
   :maxdepth: 1
 
