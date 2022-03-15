@@ -1,6 +1,6 @@
-====================
-Example Analysis Run
-====================
+=================
+Analysis Pipeline
+=================
 
 This guide provides a walkthrough of some of the key analysis steps in
 analyzing molecular inversion probe data. We use a test data set composed of

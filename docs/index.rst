@@ -19,7 +19,7 @@ inversion probe design, data processing, and analysis.
   :maxdepth: 2
 
   guides/probe-design
-  guides/example-analysis
+  guides/analysis-pipeline
 
 .. toctree::
   :caption: Man Pages
