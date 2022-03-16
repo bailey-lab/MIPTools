@@ -6,9 +6,9 @@ wrangler
 
 Synopsis
 ========
-.. code-block:: console
+.. code-block:: shell
 	
-	singularity run [options] --app wrangler <container> [app_options]
+	singularity run [run options...] --app wrangler <container> [app options...]
 
 Description
 ===========

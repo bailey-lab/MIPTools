@@ -6,9 +6,9 @@ download
 
 Synopsis
 ========
-.. code-block:: console
+.. code-block:: shell
 	
-	singularity run [options] --app download <container> [app_options]
+	singularity run [run options...] --app download <container> [app options...]
 
 Description
 ===========

@@ -6,9 +6,9 @@ jupyter
 
 Synopsis
 ========
-.. code-block:: console
+.. code-block:: shell
 	
-	singularity run [options] --app jupyter <container> [app_options]
+	singularity run [run options...] --app jupyter <container> [app options...]
 
 Description
 ===========

@@ -4,9 +4,9 @@ demux_qc
 
 Synopsis
 ========
-.. code-block:: console
+.. code-block:: shell
 	
-	singularity run [options] --app demux_qc <container> [app_options]
+	singularity run [run options...] --app demux_qc <container> [app options...]
 
 Description
 ===========

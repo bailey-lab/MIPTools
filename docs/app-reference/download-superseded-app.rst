@@ -4,9 +4,9 @@ download_superseded
 
 Synopsis
 ========
-.. code-block:: console
+.. code-block:: shell
 	
-	singularity run [options] --app download_superseded <container> [app_options]
+	singularity run [run options...] --app download_superseded <container> [app options...]
 
 Description
 ===========

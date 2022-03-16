@@ -6,9 +6,9 @@ demux
 
 Synopsis
 ========
-.. code-block:: console
+.. code-block:: shell
 	
-	singularity run [options] --app demux <container> [app_options]
+	singularity run [run options...] --app demux <container> [app options...]
 
 Description
 ===========
