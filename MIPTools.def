@@ -195,7 +195,7 @@ From: amd64/ubuntu:20.04
     scp /opt/programs/parasight_v7.6/parasight.pl /opt/bin/parasight76.pl
 
     # install basespace cli
-    BS_PATH="https://launch.basespace.illumina.com/CLI/latest/amd64-linux/bs"
+    BS_PATH="https://launch.basespace.illumina.com/CLI/1.5.1/amd64-linux/bs"
     wget $BS_PATH -O /opt/bin/bs
 
     # add executable flag to executables
