@@ -164,13 +164,21 @@ From: amd64/ubuntu:20.04
     scp vt /opt/bin
 
     # install magrittr
-    Rscript -e 'install.packages("magrittr", repos = "https://cloud.r-project.org")'
+    Rscript -e 'devtools::install_version(
+        package = "magrittr",
+        version = "2.0.2",
+        repos = "https://cloud.r-project.org"
+    )'
 
     # install RealMcCoil
-    Rscript -e 'devtools::install_github("OJWatson/McCOILR")'
+    Rscript -e 'devtools::install_github("OJWatson/McCOILR", ref = "v1.3.1")'
 
     # install rehh
-    Rscript -e 'install.packages("rehh", repos="https://cloud.r-project.org")'
+    Rscript -e 'devtools::install_version(
+        package = "rehh", 
+        version = "3.2.2",
+        repos = "https://cloud.r-project.org"
+    )'
 
     # install MIPWrangler
     cd /opt/programs
