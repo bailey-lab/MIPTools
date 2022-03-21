@@ -81,7 +81,7 @@ parser.add_argument(
     "--threads",
     help="number of CPU threads to use.",
     type=int,
-    default=1,
+    default=20,
 )
 parser.add_argument(
     "-e",
