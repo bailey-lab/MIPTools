@@ -2410,19 +2410,29 @@ def bwa_multi(fastq_files, output_type, fastq_dir, bam_dir, options, species,
     if not os.path.exists(bam_dir):
         os.makedirs(bam_dir)
     if parallel_processes == 1:
+        # Set number of processors
+        options = options + ["-t " + str(processor_number)]
+
+        # Run bwa on each fastq file
         for f in fastq_files:
             # get base file name
             base_name = f.split(".")[0]
             bam_name = base_name + extension
-            options.extend("-t" + str(processor_number))
             bwa(f, bam_name, output_type, fastq_dir, bam_dir, options, species,
                 base_name)
     else:
+        # Determine number of processors per parallel process
         processor_per_process = processor_number // parallel_processes
         p = NoDaemonProcessPool(parallel_processes)
+
+        # Set number of processors
         options = options + ["-t " + str(processor_per_process)]
+
+        # Initialize lists
         results = []
         errors = []
+
+        # Run bwa on each fastq file
         for f in fastq_files:
             base_name = f.split(".")[0]
             bam_name = base_name + extension

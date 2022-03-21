@@ -19,6 +19,7 @@ New Features
 Bug Fixes
 ---------
 
+-  Let Freebayes run with only one CPU thread (:github:issue:`33`).
 -  Fix error when app arguments have whitespace characters (:github:issue:`26`).
 -  Fix missing file error when MIP arms file is created from the MIP
    info dictionary (:github:user:`aydemiro`, :github:pull:`23`).
