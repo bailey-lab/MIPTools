@@ -84,78 +84,79 @@ From: amd64/ubuntu:20.04
 
     # install conda and python via Miniconda3
     PYTHON_VERSION=3.8
+    PYTHON_VERSION=$(echo ${PYTHON_VERSION} | sed 's/[^0-9]//g' | head -c2)
     MINICONDA_VERSION=4.8.3
     MINICONDA_MD5=d63adf39f2c220950a063e0529d4ff74
     CONDA_DIR=/opt/conda
     export PATH=${CONDA_DIR}/bin:${PATH}
     cd /tmp && \
-        wget --quiet "https://repo.anaconda.com/miniconda/Miniconda3-py${PYTHON_VERSION//./}_${MINICONDA_VERSION}-Linux-x86_64.sh" && \
-        echo "${MINICONDA_MD5} *Miniconda3-py${PYTHON_VERSION//./}_${MINICONDA_VERSION}-Linux-x86_64.sh" | md5sum -c - && \
-        /bin/bash Miniconda3-py${PYTHON_VERSION//./}_${MINICONDA_VERSION}-Linux-x86_64.sh -bfp ${CONDA_DIR} && \
-        rm Miniconda3-py${PYTHON_VERSION//./}_${MINICONDA_VERSION}-Linux-x86_64.sh && \
+        wget --quiet "https://repo.anaconda.com/miniconda/Miniconda3-py${PYTHON_VERSION}_${MINICONDA_VERSION}-Linux-x86_64.sh" && \
+        echo "${MINICONDA_MD5} *Miniconda3-py${PYTHON_VERSION}_${MINICONDA_VERSION}-Linux-x86_64.sh" | md5sum -c - && \
+        /bin/bash Miniconda3-py${PYTHON_VERSION}_${MINICONDA_VERSION}-Linux-x86_64.sh -bfp ${CONDA_DIR} && \
+        rm Miniconda3-py${PYTHON_VERSION}_${MINICONDA_VERSION}-Linux-x86_64.sh && \
         ${CONDA_DIR}/bin/conda config --add channels defaults && \
         ${CONDA_DIR}/bin/conda config --add channels bioconda && \
         ${CONDA_DIR}/bin/conda config --add channels conda-forge && \
         ${CONDA_DIR}/bin/conda config --add channels r && \
         ${CONDA_DIR}/bin/conda config --system --set show_channel_urls true && \
-        ${CONDA_DIR}/bin/conda install --quiet --yes conda="${MINICONDA_VERSION%.*}.*" && \
-        conda clean --all -f -y
+        conda clean --all --force-pkgs-dirs --yes
 
     # install mamba
-    conda install mamba -c conda-forge
+    # Note that the mamba installation will update conda to the latest version
+    conda install mamba=0.13.0 --channel conda-forge
 
     # install conda packages using mamba
     mamba install -qy\
-      "r" \
-      "r-epitools" \
-      "rpy2" \
-      "r-irkernel" \
-      "r-plotly" \
-      "r-knitr" \
-      "r-shiny" \
-      "r-ggplot2" \
-      "r-devtools" \
-      "r-dplyr" \
-      "r-dt" \
-      "r-pkgbuild" \
-      "gxx_linux-64" \
-      "python" \
-      "notebook" \
-      "nbconvert" \
-      "jupyter_contrib_nbextensions" \
-      "xlrd" \
-      "bcftools" \
-      "samtools" \
-      "vcftools" \
-      "htslib" \
-      "bwa" \
-      "bowtie2" \
-      "primer3" \
-      "primer3-py" \
-      "numpy" \
-      "scipy" \
-      "biopython" \
-      "pysam" \
-      "pandas" \
-      "matplotlib" \
-      "seaborn" \
-      "scikit-learn" \
-      "scandir" \
-      "openpyxl" \
-      "simplegeneric" \
-      "matplotlib-venn" \
-      "tblib" \
-      "parallel" \
-      "scikit-allel" \
-      "bioconductor-dnacopy" \
-      "basemap-data-hires" \
+      "r-base=3.6.3" \
+      "r-epitools=0.5_10" \
+      "rpy2=3.4.4" \
+      "r-irkernel=1.2" \
+      "r-plotly=4.9.3" \
+      "r-knitr=1.33" \
+      "r-shiny=1.6.0" \
+      "r-ggplot2=3.3.3" \
+      "r-devtools=2.4.1" \
+      "r-dplyr=1.0.6" \
+      "r-dt=0.18" \
+      "r-pkgbuild=1.2.0" \
+      "gxx_linux-64=7.5.0" \
+      "python=3.8.3" \
+      "notebook=6.4.0" \
+      "nbconvert=6.0.7" \
+      "jupyter_contrib_nbextensions=0.5.1" \
+      "xlrd=2.0.1" \
+      "bcftools=1.12" \
+      "samtools=1.12" \
+      "vcftools=0.1.16" \
+      "htslib=1.12" \
+      "bwa=0.7.17" \
+      "bowtie2=2.4.3" \
+      "primer3=2.5.0" \
+      "primer3-py=0.6.0" \
+      "numpy=1.20.3" \
+      "scipy=1.6.2" \
+      "biopython=1.78" \
+      "pysam=0.16.0.1" \
+      "pandas=1.2.4" \
+      "matplotlib=3.4.2" \
+      "seaborn=0.11.1" \
+      "scikit-learn=0.24.2" \
+      "scandir=1.10.0" \
+      "openpyxl=3.0.7" \
+      "simplegeneric=0.8.1" \
+      "matplotlib-venn=0.11.6" \
+      "tblib=1.7.0" \
+      "parallel=20210422" \
+      "scikit-allel=1.3.5" \
+      "bioconductor-dnacopy=1.60.0" \
+      "basemap-data-hires=1.2.2" \
       "seqtk=1.3" \
-      "gatk4" \
-      "freebayes" \
-      "lastz" \
-      "plotly" \
-      "texlive-core" \
-      "libgfortran4"
+      "gatk4=4.2.0.0" \
+      "freebayes=1.3.5" \
+      "lastz=1.0.4" \
+      "plotly=4.14.3" \
+      "texlive-core=20180414" \
+      "libgfortran4=7.5.0"
 
     # install vt variant tool set
     cd /opt/programs
