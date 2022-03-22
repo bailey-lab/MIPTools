@@ -17,13 +17,10 @@ From: amd64/ubuntu:20.04
 
     # set build environment
     export DEBIAN_FRONTEND=noninteractive \
-        CONDA_DIR=/opt/conda \
         SHELL=/bin/bash \
         LANG=en_US.UTF-8 \
         LANGUAGE=en_US.UTF-8 \
-        LC_ALL=en_US.UTF-8 \
-        MINICONDA_VERSION=4.8.3
-    export PATH=$CONDA_DIR/bin:$PATH
+        LC_ALL=en_US.UTF-8
 
     # install system packages
     apt-get update \
@@ -85,18 +82,23 @@ From: amd64/ubuntu:20.04
     cd jvarkit
     ./gradlew msa2vcf
 
-    # install conda
+    # install conda and python via Miniconda3
+    PYTHON_VERSION=3.8
+    MINICONDA_VERSION=4.8.3
+    MINICONDA_MD5=d63adf39f2c220950a063e0529d4ff74
+    CONDA_DIR=/opt/conda
+    export PATH=${CONDA_DIR}/bin:${PATH}
     cd /tmp && \
-        wget --quiet https://repo.continuum.io/miniconda/Miniconda3-py38_${MINICONDA_VERSION}-Linux-x86_64.sh && \
-        echo "d63adf39f2c220950a063e0529d4ff74 *Miniconda3-py38_${MINICONDA_VERSION}-Linux-x86_64.sh" | md5sum -c - && \
-        /bin/bash Miniconda3-py38_${MINICONDA_VERSION}-Linux-x86_64.sh -f -b -p $CONDA_DIR && \
-        rm Miniconda3-py38_${MINICONDA_VERSION}-Linux-x86_64.sh && \
-        $CONDA_DIR/bin/conda config --add channels defaults && \
-        $CONDA_DIR/bin/conda config --add channels bioconda && \
-        $CONDA_DIR/bin/conda config --add channels conda-forge && \
-        $CONDA_DIR/bin/conda config --add channels r && \
-        $CONDA_DIR/bin/conda config --system --set show_channel_urls true && \
-        $CONDA_DIR/bin/conda install --quiet --yes conda="${MINICONDA_VERSION%.*}.*" && \
+        wget --quiet "https://repo.anaconda.com/miniconda/Miniconda3-py${PYTHON_VERSION//./}_${MINICONDA_VERSION}-Linux-x86_64.sh" && \
+        echo "${MINICONDA_MD5} *Miniconda3-py${PYTHON_VERSION//./}_${MINICONDA_VERSION}-Linux-x86_64.sh" | md5sum -c - && \
+        /bin/bash Miniconda3-py${PYTHON_VERSION//./}_${MINICONDA_VERSION}-Linux-x86_64.sh -bfp ${CONDA_DIR} && \
+        rm Miniconda3-py${PYTHON_VERSION//./}_${MINICONDA_VERSION}-Linux-x86_64.sh && \
+        ${CONDA_DIR}/bin/conda config --add channels defaults && \
+        ${CONDA_DIR}/bin/conda config --add channels bioconda && \
+        ${CONDA_DIR}/bin/conda config --add channels conda-forge && \
+        ${CONDA_DIR}/bin/conda config --add channels r && \
+        ${CONDA_DIR}/bin/conda config --system --set show_channel_urls true && \
+        ${CONDA_DIR}/bin/conda install --quiet --yes conda="${MINICONDA_VERSION%.*}.*" && \
         conda clean --all -f -y
 
     # install mamba
@@ -195,7 +197,8 @@ From: amd64/ubuntu:20.04
     scp /opt/programs/parasight_v7.6/parasight.pl /opt/bin/parasight76.pl
 
     # install basespace cli
-    BS_PATH="https://launch.basespace.illumina.com/CLI/1.5.1/amd64-linux/bs"
+    BS_VERSION=1.5.1
+    BS_PATH="https://launch.basespace.illumina.com/CLI/${BS_VERSION}/amd64-linux/bs"
     wget $BS_PATH -O /opt/bin/bs
 
     # add executable flag to executables
