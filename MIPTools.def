@@ -94,69 +94,25 @@ From: amd64/ubuntu:20.04
         echo "${MINICONDA_MD5} *Miniconda3-py${PYTHON_VERSION}_${MINICONDA_VERSION}-Linux-x86_64.sh" | md5sum -c - && \
         /bin/bash Miniconda3-py${PYTHON_VERSION}_${MINICONDA_VERSION}-Linux-x86_64.sh -bfp ${CONDA_DIR} && \
         rm Miniconda3-py${PYTHON_VERSION}_${MINICONDA_VERSION}-Linux-x86_64.sh && \
-        ${CONDA_DIR}/bin/conda config --add channels defaults && \
-        ${CONDA_DIR}/bin/conda config --add channels bioconda && \
-        ${CONDA_DIR}/bin/conda config --add channels conda-forge && \
-        ${CONDA_DIR}/bin/conda config --add channels r && \
         ${CONDA_DIR}/bin/conda config --system --set show_channel_urls true && \
         conda clean --all --force-pkgs-dirs --yes
 
-    # install mamba
+    # Install mamba
     # Note that the mamba installation will update conda to the latest version
     conda install mamba=0.13.0 --channel conda-forge
 
-    # install conda packages using mamba
-    mamba install -qy\
-      "r-base=3.6.3" \
-      "r-epitools=0.5_10" \
-      "rpy2=3.4.4" \
-      "r-irkernel=1.2" \
-      "r-plotly=4.9.3" \
-      "r-knitr=1.33" \
-      "r-shiny=1.6.0" \
-      "r-ggplot2=3.3.3" \
-      "r-devtools=2.4.1" \
-      "r-dplyr=1.0.6" \
-      "r-dt=0.18" \
-      "r-pkgbuild=1.2.0" \
-      "gxx_linux-64=7.5.0" \
-      "python=3.8.3" \
-      "notebook=6.4.0" \
-      "nbconvert=6.0.7" \
-      "jupyter_contrib_nbextensions=0.5.1" \
-      "xlrd=2.0.1" \
-      "bcftools=1.12" \
-      "samtools=1.12" \
-      "vcftools=0.1.16" \
-      "htslib=1.12" \
-      "bwa=0.7.17" \
-      "bowtie2=2.4.3" \
-      "primer3=2.5.0" \
-      "primer3-py=0.6.0" \
-      "numpy=1.20.3" \
-      "scipy=1.6.2" \
-      "biopython=1.78" \
-      "pysam=0.16.0.1" \
-      "pandas=1.2.4" \
-      "matplotlib=3.4.2" \
-      "seaborn=0.11.1" \
-      "scikit-learn=0.24.2" \
-      "scandir=1.10.0" \
-      "openpyxl=3.0.7" \
-      "simplegeneric=0.8.1" \
-      "matplotlib-venn=0.11.6" \
-      "tblib=1.7.0" \
-      "parallel=20210422" \
-      "scikit-allel=1.3.5" \
-      "bioconductor-dnacopy=1.60.0" \
-      "basemap-data-hires=1.2.2" \
-      "seqtk=1.3" \
-      "gatk4=4.2.0.0" \
-      "freebayes=1.3.5" \
-      "lastz=1.0.4" \
-      "plotly=4.14.3" \
-      "texlive-core=20180414" \
-      "libgfortran4=7.5.0"
+    # Install mamba packages using an environment file.
+    # If the versioned file exists, use it as a template to ensure version
+    # numbers are fixed. Otherwise, install packages with the latest versions.
+    # Note that instead of creating a new environment, we update the base
+    # environment, which is activated by default.
+    if [ -f "/opt/environment_versioned.yml" ]; then
+        mamba env update --prefix ${CONDA_DIR} --file /opt/environment_versioned.yml
+    else
+        # Update environment and save information to a file
+        mamba env update --prefix ${CONDA_DIR} --file /opt/environment.yml
+        mamba env export --prefix ${CONDA_DIR} > /opt/environment_versioned.yml
+    fi
 
     # install vt variant tool set
     cd /opt/programs
@@ -219,6 +175,7 @@ From: amd64/ubuntu:20.04
 ##                        Files Section                        ##
 #################################################################
 %files
+    environment* /opt
     programs /opt
     bin /opt
     src /opt
