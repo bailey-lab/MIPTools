@@ -4290,7 +4290,7 @@ def parasight(resource_dir,
         gs_list.append(gs_command)
         pdf_list.append("cp " + basename + ".pdf "
                         + os.path.join(pdf_dir, t + ".pdf"))
-        outlist = ["parasight76.pl",
+        outlist = ["parasight.pl",
                    "-showseq", basename + ".show",
                    "-extra", basename + extra_extension,
                    "-template", "/opt/resources/nolabel.pst",
@@ -4344,7 +4344,7 @@ def parasight_print(resource_dir, design_dir, design_info_file,
             if (designed_gene_list is None) or (g in designed_gene_list):
                 show_file = os.path.join(design_dir, g, g + ".show")
                 extras_file = os.path.join(design_dir, g, g + extra_extension)
-                line = ["parasight76.pl", "-showseq", show_file,
+                line = ["parasight.pl", "-showseq", show_file,
                         "-extra ", extras_file]
                 if print_out:
                     print(" ".join(line))
