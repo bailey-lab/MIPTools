@@ -8,6 +8,8 @@ MIPTools (development version)
 New Features
 ------------
 
+-  Install :github:repo:`mipscripts <bailey-lab/mipscripts>`, which contains
+   additional tools for analysis pipelines.
 -  Perform additional argument parsing to ensure arguments are formatted
    correctly (:github:issue:`28`).
 -  New ``download`` app supersedes the previous ``download`` app, which has

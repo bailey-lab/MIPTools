@@ -191,6 +191,11 @@ From: amd64/ubuntu:20.04
     git clone --branch v7.6 https://github.com/bailey-lab/parasight
     scp parasight/parasight.pl /opt/bin/parasight.pl
 
+    # install mipscripts
+    cd /opt/programs
+    git clone --branch v0.3.0 https://github.com/bailey-lab/mipscripts.git
+    scp mipscripts/mipscripts.py /opt/bin/mipscripts.py
+
     # install basespace cli
     BS_PATH="https://launch.basespace.illumina.com/CLI/latest/amd64-linux/bs"
     wget $BS_PATH -O /opt/bin/bs
