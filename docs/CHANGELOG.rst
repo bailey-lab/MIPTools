@@ -32,6 +32,8 @@ Bug Fixes
 Maintenance
 -----------
 
+-  Install programs from GitHub instead of storing source code
+   (:github:user:`arisp99`, :github:pull:`36`).
 -  Update LICENSE year.
 -  Store containers using an HTTP directory (:github:issue:`12`).
 -  Remove duplicated files.
