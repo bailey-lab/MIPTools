@@ -187,7 +187,9 @@ From: amd64/ubuntu:20.04
     ./install.sh $CPU_COUNT
 
     # install parasight
-    scp /opt/programs/parasight_v7.6/parasight.pl /opt/bin/parasight76.pl
+    cd /opt/programs
+    git clone --branch v7.6 https://github.com/bailey-lab/parasight
+    scp parasight/parasight.pl /opt/bin/parasight.pl
 
     # install basespace cli
     BS_PATH="https://launch.basespace.illumina.com/CLI/latest/amd64-linux/bs"

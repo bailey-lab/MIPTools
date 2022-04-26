@@ -5,6 +5,6 @@ readthedocs-sphinx-search==0.1.1
 docutils==0.16 # see https://github.com/sphinx-doc/sphinx/issues/9049
 myst_parser==0.15.2 # write docs using MyST (a flavor of markdown)
 sphinx_copybutton==0.4.0 # copy button
-sphinx-toolbox==2.18.0 # many useful tools for sphinx
+sphinx-toolbox==2.18.2 # many useful tools for sphinx
 sphinx-licenseinfo==0.3.0 # license info
 sphinx-notfound-page==0.8 # 404 page
