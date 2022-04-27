@@ -20,6 +20,7 @@ inversion probe design, data processing, and analysis.
 
   guides/probe-design
   guides/analysis-pipeline
+  guides/hpcc
 
 .. toctree::
   :caption: Man Pages
