@@ -407,15 +407,16 @@ From: amd64/ubuntu:20.04
     done
 
     # Remove whitespace from arguments
-    probe_sets=${probe_sets//[[:space:]]/}
-    sample_sets=${sample_sets//[[:space:]]/}
-    stitch_options=${stitch_options//[[:space:]]/}
+    probe_sets=$(echo ${probe_sets} | sed "s/[[:space:]]//g")
+    sample_sets=$(echo ${sample_sets} | sed "s/[[:space:]]//g")
+    stitch_options=$(echo ${stitch_options} | sed "s/[[:space:]]//g")
     
     # Ensure that stitch options begin with a comma if not the default value
     # This is done as the arguments are fed in with leading dashes and the
     # python script will crash if dashes are fed in. By adding a leading comma,
     # the script will run.
-    if [ ${stitch_options:0:1} != "," ] && [ ${stitch_options} != "none" ]; then
+    stitch_first_char=$(echo ${stitch_options} | head -c1)
+    if [ ${stitch_first_char} != "," ] && [ ${stitch_options} != "none" ]; then
         stitch_options=",${stitch_options}"
     fi
 

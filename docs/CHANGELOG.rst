@@ -11,7 +11,7 @@ New Features
 -  Install :github:repo:`mipscripts <bailey-lab/mipscripts>`, which contains
    additional tools for analysis pipelines.
 -  Perform additional argument parsing to ensure arguments are formatted
-   correctly (:github:issue:`28`).
+   correctly (:github:issue:`28`, :github:issue:`37`).
 -  New ``download`` app supersedes the previous ``download`` app, which has
    been renamed to ``download_superseded``. The new app improves the method for
    downloading data from the Illumina BaseSpace Sequence Hub by using the
@@ -22,7 +22,8 @@ Bug Fixes
 ---------
 
 -  Let Freebayes run with only one CPU thread (:github:issue:`33`).
--  Fix error when app arguments have whitespace characters (:github:issue:`26`).
+-  Fix error when app arguments have whitespace characters (:github:issue:`26`,
+   :github:issue:`37`).
 -  Fix missing file error when MIP arms file is created from the MIP
    info dictionary (:github:user:`aydemiro`, :github:pull:`23`).
 -  Improve sample sheet preparation. Avoid errors when sample file
