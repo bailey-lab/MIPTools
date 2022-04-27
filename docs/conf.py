@@ -35,6 +35,7 @@ extensions = [
     "sphinx_toolbox.github",  # link to github
     "sphinx_licenseinfo", # add license information
     "notfound.extension", # 404 page
+    "sphinx.ext.autosectionlabel", # reference sections using their title
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -70,3 +71,7 @@ github_repository = "MIPTools"
 
 # -- 404 Page configuration-----------------------------------------------------
 notfound_urls_prefix = "/MIPTools/"
+
+# -- Auto Section configuration-------------------------------------------------
+# Make sure the target is unique
+autosectionlabel_prefix_document = True
