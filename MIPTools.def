@@ -99,7 +99,7 @@ From: amd64/ubuntu:20.04
 
     # Install mamba
     # Note that the mamba installation will update conda to the latest version
-    conda install mamba=0.13.0 --channel conda-forge
+    conda install mamba --channel conda-forge
 
     # Install mamba packages using an environment file.
     # If the versioned file exists, use it as a template to ensure version
