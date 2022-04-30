@@ -152,8 +152,7 @@ From: amd64/ubuntu:20.04
       "freebayes" \
       "lastz" \
       "plotly" \
-      "texlive-core" \
-      "libgfortran4"
+      "texlive-core"
 
     # install vt variant tool set
     cd /opt/programs
