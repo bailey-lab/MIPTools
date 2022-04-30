@@ -21,6 +21,7 @@ New Features
 Bug Fixes
 ---------
 
+-  Upgrade ``libgfortran4`` to ``libgfortran5`` (:github:issue:`38`).
 -  Let Freebayes run with only one CPU thread (:github:issue:`33`).
 -  Fix error when app arguments have whitespace characters (:github:issue:`26`,
    :github:issue:`37`).
