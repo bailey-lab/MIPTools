@@ -54,5 +54,4 @@ dependencies:
   - lastz
   - plotly
   - texlive-core
-  - libgfortran4
 prefix: /opt/conda
