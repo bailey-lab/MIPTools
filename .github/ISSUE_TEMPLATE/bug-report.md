@@ -10,18 +10,24 @@ assignees: ""
 
 <!-- Please briefly describe your problem. -->
 
-### Expected Behavior
+### Steps to Reproduce
 
-<!-- Please detail what output you expect. -->
+<!-- Please describe the steps to reproduce the bug. -->
 
-### Reprex
+1.
+2.
+3.
 
-<!--
-Please include a minimal reproducible example (AKA a reprex). If you've never
-heard of a reprex before, start by reading stackoverflow's help page:
-<https://stackoverflow.com/help/minimal-reproducible-example>.
+<!-- 
+Alternatively, Please include a minimal reproducible example (AKA a reprex). If
+you've never heard of a reprex before, start by reading stackoverflow's help
+page: <https://stackoverflow.com/help/minimal-reproducible-example>.
+-->
 
 ```shell
 # insert reprex here
 ```
--->
+
+### Expected Behavior
+
+<!-- Please detail what output you expect. -->
