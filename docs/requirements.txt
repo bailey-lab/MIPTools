@@ -1,8 +1,10 @@
 # Defining the exact version will make sure things don't break
-sphinx==4.4.0
+sphinx==4.3.2
 sphinx_rtd_theme==1.0.0
 readthedocs-sphinx-search==0.1.1
 docutils==0.16 # see https://github.com/sphinx-doc/sphinx/issues/9049
 myst_parser==0.15.2 # write docs using MyST (a flavor of markdown)
 sphinx_copybutton==0.4.0 # copy button
-sphinx-toolbox==2.18.0
+sphinx-toolbox==2.18.2 # many useful tools for sphinx
+sphinx-licenseinfo==0.3.0 # license info
+sphinx-notfound-page==0.8 # 404 page

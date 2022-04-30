@@ -33,6 +33,9 @@ extensions = [
     "myst_parser",  # write docs using MyST (a flavor of markdown)
     "sphinx_copybutton",  # add copy button to code chunks
     "sphinx_toolbox.github",  # link to github
+    "sphinx_licenseinfo", # add license information
+    "notfound.extension", # 404 page
+    "sphinx.ext.autosectionlabel", # reference sections using their title
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -65,3 +68,10 @@ html_context = {
 # -- Sphinx Toolbox configuration-----------------------------------------------
 github_username = "bailey-lab"
 github_repository = "MIPTools"
+
+# -- 404 Page configuration-----------------------------------------------------
+notfound_urls_prefix = "/MIPTools/"
+
+# -- Auto Section configuration-------------------------------------------------
+# Make sure the target is unique
+autosectionlabel_prefix_document = True

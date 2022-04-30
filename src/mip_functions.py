@@ -2410,19 +2410,29 @@ def bwa_multi(fastq_files, output_type, fastq_dir, bam_dir, options, species,
     if not os.path.exists(bam_dir):
         os.makedirs(bam_dir)
     if parallel_processes == 1:
+        # Set number of processors
+        options = options + ["-t " + str(processor_number)]
+
+        # Run bwa on each fastq file
         for f in fastq_files:
             # get base file name
             base_name = f.split(".")[0]
             bam_name = base_name + extension
-            options.extend("-t" + str(processor_number))
             bwa(f, bam_name, output_type, fastq_dir, bam_dir, options, species,
                 base_name)
     else:
+        # Determine number of processors per parallel process
         processor_per_process = processor_number // parallel_processes
         p = NoDaemonProcessPool(parallel_processes)
+
+        # Set number of processors
         options = options + ["-t " + str(processor_per_process)]
+
+        # Initialize lists
         results = []
         errors = []
+
+        # Run bwa on each fastq file
         for f in fastq_files:
             base_name = f.split(".")[0]
             bam_name = base_name + extension
@@ -4280,7 +4290,7 @@ def parasight(resource_dir,
         gs_list.append(gs_command)
         pdf_list.append("cp " + basename + ".pdf "
                         + os.path.join(pdf_dir, t + ".pdf"))
-        outlist = ["parasight76.pl",
+        outlist = ["parasight.pl",
                    "-showseq", basename + ".show",
                    "-extra", basename + extra_extension,
                    "-template", "/opt/resources/nolabel.pst",
@@ -4334,7 +4344,7 @@ def parasight_print(resource_dir, design_dir, design_info_file,
             if (designed_gene_list is None) or (g in designed_gene_list):
                 show_file = os.path.join(design_dir, g, g + ".show")
                 extras_file = os.path.join(design_dir, g, g + extra_extension)
-                line = ["parasight76.pl", "-showseq", show_file,
+                line = ["parasight.pl", "-showseq", show_file,
                         "-extra ", extras_file]
                 if print_out:
                     print(" ".join(line))

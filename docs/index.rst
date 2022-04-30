@@ -20,6 +20,7 @@ inversion probe design, data processing, and analysis.
 
   guides/probe-design
   guides/analysis-pipeline
+  guides/hpcc
 
 .. toctree::
   :caption: Man Pages
@@ -33,10 +34,13 @@ inversion probe design, data processing, and analysis.
   app-reference/jupyter-app
 
 .. toctree::
-  :caption: Changelog
+  :caption: Links
   :maxdepth: 1
+  :hidden:
   
+  Source Code <https://github.com/bailey-lab/MIPTools>
   CHANGELOG
+  license
 
 Need Help?
 ----------

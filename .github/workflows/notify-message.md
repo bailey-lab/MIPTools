@@ -4,5 +4,6 @@ Build and deploy:
 
 ```bash
 gh repo clone bailey-lab/MIPTools
-screen -dmS build-container MIPTools/.github/workflows/build-container.sh
+cd MIPTools
+.github/workflows/build-container.sh
 ```

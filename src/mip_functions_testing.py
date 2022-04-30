@@ -10546,7 +10546,7 @@ def parasight(resource_dir,
         gs_list.append(gs_command)
         pdf_list.append("cp " + basename + ".pdf "
                         + os.path.join(pdf_dir, t + ".pdf"))
-        outlist = ["parasight76.pl",
+        outlist = ["parasight.pl",
                    "-showseq", basename + ".show",
                    "-extra", basename + extra_extension,
                    "-template", "/opt/resources/nolabel.pst",
@@ -10682,7 +10682,7 @@ def parasight_mod(resource_dir,  design_info_file, species,
             pdf_convert_list.append(t + ".mod.pdf")
         gs_list.append(gs_command)
         pdf_list.append("cp " + basename + ".mod.pdf " +                            pdf_dir + t + ".mod.pdf")
-        outlist = ["parasight76.pl",
+        outlist = ["parasight.pl",
                    "-showseq",
                    basename + ".show",
                    "-extra",
@@ -10775,7 +10775,7 @@ def parasight_shift(resource_dir, design_info_file, species,
         gs_list.append(gs_command)
         pdf_list.append("cp " + basename + ".mod.pdf "
                         + pdf_dir + t + ".mod.pdf")
-        outlist = ["parasight76.pl",
+        outlist = ["parasight.pl",
                    "-showseq", basename + ".show",
                    "-extra", basename + extra_extension + ".mod",
                    "-template", "/opt/resources/nolabel.pst",
@@ -10815,7 +10815,7 @@ def parasight_shift(resource_dir, design_info_file, species,
 def parasight_print(gene_list, extra_suffix=".extra"):
     for g in gene_list:
         print(("cd ../" + g))
-        print(("parasight76.pl -showseq " + g + ".show "
+        print(("parasight.pl -showseq " + g + ".show "
                + "-extra " + g + extra_suffix))
 
 

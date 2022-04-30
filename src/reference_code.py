@@ -96,7 +96,7 @@ def parasight_mod(resource_dir,  design_info_file, species,
             pdf_convert_list.append(t + ".mod.pdf")
         gs_list.append(gs_command)
         pdf_list.append("cp " + basename + ".mod.pdf " +                            pdf_dir + t + ".mod.pdf")
-        outlist = ["parasight76.pl",
+        outlist = ["parasight.pl",
                    "-showseq",
                    basename + ".show",
                    "-extra",
@@ -189,7 +189,7 @@ def parasight_shift(resource_dir, design_info_file, species,
         gs_list.append(gs_command)
         pdf_list.append("cp " + basename + ".mod.pdf "
                         + pdf_dir + t + ".mod.pdf")
-        outlist = ["parasight76.pl",
+        outlist = ["parasight.pl",
                    "-showseq", basename + ".show",
                    "-extra", basename + extra_extension + ".mod",
                    "-template", "/opt/resources/nolabel.pst",
