@@ -17,13 +17,10 @@ From: amd64/ubuntu:20.04
 
     # set build environment
     export DEBIAN_FRONTEND=noninteractive \
-        CONDA_DIR=/opt/conda \
         SHELL=/bin/bash \
         LANG=en_US.UTF-8 \
         LANGUAGE=en_US.UTF-8 \
-        LC_ALL=en_US.UTF-8 \
-        MINICONDA_VERSION=4.8.3
-    export PATH=$CONDA_DIR/bin:$PATH
+        LC_ALL=en_US.UTF-8
 
     # install system packages
     apt-get update \
@@ -81,108 +78,76 @@ From: amd64/ubuntu:20.04
 
     # install msa2vcf
     cd /opt/programs
-    git clone https://github.com/lindenb/jvarkit.git
+    git clone --branch 2021.10.13 https://github.com/lindenb/jvarkit.git
     cd jvarkit
     ./gradlew msa2vcf
 
-    # install conda
+    # install conda and python via Miniconda3
+    PYTHON_VERSION=3.8
+    PYTHON_VERSION=$(echo ${PYTHON_VERSION} | sed 's/[^0-9]//g' | head -c2)
+    MINICONDA_VERSION=4.8.3
+    MINICONDA_MD5=d63adf39f2c220950a063e0529d4ff74
+    CONDA_DIR=/opt/conda
+    export PATH=${CONDA_DIR}/bin:${PATH}
     cd /tmp && \
-        wget --quiet https://repo.continuum.io/miniconda/Miniconda3-py38_${MINICONDA_VERSION}-Linux-x86_64.sh && \
-        echo "d63adf39f2c220950a063e0529d4ff74 *Miniconda3-py38_${MINICONDA_VERSION}-Linux-x86_64.sh" | md5sum -c - && \
-        /bin/bash Miniconda3-py38_${MINICONDA_VERSION}-Linux-x86_64.sh -f -b -p $CONDA_DIR && \
-        rm Miniconda3-py38_${MINICONDA_VERSION}-Linux-x86_64.sh && \
-        $CONDA_DIR/bin/conda config --add channels defaults && \
-        $CONDA_DIR/bin/conda config --add channels bioconda && \
-        $CONDA_DIR/bin/conda config --add channels conda-forge && \
-        $CONDA_DIR/bin/conda config --add channels r && \
-        $CONDA_DIR/bin/conda config --system --set show_channel_urls true && \
-        $CONDA_DIR/bin/conda install --quiet --yes conda="${MINICONDA_VERSION%.*}.*" && \
-        conda clean --all -f -y
+        wget --quiet "https://repo.anaconda.com/miniconda/Miniconda3-py${PYTHON_VERSION}_${MINICONDA_VERSION}-Linux-x86_64.sh" && \
+        echo "${MINICONDA_MD5} *Miniconda3-py${PYTHON_VERSION}_${MINICONDA_VERSION}-Linux-x86_64.sh" | md5sum -c - && \
+        /bin/bash Miniconda3-py${PYTHON_VERSION}_${MINICONDA_VERSION}-Linux-x86_64.sh -bfp ${CONDA_DIR} && \
+        rm Miniconda3-py${PYTHON_VERSION}_${MINICONDA_VERSION}-Linux-x86_64.sh && \
+        ${CONDA_DIR}/bin/conda config --system --set show_channel_urls true && \
+        conda clean --all --force-pkgs-dirs --yes
 
-    # install mamba
-    conda install mamba -c conda-forge
+    # Install mamba
+    # Note that the mamba installation will update conda to the latest version
+    conda install mamba --channel conda-forge
 
-    # install conda packages using mamba
-    mamba install -qy\
-      "r" \
-      "r-epitools" \
-      "rpy2" \
-      "r-irkernel" \
-      "r-plotly" \
-      "r-knitr" \
-      "r-shiny" \
-      "r-ggplot2" \
-      "r-devtools" \
-      "r-dplyr" \
-      "r-dt" \
-      "r-pkgbuild" \
-      "gxx_linux-64" \
-      "python" \
-      "notebook" \
-      "nbconvert" \
-      "jupyter_contrib_nbextensions" \
-      "xlrd" \
-      "bcftools" \
-      "samtools" \
-      "vcftools" \
-      "htslib" \
-      "bwa" \
-      "bowtie2" \
-      "primer3" \
-      "primer3-py" \
-      "numpy" \
-      "scipy" \
-      "biopython" \
-      "pysam" \
-      "pandas" \
-      "matplotlib" \
-      "seaborn" \
-      "scikit-learn" \
-      "scandir" \
-      "openpyxl" \
-      "simplegeneric" \
-      "matplotlib-venn" \
-      "tblib" \
-      "parallel" \
-      "scikit-allel" \
-      "bioconductor-dnacopy" \
-      "basemap-data-hires" \
-      "seqtk=1.3" \
-      "gatk4" \
-      "freebayes" \
-      "lastz" \
-      "plotly" \
-      "texlive-core"
+    # Install mamba packages using an environment file.
+    # If the versioned file exists, use it as a template to ensure version
+    # numbers are fixed. Otherwise, install packages with the latest versions.
+    # Note that instead of creating a new environment, we update the base
+    # environment, which is activated by default.
+    if [ -f "/opt/environment_versioned.yml" ]; then
+        mamba env update --prefix ${CONDA_DIR} --file /opt/environment_versioned.yml
+    else
+        # Update environment and save information to a file
+        mamba env update --prefix ${CONDA_DIR} --file /opt/environment.yml
+        mamba env export --prefix ${CONDA_DIR} > /opt/environment_versioned.yml
+    fi
 
     # install vt variant tool set
     cd /opt/programs
-    git clone https://github.com/atks/vt.git
+    git clone --branch 0.577 https://github.com/atks/vt.git
     cd vt
-    git checkout 0.577
     make -j $CPU_COUNT
     scp vt /opt/bin
 
     # install magrittr
-    Rscript -e 'install.packages("magrittr", repos = "https://cloud.r-project.org")'
+    Rscript -e 'devtools::install_version(
+        package = "magrittr",
+        version = "2.0.2",
+        repos = "https://cloud.r-project.org"
+    )'
 
     # install RealMcCoil
-    Rscript -e 'devtools::install_github("OJWatson/McCOILR")'
+    Rscript -e 'devtools::install_github("OJWatson/McCOILR", ref = "v1.3.1")'
 
     # install rehh
-    Rscript -e 'install.packages("rehh", repos="https://cloud.r-project.org")'
+    Rscript -e 'devtools::install_version(
+        package = "rehh", 
+        version = "3.2.2",
+        repos = "https://cloud.r-project.org"
+    )'
 
     # install MIPWrangler
     cd /opt/programs
-    git clone https://github.com/bailey-lab/MIPWrangler
+    git clone --branch v1.2.0 https://github.com/bailey-lab/MIPWrangler
     cd MIPWrangler
-    git checkout v1.2.0
     ./install.sh $CPU_COUNT
 
     # install elucidator
     cd /opt/programs
-    git clone https://github.com/nickjhathaway/elucidator
+    git clone --branch develop https://github.com/nickjhathaway/elucidator
     cd elucidator
-    git checkout develop
     ./install.sh $CPU_COUNT
 
     # install parasight
@@ -196,7 +161,8 @@ From: amd64/ubuntu:20.04
     scp mipscripts/mipscripts.py /opt/bin/mipscripts.py
 
     # install basespace cli
-    BS_PATH="https://launch.basespace.illumina.com/CLI/latest/amd64-linux/bs"
+    BS_VERSION=1.5.1
+    BS_PATH="https://launch.basespace.illumina.com/CLI/${BS_VERSION}/amd64-linux/bs"
     wget $BS_PATH -O /opt/bin/bs
 
     # add executable flag to executables
@@ -216,6 +182,7 @@ From: amd64/ubuntu:20.04
 ##                        Files Section                        ##
 #################################################################
 %files
+    environment* /opt
     programs /opt
     bin /opt
     src /opt
