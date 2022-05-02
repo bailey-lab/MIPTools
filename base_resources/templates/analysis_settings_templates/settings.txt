@@ -9,8 +9,6 @@
 species	pf
 callInfoDictionary	/opt/project_resources/mip_ids/call_info.json
 mipSetsDictionary	/opt/project_resources/mip_ids/probe_sets.json
-### Multiple sequence aligner to be used for variant calling.
-multipleSequenceAligner	muscle
 # set msaToVcf to miptools if miptools script is to be used (experimental)
 msaToVcf	msa2vcf
 # create snp only vcf when using msa for variant calling
