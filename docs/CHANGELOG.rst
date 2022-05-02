@@ -40,6 +40,7 @@ Bug Fixes
 Maintenance
 -----------
 
+-  Reduce size of image by deleting source code after installation of programs.
 -  Remove sequence aligners (:github:issue:`35`).
 -  Remove unused analysis settings files (:github:issue:`35`).
 -  Install programs from GitHub instead of storing source code

@@ -81,6 +81,7 @@ From: amd64/ubuntu:20.04
     git clone --branch 2021.10.13 https://github.com/lindenb/jvarkit.git
     cd jvarkit
     ./gradlew msa2vcf
+    scp dist/msa2vcf.jar /opt/bin
 
     # install conda and python via Miniconda3
     PYTHON_VERSION=3.8
@@ -114,6 +115,9 @@ From: amd64/ubuntu:20.04
         mamba env export --prefix ${CONDA_DIR} > /opt/environment_versioned.yml
     fi
 
+    # Clean mamba installs
+    mamba clean --all --yes
+
     # install vt variant tool set
     cd /opt/programs
     git clone --branch 0.577 https://github.com/atks/vt.git
@@ -140,30 +144,37 @@ From: amd64/ubuntu:20.04
 
     # install MIPWrangler
     cd /opt/programs
-    git clone --branch v1.2.0 https://github.com/bailey-lab/MIPWrangler
+    git clone --branch v1.2.0 https://github.com/bailey-lab/MIPWrangler.git
     cd MIPWrangler
     ./install.sh $CPU_COUNT
+    scp bin/MIPWrangler /opt/bin
 
     # install elucidator
     cd /opt/programs
-    git clone --branch develop https://github.com/nickjhathaway/elucidator
+    git clone --branch develop https://github.com/nickjhathaway/elucidator.git
     cd elucidator
     ./install.sh $CPU_COUNT
+    scp bin/elucidator /opt/bin
 
     # install parasight
     cd /opt/programs
-    git clone --branch v7.6 https://github.com/bailey-lab/parasight
-    scp parasight/parasight.pl /opt/bin/parasight.pl
+    git clone --branch v7.6 https://github.com/bailey-lab/parasight.git
+    scp parasight/parasight.pl /opt/bin
 
     # install mipscripts
     cd /opt/programs
     git clone --branch v0.3.0 https://github.com/bailey-lab/mipscripts.git
-    scp mipscripts/mipscripts.py /opt/bin/mipscripts.py
+    scp mipscripts/mipscripts.py /opt/bin
 
     # install basespace cli
     BS_VERSION=1.5.1
     BS_PATH="https://launch.basespace.illumina.com/CLI/${BS_VERSION}/amd64-linux/bs"
     wget $BS_PATH -O /opt/bin/bs
+
+    # Remove programs to reduce image size. These programs have been installed
+    # and the binaries moved to /opt/bin
+    cd /opt/programs
+    rm -r elucidator jvarkit mipscripts MIPWrangler parasight vt
 
     # add executable flag to executables
     chmod -R +xr /usr/bin
@@ -192,8 +203,7 @@ From: amd64/ubuntu:20.04
 ##                     Environment Section                     ##
 #################################################################
 %environment
-    path=/opt/bin:/opt/conda/bin:/opt/programs/MIPWrangler/bin:
-    path=$path/opt/programs/elucidator/bin:/opt/programs/gatk:
+    path=/opt/bin:/opt/conda/bin:
     path=$path$PATH
     export PATH=$path
     export XDG_RUNTIME_DIR=""
