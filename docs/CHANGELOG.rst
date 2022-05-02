@@ -36,6 +36,7 @@ Bug Fixes
 Maintenance
 -----------
 
+-  Remove unused analysis settings files (:github:issue:`35`).
 -  Install programs from GitHub instead of storing source code
    (:github:user:`arisp99`, :github:pull:`36`).
 -  Update LICENSE year.
