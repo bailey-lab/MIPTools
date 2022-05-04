@@ -9,8 +9,6 @@
 species	pf
 callInfoDictionary	/opt/project_resources/mip_ids/call_info.json
 mipSetsDictionary	/opt/project_resources/mip_ids/probe_sets.json
-# set msaToVcf to miptools if miptools script is to be used (experimental)
-msaToVcf	msa2vcf
 # create snp only vcf when using msa for variant calling
 snpOnlyVcf	0
 ##############  SETTINGS THAT CAN CHANGE PER RUN #############################

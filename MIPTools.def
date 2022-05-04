@@ -76,13 +76,6 @@ From: amd64/ubuntu:20.04
     alien bcl2fastq2*.rpm || true
     dpkg -i bcl2fastq2*.deb || true
 
-    # install msa2vcf
-    cd /opt/programs
-    git clone --branch 2021.10.13 https://github.com/lindenb/jvarkit.git
-    cd jvarkit
-    ./gradlew msa2vcf
-    scp dist/msa2vcf.jar /opt/bin
-
     # install conda and python via Miniconda3
     PYTHON_VERSION=3.8
     PYTHON_VERSION=$(echo ${PYTHON_VERSION} | sed 's/[^0-9]//g' | head -c2)

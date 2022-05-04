@@ -40,6 +40,8 @@ Bug Fixes
 Maintenance
 -----------
 
+-  Remove the ``msa2vcf`` program and other conversion tools
+   (:github:issue:`35`).
 -  Reduce size of image by deleting source code after installation of programs.
 -  Remove sequence aligners (:github:issue:`35`).
 -  Remove unused analysis settings files (:github:issue:`35`).
