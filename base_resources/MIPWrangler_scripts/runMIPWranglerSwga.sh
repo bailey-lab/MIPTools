@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 
-if [[ $# -ne 3 ]]; then
+if [[ $# -ne 4 ]]; then
     msg="Illegal number of parameters. Needs three arguments:\n"
     msg="${msg}1) The name of the MIP server number\n"
     msg="${msg}2) The number of threads to use\n"
-    msg="${msg}3) The population clustering fraction cutoff."
+    msg="${msg}3) The population clustering fraction cutoff\n"
+    msg="${msg}4) The threshold for downsampling the UMI count."
     echo ${msg} >&2
     exit 2
 fi
