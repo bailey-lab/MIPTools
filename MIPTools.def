@@ -167,7 +167,7 @@ From: amd64/ubuntu:20.04
     # Remove programs to reduce image size. These programs have been installed
     # and the binaries moved to /opt/bin
     cd /opt/programs
-    rm -r elucidator jvarkit mipscripts MIPWrangler parasight vt
+    rm -r elucidator mipscripts MIPWrangler parasight vt
 
     # add executable flag to executables
     chmod -R +xr /usr/bin
