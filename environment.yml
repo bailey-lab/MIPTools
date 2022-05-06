@@ -1,9 +1,9 @@
 name: base
 channels:
-  - r
-  - bioconda
   - conda-forge
-  - defaults
+  - bioconda
+  - r
+  - nodefaults
 dependencies:
   - r-base
   - r-epitools
