@@ -318,6 +318,8 @@ From: amd64/ubuntu:20.04
         echo "  -n    Starting number for MIP server. Default: 1."
         echo "  -p    Required. Probe sets to be processed."
         echo "  -s    Required. Sample sets to be processed."
+        echo "  -t    The threshold at which UMIs will be downsampled."
+        echo "        Defualt: 1000"
         echo "  -w    Absolute path to MIPWrangler run script. "
         echo "        Default: '/opt/bin/runMIPWranglerCurrent.sh'."
         echo "  -x    Required. Additional arguments to pass to MIPWrangler"
@@ -357,9 +359,10 @@ From: amd64/ubuntu:20.04
     stitch_options="none"
     keep_files=""
     population_fraction_cutoff=0.005
+    downsample_threshold=1000
 
     # Parse options
-    while getopts "c:e:f:hkl:m:n:p:s:w:x:" opt; do
+    while getopts "c:e:f:hkl:m:n:p:s:t:w:x:" opt; do
         case ${opt} in
             c) cpu_count=${OPTARG} ;;
             e) experiment_id=${OPTARG} ;;
@@ -372,6 +375,7 @@ From: amd64/ubuntu:20.04
             n) server_number=${OPTARG} ;;
             p) probe_sets=${OPTARG} ;;
             s) sample_sets=${OPTARG} ;;
+            t) downsample_threshold=${OPTARG} ;;
             w) cluster_script=${OPTARG} ;;
             x) stitch_options=${OPTARG} ;;
             *) help
@@ -398,7 +402,8 @@ From: amd64/ubuntu:20.04
     -c ${cpu_count} -e ${experiment_id} ${keep_files} \
     -l /opt/analysis/${sample_list} -m ${min_capture_length} \
     -n ${server_number} -p ${probe_sets} -s ${sample_sets} \
-    -w ${cluster_script} -x ${stitch_options} -f ${population_fraction_cutoff}
+    -w ${cluster_script} -x ${stitch_options} -f ${population_fraction_cutoff} \
+    -t ${downsample_threshold}
 
     # Run wrangler scripts.
     # The dot space is used to let the sourced script modify the current
