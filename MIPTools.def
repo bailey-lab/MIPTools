@@ -359,7 +359,7 @@ From: amd64/ubuntu:20.04
     population_fraction_cutoff=0.005
 
     # Parse options
-    while getopts "c:e:hkl:m:n:p:s:w:x:" opt; do
+    while getopts "c:e:f:hkl:m:n:p:s:w:x:" opt; do
         case ${opt} in
             c) cpu_count=${OPTARG} ;;
             e) experiment_id=${OPTARG} ;;
