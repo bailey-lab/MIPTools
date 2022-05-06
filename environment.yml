@@ -1,57 +1,57 @@
 name: base
 channels:
-  - r
-  - bioconda
   - conda-forge
-  - defaults
+  - bioconda
+  - r
+  - nodefaults
 dependencies:
+  - basemap-data-hires
+  - bcftools
+  - bioconductor-dnacopy
+  - biopython
+  - bowtie2
+  - bwa
+  - freebayes
+  - gatk4
+  - gxx_linux-64
+  - htslib
+  - jupyter_contrib_nbextensions
+  - lastz
+  - matplotlib
+  - matplotlib-venn
+  - nbconvert
+  - notebook
+  - numpy
+  - openpyxl
+  - pandas
+  - parallel
+  - plotly
+  - primer3
+  - primer3-py
+  - pysam
+  - python
   - r-base
-  - r-epitools
-  - rpy2
-  - r-irkernel
-  - r-plotly
-  - r-knitr
-  - r-shiny
-  - r-ggplot2
   - r-devtools
   - r-dplyr
   - r-dt
+  - r-epitools
+  - r-ggplot2
+  - r-irkernel
+  - r-knitr
   - r-pkgbuild
-  - gxx_linux-64
-  - python
-  - notebook
-  - nbconvert
-  - jupyter_contrib_nbextensions
-  - xlrd
-  - bcftools
+  - r-plotly
+  - r-shiny
+  - rpy2
   - samtools
-  - vcftools
-  - htslib
-  - bwa
-  - bowtie2
-  - primer3
-  - primer3-py
-  - numpy
-  - scipy
-  - biopython
-  - pysam
-  - pandas
-  - matplotlib
-  - seaborn
-  - scikit-learn
   - scandir
-  - openpyxl
-  - simplegeneric
-  - matplotlib-venn
-  - tblib
-  - parallel
   - scikit-allel
-  - bioconductor-dnacopy
-  - basemap-data-hires
+  - scikit-learn
+  - scipy
+  - seaborn
   - seqtk=1.3
-  - gatk4
-  - freebayes
-  - lastz
-  - plotly
+  - simplegeneric
+  - tblib
   - texlive-core
+  - vcftools
+  - xlrd
 prefix: /opt/conda
