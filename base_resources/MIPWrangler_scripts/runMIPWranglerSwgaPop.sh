@@ -5,7 +5,7 @@ if [[ $# -ne 3 ]]; then
     msg="${msg}1) The name of the MIP server number\n"
     msg="${msg}2) The number of threads to use\n"
     msg="${msg}3) The population clustering fraction cutoff."
-    echo msg >&2
+    echo ${msg} >&2
     exit 2
 fi
 
