@@ -106,6 +106,13 @@ parser.add_argument(
     help="Minimum capture length for stitching, excluding probe arms.",
     type=int,
 )
+parser.add_argument(
+    "-f",
+    "--population-fraction-cutoff",
+    help="Population clustering fraction cutoff.",
+    default=0.005,
+    type=float,
+)
 
 # Parse arguments from command line
 args = vars(parser.parse_args())
@@ -312,7 +319,14 @@ renamed_info = os.path.join(
 )
 wrangler_commands = [
     ["cd", "analysis"],
-    ["nohup", "bash", cluster_script, str(server_num), str(cpu_count)],
+    [
+        "nohup",
+        "bash",
+        cluster_script,
+        str(server_num),
+        str(cpu_count),
+        str(args["population_fraction_cutoff"]),
+    ],
     ["mv", os.path.join(analysis_dir, "analysis/logs"), analysis_dir],
     ["mv", os.path.join(analysis_dir, "analysis/scripts"), analysis_dir],
     ["mv", os.path.join(analysis_dir, "analysis/resources"), analysis_dir],

@@ -8,10 +8,12 @@ MIPTools (development version)
 New Features
 ------------
 
+-  Add an additional argument to the ``wrangler`` app to control the population
+   clustering fraction cutoff defined by :github:repo:`MIPWrangler
+   <bailey-lab/MIPWrangler>` (:github:user:`arisp99`, :github:pull:`39`).
 -  Add the capability to freeze software version numbers when building the
    container. Additionally, the version number for key software tools has been
-   fixed (:github:user:`arisp99`,
-   :github:pull:`32`).
+   fixed (:github:user:`arisp99`, :github:pull:`32`).
 -  Install :github:repo:`mipscripts <bailey-lab/mipscripts>`, which contains
    additional tools for analysis pipelines.
 -  Perform additional argument parsing to ensure arguments are formatted
