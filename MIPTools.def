@@ -140,14 +140,12 @@ From: amd64/ubuntu:20.04
     git clone --branch v1.2.0 https://github.com/bailey-lab/MIPWrangler.git
     cd MIPWrangler
     ./install.sh $CPU_COUNT
-    scp bin/MIPWrangler /opt/bin
 
     # install elucidator
     cd /opt/programs
     git clone --branch develop https://github.com/nickjhathaway/elucidator.git
     cd elucidator
     ./install.sh $CPU_COUNT
-    scp bin/elucidator /opt/bin
 
     # install parasight
     cd /opt/programs
@@ -167,7 +165,7 @@ From: amd64/ubuntu:20.04
     # Remove programs to reduce image size. These programs have been installed
     # and the binaries moved to /opt/bin
     cd /opt/programs
-    rm -r elucidator mipscripts MIPWrangler parasight vt
+    rm -r mipscripts parasight vt
 
     # add executable flag to executables
     chmod -R +xr /usr/bin
@@ -197,6 +195,8 @@ From: amd64/ubuntu:20.04
 #################################################################
 %environment
     path=/opt/bin:/opt/conda/bin:
+    path=$path/opt/programs/MIPWrangler/bin:
+    path=$path/opt/programs/elucidator/bin:
     path=$path$PATH
     export PATH=$path
     export XDG_RUNTIME_DIR=""

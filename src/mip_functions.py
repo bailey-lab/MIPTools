@@ -22,7 +22,6 @@ import gzip
 from primer3 import calcHeterodimerTm
 import primer3
 import traceback
-from msa_to_vcf import msa_to_vcf as msa_to_vcf
 import itertools
 import sys
 import allel
