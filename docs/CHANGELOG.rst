@@ -9,7 +9,8 @@ New Features
 ------------
 
 -  Add an additional argument to the ``wrangler`` app to control the population
-   clustering fraction cutoff (:github:user:`arisp99`, :github:pull:`39`).
+   clustering fraction cutoff defined by :github:repo:`MIPWrangler
+   <bailey-lab/MIPWrangler>` (:github:user:`arisp99`, :github:pull:`39`).
 -  Add the capability to freeze software version numbers when building the
    container. Additionally, the version number for key software tools has been
    fixed (:github:user:`arisp99`, :github:pull:`32`).
