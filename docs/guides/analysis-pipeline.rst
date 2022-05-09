@@ -77,10 +77,10 @@ Next, we can run the :ref:`wrangler app <wrangler-app>`:
     -s ${sample_sets_used} -c ${cpu_number} -m ${min_capture_length}
 
 The :ref:`wrangler app <wrangler-app>` will save the main outputs as compressed
-files in the :code:`wrangler` directory. There will additionally be two
-:code:`nohup` files that contain errors and warning messages logged by the
-:ref:`wrangler app <wrangler-app>`. These files should be empty if the all went
-well. In our example run, both :code:`nohup` files were empty and the main
+files in the :code:`wrangler` directory. There will additionally be a
+:code:`nohup` file that contains errors and warning messages logged by the
+:ref:`wrangler app <wrangler-app>`. This file should be empty if the all went
+well. In our example run, the :code:`nohup` file was empty and the main
 outputs were aggregated into the three files:
 
 * :code:`run_test_run_wrangled_20220314.txt.gz`
