@@ -93,7 +93,7 @@ From: amd64/ubuntu:20.04
 
     # Install mamba
     # Note that the mamba installation will update conda to the latest version
-    conda install mamba --channel conda-forge
+    conda install mamba --channel conda-forge --quiet
 
     # Install mamba packages using an environment file.
     # If the versioned file exists, use it as a template to ensure version
@@ -101,10 +101,10 @@ From: amd64/ubuntu:20.04
     # Note that instead of creating a new environment, we update the base
     # environment, which is activated by default.
     if [ -f "/opt/environment_versioned.yml" ]; then
-        mamba env update --prefix ${CONDA_DIR} --file /opt/environment_versioned.yml
+        mamba env update --prefix ${CONDA_DIR} --file /opt/environment_versioned.yml --quiet
     else
         # Update environment and save information to a file
-        mamba env update --prefix ${CONDA_DIR} --file /opt/environment.yml
+        mamba env update --prefix ${CONDA_DIR} --file /opt/environment.yml --quiet
         mamba env export --prefix ${CONDA_DIR} > /opt/environment_versioned.yml
     fi
 
@@ -140,14 +140,12 @@ From: amd64/ubuntu:20.04
     git clone --branch v1.2.0 https://github.com/bailey-lab/MIPWrangler.git
     cd MIPWrangler
     ./install.sh $CPU_COUNT
-    scp bin/MIPWrangler /opt/bin
 
     # install elucidator
     cd /opt/programs
     git clone --branch develop https://github.com/nickjhathaway/elucidator.git
     cd elucidator
     ./install.sh $CPU_COUNT
-    scp bin/elucidator /opt/bin
 
     # install parasight
     cd /opt/programs
@@ -167,7 +165,7 @@ From: amd64/ubuntu:20.04
     # Remove programs to reduce image size. These programs have been installed
     # and the binaries moved to /opt/bin
     cd /opt/programs
-    rm -r elucidator jvarkit mipscripts MIPWrangler parasight vt
+    rm -r mipscripts parasight vt
 
     # add executable flag to executables
     chmod -R +xr /usr/bin
@@ -197,6 +195,8 @@ From: amd64/ubuntu:20.04
 #################################################################
 %environment
     path=/opt/bin:/opt/conda/bin:
+    path=$path/opt/programs/MIPWrangler/bin:
+    path=$path/opt/programs/elucidator/bin:
     path=$path$PATH
     export PATH=$path
     export XDG_RUNTIME_DIR=""

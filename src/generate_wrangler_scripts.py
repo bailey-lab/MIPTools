@@ -334,17 +334,13 @@ wrangler_commands = [
         str(cpu_count),
         str(args["population_fraction_cutoff"]),
         str(args["downsample_threshold"]),
+        ">>",
+        os.path.join(analysis_dir, "nohup.out"),
     ],
-    ["mv", os.path.join(analysis_dir, "analysis/logs"), analysis_dir],
-    ["mv", os.path.join(analysis_dir, "analysis/scripts"), analysis_dir],
-    ["mv", os.path.join(analysis_dir, "analysis/resources"), analysis_dir],
-    [
-        "mv",
-        os.path.join(analysis_dir, "analysis/nohup.out"),
-        os.path.join(analysis_dir, "nohup2.out"),
-        "2>/dev/null ||true",
-    ],
-    ["mv", info_file, renamed_info],
+    ["mv -f", os.path.join(analysis_dir, "analysis/logs"), analysis_dir],
+    ["mv -f", os.path.join(analysis_dir, "analysis/scripts"), analysis_dir],
+    ["mv -f", os.path.join(analysis_dir, "analysis/resources"), analysis_dir],
+    ["mv -f", info_file, renamed_info],
     ["pigz", "-9", "-p", str(cpu_count), renamed_info],
 ]
 extraction_summary_file = "extractInfoSummary.txt"
