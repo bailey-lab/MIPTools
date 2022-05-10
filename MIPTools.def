@@ -319,7 +319,7 @@ From: amd64/ubuntu:20.04
         echo "  -p    Required. Probe sets to be processed."
         echo "  -s    Required. Sample sets to be processed."
         echo "  -t    The threshold at which UMIs will be downsampled."
-        echo "        Defualt: 1000"
+        echo "        Defualt: 2000"
         echo "  -w    Absolute path to MIPWrangler run script. "
         echo "        Default: '/opt/bin/runMIPWranglerCurrent.sh'."
         echo "  -x    Required. Additional arguments to pass to MIPWrangler"
@@ -359,7 +359,7 @@ From: amd64/ubuntu:20.04
     stitch_options="none"
     keep_files=""
     population_fraction_cutoff=0.005
-    downsample_threshold=1000
+    downsample_threshold=2000
 
     # Parse options
     while getopts "c:e:f:hkl:m:n:p:s:t:w:x:" opt; do

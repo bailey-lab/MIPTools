@@ -117,7 +117,7 @@ parser.add_argument(
     "-t",
     "--downsample-threshold",
     help="The threshold at which UMIs will be downsampled.",
-    default=1000,
+    default=2000,
     type=int,
 )
 

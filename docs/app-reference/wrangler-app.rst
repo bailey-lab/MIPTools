@@ -52,7 +52,7 @@ Defaults
 	-k    Default: false
 	-m    Default: 100
 	-n    Default: 1
-	-t    Default: 1000
+	-t    Default: 2000
 	-w    Default: '/opt/bin/runMIPWranglerCurrent.sh'
 
 Examples
