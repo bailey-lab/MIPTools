@@ -27,6 +27,8 @@ New Features
 Bug Fixes
 ---------
 
+-  Don't install conda and mamba packages using defaults as this can cause the
+   install process to hang.
 -  Upgrade ``libgfortran4`` to ``libgfortran5`` (:github:issue:`38`).
 -  Let Freebayes run with only one CPU thread (:github:issue:`33`).
 -  Fix error when app arguments have whitespace characters (:github:issue:`26`,
