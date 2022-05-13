@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 
-if [[ $# -ne 4 ]]; then
-    msg="Illegal number of parameters. Needs three arguments:\n"
+if [[ $# -ne 5 ]]; then
+    msg="Illegal number of parameters. Needs five arguments:\n"
     msg="${msg}1) The name of the MIP server number\n"
     msg="${msg}2) The number of threads to use\n"
     msg="${msg}3) The population clustering fraction cutoff\n"
     msg="${msg}4) The threshold for downsampling the UMI count."
+    msg="${msg}5) A flag indicating if downsmapling should be weighted."
+    msg="${msg}   Either an empty string or the -w flag as a string."
     echo ${msg} >&2
     exit 2
 fi
