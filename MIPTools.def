@@ -362,7 +362,7 @@ From: amd64/ubuntu:20.04
     downsample_threshold=2000
 
     # Parse options
-    while getopts "c:e:f:hkl:m:n:p:s:t:w:x:" opt; do
+    while getopts "c:e:f:hkl:m:n:o:p:s:t:x:" opt; do
         case ${opt} in
             c) cpu_count=${OPTARG} ;;
             e) experiment_id=${OPTARG} ;;
@@ -373,10 +373,10 @@ From: amd64/ubuntu:20.04
             l) sample_list=${OPTARG} ;;
             m) min_capture_length=${OPTARG} ;;
             n) server_number=${OPTARG} ;;
+            o) cluster_script=${OPTARG} ;;
             p) probe_sets=${OPTARG} ;;
             s) sample_sets=${OPTARG} ;;
             t) downsample_threshold=${OPTARG} ;;
-            w) cluster_script=${OPTARG} ;;
             x) stitch_options=${OPTARG} ;;
             *) help
                exit 1 ;;
@@ -402,7 +402,7 @@ From: amd64/ubuntu:20.04
     -c ${cpu_count} -e ${experiment_id} ${keep_files} \
     -l /opt/analysis/${sample_list} -m ${min_capture_length} \
     -n ${server_number} -p ${probe_sets} -s ${sample_sets} \
-    -w ${cluster_script} -x ${stitch_options} -f ${population_fraction_cutoff} \
+    -o ${cluster_script} -x ${stitch_options} -f ${population_fraction_cutoff} \
     -t ${downsample_threshold}
 
     # Run wrangler scripts.

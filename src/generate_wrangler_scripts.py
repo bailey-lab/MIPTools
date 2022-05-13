@@ -49,7 +49,7 @@ parser.add_argument(
     default="/opt/analysis",
 )
 parser.add_argument(
-    "-w",
+    "-o",
     "--cluster-script",
     help="Absolute path to MIPWrangler run script.",
     default="/opt/bin/runMIPWranglerCurrent.sh",
