@@ -38,6 +38,8 @@ Options
 	-t    The threshold at which UMIs will be downsampled. For any MIPs with more
 	      UMIs than this threshold, the number of UMIs will be reduced to the
 	      threshold.
+	-w    Whether to apply a weight when randomly sampling UMIs. UMIs are 
+	      weighed by their read counts.
 
 Defaults
 --------
@@ -54,6 +56,7 @@ Defaults
 	-n    Default: 1
 	-o    Default: '/opt/bin/runMIPWranglerCurrent.sh'
 	-t    Default: 2000
+	-w    Default: false
 
 Examples
 ========
