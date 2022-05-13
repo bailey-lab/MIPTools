@@ -25,6 +25,9 @@ dependencies:
   - openpyxl
   - pandas
   - parallel
+  - pip
+  - pip:
+      - mipscripts
   - plotly
   - primer3
   - primer3-py

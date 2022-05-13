@@ -152,11 +152,6 @@ From: amd64/ubuntu:20.04
     git clone --branch v7.6 https://github.com/bailey-lab/parasight.git
     scp parasight/parasight.pl /opt/bin
 
-    # install mipscripts
-    cd /opt/programs
-    git clone --branch v0.3.0 https://github.com/bailey-lab/mipscripts.git
-    scp mipscripts/mipscripts.py /opt/bin
-
     # install basespace cli
     BS_VERSION=1.5.1
     BS_PATH="https://launch.basespace.illumina.com/CLI/${BS_VERSION}/amd64-linux/bs"
@@ -165,7 +160,7 @@ From: amd64/ubuntu:20.04
     # Remove programs to reduce image size. These programs have been installed
     # and the binaries moved to /opt/bin
     cd /opt/programs
-    rm -r mipscripts parasight vt
+    rm -r parasight vt
 
     # add executable flag to executables
     chmod -R +xr /usr/bin
