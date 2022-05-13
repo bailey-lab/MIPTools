@@ -360,9 +360,10 @@ From: amd64/ubuntu:20.04
     keep_files=""
     population_fraction_cutoff=0.005
     downsample_threshold=2000
+    weighted=""
 
     # Parse options
-    while getopts "c:e:f:hkl:m:n:o:p:s:t:x:" opt; do
+    while getopts "c:e:f:hkl:m:n:o:p:s:t:wx:" opt; do
         case ${opt} in
             c) cpu_count=${OPTARG} ;;
             e) experiment_id=${OPTARG} ;;
@@ -377,6 +378,7 @@ From: amd64/ubuntu:20.04
             p) probe_sets=${OPTARG} ;;
             s) sample_sets=${OPTARG} ;;
             t) downsample_threshold=${OPTARG} ;;
+            w) weighted=-w ;;
             x) stitch_options=${OPTARG} ;;
             *) help
                exit 1 ;;
@@ -403,7 +405,7 @@ From: amd64/ubuntu:20.04
     -l /opt/analysis/${sample_list} -m ${min_capture_length} \
     -n ${server_number} -p ${probe_sets} -s ${sample_sets} \
     -o ${cluster_script} -x ${stitch_options} -f ${population_fraction_cutoff} \
-    -t ${downsample_threshold}
+    -t ${downsample_threshold} ${weighted}
 
     # Run wrangler scripts.
     # The dot space is used to let the sourced script modify the current
