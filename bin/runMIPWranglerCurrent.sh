@@ -17,7 +17,7 @@ MIPWrangler mipBarcodeCorrectionMultiple                --masterDir $(realpath .
 MIPWrangler mipCorrectForContamWithSameBarcodesMultiple --masterDir $(realpath ./)  --numThreads $2 --overWriteDirs --overWriteLog --logFile mipCorrectForContamWithSameBarcodes_run1
 
 # Downsample UMI counts
-find . -type f -path '*mipBarcodeCorrection/*.fastq.gz' -exec python /opt/src/wrangler_downsample_umi.py --threshold $4 $5 {} +
+find . -type f -path '*mipBarcodeCorrection/*.fastq.gz' -exec python /opt/src/wrangler_downsample_umi.py --downsample-threshold $4 $5 {} +
 
 # Cluster barcodes and MIPs
 MIPWrangler mipClusteringMultiple                       --masterDir $(realpath ./)  --numThreads $2 --overWriteDirs --overWriteLog --logFile mipClustering_run1 --par /opt/resources/clustering_pars/illumina_collapseHomoploymers.pars.txt --countEndGaps

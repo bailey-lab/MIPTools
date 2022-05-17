@@ -30,7 +30,7 @@ parser.add_argument(
     help="The files on which to downsample the UMIs.",
 )
 args = vars(parser.parse_args())
-threshold = int(args["threshold"])
+downsample_threshold = int(args["downsample_threshold"])
 
 # Remove empty first element from list
 if args["file"][0] == "":
@@ -47,7 +47,7 @@ for file in args["file"]:
 
     # Randomly select a certain number of records. Either weigh by the read
     # count, or just randomly select a sample.
-    if len(records) > threshold:
+    if len(records) > downsample_threshold:
         if args["weighted"]:
             # Find the read counts for each UMI
             read_cnts = []
@@ -63,11 +63,11 @@ for file in args["file"]:
             subset = [
                 records[i]
                 for i in np.random.choice(
-                    len(records), threshold, False, weights
+                    len(records), downsample_threshold, False, weights
                 )
             ]
         else:
-            subset = sample(records, threshold)
+            subset = sample(records, downsample_threshold)
 
         # Write the subsetted file
         SeqIO.write(subset, unzipped, "fastq")
