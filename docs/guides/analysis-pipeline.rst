@@ -51,7 +51,7 @@ analysis and copy our sample list into said directory:
 .. code-block:: shell
 	
 	mkdir test-data/wrangler
-	cp test_data/sample_list.tsv wrangler
+	cp test-data/test_data/sample_list.tsv test-data/wrangler/
 
 We additionally define several parameters needed to wrangle data:
 
@@ -64,7 +64,10 @@ We additionally define several parameters needed to wrangle data:
 	cpu_number=10
 	min_capture_length=30
 
-Next, we can run the :ref:`wrangler app <wrangler-app>`:
+Next, we can run the :ref:`wrangler app <wrangler-app>`. For additional
+instructions on what each flag represents, consult the :ref:`man page
+<wrangler-app>` for the app or the built in documentation with
+:code:`singularity run --app wrangler miptools_dev.sif -h`.
 
 .. code-block:: shell
 

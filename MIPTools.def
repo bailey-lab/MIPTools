@@ -225,9 +225,9 @@ From: amd64/ubuntu:20.04
         echo "  See 'singularity run'."
         echo ""
         echo "App Options:"
-        echo "  -d    The port to be used to load the Jupyter Notebook."
+        echo "  -d    The notebook directory."
         echo "  -h    Print the help page."
-        echo "  -p    The notebook directory."
+        echo "  -p    The port to be used to load the Jupyter Notebook."
         echo ""
         echo "Examples:"
         echo "  # Set paths"
@@ -264,10 +264,10 @@ From: amd64/ubuntu:20.04
         --ignore-missing-args
 
     # Inform the user how to access the notebook
-    echo "Use the following command if you are running this notebook from a"
-    echo "remote server. Ignore if using a local computer."
-    echo "ssh -f -N -L localhost:${nb_port}:${server_ip}:${nb_port}"\
-    "${server_user}"
+    echo "\nIf you are running this command from a remote server, you will need"
+    echo "to forward the port to your local machine. To do so, run:\n"
+    echo "ssh -fLN localhost:${nb_port}:${server_ip}:${nb_port}"\
+    "${server_user}\n"
 
     # Setup juptyr notebook settings
     jupyter nbextension enable plotlywidget/extension

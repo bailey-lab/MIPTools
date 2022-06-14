@@ -20,9 +20,9 @@ Options
 .. code-block:: none
 	
 	# Optional
-	-d    The port to be used to load the Jupyter Notebook.
+	-d    The notebook directory.
 	-h    Print the help page.
-	-p    The notebook directory.
+	-p    The port to be used to load the Jupyter Notebook.
 
 Examples
 ========
@@ -52,16 +52,16 @@ FAQ
 ===
 
 I can't connect to the remote server via ssh.
-	Make sure that you access to the server you are trying to connect to. In some
-	cases, you may need to use a VPN.
+	Make sure that you can access the server you are trying to connect to. In
+	some cases, you may need to use a VPN.
 
 How can I use this app on a HPCC?
 	If you are using a cluster computing system, the login node will likely be
 	different from the compute node. In that case, the printed remote server will
 	refer to the compute node and you will need to change this to the login node.
 	For example, you may login in to the HPCC using: :code:`ssh
-	oa@login.hpcc.edu` and submit a job to a compute node: :code:`compute1`. In
+	oa@login.hpcc.edu` and submit a job to the compute node :code:`compute1`. In
 	this case, the app may print :code:`ssh -N -f -L
 	localhost:9913:128.148.254.107:9913 oa@compute1.hpcc.edu`. You would change
-	this to: :code:`ssh -N -f -L localhost:9913:128.148.254.107:9913
+	this to :code:`ssh -N -f -L localhost:9913:128.148.254.107:9913
 	oa@login.hpcc.edu`.
