@@ -49,7 +49,7 @@ parser.add_argument(
     default="/opt/analysis",
 )
 parser.add_argument(
-    "-w",
+    "-o",
     "--cluster-script",
     help="Absolute path to MIPWrangler run script.",
     default="/opt/bin/runMIPWranglerCurrent.sh",
@@ -112,6 +112,19 @@ parser.add_argument(
     help="Population clustering fraction cutoff.",
     default=0.005,
     type=float,
+)
+parser.add_argument(
+    "-t",
+    "--downsample-threshold",
+    help="The threshold at which UMIs will be downsampled.",
+    default=2000,
+    type=int,
+)
+parser.add_argument(
+    "-w",
+    "--weighted",
+    action="store_true",
+    help="Whether to apply a weight when randomly sampling UMIs.",
 )
 
 # Parse arguments from command line
@@ -317,6 +330,13 @@ info_file = os.path.join(
 renamed_info = os.path.join(
     analysis_dir, "run_" + experiment_id + "_wrangled_" + run_date + ".txt"
 )
+# Setup downsample weighing by read counts. If this is false, we need to feed in
+# the empty string to the bash script as an argument. Otherwise, we feed in the
+# flag as a string.
+if args["weighted"]:
+    weighted = "-w"
+else:
+    weighted = "''"
 wrangler_commands = [
     ["cd", "analysis"],
     [
@@ -326,6 +346,8 @@ wrangler_commands = [
         str(server_num),
         str(cpu_count),
         str(args["population_fraction_cutoff"]),
+        str(args["downsample_threshold"]),
+        weighted,
         ">>",
         os.path.join(analysis_dir, "nohup.out"),
     ],

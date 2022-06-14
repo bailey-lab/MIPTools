@@ -8,6 +8,11 @@ MIPTools (development version)
 New Features
 ------------
 
+-  When running the ``wrangler`` app, if the number of UMIs detected for a MIP
+   is above a certain threshold, we reduce the UMI count to a lower value. This
+   is done in order to increase the speed of our pipeline. Above a certain UMI
+   count, the information becomes redundant (:github:user:`arisp99`,
+   :github:pull:`40`).
 -  Add an additional argument to the ``wrangler`` app to control the population
    clustering fraction cutoff defined by :github:repo:`MIPWrangler
    <bailey-lab/MIPWrangler>` (:github:user:`arisp99`, :github:pull:`39`).
