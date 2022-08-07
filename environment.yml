@@ -29,6 +29,7 @@ dependencies:
   - pip:
       - mipscripts
   - plotly
+  - plotnine
   - primer3
   - primer3-py
   - pysam
