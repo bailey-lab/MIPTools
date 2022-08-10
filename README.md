@@ -1,9 +1,10 @@
 # MIPTools
 
-[![Build Singularity](https://github.com/bailey-lab/MIPTools/actions/workflows/build-container.yaml/badge.svg)](https://github.com/bailey-lab/MIPTools/actions/workflows/build-container.yaml)
-[![Deploy Docs](https://github.com/bailey-lab/MIPTools/actions/workflows/deploy-docs.yaml/badge.svg)](https://github.com/bailey-lab/MIPTools/actions/workflows/deploy-docs.yaml)
+<!-- [![Build Singularity](https://github.com/bailey-lab/MIPTools/actions/workflows/build-container.yaml/badge.svg)](https://github.com/bailey-lab/MIPTools/actions/workflows/build-container.yaml) -->
+
 ![GitHub release (latest
 SemVer)](https://img.shields.io/github/v/release/bailey-lab/MIPTools)
+[![Deploy Docs](https://github.com/bailey-lab/MIPTools/actions/workflows/deploy-docs.yaml/badge.svg)](https://github.com/bailey-lab/MIPTools/actions/workflows/deploy-docs.yaml)
 ![License](https://img.shields.io/github/license/bailey-lab/MIPTools)
 
 MIPTools is a suite of computational tools that are used for molecular
