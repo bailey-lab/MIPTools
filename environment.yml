@@ -13,7 +13,6 @@ dependencies:
   - bwa
   - freebayes
   - gatk4
-  - gxx_linux-64
   - htslib
   - jupyter_contrib_nbextensions
   - lastz

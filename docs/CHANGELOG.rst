@@ -32,6 +32,7 @@ New Features
 Bug Fixes
 ---------
 
+-  Upgrade C and C++ compiler versions (:github:issue:`43`).
 -  Don't install conda and mamba packages using defaults as this can cause the
    install process to hang.
 -  Upgrade ``libgfortran4`` to ``libgfortran5`` (:github:issue:`38`).

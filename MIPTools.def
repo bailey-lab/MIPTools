@@ -35,7 +35,8 @@ From: amd64/ubuntu:20.04
     fonts-dejavu \
     git \
     build-essential \
-    gcc \
+    gcc-10 \
+    g++-10 \
     openssh-client \
     nano \
     libtbb-dev \
