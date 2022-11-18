@@ -47,4 +47,4 @@ genome, which will be used as the host species.
 	<https://docs.google.com/document/d/1k3SpO8B5zz6OVTn1wgxivep2GbUlCENunSwNap0cV2c/>`_,
 	for the time being, and an example walkthrough `here
 	<https://docs.google.com/document/d/1sY8EIbiWy_cW9TNc7jbM__amc1i_ne8KTzqhz69QQNU/>`_.
-	We plan on merging those documents here in the future.
+	We plan on merging those documents here in the future...
