@@ -10,3 +10,4 @@ base_resources/.ipynb_checkpoints/
 !docs/**
 docs/.DS_store
 docs/_build
+_build/
