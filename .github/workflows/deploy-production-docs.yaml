@@ -54,6 +54,6 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: JamesIves/github-pages-deploy-action@4.1.5
         with:
-          branch: production-docs
+          branch: prod-gh-pages
           folder: _build/html
           commit-message: Update production docs site
