@@ -128,7 +128,7 @@ Then we can start our Jupyter notebook:
     -B test-data/pf_species_resources:/opt/species_resources \
     -B test-data/wrangler:/opt/data \
     -B test-data/variant:/opt/analysis \
-    --app jupyter miptools_dev.sif
+    --app jupyter miptools.sif
 
 A series of instructions will be printed to the terminal on how to access the
 notebook. Follow these instructions to run the Jupyter notebooks in a web
