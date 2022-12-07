@@ -128,11 +128,11 @@ Then we can start our Jupyter notebook:
     -B test-data/pf_species_resources:/opt/species_resources \
     -B test-data/wrangler:/opt/data \
     -B test-data/variant:/opt/analysis \
-    --app jupyter miptools_dev.sif
+    --app jupyter miptools_v0.4.0.sif
 
 A series of instructions will be printed to the terminal on how to access the
 notebook. Follow these instructions to run the Jupyter notebooks in a web
 browser. For more information refer to the :ref:`FAQ of the jupyter app
 <jupyter-app-faq>`. Next, navigate to the :code:`analysis` directory. The
-:code:`analysis-of-test-data-Freebayes` notebook contains a demonstration of 
+:code:`analysis-template-with-qual` notebook contains a demonstration of 
 processing data, variant calling, and additional data analysis.
