@@ -25,7 +25,7 @@ line:
 .. code-block:: shell
 	
 	# Download and untar directory
-	wget -qO- https://baileylab.brown.edu/MIPTools/download/test-data.tar.gz | tar -xvz
+	wget https://baileylab.brown.edu/MIPTools/download/test-data.tar.gz | tar -xvf
 
 The test data set contains 5 directories that contain the test data, species
 resources, as well as project resources:
@@ -67,7 +67,7 @@ We additionally define several parameters needed to wrangle data:
 Next, we can run the :ref:`wrangler app <wrangler-app>`. For additional
 instructions on what each flag represents, consult the :ref:`man page
 <wrangler-app>` for the app or the built in documentation with
-:code:`singularity run --app wrangler miptools_dev.sif -h`.
+:code:`singularity run --app wrangler miptools_v0.4.0.sif -h`.
 
 .. code-block:: shell
 
@@ -75,7 +75,7 @@ instructions on what each flag represents, consult the :ref:`man page
     -B test-data/DR1_project_resources:/opt/project_resources \
     -B test-data/test_data/fastq:/opt/data \
     -B test-data/wrangler:/opt/analysis \
-    --app wrangler miptools_dev.sif \
+    --app wrangler miptools_v0.4.0.sif \
     -e ${experiment_id} -l ${sample_list} -p ${probe_sets_used} \
     -s ${sample_sets_used} -c ${cpu_number} -m ${min_capture_length}
 
