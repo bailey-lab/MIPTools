@@ -22,7 +22,7 @@ Options
 .. code-block:: none
 	
 	# Required
-	-s    The sequencing platform used. Can either be 'nextseq' or 'miseq'.
+	-p    The sequencing platform used. Can either be 'nextseq' or 'miseq'.
 
 Examples
 ========
