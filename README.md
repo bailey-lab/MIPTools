@@ -4,7 +4,7 @@
 
 ![GitHub release (latest
 SemVer)](https://img.shields.io/github/v/release/bailey-lab/MIPTools)
-[![Deploy Docs](https://github.com/bailey-lab/MIPTools/actions/workflows/deploy-docs.yaml/badge.svg)](https://github.com/bailey-lab/MIPTools/actions/workflows/deploy-docs.yaml)
+[![Documentation Status](https://readthedocs.org/projects/miptools/badge/?version=latest)](https://miptools.readthedocs.io/en/latest/?badge=latest)
 ![License](https://img.shields.io/github/license/bailey-lab/MIPTools)
 
 MIPTools is a suite of computational tools that are used for molecular
@@ -249,7 +249,7 @@ long term disk usage.
 ## Further documentation
 
 Further documentation for MIPTools is available
-[online](https://bailey-lab.github.io/MIPTools/) and in a public Google Drive
+[online](https://miptools.readthedocs.io/) and in a public Google Drive
 folder
 [here](https://drive.google.com/drive/folders/1Tmu7hdRYrdw-jqAN35lZpIjG2lBebuCK?usp=sharing)
 for various use cases (MIP design, data analysis, etc.).
