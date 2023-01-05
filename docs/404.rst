@@ -1,0 +1,14 @@
+:orphan:
+
+=============
+Uh, oh -- 404
+=============
+
+We looked everywhere but we could not find this page!
+
+.. image:: 404-image.png
+   :align: center
+   :scale: 50 %
+
+Please try using the search box or the links from the sidebar to find what you
+are looking for.
