@@ -21,9 +21,6 @@ Options
 	# Required
 	-r    The run ID of the data to download.
 
-	# Optional
-	-h    Print the help page.
-
 Download Destination
 --------------------
 Data will be downloaded to :code:`/opt/analysis`. A directory may be mounted

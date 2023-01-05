@@ -30,9 +30,6 @@ Options
 	# Required
 	-s    Path to the sample sheet for demultiplexing.
 
-	# Optional
-	-h    Print the help page.
-
 Sample Sheet
 ------------
 
