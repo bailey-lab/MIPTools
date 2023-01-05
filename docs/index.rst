@@ -27,7 +27,6 @@ inversion probe design, data processing, and analysis.
   :maxdepth: 1
 
   app-reference/download-app
-  app-reference/download-superseded-app
   app-reference/demux-app
   app-reference/demux-qc-app
   app-reference/wrangler-app
