@@ -63,7 +63,7 @@ html_context = {
     "display_github": True,
     "github_user": "bailey-lab",
     "github_repo": "MIPTools",
-    "github_version": "master/docs/",
+    "github_version": "v0.4.0-prod-docs/docs/",
 }
 
 
