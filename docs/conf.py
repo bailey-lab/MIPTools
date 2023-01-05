@@ -19,7 +19,7 @@ import re
 # -- Project information -----------------------------------------------------
 
 project = "MIPTools"
-copyright = "2021, Bailey Lab"
+copyright = "2023, Bailey Lab"
 author = "Bailey Lab"
 version = "v0.4.0.9000"
 
