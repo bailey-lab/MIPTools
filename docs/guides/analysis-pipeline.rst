@@ -25,7 +25,8 @@ line:
 .. code-block:: shell
 	
 	# Download and untar directory
-	wget https://baileylab.brown.edu/MIPTools/download/test-data.tar.gz | tar -xvf
+	wget https://baileylab.brown.edu/MIPTools/download/test-data.tar.gz
+	tar -xvf test-data.tar.gz
 
 The test data set contains 5 directories that contain the test data, species
 resources, as well as project resources:
