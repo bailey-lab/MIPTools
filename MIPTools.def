@@ -208,6 +208,10 @@ From: amd64/ubuntu:20.04
     # Exit if something fails or if have unset object
     set -eu
 
+    # increase allowed number of open files to the hard limit of the machine
+    ulimit -Sn $(ulimit -Hn)
+
+
     # Port forwarding setup
     nb_port=$(shuf -i 8000-9999 -n 1)
     server_ip=$(hostname -i)

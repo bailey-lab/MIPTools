@@ -2396,6 +2396,15 @@ def bwa(fastq_file, output_file, output_type, input_dir,
 def bwa_multi(fastq_files, output_type, fastq_dir, bam_dir, options, species,
               processor_number, parallel_processes):
     """Align fastq files to species genome using bwa in parallel."""
+    #if a person doesn't add any extra bwa options, bwa options will be a
+    #string 'mem' - needs to be a list so it can be concatenated to -t options
+    #below
+    if type(options)==str:
+        options=[options]
+    #remove threads argument if present, so it doesn't get added twice below
+    if '-t' in options:
+        thread_location=options.index('-t')
+        options=options[:thread_location]+options[thread_location+2:]
     if len(fastq_files) == 0:
         fastq_files = [f.name for f in os.scandir(fastq_dir)]
     if output_type == "sam":
