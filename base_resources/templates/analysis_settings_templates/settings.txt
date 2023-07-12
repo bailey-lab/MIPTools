@@ -120,6 +120,7 @@ givenNames	mip_name,gene_name,sample_name,haplotype_ID,haplotype_sequence,sequen
 colTypes	str,str,str,str,str,str,str,int,int
 alignmentDir	alignments/
 processorNumber	20
+freebayes_threads 4
 ########################################################################
 ########################################################################
 ###############   FILE NAMES THAT DO NOT CHANGE ########################

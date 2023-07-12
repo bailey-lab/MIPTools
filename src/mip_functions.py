@@ -5181,7 +5181,7 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
             contig_dict_list.append(contig_dict)
 
     # create a processor pool for parallel processing
-    pool = Pool(int(settings["processorNumber"]))
+    pool = Pool(int(settings["freebayes_threads"]))
     # create a results container for the return values from the worker function
     results = []
     errors = []
