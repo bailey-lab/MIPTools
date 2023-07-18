@@ -200,7 +200,6 @@ From: amd64/ubuntu:20.04
     export LANG=en_US.UTF-8
     export LANGUAGE="en_US.UTF-8"
     export LC_ALL="en_US.UTF-8"
-    ulimit -Sn $(ulimit -Hn)
     export PYTHONNOUSERSITE=1
 
 #################################################################
@@ -294,6 +293,9 @@ From: amd64/ubuntu:20.04
 %apprun wrangler
     # Exit if something fails or if have unset object
     set -eu
+
+    # Increase limit of open number of files.
+    ulimit -Sn $(ulimit -Hn)
 
     help() {
         echo "Run MIPWrangler on demultiplexed data."
