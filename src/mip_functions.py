@@ -4853,6 +4853,7 @@ def get_haplotype_counts(settings):
     # barcode count data is only available for samples with data
     # so if a sample has not produced any data, it will be missing
     # these samples should be added with 0 values for each probe
+    print('run meta is', run_meta)
     all_barcode_counts = pd.merge(
         run_meta[["Sample ID", "replicate"]].set_index("Sample ID"),
         barcode_counts, left_index=True, right_index=True, how="left")
