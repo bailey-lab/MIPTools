@@ -138,7 +138,7 @@ From: amd64/ubuntu:20.04
 
     # install MIPWrangler
     cd /opt/programs
-    git clone --branch v1.2.0 https://github.com/bailey-lab/MIPWrangler.git
+    git clone --branch develop https://github.com/bailey-lab/MIPWrangler.git
     cd MIPWrangler
     ./install.sh $CPU_COUNT
 
