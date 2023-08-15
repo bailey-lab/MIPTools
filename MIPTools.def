@@ -105,7 +105,7 @@ From: amd64/ubuntu:20.04
         mamba env update --prefix ${CONDA_DIR} --file /opt/environment_versioned.yml --quiet
     else
         # Update environment and save information to a file
-        mamba env update --prefix ${CONDA_DIR} --file /opt/environment.yml --quiet
+        mamba env update --prefix ${CONDA_DIR} --file /opt/environment.yml
         mamba env export --prefix ${CONDA_DIR} > /opt/environment_versioned.yml
     fi
 
@@ -125,6 +125,10 @@ From: amd64/ubuntu:20.04
         version = "2.0.3",
         repos = "https://cloud.r-project.org"
     )'
+
+    # install notebook.nbextensions
+    git clone https://github.com/ipython-contrib/jupyter_contrib_nbextensions.git
+    pip install -e jupyter_contrib_nbextensions
 
     # install RealMcCoil
     Rscript -e 'devtools::install_github("OJWatson/McCOILR", ref = "v1.3.1")'

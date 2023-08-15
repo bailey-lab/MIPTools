@@ -14,7 +14,6 @@ dependencies:
   - freebayes
   - gatk4
   - htslib
-  - jupyter_contrib_nbextensions
   - lastz
   - matplotlib
   - matplotlib-venn
@@ -32,7 +31,7 @@ dependencies:
   - primer3
   - primer3-py
   - pysam
-  - python
+  - python=3.9
   - r-base
   - r-devtools
   - r-dplyr
