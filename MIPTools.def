@@ -126,10 +126,6 @@ From: amd64/ubuntu:20.04
         repos = "https://cloud.r-project.org"
     )'
 
-    # install notebook.nbextensions
-    git clone https://github.com/ipython-contrib/jupyter_contrib_nbextensions.git
-    pip install -e jupyter_contrib_nbextensions
-
     # install RealMcCoil
     Rscript -e 'devtools::install_github("OJWatson/McCOILR", ref = "v1.3.1")'
 
