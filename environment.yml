@@ -26,6 +26,7 @@ dependencies:
   - pip
   - pip:
       - mipscripts
+      - jupyter_contrib_nbextensions
   - plotly
   - plotnine
   - primer3
