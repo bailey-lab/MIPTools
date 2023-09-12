@@ -325,7 +325,7 @@ if keep_files:
 now = datetime.datetime.now()
 run_date = now.strftime("%Y%m%d")
 info_file = os.path.join(
-    analysis_dir, "analysis/populationClustering/allInfo.tab.txt"
+    analysis_dir, "analysis/populationClustering/allInfo.tab.txt.gz"
 )
 renamed_info = os.path.join(
     analysis_dir, "run_" + experiment_id + "_wrangled_" + run_date + ".txt"
