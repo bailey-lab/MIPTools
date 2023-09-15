@@ -328,7 +328,7 @@ info_file = os.path.join(
     analysis_dir, "analysis/populationClustering/allInfo.tab.txt.gz"
 )
 renamed_info = os.path.join(
-    analysis_dir, "run_" + experiment_id + "_wrangled_" + run_date + ".txt"
+    analysis_dir, "run_" + experiment_id + "_wrangled_" + run_date + ".txt.gz"
 )
 # Setup downsample weighing by read counts. If this is false, we need to feed in
 # the empty string to the bash script as an argument. Otherwise, we feed in the
@@ -355,7 +355,6 @@ wrangler_commands = [
     ["mv -f", os.path.join(analysis_dir, "analysis/scripts"), analysis_dir],
     ["mv -f", os.path.join(analysis_dir, "analysis/resources"), analysis_dir],
     ["mv -f", info_file, renamed_info],
-    ["pigz", "-9", "-p", str(cpu_count), renamed_info],
 ]
 extraction_summary_file = "extractInfoSummary.txt"
 extraction_per_target_file = "extractInfoByTarget.txt"
