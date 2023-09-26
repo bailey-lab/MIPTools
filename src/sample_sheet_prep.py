@@ -302,7 +302,7 @@ if __name__ == "__main__":
                                  "barcode_dict.pickle"))
     parser.add_argument("-p", "--platform",
                         help="Sequencing platform",
-                        default="nextseq",
+                        required=True,
                         choices=["nextseq", "miseq"])
     parser.add_argument("-d", "--template-dir",
                         help="Directory containing sample sheet headers.",
