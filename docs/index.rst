@@ -42,6 +42,12 @@ inversion probe design, data processing, and analysis.
   CHANGELOG
   license
 
+.. toctree::
+  :caption: Glossary
+  :maxdepth: 1
+
+  files-generated
+
 Need Help?
 ----------
 
