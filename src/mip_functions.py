@@ -5150,6 +5150,7 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
     if not os.path.exists(cvcfs_dir):
         os.makedirs(cvcfs_dir)
     # update contig_dict with contig specific options
+    freebayes_command_dict = {}
     for chrom in chrom_dict:
         for contig_name in chrom_dict[chrom]:
             contig_dict = chrom_dict[chrom][contig_name]
@@ -5178,11 +5179,14 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
             # the options list in case bam files were added to the options
             # and they must stay at the end because they are positional args.
             contig_dict["options"] = contig_options + options
+            #contig_name = contig_dict['options'].split(' ')[3].split('/')[-1]
             # add the contig dict to contig dict list
-            contig_dict_list.append(contig_dict)
-
+            contig_value = ('freebayes '+' '.join(contig_dict['options']))
+            freebayes_command_dict[contig_name]=contig_value
+    return(freebayes_command_dict,contig_vcf_gz_paths)
+'''
     # create a processor pool for parallel processing
-    pool = Pool(int(settings["freebayes_threads"]))
+    pool = Pool(int(settings["processorNumber"]))
     # create a results container for the return values from the worker function
     results = []
     errors = []
@@ -5254,6 +5258,8 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
         subprocess.run(["mv", temp_vcf_path, vcf_file])
         subprocess.run(["bcftools", "index", "-f", vcf_file], check=True)
     return (contig_dict_list, results, errors)
+'''
+
 
 
 def freebayes_worker(contig_dict):
