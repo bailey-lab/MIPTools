@@ -5262,28 +5262,26 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
 
 
 
-def freebayes_worker(contig_dict):
+def freebayes_worker(command):
     """Run freebayes program with the specified options.
 
     Run freebayes program with the specified options and return a
     subprocess.CompletedProcess object.
     """
-    options = contig_dict["options"]
-    command = ["freebayes"]
-    command.extend(options)
+    command=command.split(' ')
     # run freebayes command piping the output
     fres = subprocess.run(command, stderr=subprocess.PIPE)
     # check the return code of the freebayes run. if succesfull continue
     if fres.returncode == 0:
         # bgzip the vcf output, using the freebayes output as bgzip input
-        vcf_path = contig_dict["vcf_path"]
+        vcf_index=command.index('-v')+1
+        vcf_path=command[vcf_index]
         gres = subprocess.run(["bgzip", "-f", vcf_path],
                               stderr=subprocess.PIPE)
         # make sure bugzip process completed successfully
         if gres.returncode == 0:
             # index the vcf.gz file
-            vcf_gz_path = contig_dict["vcf_gz_path"]
-            ires = subprocess.run(["bcftools", "index", "-f", vcf_gz_path],
+            ires = subprocess.run(["bcftools", "index", "-f", vcf_path+'.gz'],
                                   stderr=subprocess.PIPE)
             # return the CompletedProcess objects
             return (fres, gres, ires)
