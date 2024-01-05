@@ -1,16 +1,4 @@
-'''
-My usage of singularity with snakemake isn't great: my python scripts execute
-inside the singularity container, but my input and output files are seen outside
-the container. This means that input and output file paths need to be specified
-twice: once with external file paths (no binding, as input and output files) and
-once with internal file paths to match container bindings (as parameters).
-
-Ideally, internal and external file paths would be set identical to each other,
-but not sure if this might break other parts of the pipeline.
-'''
-
 configfile: 'miptools_analysis_no_jupyter.yaml'
-#singularity: config['sif_file']
 output_folder='/opt/analysis'
 log_folder=output_folder+'/run_settings/check_run_stats'
 import subprocess
@@ -30,12 +18,10 @@ rule copy_params:
 	input:
 		snakefile='/opt/snakemake/02_check_run_stats.smk',
 		configfile='miptools_analysis_no_jupyter.yaml',
-		#profile='singularity_profile',
 		scripts='/opt/snakemake/scripts'
 	output:
 		snakefile=log_folder+'/02_check_run_stats.smk',
 		configfile=log_folder+'/miptools_analysis_no_jupyter.yaml',
-		#profile=directory(log_folder+'/singularity_profile'),
 		scripts=directory(log_folder+'/scripts')
 	resources:
 		log_dir=log_folder
@@ -64,7 +50,6 @@ rule modify_ozkan_settings:
 		wdir='/opt/analysis'
 	output:
 		user_settings=output_folder+'/settings.txt'
-	#singularity: config['sif_file']
 	resources:
 		log_dir=log_folder
 	script:
@@ -88,7 +73,6 @@ rule parse_info_file:
 		sample_groups=config['sample_groups']
 	resources:
 		log_dir=log_folder
-	#singularity: config['sif_file']
 	script:
 		'scripts/parse_info_file.py'
 
@@ -122,7 +106,6 @@ rule map_haplotypes:
 		time_min=4320,
 		nodes=20,
 		log_dir=log_folder
-	#singularity: config['sif_file']
 	script:
 		'scripts/map_haplotypes.py'
 
@@ -138,7 +121,6 @@ rule graph_barcodes:
 		output_graph=output_folder+'/umi_heatmap.html'
 	resources:
 		log_dir=log_folder
-	#singularity: config['sif_file']
 	script:
 		'scripts/graph_barcodes.py'
 
@@ -164,6 +146,5 @@ rule make_repool_table:
 		log_dir=log_folder
 	output:
 		repool_csv=output_folder+'/repool.csv'
-	#singularity: config['sif_file']
 	script:
 		'scripts/make_repool_table.py'
