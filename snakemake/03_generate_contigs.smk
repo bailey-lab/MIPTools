@@ -1,6 +1,5 @@
 configfile: 'miptools_analysis_no_jupyter.yaml'
-#singularity: config['sif_file']
-output_folder=config['output_directory']
+output_folder='/opt/analysis'
 log_folder=config['output_directory']+'/run_settings/generate_contigs_and_run_freebayes'
 import subprocess
 subprocess.call(f'mkdir {log_folder}', shell=True)
@@ -16,16 +15,14 @@ rule copy_params:
 	folder
 	'''
 	input:
-		generate_contigs_snakefile='03_generate_contigs.smk',
-		run_freebayes_snakefile = '04_run_freebayes.smk',
+		generate_contigs_snakefile='/opt/snakemake/03_generate_contigs.smk',
+		run_freebayes_snakefile = '/opt/snakemake/04_run_freebayes.smk',
 		configfile='miptools_analysis_no_jupyter.yaml',
-		profile='singularity_profile',
-		scripts='scripts'
+		scripts='/opt/snakemake/scripts'
 	output:
 		generate_contigs_snakefile=log_folder+'/03_generate_contigs.smk',
 		run_freebayes_snakefile = log_folder+'/04_run_freebayes.smk',
 		configfile=log_folder+'/miptools_analysis_no_jupyter.yaml',
-		profile=directory(log_folder+'/singularity_profile'),
 		scripts=directory(log_folder+'/scripts')
 	resources:
 		log_dir=log_folder
@@ -34,7 +31,6 @@ rule copy_params:
 		cp {input.generate_contigs_snakefile} {output.generate_contigs_snakefile}
 		cp {input.run_freebayes_snakefile} {output.run_freebayes_snakefile}
 		cp {input.configfile} {output.configfile}
-		cp -r {input.profile} {output.profile}
 		cp -r {input.scripts} {output.scripts}
 		'''
 
@@ -69,6 +65,5 @@ rule generate_contigs:
 		nodes=16,
 		time_min=5760,
 		log_dir=log_folder
-	singularity: config['sif_file']
 	script:
 		'scripts/generate_contigs.py'
