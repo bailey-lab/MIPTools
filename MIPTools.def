@@ -61,7 +61,8 @@ From: amd64/ubuntu:20.04
     alien \
     unzip \
     tree \
-    pandoc
+    pandoc \
+    pip
 
     # set environment locale
     echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
@@ -157,6 +158,9 @@ From: amd64/ubuntu:20.04
     BS_VERSION=1.5.1
     BS_PATH="https://launch.basespace.illumina.com/CLI/${BS_VERSION}/amd64-linux/bs"
     wget $BS_PATH -O /opt/bin/bs
+    
+    # install snakemake
+    pip install snakemake
 
     # Remove programs to reduce image size. These programs have been installed
     # and the binaries moved to /opt/bin
@@ -184,6 +188,7 @@ From: amd64/ubuntu:20.04
     programs /opt
     bin /opt
     src /opt
+    snakemake /opt
     base_resources/ /opt/resources
 
 #################################################################
