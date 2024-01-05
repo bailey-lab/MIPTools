@@ -1,6 +1,6 @@
 configfile: 'miptools_analysis_no_jupyter.yaml'
 #singularity: config['sif_file']
-output_folder=config['output_directory']
+output_folder='/opt/analysis'
 
 import yaml
 import subprocess
@@ -31,7 +31,6 @@ rule run_freebayes:
 		nodes=16,
 		time_min=5760,
 		#log_dir=log_folder
-	singularity: config['sif_file']
 	script:
 		'scripts/run_freebayes.py'
 
@@ -53,7 +52,6 @@ rule concatenate_and_fix_vcf_headers:
 		nodes=16,
 		time_min=5760,
 		#log_dir=log_folder
-	singularity: config['sif_file']
 	script:
 		'scripts/concatenate_headers.py'
 
@@ -77,6 +75,5 @@ rule generate_tables:
 		annotated_vcf=config['annotated_vcf'],
 		aggregate_none=config['aggregate_none'],
 		output_prefix=config['output_prefix']
-	singularity: config['sif_file']
 	script:
 		'scripts/generate_tables.py'
