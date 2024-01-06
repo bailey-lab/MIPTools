@@ -1,0 +1,60 @@
+#shared variables used across multiple steps
+
+#sample_sheet is hard-coded as being in the output folder of the wrangler folder
+#and named sample_sheet.tsv. If you wrangled in some other way, rename your
+#sample sheet as sample_sheet.tsv and put it in the wrangler output folder
+
+project_resources: /path/to/project_resources
+species_resources: /path/to/species_resources
+wrangler_directory: /path/to/wrangler_directory
+#miptools_directory: /home/charlie/projects/miptools_functions_custom/src
+wrangled_file: allInfo.tsv.gz
+output_directory: /path/to/output_directory
+sif_file: /path/to/sif_file.sif
+species: pf
+
+#the probe sets here need to be an exact match for the values in your sample sheet - this needs to be fixed (what if some samples use one subset of probes and others use others)
+sample_groups: [['JJJ', 'DR1,VAR4']]
+processor_number: 16
+freebayes_threads: 8
+probe_sets_used: ['DR1']
+
+#This block is for checking basic run stats with check_run_stats.smk
+#bwa settings go here
+bwa_extra: ['-t', '16']
+
+#early filters go here (filtering at this stage is not recommended)
+min_haplotype_barcodes: 1
+min_haplotype_samples: 1
+min_haplotype_sample_fraction: 0.0001
+
+#repool spreadsheet settings
+high_barcode_threshold: 10000
+low_coverage_action: Recapture
+target_coverage_count: null
+target_coverage_fraction: 0.95
+target_coverage_key: targets_with_10_barcodes
+barcode_coverage_threshold: 10
+barcode_count_threshold: 100
+assessment_key: targets_with_1_barcodes
+good_coverage_quantile: 0.25
+
+
+#This block is for variant calling with variant_calling.smk
+#settings for freebayes
+freebayes_settings: ["--pooled-continuous", "--min-alternate-fraction", "0.01",
+  "--min-alternate-count", "2", "--haplotype-length", "3",
+  "--min-alternate-total", "10", "--use-best-n-alleles", "70",
+  "--genotype-qualities", "--gvcf", "--gvcf-dont-use-chunk", "true"]
+
+#settings for generating final allele tables
+geneid_to_genename: /opt/project_resources/geneid_to_genename.tsv
+target_aa_annotation: /opt/project_resources/targets.tsv
+aggregate_nucleotides: true
+aggregate_aminoacids: true
+target_nt_annotation: null
+annotate: true
+decompose_options: []
+annotated_vcf: false
+aggregate_none: true
+output_prefix: ''
