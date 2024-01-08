@@ -1,6 +1,6 @@
-configfile: 'miptools_analysis_no_jupyter.yaml'
+configfile: 'variant_calling.yaml'
 output_folder='/opt/analysis'
-log_folder=output_folder+'/run_settings/check_run_stats'
+log_folder=output_folder+'/run_settings'
 import subprocess
 subprocess.call(f'mkdir -p {log_folder}', shell=True)
 rule all:
@@ -17,11 +17,11 @@ rule copy_params:
 	'''
 	input:
 		snakefile='/opt/snakemake/02_check_run_stats.smk',
-		configfile='miptools_analysis_no_jupyter.yaml',
+		configfile='variant_calling.yaml',
 		scripts='/opt/snakemake/scripts'
 	output:
 		snakefile=log_folder+'/02_check_run_stats.smk',
-		configfile=log_folder+'/miptools_analysis_no_jupyter.yaml',
+		configfile=log_folder+'/variant_calling.yaml',
 		scripts=directory(log_folder+'/scripts')
 	resources:
 		log_dir=log_folder

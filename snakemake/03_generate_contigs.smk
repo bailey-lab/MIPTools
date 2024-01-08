@@ -1,6 +1,6 @@
-configfile: 'miptools_analysis_no_jupyter.yaml'
+configfile: 'variant_calling.yaml'
 output_folder='/opt/analysis'
-log_folder=config['output_directory']+'/run_settings/generate_contigs_and_run_freebayes'
+log_folder=config['output_directory']+'/run_settings'
 import subprocess
 subprocess.call(f'mkdir {log_folder}', shell=True)
 
@@ -17,12 +17,10 @@ rule copy_params:
 	input:
 		generate_contigs_snakefile='/opt/snakemake/03_generate_contigs.smk',
 		run_freebayes_snakefile = '/opt/snakemake/04_run_freebayes.smk',
-		configfile='miptools_analysis_no_jupyter.yaml',
 		scripts='/opt/snakemake/scripts'
 	output:
 		generate_contigs_snakefile=log_folder+'/03_generate_contigs.smk',
 		run_freebayes_snakefile = log_folder+'/04_run_freebayes.smk',
-		configfile=log_folder+'/miptools_analysis_no_jupyter.yaml',
 		scripts=directory(log_folder+'/scripts')
 	resources:
 		log_dir=log_folder

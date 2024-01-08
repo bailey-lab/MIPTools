@@ -1,4 +1,4 @@
-configfile: 'miptools_analysis_no_jupyter.yaml'
+configfile: 'variant_calling.yaml'
 #singularity: config['sif_file']
 output_folder='/opt/analysis'
 

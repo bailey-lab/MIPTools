@@ -3,6 +3,10 @@
 #################################################
 ulimit -n $(ulimit -Hn)
 
+#################################################
+# set the home directory as the current working directory
+#################################################
+newhome=$(pwd -P)
 ###############################################
 # function to parse the yaml file edited by the user
 # pulls out the location of the sif file, output directory, etc.
@@ -37,7 +41,8 @@ mkdir -p $output_directory
 singularity_bindings="-B $project_resources:/opt/project_resources
  -B $species_resources:/opt/species_resources
  -B $wrangler_directory:/opt/data
- -B $output_directory:/opt/analysis"
+ -B $output_directory:/opt/analysis
+ -H $newhome"
  
 snakemake_args="--cores $processor_number --keep-going --rerun-incomplete --use-conda --latency-wait 60"
 
