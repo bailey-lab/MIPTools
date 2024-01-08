@@ -28,7 +28,6 @@ rule copy_params:
 		'''
 		cp {input.generate_contigs_snakefile} {output.generate_contigs_snakefile}
 		cp {input.run_freebayes_snakefile} {output.run_freebayes_snakefile}
-		cp {input.configfile} {output.configfile}
 		cp -r {input.scripts} {output.scripts}
 		'''
 
