@@ -35,7 +35,7 @@ project_resources: /home/charlie/projects/miptools_data/miptools_test-data/DR1_p
 fastq_dir: /home/charlie/projects/miptools_data/miptools_test-data/test_data/fastq
 
 #location of sif file to use
-miptools_sif: /home/charlie/projects/miptools_data/miptools_with_snakemake.sif
+miptools_sif: /home/charlie/Downloads/MIPTools/wrangler_in_sif.sif
 
 #only rows from the sample sheet that contain exact matches to the probe sets
 #listed here (after splitting the probe_set column with commas) will be analyzed
