@@ -13,7 +13,7 @@ downsample_seed: 312
 #how many CPUs (or threads) to use in parallel - you can set this relatively low
 #(e.g. 10) because most of the intensive steps of this program are parallelized
 #across samples (i.e. 1000 parallel processes if you have 1,000 samples).
-cpu_count: 5
+cpu_count: 16
 
 #This applies to the most memory intensive steps of the pipeline. Lower values
 #complete faster on a cluster but may crash out for bigger samples or highly
@@ -24,9 +24,7 @@ cpu_count: 5
 memory_mb_per_step: 20000
 
 #location of sample sheet
-input_sample_sheet_directory: /home/charlie/projects/miptools_data/miptools_test-data/test_data
-
-input_sample_sheet_name: sample_list.tsv
+input_sample_sheet: /home/charlie/projects/miptools_data/miptools_test-data/test_data/sample_list.tsv
 
 #location of project resources
 project_resources: /home/charlie/projects/miptools_data/miptools_test-data/DR1_project_resources
@@ -35,7 +33,7 @@ project_resources: /home/charlie/projects/miptools_data/miptools_test-data/DR1_p
 fastq_dir: /home/charlie/projects/miptools_data/miptools_test-data/test_data/fastq
 
 #location of sif file to use
-miptools_sif: /home/charlie/Downloads/MIPTools/wrangler_in_sif.sif
+miptools_sif: /home/charlie/projects/miptools_data/wrangler_in_sif.sif
 
 #only rows from the sample sheet that contain exact matches to the probe sets
 #listed here (after splitting the probe_set column with commas) will be analyzed
