@@ -49,8 +49,21 @@ singularity_bindings="-B $project_resources:/opt/project_resources
 snakemake_args="--cores $cpu_count --keep-going --rerun-incomplete --latency-wait 60"
 
 ##################################
-# Step 1: Check Run Stats
+# Step 1: Set Up Wrangler Run
 #################################
 singularity exec \
  $singularity_bindings \
  $miptools_sif snakemake -s /opt/snakemake/wrangler_by_sample_setup.smk $snakemake_args
+
+ ##################################
+# Step 2: Finish Wrangler Run
+#################################
+singularity exec \
+ $singularity_bindings \
+ $miptools_sif snakemake -s /opt/snakemake/wrangler_by_sample_finish.smk $snakemake_args
+
+#################################
+# confirm the ulimit settings #
+################################
+echo 'ulimit is' 
+ulimit -n
