@@ -44,7 +44,7 @@ rule generate_mip_files:
 	'''
 	input:
 		arms_file='/opt/project_resources/mip_ids/mip_arms.txt',
-		sample_sheet='/opt/input_sample_sheet_directory/'+config['input_sample_sheet_name'],
+		sample_sheet='/opt/input_sample_sheet_directory/'+config['input_sample_sheet'].split('/')[-1],
 		fastq_folder='/opt/data'
 	params:
 		sample_set=config['sample_set_used'],
