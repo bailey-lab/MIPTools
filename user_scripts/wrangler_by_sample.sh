@@ -36,14 +36,21 @@ eval $(parse_yaml wrangler_by_sample.yaml)
 ##########################
 
 # create output directory if it doesn't exist
-mkdir -p $output_directory
+mkdir -p $output_folder
 
 # define singularity bindings and snakemake arguments to be used each time snakemake is called
 singularity_bindings="-B $project_resources:/opt/project_resources
  -B $output_folder:/opt/analysis
  -B $input_sample_sheet_directory:/opt/input_sample_sheet_directory
- -B $fastq_dir:/opt/fastq_dir
+ -B $fastq_dir:/opt/data
  -B /home/charlie/projects/MIPTools_wrangler_in_sif/snakemake:/opt/snakemake
  -H $newhome"
  
 snakemake_args="--cores $cpu_count --keep-going --rerun-incomplete --latency-wait 60"
+
+##################################
+# Step 1: Check Run Stats
+#################################
+singularity exec \
+ $singularity_bindings \
+ $miptools_sif snakemake -s /opt/snakemake/wrangler_by_sample_setup.smk $snakemake_args
