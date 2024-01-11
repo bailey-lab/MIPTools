@@ -9,8 +9,8 @@ species_resources: /home/charlie/projects/miptools_data/miptools_test-data/pf_sp
 wrangler_directory: /home/charlie/projects/miptools_data/wrangler_by_sample_original
 #miptools_directory: /home/charlie/projects/miptools_functions_custom/src
 wrangled_file: allInfo.tsv.gz
-output_directory: /home/charlie/projects/miptools_data/variant_calling_test_data
-sif_file: /home/charlie/projects/miptools_data/miptools_with_snakemake.sif
+output_directory: /home/charlie/projects/miptools_data/check_run_stats_test_data
+sif_file: /home/charlie/projects/miptools_data/wrangler_in_sif.sif
 species: pf
 
 #the probe sets here need to be an exact match for the values in your sample sheet - this needs to be fixed (what if some samples use one subset of probes and others use others)
