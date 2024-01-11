@@ -55,7 +55,6 @@ singularity_bindings="-B $project_resources:/opt/project_resources
  -B $output_folder:/opt/analysis
  -B $input_sample_sheet_directory:/opt/input_sample_sheet_directory
  -B $fastq_dir:/opt/data
- -B /home/charlie/projects/MIPTools_wrangler_in_sif/snakemake:/opt/snakemake
  -H $newhome"
  
 snakemake_args="--cores $cpu_count --keep-going --rerun-incomplete --latency-wait 60"

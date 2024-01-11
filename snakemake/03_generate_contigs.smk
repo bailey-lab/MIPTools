@@ -1,6 +1,6 @@
 configfile: 'variant_calling.yaml'
 output_folder='/opt/analysis'
-log_folder=config['output_directory']+'/run_settings'
+log_folder='/opt/analysis/run_settings'
 import subprocess
 subprocess.call(f'mkdir {log_folder}', shell=True)
 
