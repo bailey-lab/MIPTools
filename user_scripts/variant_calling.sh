@@ -7,6 +7,7 @@ ulimit -n $(ulimit -Hn)
 # set the home directory as the current working directory
 #################################################
 newhome=$(pwd -P)
+
 ###############################################
 # function to parse the yaml file edited by the user
 # pulls out the location of the sif file, output directory, etc.
