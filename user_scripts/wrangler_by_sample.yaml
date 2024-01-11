@@ -1,0 +1,57 @@
+#folder where your output will go.
+output_folder: /nfs/jbailey5/baileyweb/asimkin/other_people/mconrad2/231011B_DR23K_troubleshooting
+
+#number of umis to include for each mip/sample combo. This keeps massively over-
+#sequenced stuff from bogging down the analysis. 20000 is default.
+downsample_umi_count: 20000000000
+
+#when umis are randomly chosen, this random seed allows you to make sure the
+#same random seeds get chosen when re-running a sample (or you could change the
+#number to see if results are robust when different random umis are chosen)
+downsample_seed: 312
+
+#how many CPUs (or threads) to use in parallel - you can set this relatively low
+#(e.g. 10) because most of the intensive steps of this program are parallelized
+#across samples (i.e. 1000 parallel processes if you have 1,000 samples).
+cpu_count: 5
+
+#This applies to the most memory intensive steps of the pipeline. Lower values
+#complete faster on a cluster but may crash out for bigger samples or highly
+#sampled mips. Higher values complete slower but are less likely to crash. For
+#the best of both worlds, you can set a low initial value, run all steps that
+#complete, and then set a higher value and rerun to tackle any remaining failed
+#steps. 4000 is a good minimum, 200000 is a good maximum, 20000 is medium.
+memory_mb_per_step: 20000
+
+#location of sample sheet
+input_sample_sheet: /nfs/jbailey5/baileyweb/bailey_share/raw_data/231011B_nextseq/231011B_samples.tsv
+
+#location of project resources
+project_resources: /nfs/jbailey5/baileyweb/bailey_share/resources/MIP_project_resources/DR23K
+
+#location of input fastq file
+fastq_dir: /nfs/jbailey5/baileyweb/bailey_share/raw_data/231011B_nextseq/fastq
+
+#location of sif file to use
+miptools_sif: /nfs/jbailey5/baileyweb/bailey_share/bin/miptools_dev_plus_bcl2fastq_23-08-25.sif
+
+#only rows from the sample sheet that contain exact matches to the probe sets
+#listed here (after splitting the probe_set column with commas) will be analyzed
+#To match on multiple probe sets, use commas, e.g. DR1,VAR4
+probe_sets_used: DR23K
+
+#only rows from the sample_set column of the sample sheet that are an exact
+#match to the sample set listed below will be analyzed
+sample_set_used: Uganda-UCSF
+
+#if you have a very large number of samples that won't run all the way from
+#start to finish in one pass, or if you'd like to troubleshoot this pipeline,
+#you can have it generate an intermediate output other than the final step.
+#Input should be a number. By default, this should be set to 6. Options are:
+#1 (extraction of reads for each sample)
+#2 (UMI correction for each sample)
+#3 (correction for samples that had the wrong sample barcodes assigned)
+#4 (haplotype clustering for each sample)
+#5 (haplotype clustering for each mip)
+#6 (final output table)
+output_choice: 6
