@@ -4,13 +4,13 @@
 #and named sample_sheet.tsv. If you wrangled in some other way, rename your
 #sample sheet as sample_sheet.tsv and put it in the wrangler output folder
 
-project_resources: /path/to/project_resources
-species_resources: /path/to/species_resources
-wrangler_directory: /path/to/wrangler_directory
+project_resources: /home/charlie/projects/miptools_data/miptools_test-data/DR1_project_resources
+species_resources: /home/charlie/projects/miptools_data/miptools_test-data/pf_species_resources
+wrangler_directory: /home/charlie/projects/miptools_data/wrangler_by_sample_original
 #miptools_directory: /home/charlie/projects/miptools_functions_custom/src
 wrangled_file: allInfo.tsv.gz
-output_directory: /path/to/output_directory
-sif_file: /path/to/sif_file.sif
+output_directory: /home/charlie/projects/miptools_data/variant_calling_test_data
+sif_file: /home/charlie/projects/miptools_data/miptools_with_snakemake.sif
 species: pf
 
 #the probe sets here need to be an exact match for the values in your sample sheet - this needs to be fixed (what if some samples use one subset of probes and others use others)

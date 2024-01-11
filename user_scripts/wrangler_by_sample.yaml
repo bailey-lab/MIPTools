@@ -1,5 +1,5 @@
 #folder where your output will go.
-output_folder: /nfs/jbailey5/baileyweb/asimkin/other_people/mconrad2/231011B_DR23K_troubleshooting
+output_folder: /home/charlie/projects/miptools_data/wrangler_by_sample_in_sif
 
 #number of umis to include for each mip/sample combo. This keeps massively over-
 #sequenced stuff from bogging down the analysis. 20000 is default.
@@ -24,25 +24,27 @@ cpu_count: 5
 memory_mb_per_step: 20000
 
 #location of sample sheet
-input_sample_sheet: /nfs/jbailey5/baileyweb/bailey_share/raw_data/231011B_nextseq/231011B_samples.tsv
+input_sample_sheet_directory: /home/charlie/projects/miptools_data/miptools_test-data/test_data
+
+input_sample_sheet_name: sample_list.tsv
 
 #location of project resources
-project_resources: /nfs/jbailey5/baileyweb/bailey_share/resources/MIP_project_resources/DR23K
+project_resources: /home/charlie/projects/miptools_data/miptools_test-data/DR1_project_resources
 
 #location of input fastq file
-fastq_dir: /nfs/jbailey5/baileyweb/bailey_share/raw_data/231011B_nextseq/fastq
+fastq_dir: /home/charlie/projects/miptools_data/miptools_test-data/test_data/fastq
 
 #location of sif file to use
-miptools_sif: /nfs/jbailey5/baileyweb/bailey_share/bin/miptools_dev_plus_bcl2fastq_23-08-25.sif
+miptools_sif: /home/charlie/projects/miptools_data/miptools_with_snakemake.sif
 
 #only rows from the sample sheet that contain exact matches to the probe sets
 #listed here (after splitting the probe_set column with commas) will be analyzed
 #To match on multiple probe sets, use commas, e.g. DR1,VAR4
-probe_sets_used: DR23K
+probe_sets_used: DR1
 
 #only rows from the sample_set column of the sample sheet that are an exact
 #match to the sample set listed below will be analyzed
-sample_set_used: Uganda-UCSF
+sample_set_used: JJJ
 
 #if you have a very large number of samples that won't run all the way from
 #start to finish in one pass, or if you'd like to troubleshoot this pipeline,
