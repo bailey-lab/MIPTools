@@ -43,6 +43,7 @@ singularity_bindings="-B $project_resources:/opt/project_resources
  -B $species_resources:/opt/species_resources
  -B $wrangler_directory:/opt/data
  -B $output_directory:/opt/analysis
+ -B /home/charlie/projects/MIPTools_wrangler_in_sif/snakemake:/opt/snakemake
  -H $newhome"
  
 snakemake_args="--cores $processor_number --keep-going --rerun-incomplete --use-conda --latency-wait 60"
