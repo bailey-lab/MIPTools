@@ -161,7 +161,9 @@ From: amd64/ubuntu:20.04
     
     # install snakemake
     pip install snakemake
-
+    # use an older version of pulp (newest pulp not supported on current pip
+    #snakemake, shouldn't be needed once pip supports snakemake 7.32)
+    pip install pulp==2.7
     # Remove programs to reduce image size. These programs have been installed
     # and the binaries moved to /opt/bin
     cd /opt/programs
