@@ -4,13 +4,13 @@
 #and named sample_sheet.tsv. If you wrangled in some other way, rename your
 #sample sheet as sample_sheet.tsv and put it in the wrangler output folder
 
-project_resources: /home/charlie/big_data/miptools_data/miptools_test-data/DR1_project_resources
-species_resources: /home/charlie/big_data/miptools_data/miptools_test-data/pf_species_resources
-wrangler_directory: /home/charlie/big_data/miptools_data/output_wrangler_by_sample_in_sif
+project_resources: /nfs/jbailey5/baileyweb/asimkin/miptools/miptools_tutorial/test-data/DR1_project_resources
+species_resources: /nfs/jbailey5/baileyweb/asimkin/miptools/miptools_tutorial/test-data/pf_species_resources
+wrangler_directory: /nfs/jbailey5/baileyweb/asimkin/miptools/miptools_tutorial/test-data/wrangler_shell
 #miptools_directory: /home/charlie/projects/miptools_functions_custom/src
 wrangled_file: allInfo.tsv.gz
-output_directory: /home/charlie/big_data/miptools_data/output_variant_calling
-sif_file: /home/charlie/big_data/miptools_data/wrangler_in_sif.sif
+output_directory: /nfs/jbailey5/baileyweb/asimkin/miptools/miptools_tutorial/test-data/wrangler_snakemake_variant_snakemake
+sif_file: /nfs/jbailey5/baileyweb/bailey_share/bin/miptools_dev_plus_bcl2fastq_24-01-24.sif
 species: pf
 
 #the probe sets here need to be an exact match for the values in your sample sheet - this needs to be fixed (what if some samples use one subset of probes and others use others)

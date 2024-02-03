@@ -1,5 +1,5 @@
 #folder where your output will go.
-output_folder: /home/charlie/big_data/miptools_data/output_wrangler_by_sample_in_sif
+output_folder: /nfs/jbailey5/baileyweb/asimkin/miptools/miptools_tutorial/test-data/wrangler_snakemake
 
 #number of umis to include for each mip/sample combo. This keeps massively over-
 #sequenced stuff from bogging down the analysis. 20000 is default.
@@ -24,16 +24,16 @@ cpu_count: 16
 memory_mb_per_step: 20000
 
 #location of sample sheet
-input_sample_sheet: /home/charlie/big_data/miptools_data/miptools_test-data/test_data/sample_list.tsv
+input_sample_sheet: /nfs/jbailey5/baileyweb/asimkin/miptools/miptools_tutorial/test-data/test_data/sample_list.tsv
 
 #location of project resources
-project_resources: /home/charlie/big_data/miptools_data/miptools_test-data/DR1_project_resources
+project_resources: /nfs/jbailey5/baileyweb/asimkin/miptools/miptools_tutorial/test-data/DR1_project_resources
 
 #location of input fastq file
-fastq_dir: /home/charlie/big_data/miptools_data/miptools_test-data/test_data/fastq
+fastq_dir: /nfs/jbailey5/baileyweb/asimkin/miptools/miptools_tutorial/test-data/test_data/fastq
 
 #location of sif file to use
-miptools_sif: /home/charlie/big_data/miptools_data/wrangler_in_sif.sif
+miptools_sif: /nfs/jbailey5/baileyweb/bailey_share/bin/miptools_dev_plus_bcl2fastq_24-01-24.sif
 
 #only rows from the sample sheet that contain exact matches to the probe sets
 #listed here (after splitting the probe_set column with commas) will be analyzed
