@@ -21,8 +21,7 @@ import re
 project = "MIPTools"
 copyright = "2023, Bailey Lab"
 author = "Bailey Lab"
-version = "v0.4.0"
-
+version = "v0.4.0.9000"
 
 # -- General configuration ---------------------------------------------------
 
@@ -63,7 +62,7 @@ html_context = {
     "display_github": True,
     "github_user": "bailey-lab",
     "github_repo": "MIPTools",
-    "github_version": "v0.4.0-prod-docs/docs/",
+    "github_version": "master/docs/",
 }
 
 

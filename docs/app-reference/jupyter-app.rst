@@ -21,6 +21,7 @@ Options
 	
 	# Optional
 	-d    The notebook directory.
+	-h    Print the help page.
 	-p    The port to be used to load the Jupyter Notebook.
 
 Examples

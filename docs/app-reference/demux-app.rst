@@ -29,8 +29,10 @@ Options
 	
 	# Required
 	-s    Path to the sample sheet for demultiplexing.
+	# Optional
+	-h    Print the help page.
 	-p    The sequencing platform used. Can either be 'nextseq' or 'miseq'.
-
+=======
 Sample Sheet
 ------------
 
@@ -46,4 +48,4 @@ Examples
 	  -B base_resources:/opt/resources \
 	  -B bcl_dir:/opt/data \
 	  -B fastq_root_dir:/opt/analysis \
-	  --app demux miptools.sif -s SampleSheet.csv -p 'miseq'
+	  --app demux miptools.sif -s SampleSheet.csv

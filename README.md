@@ -1,9 +1,11 @@
 # MIPTools
 
-[![Build Singularity](https://github.com/bailey-lab/MIPTools/actions/workflows/build-container.yaml/badge.svg)](https://github.com/bailey-lab/MIPTools/actions/workflows/build-container.yaml)
+<!-- [![Build Singularity](https://github.com/bailey-lab/MIPTools/actions/workflows/build-container.yaml/badge.svg)](https://github.com/bailey-lab/MIPTools/actions/workflows/build-container.yaml) -->
+
 ![GitHub release (latest
 SemVer)](https://img.shields.io/github/v/release/bailey-lab/MIPTools)
-![GitHub](https://img.shields.io/github/license/bailey-lab/MIPTools)
+[![Documentation Status](https://readthedocs.org/projects/miptools/badge/?version=latest)](https://miptools.readthedocs.io/en/latest/?badge=latest)
+![License](https://img.shields.io/github/license/bailey-lab/MIPTools)
 
 MIPTools is a suite of computational tools that are used for molecular
 inversion probe design, data processing, and analysis.
@@ -27,17 +29,17 @@ by Singularity (e.g. on Ubuntu/Debian: `sudo snap install go --classic`).
 
 #### Download prebuilt container
 
-The MIPTools container, built and ready to use, can be
-downloaded from the [Sylabs Cloud](https://cloud.sylabs.io/). You can download
-either the development version or the most recent stable release:
+The MIPTools container, built and ready to use, can be downloaded
+[here](https://baileylab.brown.edu/MIPTools/download/). You can download the
+development version or any previous release:
 
 ```bash
+# Download the latest stable release
+wget https://baileylab.brown.edu/MIPTools/download/miptools_v0.4.0.sif
+
 # Download the development version
 # The development version is updated every two weeks
-singularity pull library://apascha1/miptools/miptools:dev
-
-# Download the latest stable release
-singularity pull library://apascha1/miptools/miptools:v1.0.0
+wget https://baileylab.brown.edu/MIPTools/download/miptools_dev.sif
 ```
 
 Note that these prebuilt versions do not include the `bcl2fastq` software due
@@ -74,8 +76,8 @@ but this may change in the future. You must download the file: **`bcl2fastq2 Con
 You can install the most recent release using the following:
 
 ```bash
-# Install stable version v1.0.0
-git clone --b v1.0.0 https://github.com/bailey-lab/MIPTools.git
+# Install stable version v0.4.0
+git clone --branch v0.4.0 https://github.com/bailey-lab/MIPTools.git
 ```
 
 You can alternatively install the development version:
@@ -247,6 +249,8 @@ long term disk usage.
 ## Further documentation
 
 Further documentation for MIPTools is available
+[online](https://miptools.readthedocs.io/) and in a public Google Drive
+folder
 [here](https://drive.google.com/drive/folders/1Tmu7hdRYrdw-jqAN35lZpIjG2lBebuCK?usp=sharing)
 for various use cases (MIP design, data analysis, etc.).
 

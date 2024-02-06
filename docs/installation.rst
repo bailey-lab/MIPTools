@@ -7,6 +7,7 @@ Dependencies
 
 A working copy of `Singularity <https://www.sylabs.io/docs/>`_ is required.
 Singularity is best installed with **sudo**. While it is said to be possible to
+
 install as an unprivileged user with some features missing, MIPTools has yet to
 be tested on such an installation.
 
@@ -39,8 +40,8 @@ You can download the development version or any previous release:
 .. note::
 	
 	These prebuilt versions do not include the :code:`bcl2fastq` software due to
-	its license. You must build the container yourself if you plan to use 
-	MIPTools to demultiplex bcl files.
+	its license. If you plan to use MIPTools to demultiplex bcl files, you must
+	build the container yourself.
 
 .. _install-source:
 
@@ -63,7 +64,7 @@ You can alternatively install the development version:
 	# Install dev version
 	git clone https://github.com/bailey-lab/MIPTools.git
 
-Next, build the container, and you should be all set to get started using
+Next, simply build the container and you should be all set to get started using
 MIPTools!
 
 .. code-block:: shell
@@ -84,6 +85,7 @@ Sudo Privileges
 
 If you want to run the container on an environment without ``sudo``, either
 download a prebuilt image (see above) or build the container on your own
+
 machine where you *do* have ``sudo`` privileges and copy the image file to the
 computer without ``sudo``. Note that the Singularity program itself must have
 been installed with ``sudo``.

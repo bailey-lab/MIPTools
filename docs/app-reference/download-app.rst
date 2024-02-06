@@ -19,12 +19,22 @@ Options
 .. code-block:: none
 	
 	# Required
-	-r    The run ID of the data to download.
+	-i    The run ID of the data to download.
 
-Download Destination
---------------------
-Data will be downloaded to :code:`/opt/analysis`. A directory may be mounted
-to this path to customize the download destination.
+	# Optional
+	-o    The path to the output directory.
+	-c    The path to the authentication credentials file.
+	-h    Print the help page.
+
+Defaults
+--------
+.. code-block:: shell
+
+	-o    Default: '/opt/analysis'
+	-c    Default: '/opt/resources/basespace.cfg'
+
+.. _authenticate-label:
+
 
 Authentication Credential File
 ------------------------------
@@ -34,6 +44,7 @@ Authentication Credential File
 	Users must first authenticate their account in order to download data from
 	the BaseSpace Sequence Hub.
 
+=======
 An authentication token must be generated in order to download data from the
 BaseSpace Sequence Hub. The steps to do so are outlined below:
 

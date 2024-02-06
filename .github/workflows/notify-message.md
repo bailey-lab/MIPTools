@@ -1,15 +1,9 @@
-Please build the container and deploy it to the Sylabs Cloud. It has been two weeks since the last reminder.
+Please build the container and upload the container to the website. It has been one month since the last reminder.
 
-Steps to build:
-
-```bash
-sudo singularity build miptools.sif MIPTools.def
-```
-
-Steps to deploy:
+Build and deploy:
 
 ```bash
-singularity remote login
-singularity sign miptools.sif
-singularity push miptools.sif library://apascha1/miptools/miptools:{tag}
+gh repo clone bailey-lab/MIPTools
+cd MIPTools
+.github/workflows/build-container.sh
 ```
