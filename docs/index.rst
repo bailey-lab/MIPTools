@@ -17,10 +17,12 @@ identifiers (UMIs) to define unique MIP capture events.
 A typical pipeline might look something like this:
  - First, a user might design MIP probes (using the probe design tool of this
  program) that have UMIs added to each MIP probe.
+
  - Second, a user might perform mip capturing reactions, PCR, sample barcoding,
  and illumina sequencing. The output data should be demultiplexed, resulting in
  two fastq files per sample. Bench techniques for these experiments are
  described elsewhere.
+
  - Third, the data is wrangled to generate an output file describing which
  genotypes (or haplotypes) are found at which abundances in each sample for each
  targeted region, using:
