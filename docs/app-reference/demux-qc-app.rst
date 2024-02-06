@@ -23,7 +23,6 @@ Options
 	
 	# Required
 	-p    The sequencing platform used. Can either be 'nextseq' or 'miseq'.
-
 	# Optional
 	-h    Print the help page.
 

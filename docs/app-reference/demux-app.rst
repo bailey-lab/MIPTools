@@ -29,10 +29,10 @@ Options
 	
 	# Required
 	-s    Path to the sample sheet for demultiplexing.
-
 	# Optional
 	-h    Print the help page.
-
+	-p    The sequencing platform used. Can either be 'nextseq' or 'miseq'.
+=======
 Sample Sheet
 ------------
 

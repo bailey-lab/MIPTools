@@ -23,7 +23,6 @@ copyright = "2023, Bailey Lab"
 author = "Bailey Lab"
 version = "v0.4.0.9000"
 
-
 # -- General configuration ---------------------------------------------------
 
 # Add any Sphinx extension module names here, as strings. They can be

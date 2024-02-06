@@ -63,6 +63,11 @@ Maintenance
 -  Improve bash errors.
 -  Make strings human readable (:github:user:`arisp99`, :github:pull:`5`).
 
+=======
+MIPTools 0.4.0
+==============================
+
+
 Documentation Overhaul
 ----------------------
 
@@ -73,12 +78,3 @@ Documentation Overhaul
    `Sphinx <https://www.sphinx-doc.org/en/master/index.html>`__ and
    `Github Pages <https://pages.github.com/>`__.
 -  Improve app documentation.
--  Add doc-strings to python functions.
--  Improve clarity of README and add additional instructions on
-   :ref:`downloading <installation:Quick Start>` or :ref:`building the
-   container <installation:Install From Source>`.
-
-MIPTools 0.4.0
-==============================
-
--  Latest stable build.

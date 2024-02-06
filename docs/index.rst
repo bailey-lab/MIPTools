@@ -39,7 +39,7 @@ A typical pipeline might look something like this:
    * a folder containing the wrangled haplotype data
    * a folder of indexed genomes for your species of interest
    * a project resources folder that describes the probes
-   
+
 .. toctree::
   :caption: Quick Start
   :maxdepth: 2
@@ -60,7 +60,6 @@ A typical pipeline might look something like this:
   :maxdepth: 1
 
   app-reference/download-app
-  app-reference/download-superseded-app
   app-reference/demux-app
   app-reference/demux-qc-app
   app-reference/wrangler-app

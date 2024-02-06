@@ -25,7 +25,8 @@ line:
 .. code-block:: shell
 	
 	# Download and untar directory
-	wget -qO- https://baileylab.brown.edu/MIPTools/download/test-data.tar.gz | tar -xvz
+	wget -qO- https://baileylab.brown.edu/MIPTools/download/test-data.tar.gz
+	tar -xvf test-data.tar.gz
 
 The test data set contains 5 directories that contain the test data, species
 resources, as well as project resources:
@@ -67,6 +68,7 @@ We additionally define several parameters needed to wrangle data:
 Next, we can run the :ref:`wrangler app <wrangler-app>`. For additional
 instructions on what each flag represents, consult the :ref:`man page
 <wrangler-app>` for the app or the built in documentation with
+
 :code:`singularity run --app wrangler miptools_dev.sif -h`.
 
 .. code-block:: shell
@@ -134,5 +136,5 @@ A series of instructions will be printed to the terminal on how to access the
 notebook. Follow these instructions to run the Jupyter notebooks in a web
 browser. For more information refer to the :ref:`FAQ of the jupyter app
 <jupyter-app-faq>`. Next, navigate to the :code:`analysis` directory. The
-:code:`analysis-of-test-data-Freebayes` notebook contains a demonstration of 
+:code:`analysis-template-with-qual` notebook contains a demonstration of 
 processing data, variant calling, and additional data analysis.
