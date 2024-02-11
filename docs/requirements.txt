@@ -1,6 +1,6 @@
 # Defining the exact version will make sure things don't break
 sphinx==7.2.6
-sphinx_rtd_theme==1.0.0
+sphinx_rtd_theme==2.0.0
 readthedocs-sphinx-search==0.1.1
 docutils==0.20.1 # see https://github.com/sphinx-doc/sphinx/issues/9049
 myst_parser==2.0.0 # write docs using MyST (a flavor of markdown)
