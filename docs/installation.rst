@@ -1,24 +1,26 @@
 ============
 Installation
 ============
+If you have a working copy of singularity and have demultiplexed data,
+you can use our sif file (recommended approach, below). Due to licensing
+issues, if you want to use miptools to demultiplex your data (we are just
+wrapping up illumina's bcl2fastq demultiplexing program) you'll need to
+download bcl2fastq, put it in our 'programs' folder, and build your own
+sif file from source.
 
 Dependencies
 ============
 
 A working copy of `Singularity <https://www.sylabs.io/docs/>`_ is required.
-Singularity is best installed with **sudo**. While it is said to be possible to
-install with unprivileged user with some features missing, MIPTools hasn't been
-tested on such an installation.
+Our tools only work when singularity is installed with administrative privileges
+with **sudo**. Administrative privileges are not required to run singularity.
 
-Singularity is available for most Linux systems including high-performance clusters. It is also possible to install
-and use on Mac OS using virtual machines with a little bit of extra work.
+Singularity is available for most Linux systems and is usually already installed
+on academic high-performance clusters. It is also possible to install and use on
+Mac OS using virtual machines with a little bit of extra work.
 
-Note that the :code:`snap` package is a rapid way to install the go language
-required by Singularity (e.g. on Ubuntu/Debian: :code:`sudo snap install go
---classic`).
-
-Quick Start
-===========
+Easy Installation
+=================
 The MIPTools container, built and ready to use, can be downloaded |download|.
 You can download the development version or any previous release:
 
@@ -34,12 +36,6 @@ You can download the development version or any previous release:
 
 	# Download the development version
 	wget https://baileylab.brown.edu/MIPTools/download/miptools_dev.sif
-
-.. note::
-	
-	These prebuilt versions do not include the :code:`bcl2fastq` software due to
-	its license. If you plan to use MIPTools to demultiplex bcl files, you must
-	build the container yourself.
 
 .. _install-source:
 
