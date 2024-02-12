@@ -130,10 +130,7 @@ Installer (Linux rpm)` and place it in the :code:`MIPTools/programs` directory.
 CPU Usage
 ---------
 
-The build process can take about 30-60 minutes to build, depending on the
-number of CPU cores available. By default, the build process will use 20 CPU
-cores. If the computer used for building the container has less then 20 CPU
-cores available, change the :code:`CPU_COUNT=20` value at the top of the
+The build process can take about 30-60 minutes to build. By default, the 
+build process will use 20 CPU cores. You can change this by editing the
+:code:`CPU_COUNT=20` value at the top of the
 :code:`MIPTools.def` file to a suitable number before building the container.
-On the other hand, if the computer has additional CPU's, by all means, use them
-by setting the same parameter to a higher value.
