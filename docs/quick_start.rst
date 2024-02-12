@@ -88,6 +88,7 @@ path to the project resources, species resources, and sif files you downloaded a
 location where you'd like the output to be sent.
 
 You can obtain a bash script for wrangling with this command (put it in the same folder as the settings file):
+
 :code:`wget https://github.com/bailey-lab/MIPTools/raw/master/user_scripts/wrangler_by_sample.sh`
 
 After changing directory to a folder that can run your data, you can execute the wrangler script with:
@@ -103,6 +104,7 @@ After wrangling is finished, you can obtain a settings file for checking run sta
 Make sure to follow the instructions in this file.
 
 You can obtain a script here (put it in the same folder as the settings file):
+
 :code:`wget https://github.com/bailey-lab/MIPTools/raw/master/user_scripts/check_run_stats.sh`.
 
 And you can execute it like this:
