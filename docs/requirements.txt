@@ -2,7 +2,7 @@
 sphinx==5.0.2
 sphinx_rtd_theme==2.0.0
 readthedocs-sphinx-search==0.1.1
-docutils==0.20.1 # see https://github.com/sphinx-doc/sphinx/issues/9049
+docutils==0.18.1 # see https://github.com/sphinx-doc/sphinx/issues/9049
 myst_parser==1.0.0 # write docs using MyST (a flavor of markdown)
 sphinx_copybutton==0.4.0 # copy button
 sphinx-toolbox==3.5.0 # many useful tools for sphinx
