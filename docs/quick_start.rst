@@ -7,173 +7,117 @@ Using MIPTools
 
 MIPTools provides users a suite of computational tools that can be used for
 molecular inversion probe design, data processing, and analysis. MIPTools is
-packaged as a `Singularity container <https://www.sylabs.io/docs/>`_. The most
-common method for running a MIPTools command is to run one of the **apps**
-defined by MIPTools. The general command structure is as follows:
+packaged as a `Singularity container <https://www.sylabs.io/docs/>`_.
 
-.. code-block:: shell
-	
-	singularity run [run options...] --app <app-name> <container> [app options...]
+MIPTools supports several computational steps, including:
+	- MIP design: This is for choosing resions of the genome that you'd like to
+	  target.
 
-In addition to providing several apps, MIPTools also defines several python
-functions—often called by the apps—which can be run using :code:`singularity exec`. The general command structure is as follows:
+	- Wrangling: This is for finding what haplotypes are associated with your
+	  targeted region and the number of times each haplotype was seen in each
+	  sample. This can be thought of as the "core" purpose of MIPTools. The output
+	  is a tab delimited file.
 
-.. code-block:: shell
-	
-	singularity exec [exec options...] <container> <command>
+	- stat-checking: This is for figuring out which samples and which targeted
+	  regions (aka MIPs) performed well and which did not. There are several
+	  graphical outputs and comma separated files produced at this stage.
 
-Users may also want to run a shell within the MIPTools container. This can be 
-done as follows:
+	- variant calling: This is for estimating the number of times that each MIP
+	  was associated with a mutation in each sample. The outputs are a VCF file
+	  containing mutated genomic positions for each sample and several tables
+	  that annotate mutations with associated amino acid changes for each sample.
 
-.. code-block:: shell
-	
-	singularity shell [shell options...] <container>
-
-Binding Paths
-=============
-
-Although :code:`miptools.sif` contains all programs needed, it does not include
-the data to be analyzed or other resources to be used. Every time we run
-Singularity we will **bind** needed directories to the container. There are
-three resources directories which are required for most operations. In addition
-to those, some apps need a :code:`data_dir` and :code:`analysis_dir`. The
-:code:`-B` option is used for each binding:
-
-.. code-block:: shell
-
-	singularity <command> -B <path/on/host>:<path/on/container> <container>
-
-The path on the left side of the colon specifies where on *your* computer the
-directory is and the right side is the location in the container where the
-directory should be bound (mounted) to. You should only change the left side of
-the column according to the location of the resource you are providing, and
-should *never* change the path on the right side. Each binding is specified
-with a separate :code:`-B` option.
-
-Directory Structure
+Input File Structure
 -------------------
 
-Three resource directories are required for most operations. These live outside
-the container and must be **bound** to the container at run time with the
-:code:`-B` option. In addition, a data directory and an analysis directory will
-be used for most operations.
+A few directories are required for most operations.
 
-	- **base_resources:** Provided in the GitHub repository. It contains common
-	  resources across projects. It should be bound to the container with
-	  :code:`-B [path to base resources container]:/opt/resources`. This makes the
-	  base_resources directory available to the container and it would be reached
-	  at :code:`/opt/resources` path within the container. The
-	  :code:`/opt/resources` part of this argument must not be altered. For
-	  example, if my base resources are located in my computer at
-	  :code:`/home/base`, I would bind it to the container with :code:`-B
-	  /home/base:/opt/resources`.
+	- **species_resources:** Contains information about the genome you targeted MIPs against.
+	  Bound internally to :code:`/opt/species_resources`. Includes:
 
-	- **species_resources:** Contains resources shared by projects using the same
-	  target species (Pf, human, etc.). Bind this to
-	  :code:`/opt/species_resources` in the container. For example, if I am
-	  working with *Plasmodium falciparum* sequences and I have the necessary
-	  files in my computer at :code:`/home/pf3d/`, then the binding parameter is
-	  :code:`-B /home/pf3d:/opt/species_resources`. The directory contains the
-	  following contents:
+		- *fasta file*: Genome reference sequence in fasta format.
 
-	  	- *file_locations.tsv*: This file is required for all operations. It is a
+	  	- *bowtie2_genome*: The reference genome indexed using bowtie2.
+
+  		- *bwa_genome*: The reference genome indexed using bwa.
+
+  		- *SNPs*: VCF formatted locations of known SNPs in the reference genome.
+		  Useful during MIP design to avoid targeting a polymorphic region of the genome.
+
+		- *refgene*: RefGen style gene/gene prediction table in GenePred format.
+  		  These are available at http://genome.ucsc.edu under Tools/Table Browser
+		  for most species. If you have gff3/gtf formatted files, they can be
+		  converted to GenePred format using Jim Kent's programs
+		  `gff3ToGenePred <http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/gff3ToGenePred>`_
+  		  and `gtfToGenePred <http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/gtfToGenePred>`_.
+
+  		- *refgene_tabix*: An index of the refgene file, created using tabix.
+
+		- *file_locations.tsv*: This file is required for all operations. It is a
 	  	  tab separated text file showing where each required file will be
 	  	  located in the container. Each line corresponds to one file. First
 	  	  field states the species for the file, second field states what kind of
-	  	  file it is and the last field is the absolute path to the file.
+	  	  file it is and the last field is the absolute path to the file within the
+		  singularity container
 
-	  	  For example, the line 
-	  	  *"pf fasta_genome /opt/species_resources/genomes/genome.fa"* would mean 
-	  	  that the fasta genome file for the species 'pf' will be found at 
-	  	  :code:`/opt/species_resources/genomes/genome.fa` within the container. 
-	  	  This also means that there is a file at
-	  	  :code:`/home/pf3d/genomes/genome.fa` in my computer, assuming I bound
-	  	  :code:`/home/pf3d` to :code:`/opt/species_resources` in the container.
+	- **project_resources:** Contains information about your mip panel. Bound internally to 
+	  :code:`/opt/project_resources`. Includes:
+		- A targets.tsv file with the genomic coordinates of any protein-coding mutations
+		  that are of particular interest.
+		- a mip_ids folder that contains the mip arms of MIPs that target regions of the
+		  genome that are of interest.
+		- A few redundant json and csv files for easy access to MIP information. Our goal
+		  is to remove these in the future.
 
-	  	- *fasta file*: This file is required for all operations. Genome
-	  	  reference sequence in fasta format.
+Wrangling
+---------
+You can download a tutorial dataset from here:
+https://baileylab.brown.edu/MIPTools/download/test-data.tar.gz
 
-	  	- *bowtie2_genome*: This file is required for probe design operations
-	  	  only. It is the reference genome indexed using bowtie2. If this is not
-	  	  available, it can be generated using MIPTools.
+You can obtain a copy of our latest sif file from here:
+https://baileylab.brown.edu/MIPTools/download/miptools_dev.sif
 
-  		- *bwa_genome*: This file is required for data analysis operations only.
-  		  It is the reference genome indexed using bwa. If this is not available,
-  		  it can be generated using MIPTools.
+You can obtain an example settings file for wrangling with this command:
+:code:`wget https://github.com/bailey-lab/MIPTools/blob/master/user_scripts/wrangler_by_sample.yaml`.
+After downloading, make sure to follow the instructions in this file, editing it to contain the correct
+path to the project resources, species resources, and sif files you downloaded above, as well as the
+location where you'd like the output to be sent.
 
-  		- *snps*: This is an optional file. However, it is extremely useful in
-  		  probe designs to avoid probe arms landing on variant regions, etc. So
-  		  it should always be used except in rare cases where such a file is not
-  		  available for the target species. The format of the file is vcf.
-  		  Individual genotypes are not necessary (a.k.a. sites only vcf). The
-  		  only requirement is that the INFO field for each variant has a field
-  		  showing the population allele frequency of alternate alleles. By
-  		  default, AF field is used. The AF field lists the allele frequencies of
-  		  each alternate allele, and does not list the frequency of the reference
-  		  allele. Vcf files may have other INFO fields that include allele
-  		  frequency information. If such a field is to be used, there are two
-  		  settings in the design settings file (.rinfo file) that must be
-  		  modified. *allele_frequency_name* field must be set to the INFO field
-  		  name to be used; *af_start_index* may have to be set to a 1 (instead of
-  		  default 0) depending on whether the reference allele frequency is
-  		  provided in the new field. For example, if we want to use the 1000
-  		  genomes vcf file, the allele frequencies are provided in the CAF field
-  		  and they include the reference allele. We would have to change the
-  		  *allele_frequency_name* field to *CAF* from the default *AF*; and set
-  		  *af_start_index* to 1 because the first alternate allele's frequency is
-  		  provided in the second place (following the reference allele).
+You can obtain a bash script for wrangling with this command (put it in the same folder as the settings file):
+:code:`wget https://github.com/bailey-lab/MIPTools/blob/master/user_scripts/wrangler_by_sample.sh`
+After changing directory to a folder that can run your data, you can execute the wrangler script with:
+:code:`bash wrangler_by_sample.sh`
 
-  		- *refgene*: RefGen style gene/gene prediction table in GenePred format.
-  		  These are available at http://genome.ucsc.edu under Tools/Table Browser
-  		  for most species. The fields in the file are "bin, name, chrom, strand,
-  		  txStart, txEnd, cdsStart, cdsEnd, exonCount, exonStarts, exonEnds,
-  		  score, name2, cdsStartStat, cdsEndStat, exonFrames". This file is
-  		  required for probe design operations if genic information is to be
-  		  used. For example, if probes need to be designed for exons of a gene,
-  		  or a gene name is given as design target. If a gene name will be
-  		  provided, it must match the **name2** column of the RefGen file. If you
-  		  are creating this file manually, the only fields necessary are: chrom,
-  		  strand, exonStarts, exonEnds and name2. All other fields can be set to
-  		  an arbitrary value (none, for example) but not left empty. The order of
-  		  columns must not be changed.
+Checking run stats
+------------------
+After wrangling is finished, you can obtain a settings file for checking run stats with this command:
+:code:`wget https://github.com/bailey-lab/MIPTools/blob/master/user_scripts/variant_calling.yaml`. Make
+sure to follow the instructions in this file.
 
-  		  .. note::
+You can obtain a script here (put it in the same folder as the settings file):
+:code:`wget https://github.com/bailey-lab/MIPTools/blob/master/user_scripts/check_run_stats.sh`.
 
-  		  	If you have gff3/gtf formatted files, they can be converted to
-  		  	GenePred format using Jim Kent's programs `gff3ToGenePred
-  		  	<http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/gff3ToGenePred>`_
-  		  	and `gtfToGenePred
-  		  	<http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/gtfToGenePred>`_.
+And you can execute it like this:
+:code:`bash check_run_stats.sh`
 
-  		- *refgene_tabix*: RefGen file, sorted and indexed using tabix. File
-  		  requirement is the same as the refgene file. tabix is available within
-  		  the MIPTools container, so you don't have to install it yourself.
+Variant Calling
+---------------
+Variant calling uses the same settings file as check_run_stats.
 
+You can obtain a script for variant calling here (put it in the same folder as the settings file):
+:code:`wget https://github.com/bailey-lab/MIPTools/blob/master/user_scripts/variant_calling.sh`.
 
-	- **project_resources:** Contains project specific files. Bind this to 
-	  :code:`/opt/project_resources`.
-
-	- **data_dir:** Contains data to be analyzed. Typically, nothing will be
-	  written to this directory. Bind this directory to :code:`/opt/data`.
-
-	- **analysis_dir:** Where analysis will be carried out and all output files
-	  will be saved. Bind it to :code:`/opt/analysis` This is the only directory 
-	  that needs write permission as the output will be saved here.
-
-:code:`data_dir` and :code:`analysis_dir` will have different content for
-different app operations. Also, one app's analysis directory may be the
-next app's data directory in the pipeline.
+And you can execute it like this:
+:code:`bash variant_calling.sh`
 
 Resource Requirements
 =====================
-
-Resources required vary widely depending on the project. Both designs and data
-analysis can be parallelized, so the more CPUs you have the better. Plenty of
-storage is also recommended. For designs on large target regions (>5kb), files
-can take up 10 GB or more per region. Consider allocating > 5 GB RAM for a
-large design region (multiply the RAM requirement by CPU number if
-parallelizing). For a typical MIP data analysis involving ~1,000 MIPs and ~1,000
-samples, consider using at least 20 CPUs and 20 GB RAM to get the analysis done
-within 10-12 h. You should expect ~200 GB disk space used for such an analysis
-as well, although most files can be removed after processing steps to reduce
-long term disk usage.
+Resources required vary widely depending on the project. Wrangling and variant calling require the
+most RAM and processing power, and both of these steps can be parallelized across multiple processors.
+The more processors (also known as CPUs or threads) you ask for, the faster the job will run, the more
+RAM will be required, and the higher the probability that the job will crash. Internally, MIPTools uses
+snakemake so that if a job crashes partway through, you can rerun it and MIPTools will pick up where it
+left off. Therefore, you might consider running a job once, requesting a large number of processors (e.g.
+15) so that most of the steps finish quickly, and then editing the settings file to request fewer
+processors (e.g. 4 or even 2 or 1) if the job crashes so that any remaining particularly tricky steps can
+be run with fewer processors with a lower likelihood of crashing.
