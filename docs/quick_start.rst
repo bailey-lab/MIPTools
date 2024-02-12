@@ -72,30 +72,38 @@ A few directories are required for most operations.
 Wrangling
 ---------
 You can download a tutorial dataset from here:
+
 https://baileylab.brown.edu/MIPTools/download/test-data.tar.gz
 
 You can obtain a copy of our latest sif file from here:
+
 https://baileylab.brown.edu/MIPTools/download/miptools_dev.sif
 
 You can obtain an example settings file for wrangling with this command:
-:code:`wget https://github.com/bailey-lab/MIPTools/blob/master/user_scripts/wrangler_by_sample.yaml`.
+
+:code:`wget https://github.com/bailey-lab/MIPTools/raw/master/user_scripts/wrangler_by_sample.yaml`.
+
 After downloading, make sure to follow the instructions in this file, editing it to contain the correct
 path to the project resources, species resources, and sif files you downloaded above, as well as the
 location where you'd like the output to be sent.
 
 You can obtain a bash script for wrangling with this command (put it in the same folder as the settings file):
-:code:`wget https://github.com/bailey-lab/MIPTools/blob/master/user_scripts/wrangler_by_sample.sh`
+:code:`wget https://github.com/bailey-lab/MIPTools/raw/master/user_scripts/wrangler_by_sample.sh`
+
 After changing directory to a folder that can run your data, you can execute the wrangler script with:
+
 :code:`bash wrangler_by_sample.sh`
 
 Checking run stats
 ------------------
 After wrangling is finished, you can obtain a settings file for checking run stats with this command:
-:code:`wget https://github.com/bailey-lab/MIPTools/blob/master/user_scripts/variant_calling.yaml`. Make
-sure to follow the instructions in this file.
+
+:code:`wget https://github.com/bailey-lab/MIPTools/raw/master/user_scripts/variant_calling.yaml`.
+
+Make sure to follow the instructions in this file.
 
 You can obtain a script here (put it in the same folder as the settings file):
-:code:`wget https://github.com/bailey-lab/MIPTools/blob/master/user_scripts/check_run_stats.sh`.
+:code:`wget https://github.com/bailey-lab/MIPTools/raw/master/user_scripts/check_run_stats.sh`.
 
 And you can execute it like this:
 :code:`bash check_run_stats.sh`
@@ -105,7 +113,8 @@ Variant Calling
 Variant calling uses the same settings file as check_run_stats.
 
 You can obtain a script for variant calling here (put it in the same folder as the settings file):
-:code:`wget https://github.com/bailey-lab/MIPTools/blob/master/user_scripts/variant_calling.sh`.
+
+:code:`wget https://github.com/bailey-lab/MIPTools/raw/master/user_scripts/variant_calling.sh`.
 
 And you can execute it like this:
 :code:`bash variant_calling.sh`
