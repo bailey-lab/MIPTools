@@ -14,14 +14,14 @@ MIPTools supports several computational steps, including:
 	- Wrangling: This is for finding what haplotypes are associated with each
 	  targeted region and the number of times each haplotype was seen in each
 	  sample. This can be thought of as the "core" purpose of MIPTools. The output
-	  is a tab delimited file called allInfo.tsv.gz
+	  is a tab delimited file called **allInfo.tsv.gz**
 
 	- stat-checking: This is for figuring out which samples and which targeted
 	  regions (aka MIPs) performed well and which did not. There are several
 	  graphical outputs and comma separated files produced at this stage. Among
-	  the most important are barcode_counts.csv (how many times each targeted
-	  region of the genome was seen in each sample) and repool.csv (which MIPs
-	  need to be re-sequenced or repooled in each sample). umi_heatmap.html is
+	  the most important are **barcode_counts.csv** (how many times each targeted
+	  region of the genome was seen in each sample) and **repool.csv** (which MIPs
+	  need to be re-sequenced or repooled in each sample). **umi_heatmap.html** is
 	  also useful for visualizing the performance of each MIP in each sample
 	  (open this with a web browser).
 
@@ -32,11 +32,11 @@ MIPTools supports several computational steps, including:
 	  For the tutorial, the main outputs of interest are three tables that can be
 	  used to infer which samples contain each mutation:
 
-	  - coverage_AA_table.csv: how many times the mutation was sequenced
+	  - *coverage_AA_table.csv*: how many times the mutation was sequenced
 
-	  - reference_AA_table.csv: how many times the reference allele was seen in each sample
+	  - *reference_AA_table.csv*: how many times the reference allele was seen in each sample
 
-	  - alternate_AA_table.csv: how many times the alternate (mutant) allele was seen in each sample
+	  - *alternate_AA_table.csv*: how many times the alternate (mutant) allele was seen in each sample
 
 Input File Structure
 --------------------
