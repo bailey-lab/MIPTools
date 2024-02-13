@@ -1,27 +1,15 @@
-===========
-Quick Start
-===========
+====================
+Abbreviated tutorial
+====================
+This abbreviated tutorial provides a minimal version of instructions for
+people who want to get a "working version" up and running quickly to explore
+the data for themselves. A little background is still needed.
 
-Using MIPTools
-==============
-
-MIPTools provides users a suite of computational tools that can be used for
-molecular inversion probe design, data processing, and analysis. MIPTools is
-packaged as a `Singularity container <https://www.sylabs.io/docs/>`_.
-
-This Quick Start tutorial provides a tutorial dataset that you can use to
-analyze a hypothetical dataset containing 56 samples sequenced with 57
-targeted genomic regions corresponding to known drug resistance mutations of
-the P. falciparum genome.
-| You can download the tutorial dataset from here:
-| https://baileylab.brown.edu/MIPTools/download/test-data.tar.gz
-
-| You can obtain a copy of our latest sif file from here:
-| https://baileylab.brown.edu/MIPTools/download/miptools_dev.sif
-
+Background
+==========
 MIPTools supports several computational steps, including:
 	- MIP design: This is for choosing resions of the genome that you'd like to
-	  target (the tutorial assumes MIP design has already been finished).
+	  target.
 
 	- Wrangling: This is for finding what haplotypes are associated with each
 	  targeted region and the number of times each haplotype was seen in each
@@ -51,8 +39,7 @@ MIPTools supports several computational steps, including:
 	  - alternate_AA_table.csv: how many times the alternate (mutant) allele was seen in each sample
 
 Input File Structure
--------------------
-
+--------------------
 A few directories are required for most operations.
 
 	- **species_resources:** Contains information about the genome you targeted MIPs against.
@@ -92,16 +79,31 @@ A few directories are required for most operations.
 		- A few redundant json and csv files for easy access to MIP information. Our goal
 		  is to remove these in the future.
 
+Analyzing the Data
+==================
+Now that we know what steps will be performed and how files are organized, we can look at a
+hypothetical dataset. The tutorial dataset contains 56 samples sequenced with 57 targeted
+genomic regions corresponding to known drug resistance mutations of the P. falciparum genome.
+It assumes that MIPs have already been designed, and that samples have already been sequenced
+using the MIPs using illumina paired end reads and demultiplexed.
+
+| You can download the tutorial dataset from here:
+| https://baileylab.brown.edu/MIPTools/download/test-data.tar.gz
+| The dataset includes a project_resources folder, a species_resources folder, a sample sheet,
+and a fastq directory with demultiplexed output.
+
+| You can obtain a copy of our latest sif file from here:
+| https://baileylab.brown.edu/MIPTools/download/miptools_dev.sif
+| This includes all executable programs needed for analysis
+
 Wrangling
 ---------
-| You can obtain an example settings file for wrangling with this command:
+| For convenience, settings can be passed in to the wrangler via a yaml file. Later in the tutorial, we'll show some more advanced usage options available for troubleshooting and passing more customizable inputs. For now, you can obtain an example simple settings file for wrangling with this command:
 | :code:`wget https://github.com/bailey-lab/MIPTools/raw/master/user_scripts/wrangler_by_sample.yaml`
-
-After downloading, make sure to follow the instructions in this file, editing it to contain the correct
-path to the project resources, species resources, and sif files you downloaded above, as well as the
+| After downloading, open the file for editing with a text editor and make sure to **follow the instructions in this file**, editing it to contain the correct path to the project resources, species resources, sample sheet, and sif files you downloaded above, as well as the
 location where you'd like the output to be sent.
 
-| You can obtain the bash script for wrangling with this command (put it in the same folder as the settings file):
+| We've also provided a bash script for converting the yaml settings into instructions for the wrangler. You can obtain the bash script for wrangling with this command (put it in the same folder as the settings yaml file):
 | :code:`wget https://github.com/bailey-lab/MIPTools/raw/master/user_scripts/wrangler_by_sample.sh`
 
 | After changing directory to a folder that can run your data, you can execute the wrangler script with:
@@ -111,7 +113,7 @@ Checking run stats
 ------------------
 | After wrangling is finished, you can obtain a settings file for checking run stats with this command:
 | :code:`wget https://github.com/bailey-lab/MIPTools/raw/master/user_scripts/variant_calling.yaml`
-| Make sure to follow the instructions in this file.
+| **Make sure to follow the instructions in this file.**
 
 | You can obtain the script for checking run stats here (put it in the same folder as the settings file):
 | :code:`wget https://github.com/bailey-lab/MIPTools/raw/master/user_scripts/check_run_stats.sh`
