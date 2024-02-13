@@ -90,8 +90,7 @@ illumina paired end reads, and demultiplexed.
 
 | You can download the tutorial dataset from here:
 | https://baileylab.brown.edu/MIPTools/download/test-data.tar.gz
-| The dataset includes a project_resources folder, a species_resources folder, a sample sheet,
-and a fastq directory with demultiplexed illumina paired end reads as output.
+| The dataset includes a project_resources folder, a species_resources folder, a sample sheet, and a fastq directory with demultiplexed illumina paired end reads as output.
 
 | You can obtain a copy of our latest sif file from here:
 | https://baileylab.brown.edu/MIPTools/download/miptools_dev.sif
@@ -101,8 +100,7 @@ Wrangling
 ---------
 | For convenience, settings can be passed in to the wrangler via a yaml file. Later in the tutorial, we'll show some more advanced usage options available for troubleshooting and passing more customizable inputs. For now, you can obtain an example simple settings file for wrangling with this command:
 | :code:`wget https://github.com/bailey-lab/MIPTools/raw/master/user_scripts/wrangler_by_sample.yaml`
-| After downloading, open the file for editing with a text editor and make sure to **follow the instructions in this file**, editing it to contain the correct path to the project resources, species resources, sample sheet, and sif files you downloaded above, as well as the
-location where you'd like the output to be sent.
+| After downloading, open the file for editing with a text editor and make sure to **follow the instructions in this file**, editing it to contain the correct path to the project resources, species resources, sample sheet, and sif files you downloaded above, as well as the location where you'd like the output to be sent.
 
 | We've also provided a bash script for converting the yaml settings into instructions for the wrangler. You can obtain the bash script for wrangling with this command (put it in the same folder as the settings yaml file):
 | :code:`wget https://github.com/bailey-lab/MIPTools/raw/master/user_scripts/wrangler_by_sample.sh`
@@ -134,12 +132,16 @@ Variant calling uses the same settings file as check_run_stats.
 
 Resource Requirements
 =====================
-Resources required vary widely depending on the project. Wrangling and variant calling require the
-most RAM and processing power, and both of these steps can be parallelized across multiple processors.
-The more processors (also known as CPUs or threads) you ask for, the faster the job will run, the more
-RAM will be required, and the higher the probability that the job will crash. Internally, MIPTools uses
-snakemake so that if a job crashes partway through, you can rerun it and MIPTools will pick up where it
-left off. Therefore, you might consider running a job once, requesting a large number of processors (e.g.
-15) so that most of the steps finish quickly, and then editing the settings file to request fewer
-processors (e.g. 4 or even 2 or 1) if the job crashes so that any remaining particularly tricky steps can
-be run with fewer processors with a lower likelihood of crashing.
+If you use the default processor counts, wrangling and variant calling should complete in approximately
+five minutes each, with checking run stats completing substantially faster.
+
+More generally, resources required vary widely depending on the project. Wrangling and variant calling
+require the most RAM and processing power, and both of these steps can be parallelized across multiple
+processors. The more processors (also known as CPUs or threads) you ask for, the faster the job will run,
+the more RAM will be required, and the higher the probability that the job will crash if RAM is
+insufficient. Internally, MIPTools uses snakemake so that if a job crashes partway through, you can rerun
+it and MIPTools will pick up where it left off. Therefore, you might consider running a job once,
+requesting a large number of processors (e.g. 15) so that most of the steps finish quickly, and then
+editing the settings file to request fewer processors (e.g. 4 or even 2 or 1) if the job crashes so that
+any remaining particularly tricky steps can be run with fewer processors with a lower likelihood of
+crashing.
