@@ -42,7 +42,7 @@ MIPTools supports several computational steps, including:
 	  containing mutated genomic positions for each sample and several tables
 	  that annotate mutations with associated amino acid changes for each sample.
 	  For the tutorial, the main outputs of interest are three tables that can be
-	  used to infer how many samples contain each mutation:
+	  used to infer which samples contain each mutation:
 
 	  - coverage_AA_table.csv: how many times the mutation was sequenced
 
