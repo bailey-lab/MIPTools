@@ -1,27 +1,12 @@
 #folder where your output will go.
 output_folder: /nfs/jbailey5/baileyweb/asimkin/miptools/miptools_tutorial/test-data/wrangler_snakemake
 
-#number of umis to include for each mip/sample combo. This keeps massively over-
-#sequenced stuff from bogging down the analysis. 20000 is default.
-downsample_umi_count: 20000000000
-
-#when umis are randomly chosen, this random seed allows you to make sure the
-#same random seeds get chosen when re-running a sample (or you could change the
-#number to see if results are robust when different random umis are chosen)
-downsample_seed: 312
-
-#how many CPUs (or threads) to use in parallel - you can set this relatively low
-#(e.g. 10) because most of the intensive steps of this program are parallelized
-#across samples (i.e. 1000 parallel processes if you have 1,000 samples).
+#how many CPUs (or threads or processors) to use in parallel. More CPUs means
+#faster run times (if your computer has at least this many processors) but also
+#means more RAM used. Doubling processors doubles the RAM, and if you run out of
+#RAM, the job will crash. If the job crashes, set cpu_count lower and run it
+#again (it will pick up at the step where the crash occurred).
 cpu_count: 16
-
-#This applies to the most memory intensive steps of the pipeline. Lower values
-#complete faster on a cluster but may crash out for bigger samples or highly
-#sampled mips. Higher values complete slower but are less likely to crash. For
-#the best of both worlds, you can set a low initial value, run all steps that
-#complete, and then set a higher value and rerun to tackle any remaining failed
-#steps. 4000 is a good minimum, 200000 is a good maximum, 20000 is medium.
-memory_mb_per_step: 20000
 
 #location of sample sheet
 input_sample_sheet: /nfs/jbailey5/baileyweb/asimkin/miptools/miptools_tutorial/test-data/test_data/sample_list.tsv
@@ -33,11 +18,11 @@ project_resources: /nfs/jbailey5/baileyweb/asimkin/miptools/miptools_tutorial/te
 fastq_dir: /nfs/jbailey5/baileyweb/asimkin/miptools/miptools_tutorial/test-data/test_data/fastq
 
 #location of sif file to use
-miptools_sif: /nfs/jbailey5/baileyweb/bailey_share/bin/miptools_dev_plus_bcl2fastq_24-01-24.sif
+miptools_sif: /nfs/jbailey5/baileyweb/bailey_share/bin/miptools_dev_24-02-12.sif
 
 #only rows from the sample sheet that contain exact matches to the probe sets
-#listed here (after splitting the probe_set column with commas) will be analyzed
-#To match on multiple probe sets, use commas, e.g. DR1,VAR4
+#listed here (after splitting the probe_set column with commas) will be
+#analyzed.
 probe_sets_used: DR1
 
 #only rows from the sample_set column of the sample sheet that are an exact
@@ -55,3 +40,21 @@ sample_set_used: JJJ
 #5 (haplotype clustering for each mip)
 #6 (final output table)
 output_choice: 6
+
+#memory_mb_per_step applies only when submitting on a slurm cluster. Since in
+#our experience slurm submissions slow down analysis, you can leave this at its
+#default value.
+memory_mb_per_step: 20000
+
+#number of umis to include for each mip/sample combo. This keeps massively over-
+#sequenced stuff from bogging down the analysis. 20000 is default, but in
+#practice, we haven't extensively tested this feature so recommend setting it to
+#a very high number (e.g. 20000000000) to avoid downsampling altogether.
+downsample_umi_count: 20000000000
+
+#when downsampling occurs, this random seed allows you to make sure thesame
+#random seeds get chosen when re-running a sample (or you could change the
+#number to see if results are robust when different random umis are chosen).
+#Since we're not recommending downsampling yet, you can leave this value alone.
+downsample_seed: 312
+
