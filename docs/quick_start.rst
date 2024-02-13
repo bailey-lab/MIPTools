@@ -84,13 +84,14 @@ Analyzing the Data
 Now that we know what steps will be performed and how files are organized, we can look at a
 hypothetical dataset. The tutorial dataset contains 56 samples sequenced with 57 targeted
 genomic regions corresponding to known drug resistance mutations of the P. falciparum genome.
-It assumes that MIPs have already been designed, and that samples have already been sequenced
-using the MIPs using illumina paired end reads and demultiplexed.
+It assumes that MIPs have already been designed, and that these MIPs have been used to target
+our regions of interest, and that samples have already been pooled together, sequenced with
+illumina paired end reads, and demultiplexed.
 
 | You can download the tutorial dataset from here:
 | https://baileylab.brown.edu/MIPTools/download/test-data.tar.gz
 | The dataset includes a project_resources folder, a species_resources folder, a sample sheet,
-and a fastq directory with demultiplexed output.
+and a fastq directory with demultiplexed illumina paired end reads as output.
 
 | You can obtain a copy of our latest sif file from here:
 | https://baileylab.brown.edu/MIPTools/download/miptools_dev.sif
