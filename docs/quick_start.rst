@@ -133,15 +133,17 @@ Variant calling uses the same settings file as check_run_stats.
 Resource Requirements
 =====================
 If you use the default processor counts, wrangling and variant calling should complete in approximately
-five minutes each, with checking run stats completing substantially faster.
+five minutes each for the tutorial dataset, with checking run stats completing substantially faster.
 
 More generally, resources required vary widely depending on the project. Wrangling and variant calling
 require the most RAM and processing power, and both of these steps can be parallelized across multiple
-processors. The more processors (also known as CPUs or threads) you ask for, the faster the job will run,
-the more RAM will be required, and the higher the probability that the job will crash if RAM is
-insufficient. Internally, MIPTools uses snakemake so that if a job crashes partway through, you can rerun
-it and MIPTools will pick up where it left off. Therefore, you might consider running a job once,
-requesting a large number of processors (e.g. 15) so that most of the steps finish quickly, and then
-editing the settings file to request fewer processors (e.g. 4 or even 2 or 1) if the job crashes so that
-any remaining particularly tricky steps can be run with fewer processors with a lower likelihood of
-crashing.
+processors. Wrangling with ~7,000 samples can take up to three days to complete, and some variant calling
+steps on datasets this large can take a little over a week. The more processors (also known as CPUs or
+threads) you ask for, the faster the job will run, the more RAM will be required, and the higher the
+probability that the job will crash if RAM is insufficient. With a dataset containing 7,000 samples, a
+single processor might require up to 150 GB of RAM in the variant calling step. Internally, MIPTools uses
+snakemake so that if a job crashes partway through, you can rerun it and MIPTools will pick up where it
+left off. Therefore, you might consider running a job once and requesting a large number of processors
+(e.g. 15) so that most of the steps finish quickly. Then, if the job crashes, you might edit the settings
+file to request fewer processors (e.g. 4 or even 2 or 1) so that any remaining particularly tricky steps
+can be run with a lower likelihood of crashing.
