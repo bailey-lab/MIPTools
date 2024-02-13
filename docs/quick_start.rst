@@ -9,23 +9,46 @@ MIPTools provides users a suite of computational tools that can be used for
 molecular inversion probe design, data processing, and analysis. MIPTools is
 packaged as a `Singularity container <https://www.sylabs.io/docs/>`_.
 
+This Quick Start tutorial provides a tutorial dataset that you can use to
+analyze a hypothetical dataset containing 56 samples sequenced with 57
+targeted genomic regions corresponding to known drug resistance mutations of
+the P. falciparum genome.
+| You can download the tutorial dataset from here:
+| https://baileylab.brown.edu/MIPTools/download/test-data.tar.gz
+
+| You can obtain a copy of our latest sif file from here:
+| https://baileylab.brown.edu/MIPTools/download/miptools_dev.sif
+
 MIPTools supports several computational steps, including:
 	- MIP design: This is for choosing resions of the genome that you'd like to
-	  target.
+	  target (the tutorial assumes MIP design has already been finished).
 
-	- Wrangling: This is for finding what haplotypes are associated with your
+	- Wrangling: This is for finding what haplotypes are associated with each
 	  targeted region and the number of times each haplotype was seen in each
 	  sample. This can be thought of as the "core" purpose of MIPTools. The output
-	  is a tab delimited file.
+	  is a tab delimited file called allInfo.tsv.gz
 
 	- stat-checking: This is for figuring out which samples and which targeted
 	  regions (aka MIPs) performed well and which did not. There are several
-	  graphical outputs and comma separated files produced at this stage.
+	  graphical outputs and comma separated files produced at this stage. Among
+	  the most important are barcode_counts.csv (how many times each targeted
+	  region of the genome was seen in each sample) and repool.csv (which MIPs
+	  need to be re-sequenced or repooled in each sample). umi_heatmap.html is
+	  also useful for visualizing the performance of each MIP in each sample
+	  (open this with a web browser).
 
 	- variant calling: This is for estimating the number of times that each MIP
 	  was associated with a mutation in each sample. The outputs are a VCF file
 	  containing mutated genomic positions for each sample and several tables
 	  that annotate mutations with associated amino acid changes for each sample.
+	  For the tutorial, the main outputs of interest are three tables that can be
+	  used to infer how many samples contain each mutation:
+
+	  - coverage_AA_table.csv: how many times the mutation was sequenced
+
+	  - reference_AA_table.csv: how many times the reference allele was seen in each sample
+
+	  - alternate_AA_table.csv: how many times the alternate (mutant) allele was seen in each sample
 
 Input File Structure
 -------------------
@@ -71,14 +94,8 @@ A few directories are required for most operations.
 
 Wrangling
 ---------
-| You can download a tutorial dataset from here:
-| https://baileylab.brown.edu/MIPTools/download/test-data.tar.gz
-
-| You can obtain a copy of our latest sif file from here:
-| https://baileylab.brown.edu/MIPTools/download/miptools_dev.sif
-
 | You can obtain an example settings file for wrangling with this command:
-| :code:`wget https://github.com/bailey-lab/MIPTools/raw/master/user_scripts/wrangler_by_sample.yaml`.
+| :code:`wget https://github.com/bailey-lab/MIPTools/raw/master/user_scripts/wrangler_by_sample.yaml`
 
 After downloading, make sure to follow the instructions in this file, editing it to contain the correct
 path to the project resources, species resources, and sif files you downloaded above, as well as the
@@ -93,11 +110,11 @@ location where you'd like the output to be sent.
 Checking run stats
 ------------------
 | After wrangling is finished, you can obtain a settings file for checking run stats with this command:
-| :code:`wget https://github.com/bailey-lab/MIPTools/raw/master/user_scripts/variant_calling.yaml`.
+| :code:`wget https://github.com/bailey-lab/MIPTools/raw/master/user_scripts/variant_calling.yaml`
 | Make sure to follow the instructions in this file.
 
 | You can obtain a script here (put it in the same folder as the settings file):
-| :code:`wget https://github.com/bailey-lab/MIPTools/raw/master/user_scripts/check_run_stats.sh`.
+| :code:`wget https://github.com/bailey-lab/MIPTools/raw/master/user_scripts/check_run_stats.sh`
 
 | And you can execute it like this:
 | :code:`bash check_run_stats.sh`
@@ -107,7 +124,7 @@ Variant Calling
 Variant calling uses the same settings file as check_run_stats.
 
 | You can obtain a script for variant calling here (put it in the same folder as the settings file):
-| :code:`wget https://github.com/bailey-lab/MIPTools/raw/master/user_scripts/variant_calling.sh`.
+| :code:`wget https://github.com/bailey-lab/MIPTools/raw/master/user_scripts/variant_calling.sh`
 
 | And you can execute it like this:
 | :code:`bash variant_calling.sh`
