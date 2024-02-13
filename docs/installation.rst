@@ -3,7 +3,7 @@ Installation
 ============
 If you have a working copy of singularity and have demultiplexed data,
 you can use our sif file (recommended approach, below). Due to licensing
-issues, if you want to use miptools to demultiplex your data (we are just
+issues, if you want to use miptools to demultiplex your data (we're just
 wrapping up illumina's bcl2fastq demultiplexing program) you'll need to
 download bcl2fastq, put it in our 'programs' folder, and build your own
 sif file from source.
@@ -82,37 +82,6 @@ download a prebuilt image (see above) or build the container on your own
 machine where you *do* have ``sudo`` privilege and copy the image file to the
 computer without ``sudo``. Note that the Singularity program itself must have
 been installed with ``sudo``.
-
-Software Versioning
--------------------
-
-MIPTools installs several software tools together into the final built
-container. Software packages are installed in the ``%post`` section on the
-definition file, ``MIPTools.def`` (for more information of the definition file
-consult the `Singularity documentation <https://sylabs.io/docs>`_). Programs in
-MIPTools are installed in a variety of ways including via ``wget``,
-``apt-get``, building source code for programs downloaded via ``git``, and even
-via ``mamba``.
-
-In order to ensure reproducible builds, the version number has been fixed for
-many of the key programs MIPTools uses. The exceptions to this rule include
-software installed via ``apt-get`` and ``mamba``. Software installed via
-``mamba`` is defined in an ``environment.yml`` file in the root of the MIPTools
-directory. This ``environment.yml`` file does not contain package versions as
-in many cases dependency conflicts may arise. It is, however, possible to
-specify the version number of installed packages by defining an
-``environment_versioned.yml`` file in the root of the MIPTools directory.
-During the build process if this file exists it will be used to install
-``mamba`` packages. If no ``environment_versioned.yml`` file exists, it will be
-generated during the build process and saved within the MIPTools container.
-Users may then save this file to the root of the MIPTools directory to ensure
-package versions of software installed with ``mamba`` do not change. To save
-this file locally you may use ``singularity exec``:
-
-.. code-block:: shell
-
-	singularity exec <container> cat /opt/environment_versioned.yml > environment_versioned.yml
-
 
 Demultiplexing
 --------------
