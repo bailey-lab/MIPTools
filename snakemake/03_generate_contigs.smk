@@ -4,6 +4,23 @@ log_folder='/opt/analysis/run_settings'
 import subprocess
 subprocess.call(f'mkdir {log_folder}', shell=True)
 
+if config['target_aa_annotation']:
+	targeting=config['target_aa_annotation']
+elif config['target_nt_annotation']:
+	targeting=config['target_nt_annotation']
+elif config['target_aa_annotation'] and config['target_nt_annotation:
+	print("can't set both target_aa_annotation and target_nt_annotation, one of"
+	"these needs to be false")
+	exit()
+else:
+	targeting=None
+	
+	
+else:
+	print("
+
+targets_file_choice=config['target_aa_annotation']
+
 rule all:
 	input:
 		freebayes_command_dict=output_folder+'/freebayes_command_dict.yaml',
@@ -51,7 +68,7 @@ rule generate_contigs:
 		#targets_index=output_folder+'/targets.vcf.gz.tbi',
 		#targets_vcf=output_folder+'/targets.vcf.gz'
 	params:
-		targets_file=config['target_aa_annotation'],
+		targets_file=targeting,
 		freebayes_settings=config['freebayes_settings'],
 		wdir='/opt/analysis',
 		settings_file='settings.txt'
