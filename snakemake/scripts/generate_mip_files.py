@@ -5,7 +5,8 @@ import os
 arms_file=snakemake.input.arms_file
 input_fastq_folder=snakemake.input.fastq_folder
 input_sample_sheet=snakemake.input.sample_sheet
-desired_sample_set=snakemake.params.sample_set
+desired_sample_set=snakemake.params.sample_set.split(',')
+desired_sample_set=set([sample_set.upper() for sample_set in desired_sample_set])
 desired_probe_sets=snakemake.params.probe_sets.replace(' ', '').strip().split(',')
 mip_arms=snakemake.output.mip_arms
 sample_file=open(snakemake.output.sample_file, 'w')
@@ -32,7 +33,7 @@ for line_number, line in enumerate(open(input_sample_sheet)):
 		for desired_probe_set in desired_probe_sets:
 			new_sample_name=f'{line[sample_name_c]}-{line[sample_set_c]}-{line[replicate_c]}'
 			if new_sample_name in sequenced_samples:
-				if desired_probe_set.upper() in probe_sets and sample_set.upper()==desired_sample_set.upper():
+				if desired_probe_set.upper() in probe_sets and sample_set.upper() in desired_sample_set:
 					samples_used.add(new_sample_name)
 
 family_df=arms_df[['mip_family']]

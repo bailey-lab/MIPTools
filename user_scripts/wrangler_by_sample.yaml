@@ -26,7 +26,10 @@ miptools_sif: /nfs/jbailey5/baileyweb/bailey_share/bin/miptools_dev_24-02-12.sif
 probe_sets_used: DR1
 
 #only rows from the sample_set column of the sample sheet that are an exact
-#match to the sample set listed below will be analyzed
+#match to the sample set listed below will be analyzed. If the samples you want
+#to analyze are coming from multiple sample sets, list all sample sets delimited
+#by commas with no spaces, e.g. JJJ,MSMT-2021,MSMT-2022 would pull samples that
+#have an exact match to JJJ, MSMT-2021, or MSMT-2022 in the sample_set column
 sample_set_used: JJJ
 
 #if you have a very large number of samples that won't run all the way from
