@@ -15,10 +15,6 @@ elif config['target_aa_annotation'] and config['target_nt_annotation:
 else:
 	targeting=None
 	
-	
-else:
-	print("
-
 targets_file_choice=config['target_aa_annotation']
 
 rule all:
