@@ -8,7 +8,7 @@ if config['target_aa_annotation']:
 	targeting=config['target_aa_annotation']
 elif config['target_nt_annotation']:
 	targeting=config['target_nt_annotation']
-elif config['target_aa_annotation'] and config['target_nt_annotation:
+elif config['target_aa_annotation'] and config['target_nt_annotation']:
 	print("can't set both target_aa_annotation and target_nt_annotation, one of"
 	"these needs to be false")
 	exit()
