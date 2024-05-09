@@ -5791,7 +5791,7 @@ def vcf_to_tables_fb(vcf_file, settings=None, settings_file=None,
                     in variants["variants/ANN_Annotation"]]
         # spcecify fields of interest from the INFO fields
         variant_fields = ["ANN_Gene_ID", "ANN_HGVS_p", "ANN_Annotation",
-                          "QUAL", "POS"]
+                          "QUAL"]
         variant_fields = ["variants/" + v for v in variant_fields]
         # specify fields of interest from individual level data
         # that is basically the count data for tables. AO: alt allele count,
@@ -5817,7 +5817,6 @@ def vcf_to_tables_fb(vcf_file, settings=None, settings_file=None,
         split_calls = []
         for i in range(len(missense)):
             mv = variant_data[i][:3]
-            genomic_position = int(variant_data[i][4])
             # get the aa change such as AspGluAsp144HisGlnTyr
             aa_change = mv[1]
             # if no aa change, skip
@@ -5867,7 +5866,7 @@ def vcf_to_tables_fb(vcf_file, settings=None, settings_file=None,
                         targeted_mutation = "No"
                     # add the split variant information split variants list
                     split_variants.append(mv + (new_change, gene_name,
-                                                mut_name, targeted_mutation, genomic_position))
+                                                mut_name, targeted_mutation))
                     # add the individual level data to split calls list.
                     split_calls.append(call_data[i])
             else:
@@ -5887,7 +5886,7 @@ def vcf_to_tables_fb(vcf_file, settings=None, settings_file=None,
                     targeted_mutation = "No"
                 # add compound variant data to split variant data
                 split_variants.append(mv + (aa_change, gene_name,
-                                            mut_name, targeted_mutation, genomic_position))
+                                            mut_name, targeted_mutation))
                 # add the individual level data to split calls list.
                 split_calls.append(call_data[i])
 
@@ -5920,7 +5919,7 @@ def vcf_to_tables_fb(vcf_file, settings=None, settings_file=None,
         index = pd.MultiIndex.from_tuples(
             split_variants, names=["Gene ID", "Compound Change", "ExonicFunc",
                                    "AA Change", "Gene", "Mutation Name",
-                                   "Targeted", "Position"])
+                                   "Targeted"])
         # get alt counts
         variant_counts = pd.DataFrame(np.array(split_calls)[:, 0],
                                       columns=variants["samples"],
@@ -5935,7 +5934,7 @@ def vcf_to_tables_fb(vcf_file, settings=None, settings_file=None,
                                 index=index).replace(-1, 0)
         # combine counts for same changes
         grouping_keys = ["Gene ID", "Gene", "Mutation Name", "ExonicFunc",
-                         "AA Change", "Targeted", "Position"]
+                         "AA Change", "Targeted"]
         # replace -1 (allel assigned NA values) values with 0
         # sum alt counts
         mutation_counts = variant_counts.groupby(grouping_keys).sum()
@@ -6504,7 +6503,6 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
         split_calls = []
         for i in range(len(missense)):
             mv = variant_data[i][:3]
-            genomic_position = int(variant_data[i][4])
             # get the aa change such as AspGluAsp144HisGlnTyr
             aa_change = mv[1]
             # if no aa change, skip
@@ -6554,7 +6552,7 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
                         targeted_mutation = "No"
                     # add the split variant information split variants list
                     split_variants.append(mv + (new_change, gene_name,
-                                                mut_name, targeted_mutation, genomic_position))
+                                                mut_name, targeted_mutation))
                     # add the individual level data to split calls list.
                     split_calls.append(call_data[i])
             else:
@@ -6574,7 +6572,7 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
                     targeted_mutation = "No"
                 # add compound variant data to split variant data
                 split_variants.append(mv + (aa_change, gene_name,
-                                            mut_name, targeted_mutation, genomic_position))
+                                            mut_name, targeted_mutation))
                 # add the individual level data to split calls list.
                 split_calls.append(call_data[i])
         # create a multiindex for the variant df that we'll create next
