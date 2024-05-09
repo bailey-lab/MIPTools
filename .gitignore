@@ -10,3 +10,5 @@ base_resources/.ipynb_checkpoints/
 !docs/**
 docs/.DS_store
 docs/_build
+local_output
+local_input
