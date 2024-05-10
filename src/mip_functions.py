@@ -5935,7 +5935,8 @@ def vcf_to_tables_fb(vcf_file, settings=None, settings_file=None,
                                 index=index).replace(-1, 0)
         # combine counts for same changes
         grouping_keys = ["Gene ID", "Gene", "Mutation Name", "ExonicFunc",
-                         "AA Change", "Targeted", "Position"]
+                          "AA Change", "Targeted", "Position"]
+        #grouping_keys = ["Position"]
         # replace -1 (allel assigned NA values) values with 0
         # sum alt counts
         mutation_counts = variant_counts.groupby(grouping_keys).sum()
