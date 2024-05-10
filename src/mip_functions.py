@@ -5342,13 +5342,13 @@ def concatenate_headers(settings=None, wdir='/opt/analysis', freebayes_settings=
 	subprocess.run(["bcftools", "index", "-f", vcf_file], check=True)
 	# fix vcf header if --gvcf option has been used
 	if "--gvcf" in freebayes_settings:
-	    temp_vcf_path = os.path.join(wdir, "temp.vcf.gz")
-	    vcf_reheader(os.path.basename(vcf_file), temp_vcf_path, wdir=wdir)
-	    old_vcf_path = os.path.join(wdir, "unfixed.vcf.gz")
-	    subprocess.run(["mv", vcf_file, old_vcf_path])
-	    subprocess.run(["mv", temp_vcf_path, vcf_file])
-	    subprocess.run(["bcftools", "index", "-f", vcf_file], check=True)
-	    print('did a reheader')
+        temp_vcf_path = os.path.join(wdir, "temp.vcf.gz")
+        vcf_reheader(os.path.basename(vcf_file), temp_vcf_path, wdir=wdir)
+        old_vcf_path = os.path.join(wdir, "unfixed.vcf.gz")
+        subprocess.run(["mv", vcf_file, old_vcf_path])
+        subprocess.run(["mv", temp_vcf_path, vcf_file])
+        subprocess.run(["bcftools", "index", "-f", vcf_file], check=True)
+        print('did a reheader')
 
 def gatk(options):
     """GATK wrapper function.
