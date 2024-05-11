@@ -30,17 +30,12 @@ function parse_yaml {
 }
 
 
+
+#parse_yaml wrangler_by_sample.yaml
+
 eval $(parse_yaml wrangler_by_sample.yaml)
 
-function parse_sample_sheet_directory {
-    readarray -d "/" -t strarr <<< "$input_sample_sheet"
-    for (( n=1; n < ${#strarr[*]}-1; n++))
-        do
-         input_sample_sheet_directory+="/${strarr[n]}"
-        done
-    echo $input_sample_sheet_directory
-}
-input_sample_sheet_directory=$(parse_sample_sheet_directory)
+input_sample_sheet_directory="$(dirname "${input_sample_sheet}")"
 
 
 ############################
@@ -49,6 +44,12 @@ input_sample_sheet_directory=$(parse_sample_sheet_directory)
 
 # create output directory if it doesn't exist
 mkdir -p $output_folder
+
+#replace leading and trailing whitespace in variables (If I learn more unix I'll wrap this in a function or add to the yaml parser above):
+project_resources="$(echo -e "${project_resources}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+output_folder="$(echo -e "${output_folder}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+input_sample_sheet_directory="$(echo -e "${input_sample_sheet_directory}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+fastq_dir="$(echo -e "${fastq_dir}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
 
 # define singularity bindings and snakemake arguments to be used each time snakemake is called
 singularity_bindings="-B $project_resources:/opt/project_resources
