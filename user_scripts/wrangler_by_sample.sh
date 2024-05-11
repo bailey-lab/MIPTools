@@ -33,12 +33,11 @@ function parse_yaml {
 eval $(parse_yaml wrangler_by_sample.yaml)
 
 function parse_sample_sheet_directory {
-    readarray -d "/" -t strarr <<< "$input_sample_sheet"
-    for (( n=1; n < ${#strarr[*]}-1; n++))
-        do
-         input_sample_sheet_directory+="/${strarr[n]}"
-        done
-    echo $input_sample_sheet_directory
+    local IFS='/'
+    read -ra arr <<< "$input_sample_sheet"
+    unset 'arr[${#arr[@]}-1]'
+    shift
+    echo "${arr[*]}"
 }
 input_sample_sheet_directory=$(parse_sample_sheet_directory)
 
