@@ -38,6 +38,12 @@ eval $(parse_yaml variant_calling.yaml)
 # create output directory if it doesn't exist
 mkdir -p $output_directory
 
+#replace leading and trailing whitespace in variables (If I learn more unix I'll wrap this in a function or add to the yaml parser above):
+project_resources="$(echo -e "${project_resources}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+species_resources="$(echo -e "${species_resources}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+wrangler_directory="$(echo -e "${wrangler_directory}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+output_directory="$(echo -e "${output_directory}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+
 # define singularity bindings and snakemake arguments to be used each time snakemake is called
 singularity_bindings="-B $project_resources:/opt/project_resources
  -B $species_resources:/opt/species_resources
