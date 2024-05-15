@@ -1,5 +1,5 @@
 #folder where your output will go.
-output_folder: /nfs/jbailey5/baileyweb/asimkin/miptools/miptools_tutorial/test-data/wrangler_snakemake
+output_folder: /nfs/jbailey5/baileyweb/asimkin/miptools/miptools_tutorial/test-data/unlocking_folders
 
 #how many CPUs (or threads or processors) to use in parallel. More CPUs means
 #faster run times (if your computer has at least this many processors) but also
@@ -18,7 +18,7 @@ project_resources: /nfs/jbailey5/baileyweb/asimkin/miptools/miptools_tutorial/te
 fastq_dir: /nfs/jbailey5/baileyweb/asimkin/miptools/miptools_tutorial/test-data/test_data/fastq
 
 #location of sif file to use
-miptools_sif: /nfs/jbailey5/baileyweb/bailey_share/bin/miptools_dev_24-02-12.sif
+miptools_sif: /nfs/jbailey5/baileyweb/bailey_share/bin/miptools_dev_24-03-18.sif
 
 #only rows from the sample sheet that contain exact matches to the probe sets
 #listed here (after splitting the probe_set column with commas) will be

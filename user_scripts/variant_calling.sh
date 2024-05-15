@@ -52,6 +52,31 @@ singularity_bindings="-B $project_resources:/opt/project_resources
  -H $newhome"
  
 snakemake_args="--cores $processor_number --keep-going --rerun-incomplete --use-conda --latency-wait 60"
+freebayes_args="--cores $freebayes_threads --keep-going --rerun-incomplete --use-conda --latency-wait 60"
+
+##########################################
+# optional: unlock a crashed snakemake run
+##########################################
+
+unlock() {
+   echo "unlocking"
+   singularity exec $singularity_bindings $miptools_sif snakemake \
+   -s /opt/snakemake/02_check_run_stats.smk --unlock 
+
+   singularity exec $singularity_bindings snakemake \
+   -s /opt/snakemake/03_generate_contigs.smk --unlock
+
+   singularity exec $singularity_bindings snakemake \
+   -s /opt/snakemake/04_run_freebayes.smk --unlock
+}
+
+#parse command line arguments to do the unlocking
+while getopts "u" opt; do
+        case ${opt} in
+            u) unlock
+               exit 1 ;;
+        esac
+    done
 
 ##################################
 # Step 1: Check Run Stats
@@ -72,7 +97,7 @@ singularity exec \
 ###############################
 singularity exec \
   $singularity_bindings \
-  $sif_file snakemake -s /opt/snakemake/04_run_freebayes.smk $snakemake_args
+  $sif_file snakemake -s /opt/snakemake/04_run_freebayes.smk $freebayes_args
 
 #################################
 # confirm the ulimit settings #

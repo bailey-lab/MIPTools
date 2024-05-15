@@ -43,6 +43,24 @@ species_resources="$(echo -e "${species_resources}" | sed -e 's/^[[:space:]]*//'
 wrangler_directory="$(echo -e "${wrangler_directory}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
 output_directory="$(echo -e "${output_directory}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
 
+#allow the unlocking of a snakemake directory after a crashed run
+unlock() {
+   echo "unlocking"
+   singularity exec -H $newhome $miptools_sif snakemake \
+   -s /opt/snakemake/wrangler_by_sample_setup.smk --unlock 
+
+   singularity exec -H $newhome $miptools_sif snakemake \
+   -s /opt/snakemake/wrangler_by_sample_finish.smk --unlock
+}
+
+#parse command line arguments to do the unlocking - this works but requires the user to add a (non-used) word after the -u
+while getopts "u" opt; do
+        case ${opt} in
+            u) unlock
+               exit 1 ;;
+        esac
+    done
+
 ############################
 # setup the run
 ##########################
@@ -58,6 +76,24 @@ singularity_bindings="-B $project_resources:/opt/project_resources
  -H $newhome"
  
 snakemake_args="--cores $processor_number --keep-going --rerun-incomplete --use-conda --latency-wait 60"
+
+##########################################
+# optional: unlock a crashed snakemake run
+##########################################
+
+unlock() {
+   echo "unlocking"
+   singularity exec $singularity_bindings $miptools_sif snakemake \
+   -s /opt/snakemake/02_check_run_stats.smk --unlock 
+}
+
+#parse command line arguments to do the unlocking
+while getopts "u" opt; do
+        case ${opt} in
+            u) unlock
+               exit 1 ;;
+        esac
+    done
 
 ##################################
 # Step 1: Check Run Stats

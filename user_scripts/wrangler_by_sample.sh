@@ -30,12 +30,13 @@ function parse_yaml {
 }
 
 
-
 #parse_yaml wrangler_by_sample.yaml
-
 eval $(parse_yaml wrangler_by_sample.yaml)
 
 input_sample_sheet_directory="$(dirname "${input_sample_sheet}")"
+
+
+
 
 
 ############################
@@ -59,6 +60,27 @@ singularity_bindings="-B $project_resources:/opt/project_resources
  -H $newhome"
  
 snakemake_args="--cores $cpu_count --keep-going --rerun-incomplete --latency-wait 60"
+
+##########################################
+# optional: unlock a crashed snakemake run
+##########################################
+
+unlock() {
+   echo "unlocking"
+   singularity exec $singularity_bindings $miptools_sif snakemake \
+   -s /opt/snakemake/wrangler_by_sample_setup.smk --unlock 
+
+   singularity exec $singularity_bindings $miptools_sif snakemake \
+   -s /opt/snakemake/wrangler_by_sample_finish.smk --unlock
+}
+
+#parse command line arguments to do the unlocking
+while getopts "u" opt; do
+        case ${opt} in
+            u) unlock
+               exit 1 ;;
+        esac
+    done
 
 ##################################
 # Step 1: Set Up Wrangler Run
