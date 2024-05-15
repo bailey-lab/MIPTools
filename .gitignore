@@ -11,3 +11,4 @@ base_resources/.ipynb_checkpoints/
 docs/.DS_store
 docs/_build
 local_files
+programs/bcl2fastq2-v2-20-0-linux-x86-64.zip
