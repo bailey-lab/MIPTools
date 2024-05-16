@@ -101,7 +101,7 @@ class ExceptionWrapper(object):
 def coordinate_to_target(coordinates, snp_locations, capture_size):
     """ Create MIP targets starting from a snp file that is produced offline,
     usually from Annovar. This is a tab separated file with the following
-    chr1	2595307	2595307	A	G	rs3748816.
+    chr1	2595307	2595307	AG	rs3748816.
     This can be generalized to any target with coordinates.
     """
     # create target regions to cover all snps
@@ -2396,15 +2396,15 @@ def bwa(fastq_file, output_file, output_type, input_dir,
 def bwa_multi(fastq_files, output_type, fastq_dir, bam_dir, options, species,
               processor_number, parallel_processes):
     """Align fastq files to species genome using bwa in parallel."""
-    #if a person doesn't add any extra bwa options, bwa options will be a
-    #string 'mem' - needs to be a list so it can be concatenated to -t options
-    #below
-    if type(options)==str:
-        options=[options]
-    #remove threads argument if present, so it doesn't get added twice below
+    # if a person doesn't add any extra bwa options, bwa options will be a
+    # string 'mem' - needs to be a list so it can be concatenated to -t options
+    # below
+    if type(options) == str:
+        options = [options]
+    # remove threads argument if present, so it doesn't get added twice below
     if '-t' in options:
-        thread_location=options.index('-t')
-        options=options[:thread_location]+options[thread_location+2:]
+        thread_location = options.index('-t')
+        options = options[:thread_location]+options[thread_location+2:]
     if len(fastq_files) == 0:
         fastq_files = [f.name for f in os.scandir(fastq_dir)]
     if output_type == "sam":
@@ -5179,11 +5179,13 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
             # the options list in case bam files were added to the options
             # and they must stay at the end because they are positional args.
             contig_dict["options"] = contig_options + options
-            #contig_name = contig_dict['options'].split(' ')[3].split('/')[-1]
+            # contig_name = contig_dict['options'].split(' ')[3].split('/')[-1]
             # add the contig dict to contig dict list
             contig_value = ('freebayes '+' '.join(contig_dict['options']))
-            freebayes_command_dict[contig_name]=contig_value
-    return(freebayes_command_dict,contig_vcf_gz_paths)
+            freebayes_command_dict[contig_name] = contig_value
+    return (freebayes_command_dict, contig_vcf_gz_paths)
+
+
 '''
     # create a processor pool for parallel processing
     pool = Pool(int(settings["processorNumber"]))
@@ -5261,21 +5263,20 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
 '''
 
 
-
 def freebayes_worker(command):
     """Run freebayes program with the specified options.
 
     Run freebayes program with the specified options and return a
     subprocess.CompletedProcess object.
     """
-    command=command.split(' ')
+    command = command.split(' ')
     # run freebayes command piping the output
     fres = subprocess.run(command, stderr=subprocess.PIPE)
     # check the return code of the freebayes run. if succesfull continue
     if fres.returncode == 0:
         # bgzip the vcf output, using the freebayes output as bgzip input
-        vcf_index=command.index('-v')+1
-        vcf_path=command[vcf_index]
+        vcf_index = command.index('-v')+1
+        vcf_path = command[vcf_index]
         gres = subprocess.run(["bgzip", "-f", vcf_path],
                               stderr=subprocess.PIPE)
         # make sure bugzip process completed successfully
@@ -5330,25 +5331,32 @@ def vcf_reheader(vcf_file, fixed_vcf_file, wdir="/opt/analysis/"):
                     vcf_path,  "-o", fixed_vcf_path], check=True)
     return
 
-def concatenate_headers(settings=None, wdir='/opt/analysis', freebayes_settings=None, vcf_paths=None):
-	vcf_file="/opt/analysis/variants.vcf.gz"
-	# concatanate contig vcfs. The number of contigs may be high, so we'll
-	# write the vcf paths to a file and bcftools will read from that file
-	cvcf_paths_file = os.path.join(wdir, "contig_vcfs", "vcf_file_list.txt")
-	with open(cvcf_paths_file, "w") as outfile:
-	    outfile.write("\n".join(vcf_paths) + "\n")
-	subprocess.run(["bcftools", "concat", "-f", cvcf_paths_file, "-Oz",
-                "-o", vcf_file], check=True)
-	subprocess.run(["bcftools", "index", "-f", vcf_file], check=True)
-	# fix vcf header if --gvcf option has been used
-	if "--gvcf" in freebayes_settings:
-	    temp_vcf_path = os.path.join(wdir, "temp.vcf.gz")
-	    vcf_reheader(os.path.basename(vcf_file), temp_vcf_path, wdir=wdir)
-	    old_vcf_path = os.path.join(wdir, "unfixed.vcf.gz")
-	    subprocess.run(["mv", vcf_file, old_vcf_path])
-	    subprocess.run(["mv", temp_vcf_path, vcf_file])
-	    subprocess.run(["bcftools", "index", "-f", vcf_file], check=True)
-	    print('did a reheader')
+
+def concatenate_headers(
+        settings=None,
+        wdir='/opt/analysis',
+        freebayes_settings=None,
+        vcf_paths=None
+        ):
+    vcf_file = "/opt/analysis/variants.vcf.gz"
+    # concatanate contig vcfs. The number of contigs may be high, so we'll
+    # write the vcf paths to a file and bcftools will read from that file
+    cvcf_paths_file = os.path.join(wdir, "contig_vcfs", "vcf_file_list.txt")
+    with open(cvcf_paths_file, "w") as outfile:
+        outfile.write("\n".join(vcf_paths) + "\n")
+    subprocess.run(["bcftools", "concat", "-f", cvcf_paths_file, "-Oz",
+                    "-o", vcf_file], check=True)
+    subprocess.run(["bcftools", "index", "-f", vcf_file], check=True)
+    # fix vcf header if --gvcf option has been used
+    if "--gvcf" in freebayes_settings:
+        temp_vcf_path = os.path.join(wdir, "temp.vcf.gz")
+        vcf_reheader(os.path.basename(vcf_file), temp_vcf_path, wdir=wdir)
+        old_vcf_path = os.path.join(wdir, "unfixed.vcf.gz")
+        subprocess.run(["mv", vcf_file, old_vcf_path])
+        subprocess.run(["mv", temp_vcf_path, vcf_file])
+        subprocess.run(["bcftools", "index", "-f", vcf_file], check=True)
+        print('did a reheader')
+
 
 def gatk(options):
     """GATK wrapper function.
@@ -6005,13 +6013,15 @@ def vcf_to_tables_fb(vcf_file, settings=None, settings_file=None,
 
         # save count tables
         new_mutation_counts = mutation_counts.reset_index()
-        #new_mutation_counts = new_mutation_counts.astype(int)
+        # new_mutation_counts = new_mutation_counts.astype(int)
         pd.options.display.float_format = '{:,.0f}'.format
         new_mutation_counts = new_mutation_counts.astype(str)
-        joined_mutation_counts = new_mutation_counts.groupby(['Position'], as_index=False).agg(', '.join)
-        joined_mutation_counts = joined_mutation_counts.set_index(["Position", "AA Change"])
-        joined_mutation_counts.T.to_csv(os.path.join(wdir, output_prefix
-                                              + "alternate_AA_table.csv"))
+        joined_mutation_counts = new_mutation_counts.groupby(
+            ['Position'], as_index=False).agg(', '.join)
+        joined_mutation_counts = joined_mutation_counts.set_index(
+            ["Position", "AA Change"])
+        joined_mutation_counts.T.to_csv(
+            os.path.join(wdir, output_prefix + "alternate_AA_table.csv"))
         mutation_refs.T.to_csv(os.path.join(wdir, output_prefix
                                             + "reference_AA_table.csv"))
         mutation_coverage.T.to_csv(os.path.join(wdir, output_prefix
@@ -6889,7 +6899,6 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
                                        + "genotypes_table.csv"))
 
 
-
 def get_mutation_position(change):
     digits = []
     found = False
@@ -7037,6 +7046,7 @@ def annotate_vcf_file(settings, vcf_file, annotated_vcf_file, options=[]):
 # general use functions.
 ###############################################################################
 
+
 def parse_alignment_positions(alignment_file, contig_start, ref_key="ref"):
     """ Parse a multiple sequence alignment file given in fasta format.
     Using the genomic start position of the reference contig, create a
@@ -7059,8 +7069,10 @@ def parse_alignment_positions(alignment_file, contig_start, ref_key="ref"):
 
 
 def check_overlap(r1, r2, padding=0):
-    """ Check if two regions overlap. Regions are given as lists of chrom (str),
-    begin (int), end (int)."""
+    """
+    Check if two regions overlap. Regions are given as lists of chrom (str),
+    begin (int), end (int).
+    """
     # check chromosome equivalency
     o1 = r1[0] == r2[0]
     # check interval overlap
@@ -7216,7 +7228,7 @@ def remove_overlap(reg1, reg2, spacer=0):
     try:
         if regions[0][1] - regions[1][0] >= spacer:
             coords = sorted(reg1 + reg2)
-            return[[coords[0], coords[1] - 1],
+            return [[coords[0], coords[1] - 1],
                    [coords[2] + 1, coords[3]]]
         else:
             return regions
