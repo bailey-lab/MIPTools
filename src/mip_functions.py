@@ -7229,7 +7229,7 @@ def remove_overlap(reg1, reg2, spacer=0):
         if regions[0][1] - regions[1][0] >= spacer:
             coords = sorted(reg1 + reg2)
             return [[coords[0], coords[1] - 1],
-                   [coords[2] + 1, coords[3]]]
+                    [coords[2] + 1, coords[3]]]
         else:
             return regions
     except IndexError:
@@ -9404,7 +9404,7 @@ def ntthal(s1, s2, Na=25, Mg=10, conc=0.4, print_command=False,
     cmnd = ["ntthal", "-path", td_path, "-mv", str(Na), "-dv", str(Mg),
             "-d", str(conc), "-s1", s1, "-s2", s2, "-r"]
     if print_command:
-        return(" ".join(cmnd))
+        return (" ".join(cmnd))
     else:
         ntt_res = subprocess.check_output(cmnd)
         return float(ntt_res.decode("UTF-8").strip())
