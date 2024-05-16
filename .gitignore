@@ -5,8 +5,9 @@
 *.out
 miptools/
 build_logs/
-src/__pycache__/
+__pycache__
 base_resources/.ipynb_checkpoints/
 !docs/**
 docs/.DS_store
 docs/_build
+local_files
