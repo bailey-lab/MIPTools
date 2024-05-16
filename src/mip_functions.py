@@ -6004,7 +6004,13 @@ def vcf_to_tables_fb(vcf_file, settings=None, settings_file=None,
         #     pass
 
         # save count tables
-        mutation_counts.T.to_csv(os.path.join(wdir, output_prefix
+        new_mutation_counts = mutation_counts.reset_index()
+        #new_mutation_counts = new_mutation_counts.astype(int)
+        pd.options.display.float_format = '{:,.0f}'.format
+        new_mutation_counts = new_mutation_counts.astype(str)
+        joined_mutation_counts = new_mutation_counts.groupby(['Position'], as_index=False).agg(', '.join)
+        joined_mutation_counts = joined_mutation_counts.set_index(["Position", "AA Change"])
+        joined_mutation_counts.T.to_csv(os.path.join(wdir, output_prefix
                                               + "alternate_AA_table.csv"))
         mutation_refs.T.to_csv(os.path.join(wdir, output_prefix
                                             + "reference_AA_table.csv"))
@@ -6260,6 +6266,7 @@ def vcf_to_tables_fb(vcf_file, settings=None, settings_file=None,
                                 columns=variants["samples"],
                                 index=index).replace(-1, 0)
         # save count tables
+        # print(joined_mutation_counts)
         variant_counts.T.to_csv(os.path.join(wdir, output_prefix
                                              + "alternate_table.csv"))
         reference_counts.T.to_csv(os.path.join(wdir, output_prefix
