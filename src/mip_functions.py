@@ -5331,24 +5331,24 @@ def vcf_reheader(vcf_file, fixed_vcf_file, wdir="/opt/analysis/"):
     return
 
 def concatenate_headers(settings=None, wdir='/opt/analysis', freebayes_settings=None, vcf_paths=None):
-    vcf_file="/opt/analysis/variants.vcf.gz"
-    # concatanate contig vcfs. The number of contigs may be high, so we'll
-    # write the vcf paths to a file and bcftools will read from that file
-    cvcf_paths_file = os.path.join(wdir, "contig_vcfs", "vcf_file_list.txt")
-    with open(cvcf_paths_file, "w") as outfile:
-        outfile.write("\n".join(vcf_paths) + "\n")
-    subprocess.run(["bcftools", "concat", "-f", cvcf_paths_file, "-Oz",
+	vcf_file="/opt/analysis/variants.vcf.gz"
+	# concatanate contig vcfs. The number of contigs may be high, so we'll
+	# write the vcf paths to a file and bcftools will read from that file
+	cvcf_paths_file = os.path.join(wdir, "contig_vcfs", "vcf_file_list.txt")
+	with open(cvcf_paths_file, "w") as outfile:
+	    outfile.write("\n".join(vcf_paths) + "\n")
+	subprocess.run(["bcftools", "concat", "-f", cvcf_paths_file, "-Oz",
                 "-o", vcf_file], check=True)
-    subprocess.run(["bcftools", "index", "-f", vcf_file], check=True)
-    # fix vcf header if --gvcf option has been used
-    if "--gvcf" in freebayes_settings:
-        temp_vcf_path = os.path.join(wdir, "temp.vcf.gz")
-        vcf_reheader(os.path.basename(vcf_file), temp_vcf_path, wdir=wdir)
-        old_vcf_path = os.path.join(wdir, "unfixed.vcf.gz")
-        subprocess.run(["mv", vcf_file, old_vcf_path])
-        subprocess.run(["mv", temp_vcf_path, vcf_file])
-        subprocess.run(["bcftools", "index", "-f", vcf_file], check=True)
-        print('did a reheader')
+	subprocess.run(["bcftools", "index", "-f", vcf_file], check=True)
+	# fix vcf header if --gvcf option has been used
+	if "--gvcf" in freebayes_settings:
+	    temp_vcf_path = os.path.join(wdir, "temp.vcf.gz")
+	    vcf_reheader(os.path.basename(vcf_file), temp_vcf_path, wdir=wdir)
+	    old_vcf_path = os.path.join(wdir, "unfixed.vcf.gz")
+	    subprocess.run(["mv", vcf_file, old_vcf_path])
+	    subprocess.run(["mv", temp_vcf_path, vcf_file])
+	    subprocess.run(["bcftools", "index", "-f", vcf_file], check=True)
+	    print('did a reheader')
 
 def gatk(options):
     """GATK wrapper function.
@@ -5867,7 +5867,8 @@ def vcf_to_tables_fb(vcf_file, settings=None, settings_file=None,
                         targeted_mutation = "No"
                     # add the split variant information split variants list
                     split_variants.append(mv + (new_change, gene_name,
-                                                mut_name, targeted_mutation, genomic_position))
+                                                mut_name, targeted_mutation,
+                                                site_qual, genomic_position))
                     # add the individual level data to split calls list.
                     split_calls.append(call_data[i])
             else:
@@ -5887,7 +5888,8 @@ def vcf_to_tables_fb(vcf_file, settings=None, settings_file=None,
                     targeted_mutation = "No"
                 # add compound variant data to split variant data
                 split_variants.append(mv + (aa_change, gene_name,
-                                            mut_name, targeted_mutation, genomic_position))
+                                            mut_name, targeted_mutation,
+                                            site_qual, genomic_position))
                 # add the individual level data to split calls list.
                 split_calls.append(call_data[i])
 
@@ -5920,7 +5922,7 @@ def vcf_to_tables_fb(vcf_file, settings=None, settings_file=None,
         index = pd.MultiIndex.from_tuples(
             split_variants, names=["Gene ID", "Compound Change", "ExonicFunc",
                                    "AA Change", "Gene", "Mutation Name",
-                                   "Targeted", "Position"])
+                                   "Targeted", "Site Quality", "Position"])
         # get alt counts
         variant_counts = pd.DataFrame(np.array(split_calls)[:, 0],
                                       columns=variants["samples"],
@@ -5934,9 +5936,9 @@ def vcf_to_tables_fb(vcf_file, settings=None, settings_file=None,
                                 columns=variants["samples"],
                                 index=index).replace(-1, 0)
         # combine counts for same changes
-        grouping_keys = ["Gene ID", "Gene", "Mutation Name", "ExonicFunc",
-                          "AA Change", "Targeted", "Position"]
-        #grouping_keys = ["Position"]
+        # grouping_keys = ["Gene ID", "Gene", "Mutation Name", "ExonicFunc",
+        #                  "AA Change", "Targeted"]
+        grouping_keys = ["Position", "AA Change"]
         # replace -1 (allel assigned NA values) values with 0
         # sum alt counts
         mutation_counts = variant_counts.groupby(grouping_keys).sum()
@@ -5977,29 +5979,29 @@ def vcf_to_tables_fb(vcf_file, settings=None, settings_file=None,
 
         # for one pf mutation alt count will be replaced with ref count
         # because reference allele is drug resistant
-        dhps_key = ("PF3D7_0810800", "dhps", "dhps-Gly437Ala",
-                    "missense_variant", "Gly437Ala", "Yes")
-        dhps_new_key = ("PF3D7_0810800", "dhps", "dhps-Ala437Gly",
-                        "missense_variant", "Ala437Gly", "Yes")
-        try:
-            mutation_counts.loc[dhps_new_key, :] = mutation_refs.loc[
-                dhps_key, :]
-            mutation_refs.loc[dhps_new_key, :] = mutation_counts.loc[
-                dhps_key, :]
-            mutation_coverage.loc[dhps_new_key, :] = mutation_coverage.loc[
-                dhps_key, :]
-            gt_calls.loc[dhps_new_key, :] = gt_calls.loc[
-                dhps_key, :].replace({2: 0, 0: 2})
-            gt_calls.drop(dhps_key, inplace=True)
-            mutation_counts.drop(dhps_key, inplace=True)
-            mutation_refs.drop(dhps_key, inplace=True)
-            mutation_coverage.drop(dhps_key, inplace=True)
-            mutation_counts = mutation_counts.sort_index()
-            mutation_refs = mutation_refs.sort_index()
-            mutation_coverage = mutation_coverage.sort_index()
-            gt_calls = gt_calls.sort_index()
-        except KeyError:
-            pass
+        # dhps_key = ("PF3D7_0810800", "dhps", "dhps-Gly437Ala",
+        #             "missense_variant", "Gly437Ala", "Yes")
+        # dhps_new_key = ("PF3D7_0810800", "dhps", "dhps-Ala437Gly",
+        #                 "missense_variant", "Ala437Gly", "Yes")
+        # try:
+        #     mutation_counts.loc[dhps_new_key, :] = mutation_refs.loc[
+        #         dhps_key, :]
+        #     mutation_refs.loc[dhps_new_key, :] = mutation_counts.loc[
+        #         dhps_key, :]
+        #     mutation_coverage.loc[dhps_new_key, :] = mutation_coverage.loc[
+        #         dhps_key, :]
+        #     gt_calls.loc[dhps_new_key, :] = gt_calls.loc[
+        #         dhps_key, :].replace({2: 0, 0: 2})
+        #     gt_calls.drop(dhps_key, inplace=True)
+        #     mutation_counts.drop(dhps_key, inplace=True)
+        #     mutation_refs.drop(dhps_key, inplace=True)
+        #     mutation_coverage.drop(dhps_key, inplace=True)
+        #     mutation_counts = mutation_counts.sort_index()
+        #     mutation_refs = mutation_refs.sort_index()
+        #     mutation_coverage = mutation_coverage.sort_index()
+        #     gt_calls = gt_calls.sort_index()
+        # except KeyError:
+        #     pass
 
         # save count tables
         mutation_counts.T.to_csv(os.path.join(wdir, output_prefix
@@ -6505,7 +6507,6 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
         split_calls = []
         for i in range(len(missense)):
             mv = variant_data[i][:3]
-            genomic_position = int(variant_data[i][4])
             # get the aa change such as AspGluAsp144HisGlnTyr
             aa_change = mv[1]
             # if no aa change, skip
@@ -6555,7 +6556,7 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
                         targeted_mutation = "No"
                     # add the split variant information split variants list
                     split_variants.append(mv + (new_change, gene_name,
-                                                mut_name, targeted_mutation, genomic_position))
+                                                mut_name, targeted_mutation))
                     # add the individual level data to split calls list.
                     split_calls.append(call_data[i])
             else:
@@ -6575,7 +6576,7 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
                     targeted_mutation = "No"
                 # add compound variant data to split variant data
                 split_variants.append(mv + (aa_change, gene_name,
-                                            mut_name, targeted_mutation, genomic_position))
+                                            mut_name, targeted_mutation))
                 # add the individual level data to split calls list.
                 split_calls.append(call_data[i])
         # create a multiindex for the variant df that we'll create next
