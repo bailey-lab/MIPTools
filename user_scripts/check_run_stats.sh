@@ -46,10 +46,10 @@ output_directory="$(echo -e "${output_directory}" | sed -e 's/^[[:space:]]*//' -
 #allow the unlocking of a snakemake directory after a crashed run
 unlock() {
    echo "unlocking"
-   singularity exec -H $newhome $miptools_sif snakemake \
+   singularity exec -H $newhome $sif_file snakemake \
    -s /opt/snakemake/wrangler_by_sample_setup.smk --unlock 
 
-   singularity exec -H $newhome $miptools_sif snakemake \
+   singularity exec -H $newhome $sif_file snakemake \
    -s /opt/snakemake/wrangler_by_sample_finish.smk --unlock
 }
 

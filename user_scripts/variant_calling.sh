@@ -60,13 +60,13 @@ freebayes_args="--cores $freebayes_threads --keep-going --rerun-incomplete --use
 
 unlock() {
    echo "unlocking"
-   singularity exec $singularity_bindings $miptools_sif snakemake \
+   singularity exec $singularity_bindings $sif_file snakemake \
    -s /opt/snakemake/02_check_run_stats.smk --unlock 
 
-   singularity exec $singularity_bindings snakemake \
+   singularity exec $singularity_bindings $sif_file snakemake \
    -s /opt/snakemake/03_generate_contigs.smk --unlock
 
-   singularity exec $singularity_bindings snakemake \
+   singularity exec $singularity_bindings $sif_file snakemake \
    -s /opt/snakemake/04_run_freebayes.smk --unlock
 }
 
