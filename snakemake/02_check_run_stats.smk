@@ -70,7 +70,9 @@ rule parse_info_file:
 		settings_file='settings.txt',
 		info_files=['/opt/data/'+config['wrangled_file']],
 		sample_sheets='/opt/data/sample_sheet.tsv',
-		sample_groups=config['sample_groups']
+		sample_set = config['sample_set'],
+		probe_set = config['probe_set'],
+		# sample_groups=config['sample_groups']
 	resources:
 		log_dir=log_folder
 	script:

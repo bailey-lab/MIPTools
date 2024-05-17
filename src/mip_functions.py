@@ -7628,7 +7628,8 @@ def process_info_file(wdir,
                       info_files,
                       sample_sheets,
                       combined_file,
-                      sample_sets=None):
+                      sample_set=None,
+                      probe_set=None):
     """
     Process MIPWrangler output file.
 
@@ -7636,6 +7637,7 @@ def process_info_file(wdir,
     output file, renames the columns to be used in downstream analysis and
     merges the provided meta data.
     """
+    pd.options.mode.chained_assignment = None
     settings = get_analysis_settings(os.path.join(wdir, settings_file))
     colnames = dict(list(zip(settings["colNames"],
                          settings["givenNames"])))
@@ -7651,14 +7653,19 @@ def process_info_file(wdir,
     ].apply(lambda a: "-".join(a), axis=1)
     run_meta = current_run_meta
     run_meta.rename(columns={"library_prep": "Library Prep"}, inplace=True)
-    if sample_sets is not None:
-        sps = pd.DataFrame(sample_sets, columns=["sample_set",
-                                                 "probe_set"])
-    else:
-        sps = run_meta.groupby(
-            ["sample_set", "probe_set"]
-        ).first().reset_index()[["sample_set", "probe_set"]]
-    run_meta = run_meta.merge(sps, how="inner")
+    # if sample_sets is not None:
+    #     sps = pd.DataFrame(sample_sets, columns=["sample_set",
+    #                                              "probe_set"])
+    # else:
+    #     sps = run_meta.groupby(
+    #         ["sample_set", "probe_set"]
+    #     ).first().reset_index()[["sample_set", "probe_set"]]
+    # run_meta = run_meta.merge(sps, how="inner")
+    run_meta['probe_set'] = run_meta['probe_set'].astype(str)+','
+    run_meta = run_meta[(run_meta['probe_set'].str.contains(probe_set+','))]
+    run_meta = run_meta[(run_meta['sample_set'].str.contains(sample_set))]
+    run_meta['probe_set'] = run_meta['probe_set'].str[:-1]
+
     run_meta["Sample ID"] = run_meta["Original SID"]
     # load the probe set dictionary to extract the
     # probes that we're interested in
