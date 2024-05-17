@@ -10,13 +10,21 @@ wdir=snakemake.params['wdir']+'/'
 settings_file=snakemake.params['settings_file']
 info_files=snakemake.params['info_files']
 sample_sheets=[snakemake.params['sample_sheets']]
-sample_groups=snakemake.params['sample_groups']
+# sample_groups=snakemake.params['sample_groups']
+sample_set = snakemake.params['sample_set']
+probe_set = snakemake.params['probe_set']
 settings = mip.get_analysis_settings(wdir+'/'+settings_file)
 
 if len(info_files) > 1:
-	mip.combine_info_files(wdir, settings_file, info_files, sample_sheets,
-	settings["mipsterFile"],
-	sample_sets=sample_groups)
+	mip.combine_info_files(
+		wdir, settings_file, info_files, sample_sheets,
+	    settings["mipsterFile"],
+	    # sample_sets=sample_groups
+	    )
 else:
-	mip.process_info_file(wdir, settings_file, info_files, sample_sheets,
-	settings["mipsterFile"], sample_sets=sample_groups)
+	mip.process_info_file(
+		wdir, settings_file, info_files, sample_sheets,
+	    settings["mipsterFile"], 
+	    sample_set=sample_set,
+	    probe_set=probe_set
+	    )
