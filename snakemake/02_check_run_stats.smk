@@ -42,7 +42,7 @@ rule modify_ozkan_settings:
 		processor_number=config['processor_number'],
 		bwa_extra=config['bwa_extra'],
 		species=config['species'],
-		probe_sets_used=config['probe_sets_used'],
+		probe_set = config['probe_set'],
 		freebayes_threads=config['freebayes_threads'],
 		min_haplotype_barcodes=config['min_haplotype_barcodes'],
 		min_haplotype_samples=config['min_haplotype_samples'],
