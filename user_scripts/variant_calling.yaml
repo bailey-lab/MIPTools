@@ -42,7 +42,7 @@ species: pf #abbreviated name of the species you're analyzing. Needs to match a
 #[['JJJ','DR1,VAR4'], ['JJJ', 'DR1']] would pull samples that match 'JJJ' 
 #sample_set and 'DR1,VAR4' probe_set, but also samples that match 'JJJ'
 #sample_set and 'DR1' probe_set 
-sample_groups: [['JJJ', 'DR1,VAR4']]
+sample_set: JJJ
 
 #The actual probe set you'd like to analyze. This needs to match the probeset
 #you provided in your project_resources folder. The setting above is for
@@ -51,7 +51,7 @@ sample_groups: [['JJJ', 'DR1,VAR4']]
 #sample) whereas the one below is for selecting the single probe set you'd like
 #to analyze in this pipeline. Needs to include the square brackets and quotes
 #e.g. ['DR1']
-probe_sets_used: ['DR1']
+probe_set: DR1
 
 #number of processors to use for the less resource-intensive parts
 #of the pipeline
