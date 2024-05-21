@@ -25,7 +25,6 @@ rule all:
 		final_out
 
 rule extract_by_arm:
-	input:
 	params:
 		output_dir='/opt/analysis/analysis',
 #		wrangler_dir=output,
