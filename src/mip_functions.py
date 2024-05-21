@@ -34,7 +34,7 @@ mip_backbones = {
     "hybrid_split": "NNNNAGATCGGAAGAGCACACGTGACTCGCCAAGCTGAAGNNNNNNNNNN",
     "hybrid_split_hp": "AGATCGGAAGAGCACACGTGACTCGCCAAGCTGAAGNNNNNNNNNN",
     "gc_bb": "GCAGATCGGAAGAGCACACCTCGCCAAGCTTTCGGCNNNNNNNNNNNN",
-    "slx_bb": "CTTCAGCTTCCCGATCCGACGGTAGTGTNNNNNNNNNNNN"
+    "slx_bb": "CTTCAGCTTCCCGATCCGACGGTAGTGTNNNNNNNNNNNN",
 }
 
 """
@@ -75,7 +75,7 @@ class NoDaemonContext(type(multiprocessing.get_context())):
 # because the latter is only a wrapper function, not a proper class.
 class NoDaemonProcessPool(multiprocessing.pool.Pool):
     def __init__(self, *args, **kwargs):
-        kwargs['context'] = NoDaemonContext()
+        kwargs["context"] = NoDaemonContext()
         super(NoDaemonProcessPool, self).__init__(*args, **kwargs)
 
 
@@ -86,7 +86,7 @@ class ExceptionWrapper(object):
     def __init__(self, ee, exc):
         self.ee = ee
         self.exc = exc
-        __,  __, self.tb = sys.exc_info()
+        __, __, self.tb = sys.exc_info()
 
     def re_raise(self):
         print(self.exc)
@@ -99,7 +99,7 @@ class ExceptionWrapper(object):
 
 
 def coordinate_to_target(coordinates, snp_locations, capture_size):
-    """ Create MIP targets starting from a snp file that is produced offline,
+    """Create MIP targets starting from a snp file that is produced offline,
     usually from Annovar. This is a tab separated file with the following
     chr1	2595307	2595307	A	G	rs3748816.
     This can be generalized to any target with coordinates.
@@ -111,11 +111,9 @@ def coordinate_to_target(coordinates, snp_locations, capture_size):
     for r in rsl:
         chrom = rsl[r]["chrom"]
         try:
-            snp_chroms[chrom].append([rsl[r]["begin"],
-                                      rsl[r]["end"]])
+            snp_chroms[chrom].append([rsl[r]["begin"], rsl[r]["end"]])
         except KeyError:
-            snp_chroms[chrom] = [[rsl[r]["begin"],
-                                  rsl[r]["end"]]]
+            snp_chroms[chrom] = [[rsl[r]["begin"], rsl[r]["end"]]]
     # merge snps that are too close to get separate regions
     # the length should be twice the capture size
     merged_snp_chroms = {}
@@ -127,9 +125,12 @@ def coordinate_to_target(coordinates, snp_locations, capture_size):
         for r in regions:
             snps_in_region = []
             for s in reference_snp_locations:
-                if ((reference_snp_locations[s]["chrom"] == c)
-                    and (r[0] <= reference_snp_locations[s]["begin"]
-                         <= reference_snp_locations[s]["end"] <= r[1])):
+                if (reference_snp_locations[s]["chrom"] == c) and (
+                    r[0]
+                    <= reference_snp_locations[s]["begin"]
+                    <= reference_snp_locations[s]["end"]
+                    <= r[1]
+                ):
                     snps_in_region.append(s)
             r.append(snps_in_region)
         for reg in regions:
@@ -171,7 +172,7 @@ def coordinate_to_target(coordinates, snp_locations, capture_size):
 
 
 def rsid_to_target(resource_dir, snp_file):
-    """ Create MIP targets starting from a snp file that is produced offline,
+    """Create MIP targets starting from a snp file that is produced offline,
     usually from Annovar. This is a tab separated file with the following
     content: chr1	2595307	2595307	A	G	rs3748816.
     This can be generalized to any target with coordinates.
@@ -182,25 +183,28 @@ def rsid_to_target(resource_dir, snp_file):
     # these locations in the genome.
     snp_locations = {}
     capture_types = {}
-    with io.open(os.path.join(resource_dir, snp_file),
-                 encoding="utf-8") as infile:
+    with io.open(os.path.join(resource_dir, snp_file), encoding="utf-8") as infile:
         for line in infile:
             newline = line.strip().split("\t")
             rsid = newline[5]
             try:
                 # update the location dictionary if the rsid is already present
-                temp_dic = {"chrom": newline[0],
-                            "begin": int(newline[1]),
-                            "end": int(newline[2]),
-                            "ref_base": newline[3],
-                            "alt_bases": [newline[4]]}
+                temp_dic = {
+                    "chrom": newline[0],
+                    "begin": int(newline[1]),
+                    "end": int(newline[2]),
+                    "ref_base": newline[3],
+                    "alt_bases": [newline[4]],
+                }
                 # check if this location is already in the dict
                 # append the new alternative base to the dict
                 for snp in snp_locations[rsid]:
-                    if ((snp["begin"] == temp_dic["begin"])
+                    if (
+                        (snp["begin"] == temp_dic["begin"])
                         and (snp["end"] == temp_dic["end"])
                         and (snp["chrom"] == temp_dic["chrom"])
-                            and (snp["ref_base"] == temp_dic["ref_base"])):
+                        and (snp["ref_base"] == temp_dic["ref_base"])
+                    ):
                         snp["alt_bases"].append(temp_dic["alt_bases"][0])
                         break
                 else:
@@ -227,8 +231,12 @@ def rsid_to_target(resource_dir, snp_file):
                     reference_snp_locations[s] = snp_locations[s][i]
                     break
             else:
-                print(("Short chromosome name not found! "
-                       "Please check the output list."))
+                print(
+                    (
+                        "Short chromosome name not found! "
+                        "Please check the output list."
+                    )
+                )
                 problem_snps.append(s)
         reference_snp_locations[s]["capture_type"] = capture_types[s]
     return reference_snp_locations, snp_locations
@@ -237,17 +245,17 @@ def rsid_to_target(resource_dir, snp_file):
 def gene_to_target(gene_list, species):
     target_coordinates = {}
     for gene in gene_list:
-        e = get_exons(get_gene(gene,
-                               get_file_locations()[species]["refgene"],
-                               alternative_chr=1))
+        e = get_exons(
+            get_gene(gene, get_file_locations()[species]["refgene"], alternative_chr=1)
+        )
         try:
-            target_coordinates[gene] = {"chrom": e["chrom"],
-                                        "begin": e["begin"],
-                                        "end": e["end"]}
+            target_coordinates[gene] = {
+                "chrom": e["chrom"],
+                "begin": e["begin"],
+                "end": e["end"],
+            }
         except KeyError:
-            target_coordinates[gene] = {"chrom": np.nan,
-                                        "begin": np.nan,
-                                        "end": np.nan}
+            target_coordinates[gene] = {"chrom": np.nan, "begin": np.nan, "end": np.nan}
     return target_coordinates
 
 
@@ -256,9 +264,9 @@ def gene_to_target_exons(gene_list, species, exon_list):
     for i in range(len(gene_list)):
         gene = gene_list[i]
         exons_wanted = exon_list[i]
-        gene_exons = get_exons(get_gene(gene,
-                               get_file_locations()[species]["refgene"],
-                               alternative_chr=1))
+        gene_exons = get_exons(
+            get_gene(gene, get_file_locations()[species]["refgene"], alternative_chr=1)
+        )
         exons = gene_exons["exons"]
         if gene_exons["orientation"] == "-":
             exons.reverse()
@@ -266,9 +274,11 @@ def gene_to_target_exons(gene_list, species, exon_list):
             for j in range(len(exons)):
                 e = exons[j]
                 tar_name = "-".join([gene, "exon", str(j)])
-                target_coordinates[tar_name] = {"chrom": gene_exons["chrom"],
-                                                "begin": e[0],
-                                                "end": e[1]}
+                target_coordinates[tar_name] = {
+                    "chrom": gene_exons["chrom"],
+                    "begin": e[0],
+                    "end": e[1],
+                }
         else:
             for j in exons_wanted:
                 try:
@@ -277,14 +287,15 @@ def gene_to_target_exons(gene_list, species, exon_list):
                     target_coordinates[tar_name] = {
                         "chrom": gene_exons["chrom"],
                         "begin": e[0],
-                        "end": e[1]}
+                        "end": e[1],
+                    }
                 except IndexError:
                     print(("Exon ", j, " does not exist for gene ", gene))
     return target_coordinates
 
 
 def parse_alignment(reg_file):
-    """ Create a rinfo dictionary from a rinfo file."""
+    """Create a rinfo dictionary from a rinfo file."""
     reg_dic = {}
     with open(reg_file, "r") as infile:
         for line in infile:
@@ -293,17 +304,23 @@ def parse_alignment(reg_file):
                 key1 = newline[1].split(":")[0]
                 key2 = newline[1].split(":")[1]
                 if key1 not in reg_dic:
-                    reg_dic[key1] = {key2: {"copyname": newline[2],
-                                            "chr": int(newline[3][3:]),
-                                            "begin": int(newline[4]),
-                                            "end": int(newline[5]),
-                                            "ori": (newline[6] == "F")}}
+                    reg_dic[key1] = {
+                        key2: {
+                            "copyname": newline[2],
+                            "chr": int(newline[3][3:]),
+                            "begin": int(newline[4]),
+                            "end": int(newline[5]),
+                            "ori": (newline[6] == "F"),
+                        }
+                    }
                 else:
-                    reg_dic[key1][key2] = {"copyname": newline[2],
-                                           "chr": int(newline[3][3:]),
-                                           "begin": int(newline[4]),
-                                           "end": int(newline[5]),
-                                           "ori": (newline[6] == "F")}
+                    reg_dic[key1][key2] = {
+                        "copyname": newline[2],
+                        "chr": int(newline[3][3:]),
+                        "begin": int(newline[4]),
+                        "end": int(newline[5]),
+                        "ori": (newline[6] == "F"),
+                    }
     return reg_dic
 
 
@@ -337,9 +354,14 @@ def update_rinfo_file(rinfo_file, update_file, output_file):
                 outfile.write(line)
 
 
-def get_target_coordinates(res_dir, species, capture_size,
-                           coordinates_file=None, snps_file=None,
-                           genes_file=None):
+def get_target_coordinates(
+    res_dir,
+    species,
+    capture_size,
+    coordinates_file=None,
+    snps_file=None,
+    genes_file=None,
+):
     """Extract MIP target coordinates from provided files."""
     capture_types = {}
     # Get target coordinates specified as genomic coordinates
@@ -351,17 +373,26 @@ def get_target_coordinates(res_dir, species, capture_size,
         try:
             coord_df = pd.read_table(coordinates_file, index_col=False)
             coord_names = coord_df["Name"].tolist()
-            coord_df.rename(columns={"Name": "name", "Chrom": "chrom",
-                            "Start": "begin", "End": "end"}, inplace=True)
-            region_coordinates = coord_df.set_index("name").to_dict(
-                orient="index")
+            coord_df.rename(
+                columns={
+                    "Name": "name",
+                    "Chrom": "chrom",
+                    "Start": "begin",
+                    "End": "end",
+                },
+                inplace=True,
+            )
+            region_coordinates = coord_df.set_index("name").to_dict(orient="index")
             # update capture types of targets
             for g in region_coordinates:
                 if g not in capture_types:
                     capture_types[g] = region_coordinates[g]["CaptureType"]
         except IOError:
-            print(("Target coordinates file {} could not be found.").format(
-                (coordinates_file)))
+            print(
+                ("Target coordinates file {} could not be found.").format(
+                    (coordinates_file)
+                )
+            )
             region_coordinates = {}
             coord_names = []
 
@@ -391,15 +422,21 @@ def get_target_coordinates(res_dir, species, capture_size,
                             gene_id = alias[g]
                             genes[g]["GeneID"] = gene_id
                         except KeyError:
-                            print("""Alias for gene %s is not found.
+                            print(
+                                """Alias for gene %s is not found.
                                 Either provide a gene ID or use an alias
-                                which is present in refgene file.""" % g)
+                                which is present in refgene file."""
+                                % g
+                            )
                             continue
                         except NameError:
-                            print(""" Gene ID is not provided for %s.
+                            print(
+                                """ Gene ID is not provided for %s.
                                 If gene name will be used to extract gene
                                 ID an alias dictionary must be specified.
-                                """ % g)
+                                """
+                                % g
+                            )
                             continue
                 except TypeError:
                     pass
@@ -408,11 +445,9 @@ def get_target_coordinates(res_dir, species, capture_size,
                 capture_types[g] = genes[g]["CaptureType"]
             gene_id_coordinates = gene_to_target(gene_ids, species)
             for gid in gene_id_coordinates:
-                gene_coordinates[gene_id_to_gene[gid]] = gene_id_coordinates[
-                    gid]
+                gene_coordinates[gene_id_to_gene[gid]] = gene_id_coordinates[gid]
         except IOError:
-            print(("Target genes file {} could not be found.").format(
-                (genes_file)))
+            print(("Target genes file {} could not be found.").format((genes_file)))
             gene_coordinates = {}
             gene_names = []
 
@@ -422,18 +457,24 @@ def get_target_coordinates(res_dir, species, capture_size,
         # Get SNP target coordinates
         try:
             snps_file = os.path.join(res_dir, snps_file)
-            snp_df = pd.read_table(snps_file, index_col=False,
-                                   dtype={"Start": int, "End": int})
-            snp_df.rename(columns={"Name": "name", "Chrom": "chrom",
-                                   "Start": "begin", "End": "end"},
-                          inplace=True)
+            snp_df = pd.read_table(
+                snps_file, index_col=False, dtype={"Start": int, "End": int}
+            )
+            snp_df.rename(
+                columns={
+                    "Name": "name",
+                    "Chrom": "chrom",
+                    "Start": "begin",
+                    "End": "end",
+                },
+                inplace=True,
+            )
             snp_coordinates = snp_df.set_index("name").to_dict(orient="index")
             for g in snp_coordinates:
                 if g not in capture_types:
                     capture_types[g] = "targets"
         except IOError:
-            print(("Target SNPs file {} could not be found.").format(
-                (snps_file)))
+            print(("Target SNPs file {} could not be found.").format((snps_file)))
             snp_coordinates = {}
 
     # merge coordinates dictionaries
@@ -455,8 +496,7 @@ def get_target_coordinates(res_dir, species, capture_size,
             print("%s is replaced with %s" % (c, newc))
             all_coordinates[newc] = all_coordinates.pop(c)
             capture_types[newc] = capture_types.pop(c)
-    target_regions, target_names = merge_coordinates(all_coordinates,
-                                                     capture_size)
+    target_regions, target_names = merge_coordinates(all_coordinates, capture_size)
     # prioritize gene names ond  coordinate names  over snp or other names
     for t in list(target_names.keys()):
         for n in target_names[t]:
@@ -468,13 +508,15 @@ def get_target_coordinates(res_dir, species, capture_size,
                 target_names[n] = target_names.pop(t)
                 target_regions[n] = target_regions.pop(t)
                 break
-    out_dict = {"target_regions": target_regions,
-                "target_names": target_names,
-                "capture_types": capture_types,
-                "gene_names": gene_names,
-                "snp_coordinates": snp_coordinates,
-                "gene_coordinates": gene_coordinates,
-                "region_coordinates": region_coordinates}
+    out_dict = {
+        "target_regions": target_regions,
+        "target_names": target_names,
+        "capture_types": capture_types,
+        "gene_names": gene_names,
+        "snp_coordinates": snp_coordinates,
+        "gene_coordinates": gene_coordinates,
+        "region_coordinates": region_coordinates,
+    }
 
     return out_dict
 
@@ -504,11 +546,9 @@ def merge_coordinates(coordinates, capture_size):
     for c in coordinates:
         chrom = coordinates[c]["chrom"]
         try:
-            chroms[chrom].append([coordinates[c]["begin"],
-                                  coordinates[c]["end"]])
+            chroms[chrom].append([coordinates[c]["begin"], coordinates[c]["end"]])
         except KeyError:
-            chroms[chrom] = [[coordinates[c]["begin"],
-                              coordinates[c]["end"]]]
+            chroms[chrom] = [[coordinates[c]["begin"], coordinates[c]["end"]]]
     # merge snps that are too close to get separate regions
     # the length should be twice the capture size
     merged_chroms = {}
@@ -523,9 +563,13 @@ def merge_coordinates(coordinates, capture_size):
         for reg in regions:
             targets_in_region = []
             for co in coordinates:
-                if (coordinates[co]["chrom"] == c
-                    and reg[0] <= coordinates[co]["begin"]
-                        <= coordinates[co]["end"] <= reg[1]):
+                if (
+                    coordinates[co]["chrom"] == c
+                    and reg[0]
+                    <= coordinates[co]["begin"]
+                    <= coordinates[co]["end"]
+                    <= reg[1]
+                ):
                     targets_in_region.append(co)
             region_name = targets_in_region[0]
             target_names[region_name] = targets_in_region
@@ -536,7 +580,7 @@ def merge_coordinates(coordinates, capture_size):
 
 
 def create_target_fastas(res_dir, targets, species, flank):
-    """ Create fasta files for a list of region coordinates provided as a dict
+    """Create fasta files for a list of region coordinates provided as a dict
     in the form {target1: [chrx, start, end], target2: [chrx, start, end], ..},
     flank on both sides with the specified length. If beginning  coordinate is
     less than zero, reset the beginning coordinate to zero..
@@ -552,9 +596,13 @@ def create_target_fastas(res_dir, targets, species, flank):
             with open(os.path.join(res_dir, t + ".fa"), "w") as outfile:
                 outfile.write(get_fasta(rk, species, header=t))
         except Exception as e:
-            print(("Fasta file for {} could not be created, "
-                   "due to error {}. It will be removed"
-                   " from the target list.").format(t, e))
+            print(
+                (
+                    "Fasta file for {} could not be created, "
+                    "due to error {}. It will be removed"
+                    " from the target list."
+                ).format(t, e)
+            )
             targets.pop(t)
     return
 
@@ -586,8 +634,9 @@ def add_fasta_targets(res_dir, fasta_files, fasta_capture_type):
     return {"fasta_sequences": fasta_sequences, "capture_types": capture_types}
 
 
-def set_genomic_target_alignment_options(target_regions, fasta_sequences,
-                                         identity, coverage, flank):
+def set_genomic_target_alignment_options(
+    target_regions, fasta_sequences, identity, coverage, flank
+):
     alignment_list = []
     fasta_list = list(fasta_sequences.keys()) + list(target_regions.keys())
     for t in fasta_list:
@@ -603,19 +652,29 @@ def set_genomic_target_alignment_options(target_regions, fasta_sequences,
             cover = 100
         temp_dict["coverage"] = cover
         if fasta_size < 100:
-            temp_dict["options"].extend(["--notransition", "--step=10",
-                                         "--ambiguous=iupac"])
+            temp_dict["options"].extend(
+                ["--notransition", "--step=10", "--ambiguous=iupac"]
+            )
         elif fasta_size < 1000:
-            temp_dict["options"].extend(["--notransition", "--step=10",
-                                         "--ambiguous=iupac"])
+            temp_dict["options"].extend(
+                ["--notransition", "--step=10", "--ambiguous=iupac"]
+            )
         elif fasta_size < 5000:
-            temp_dict["options"].extend(["--notransition",
-                                         "--step=" + str(int(fasta_size/10)),
-                                         "--ambiguous=iupac"])
+            temp_dict["options"].extend(
+                [
+                    "--notransition",
+                    "--step=" + str(int(fasta_size / 10)),
+                    "--ambiguous=iupac",
+                ]
+            )
         else:
-            temp_dict["options"].extend(["--notransition",
-                                         "--step=" + str(int(fasta_size/10)),
-                                         "--ambiguous=iupac"])
+            temp_dict["options"].extend(
+                [
+                    "--notransition",
+                    "--step=" + str(int(fasta_size / 10)),
+                    "--ambiguous=iupac",
+                ]
+            )
         alignment_list.append(temp_dict)
     return alignment_list
 
@@ -678,13 +737,15 @@ def align_region_worker(l):
     else:
         query_act = ""
     # create the command list to pass to the processor
-    comm = ["lastz_32",
-            target_fasta + target_act,
-            query_fasta + query_act,
-            "--output=" + os.path.join(resource_dir, output_file),
-            "--format=" + output_format,
-            "--filter=identity:" + str(identity_cutoff),
-            "--filter=coverage:" + str(coverage_cutoff)]
+    comm = [
+        "lastz_32",
+        target_fasta + target_act,
+        query_fasta + query_act,
+        "--output=" + os.path.join(resource_dir, output_file),
+        "--format=" + output_format,
+        "--filter=identity:" + str(identity_cutoff),
+        "--filter=coverage:" + str(coverage_cutoff),
+    ]
     # add any extra options to the end of the command
     comm.extend(options)
     # run the command using subprocess module
@@ -692,9 +753,13 @@ def align_region_worker(l):
     return
 
 
-def align_genes_for_design(fasta_list, res_dir,
-                           alignment_types=["differences", "general"],
-                           species="hs", num_processor=30):
+def align_genes_for_design(
+    fasta_list,
+    res_dir,
+    alignment_types=["differences", "general"],
+    species="hs",
+    num_processor=30,
+):
     """Perform specified alignments given in an alignment dict.
 
     This functions is called from align_targets function for the initial
@@ -740,9 +805,22 @@ def align_genes_for_design(fasta_list, res_dir,
         target = get_file_locations()[species]["fasta_genome"]
         # alignment output should have the following fields.
         # These are the bare minimum to be able to parse the alignment later.
-        out_fields = ["name1", "strand1", "zstart1", "end1", "length1",
-                      "name2", "strand2", "zstart2", "end2", "zstart2+",
-                      "end2+", "length2", "identity", "coverage"]
+        out_fields = [
+            "name1",
+            "strand1",
+            "zstart1",
+            "end1",
+            "length1",
+            "name2",
+            "strand2",
+            "zstart2",
+            "end2",
+            "zstart2+",
+            "end2+",
+            "length2",
+            "identity",
+            "coverage",
+        ]
         out_fields = ",".join(out_fields)
         gen_out = "general:" + out_fields
         # output fields for "differences" is fixed; it outputs the differences
@@ -759,23 +837,39 @@ def align_genes_for_design(fasta_list, res_dir,
         # target multiple: indicates there are multiple sequences in the target
         # file (e.g. chromosomes, contigs)
         if "general" in alignment_types:
-            al = [gene_name + ".fa", res_dir, gene_name + ".al", target,
-                  ["multiple", "unmask", "nameparse=darkspace"],
-                  ["unmask", "nameparse=darkspace"],
-                  identity, coverage, gen_out, options]
+            al = [
+                gene_name + ".fa",
+                res_dir,
+                gene_name + ".al",
+                target,
+                ["multiple", "unmask", "nameparse=darkspace"],
+                ["unmask", "nameparse=darkspace"],
+                identity,
+                coverage,
+                gen_out,
+                options,
+            ]
             region_list.append(al)
         if "differences" in alignment_types:
-            al = [gene_name + ".fa", res_dir, gene_name + ".differences",
-                  target, ["multiple", "unmask", "nameparse=darkspace"],
-                  ["unmask", "nameparse=darkspace"],
-                  identity,  coverage, dif_out, options]
+            al = [
+                gene_name + ".fa",
+                res_dir,
+                gene_name + ".differences",
+                target,
+                ["multiple", "unmask", "nameparse=darkspace"],
+                ["unmask", "nameparse=darkspace"],
+                identity,
+                coverage,
+                dif_out,
+                options,
+            ]
             region_list.append(al)
     align_region_multi(region_list, num_processor)
     return
 
 
 def merge_alignments(resource_dir, fasta_list, output_prefix="merged"):
-    """ Merge the results of "general" type lastZ alignments into a
+    """Merge the results of "general" type lastZ alignments into a
     single file. This is used to process the alignment results from the
     align_genes_for_design function where target sequences are aligned
     against the reference genome.
@@ -792,8 +886,7 @@ def merge_alignments(resource_dir, fasta_list, output_prefix="merged"):
     """
     # create a list for each alignment type (general and differences)
     als_out = []
-    with open(os.path.join(
-            resource_dir, output_prefix + ".al"), "w") as alignment_file:
+    with open(os.path.join(resource_dir, output_prefix + ".al"), "w") as alignment_file:
         for f in fasta_list:
             fnum = 0
             with open(os.path.join(resource_dir, f + ".al")) as alignment:
@@ -812,7 +905,7 @@ def merge_alignments(resource_dir, fasta_list, output_prefix="merged"):
 
 
 def merge_alignment_diffs(resource_dir, fasta_list, output_prefix="merged"):
-    """ Merge the results of "differences" type lastZ alignments into a
+    """Merge the results of "differences" type lastZ alignments into a
     single file. This is used to process the alignment results from the
     align_genes_for_design function where target sequences are aligned
     against the reference genome.
@@ -829,8 +922,9 @@ def merge_alignment_diffs(resource_dir, fasta_list, output_prefix="merged"):
     """
     # create a list for each alignment type (general and differences)
     diffs_out = []
-    with open(os.path.join(
-            resource_dir, output_prefix + ".differences"), "w") as diff_file:
+    with open(
+        os.path.join(resource_dir, output_prefix + ".differences"), "w"
+    ) as diff_file:
         for f in fasta_list:
             fnum = 0
             with open(os.path.join(resource_dir, f + ".differences")) as diffs:
@@ -842,7 +936,7 @@ def merge_alignment_diffs(resource_dir, fasta_list, output_prefix="merged"):
 
 
 def alignment_parser(wdir, name, spacer=0, gene_names=[]):
-    """ Parse merged genome alignment results file which is generated by
+    """Parse merged genome alignment results file which is generated by
     align_genes_for_design function to align design targets to reference
     genomes. One query (target region) may have multiple alignments to the
     genome.
@@ -931,7 +1025,7 @@ def alignment_parser(wdir, name, spacer=0, gene_names=[]):
     overlap_found = True
     # place a failsafe counter to avoid unforseen infinite loops
     exit_counter = 0
-    while (overlap_found and (exit_counter < 10000)):
+    while overlap_found and (exit_counter < 10000):
         overlap_found = False
         for o in list(overlaps.keys()):
             # check if o is still in the overlaps and has not been removed
@@ -988,8 +1082,7 @@ def alignment_parser(wdir, name, spacer=0, gene_names=[]):
         for r in regs:
             r.append(0 - len(r[0]))
             r.append(r[2] - r[1] + 1)
-        aligned_regions[ar] = sorted(regs, key=itemgetter(4, 3),
-                                     reverse=True)
+        aligned_regions[ar] = sorted(regs, key=itemgetter(4, 3), reverse=True)
     target_regions = {}
     region_names = {}
     regions = separated_merged_regions
@@ -1008,8 +1101,9 @@ def alignment_parser(wdir, name, spacer=0, gene_names=[]):
         # it is not absolutely necessary and it would not behave as expected
         # when chromosome names do not follow that convention, i.e, chr6 and
         # chr6_altXYZ
-        target_regions[r] = sorted(target_regions[r], key=itemgetter(4, 3),
-                                   reverse=True)
+        target_regions[r] = sorted(
+            target_regions[r], key=itemgetter(4, 3), reverse=True
+        )
         # assign names to grouped targets
         reg_names = []
         # for each region we go back to individual region alignments and see
@@ -1022,9 +1116,11 @@ def alignment_parser(wdir, name, spacer=0, gene_names=[]):
             reg_end = reg[2]
             for c in aligned_regions:
                 main_region = aligned_regions[c][0]
-                if (reg_chrom == main_region[0]
-                        and reg_begin <= main_region[1]
-                        and reg_end >= main_region[2]):
+                if (
+                    reg_chrom == main_region[0]
+                    and reg_begin <= main_region[1]
+                    and reg_end >= main_region[2]
+                ):
                     reg_names.append(c)
                     break
             else:
@@ -1059,8 +1155,7 @@ def alignment_parser(wdir, name, spacer=0, gene_names=[]):
         rn_counts = {}
         for rn in rnames:
             rnc = rnames.count(rn)
-            rn_counts[rn] = {"total_count": rnc,
-                             "used_count": 0}
+            rn_counts[rn] = {"total_count": rnc, "used_count": 0}
         for rn in rnames:
             if rn_counts[rn]["total_count"] > 1:
                 nnames.append(rn + "-" + str(rn_counts[rn]["used_count"]))
@@ -1083,12 +1178,12 @@ def alignment_parser(wdir, name, spacer=0, gene_names=[]):
                 best_score = score
         if best_score != 10000:
             imperfect_aligners.append(r)
-    return [target_regions, region_names, imperfect_aligners, aligned_regions,
-            overlaps]
+    return [target_regions, region_names, imperfect_aligners, aligned_regions, overlaps]
 
 
-def set_intra_alignment_options(target_regions, identity, coverage,
-                                max_allowed_indel_size):
+def set_intra_alignment_options(
+    target_regions, identity, coverage, max_allowed_indel_size
+):
     """Set lastZ alignment options for intraparalog_aligner function."""
     alignment_options_dict = {}
     for t in target_regions:
@@ -1103,17 +1198,24 @@ def set_intra_alignment_options(target_regions, identity, coverage,
                 except NameError:
                     smallest_target = int(r[-1])
         if small_target > 0:
-            print(("{} targets within {} are smaller than intra_coverage"
-                   " value. This means that those targets will not be aligned."
-                   " Smallest target's length was {}. Set intra_coverage"
-                   " to a value smaller than this value to align all regions."
-                   ).format(small_target, t, smallest_target))
+            print(
+                (
+                    "{} targets within {} are smaller than intra_coverage"
+                    " value. This means that those targets will not be aligned."
+                    " Smallest target's length was {}. Set intra_coverage"
+                    " to a value smaller than this value to align all regions."
+                ).format(small_target, t, smallest_target)
+            )
         cover = round(coverage * 100 / reference_len, 1)
         gap_open_penalty = 400
         gap_extend_penalty = 30
         ydrop = max_allowed_indel_size * gap_extend_penalty + gap_open_penalty
-        alignment_opts = ["--ydrop=" + str(ydrop), "--notransition",
-                          "--ambiguous=iupac", "--noytrim"]
+        alignment_opts = [
+            "--ydrop=" + str(ydrop),
+            "--notransition",
+            "--ambiguous=iupac",
+            "--noytrim",
+        ]
         temp_dict["options"] = alignment_opts
         if cover > 100:
             cover = 100
@@ -1122,14 +1224,16 @@ def set_intra_alignment_options(target_regions, identity, coverage,
     return alignment_options_dict
 
 
-def intraparalog_aligner(resource_dir,
-                         target_regions,
-                         region_names,
-                         imperfect_aligners,
-                         fasta_sequences,
-                         species,
-                         num_process,
-                         alignment_options_dict={}):
+def intraparalog_aligner(
+    resource_dir,
+    target_regions,
+    region_names,
+    imperfect_aligners,
+    fasta_sequences,
+    species,
+    num_process,
+    alignment_options_dict={},
+):
     """Align all regions within a target group.
 
     Align all regions within a target group to the region selected
@@ -1154,15 +1258,15 @@ def intraparalog_aligner(resource_dir,
         coverage = alignment_options_dict[t]["coverage"]
         tar_regs = target_regions[t]
         # create a fasta file for the reference copy (or reference region)
-        target_keys = [tr[0] + ":" + str(tr[1] + 1)
-                       + "-" + str(tr[2]) for tr in tar_regs]
+        target_keys = [
+            tr[0] + ":" + str(tr[1] + 1) + "-" + str(tr[2]) for tr in tar_regs
+        ]
         query_key = target_keys[0]
         with open(os.path.join(resource_dir, t + ".query.fa"), "w") as outfile:
             outfile.write(">" + t + "_ref\n")
             outfile.write(get_sequence(query_key, species))
         # create a fasta file that includes all target regions within a group.
-        with open(os.path.join(
-                resource_dir, t + ".targets.fa"), "w") as outfile:
+        with open(os.path.join(resource_dir, t + ".targets.fa"), "w") as outfile:
             outfile_list = []
             for i in range(len(target_keys)):
                 k = target_keys[i]
@@ -1178,26 +1282,38 @@ def intraparalog_aligner(resource_dir,
                     outfile_list.append(fasta_sequences[o])
                     o_count += 1
             outfile.write("\n".join(outfile_list))
-        comm = [t + ".query.fa", resource_dir, t + ".aligned",
-                os.path.join(resource_dir, t + ".targets.fa"),
-                ["multiple", "unmask", "nameparse=darkspace"],
-                ["unmask", "nameparse=darkspace"],
-                identity, coverage, gen_out,
-                alignment_options, species]
+        comm = [
+            t + ".query.fa",
+            resource_dir,
+            t + ".aligned",
+            os.path.join(resource_dir, t + ".targets.fa"),
+            ["multiple", "unmask", "nameparse=darkspace"],
+            ["unmask", "nameparse=darkspace"],
+            identity,
+            coverage,
+            gen_out,
+            alignment_options,
+            species,
+        ]
         alignment_commands.append(comm)
-        comm = [t + ".query.fa", resource_dir,
-                t + ".differences",
-                os.path.join(resource_dir, t + ".targets.fa"),
-                ["multiple", "unmask", "nameparse=darkspace"],
-                ["unmask", "nameparse=darkspace"],
-                identity, coverage,
-                diff_out, alignment_options, species]
+        comm = [
+            t + ".query.fa",
+            resource_dir,
+            t + ".differences",
+            os.path.join(resource_dir, t + ".targets.fa"),
+            ["multiple", "unmask", "nameparse=darkspace"],
+            ["unmask", "nameparse=darkspace"],
+            identity,
+            coverage,
+            diff_out,
+            alignment_options,
+            species,
+        ]
         alignment_commands.append(comm)
     return align_region_multi(alignment_commands, num_process)
 
 
-def intra_alignment_checker(family_name, res_dir, target_regions,
-                            region_names):
+def intra_alignment_checker(family_name, res_dir, target_regions, region_names):
     """
     Parse intraparalog_aligner results.
 
@@ -1230,30 +1346,37 @@ def intra_alignment_checker(family_name, res_dir, target_regions,
                     end = tr[1] + int(temp_dict["end1"])
                     size = end - start + 1
                     try:
-                        new_regions[cn].append([tr[0], start, end,
-                                               0 - len(tr[0]), size])
+                        new_regions[cn].append(
+                            [tr[0], start, end, 0 - len(tr[0]), size]
+                        )
                     except KeyError:
-                        new_regions[cn] = [[tr[0], start, end,
-                                           0 - len(tr[0]), size]]
+                        new_regions[cn] = [[tr[0], start, end, 0 - len(tr[0]), size]]
     # check if any paralog is missing after aligning to the reference copy
     targeted_copies = list(range(len(target_regions)))
     missing_copies = set(targeted_copies).difference(new_regions.keys())
     if len(missing_copies) > 0:
-        print(("Paralog copies {} were not successfully aligned to "
-               "the reference copy for the target {}. You may consider "
-               "relaxing the alignment filters '--local-coverage' "
-               "and '--local-identity'").format(
-                   ", ".join(map(str, sorted(missing_copies))), family_name))
+        print(
+            (
+                "Paralog copies {} were not successfully aligned to "
+                "the reference copy for the target {}. You may consider "
+                "relaxing the alignment filters '--local-coverage' "
+                "and '--local-identity'"
+            ).format(", ".join(map(str, sorted(missing_copies))), family_name)
+        )
     ret_regions = []
     rnames = []
     for ci in sorted(new_regions):
         ret_regions.extend(sorted(new_regions[ci]))
         if len(new_regions[ci]) > 1:
-            print(("Paralog copy {} for target region {} was aligned "
-                   "to the reference copy multiple times. This copy will "
-                   "be treated as multiple independent paralog copies and "
-                   "realigned to the reference copy as separate "
-                   "targets.").format(ci, family_name))
+            print(
+                (
+                    "Paralog copy {} for target region {} was aligned "
+                    "to the reference copy multiple times. This copy will "
+                    "be treated as multiple independent paralog copies and "
+                    "realigned to the reference copy as separate "
+                    "targets."
+                ).format(ci, family_name)
+            )
             for i in range(len(new_regions[ci])):
                 rnames.append(region_names[ci] + "-" + str(i))
         else:
@@ -1261,28 +1384,58 @@ def intra_alignment_checker(family_name, res_dir, target_regions,
     return [ret_regions, rnames]
 
 
-def align_paralogs(res_dir, target_regions, region_names, imperfect_aligners,
-                   fasta_sequences, species, identity, coverage,
-                   max_allowed_indel_size, num_process):
+def align_paralogs(
+    res_dir,
+    target_regions,
+    region_names,
+    imperfect_aligners,
+    fasta_sequences,
+    species,
+    identity,
+    coverage,
+    max_allowed_indel_size,
+    num_process,
+):
     alignment_options = set_intra_alignment_options(
-        target_regions, identity, coverage, max_allowed_indel_size)
-    intraparalog_aligner(res_dir, target_regions, region_names,
-                         imperfect_aligners, fasta_sequences, species,
-                         num_process, alignment_options)
+        target_regions, identity, coverage, max_allowed_indel_size
+    )
+    intraparalog_aligner(
+        res_dir,
+        target_regions,
+        region_names,
+        imperfect_aligners,
+        fasta_sequences,
+        species,
+        num_process,
+        alignment_options,
+    )
     for r in target_regions.keys():
-        ntr = intra_alignment_checker(r, res_dir, target_regions[r],
-                                      region_names[r])
+        ntr = intra_alignment_checker(r, res_dir, target_regions[r], region_names[r])
         target_regions[r] = ntr[0]
         region_names[r] = ntr[1]
     alignment_options = set_intra_alignment_options(
-        target_regions, identity, coverage, max_allowed_indel_size)
-    intraparalog_aligner(res_dir, target_regions, region_names,
-                         imperfect_aligners, fasta_sequences, species,
-                         num_process, alignment_options)
+        target_regions, identity, coverage, max_allowed_indel_size
+    )
+    intraparalog_aligner(
+        res_dir,
+        target_regions,
+        region_names,
+        imperfect_aligners,
+        fasta_sequences,
+        species,
+        num_process,
+        alignment_options,
+    )
 
 
-def get_missed_targets(original_target_regions, target_regions,
-                       aligned_regions, min_target_size, flank, capture_types):
+def get_missed_targets(
+    original_target_regions,
+    target_regions,
+    aligned_regions,
+    min_target_size,
+    flank,
+    capture_types,
+):
     org_chroms = {}
     new_chroms = {}
     for o in original_target_regions:
@@ -1314,16 +1467,16 @@ def get_missed_targets(original_target_regions, target_regions,
             unc_regs = uncovered_chroms[uc]
             for ur in unc_regs:
                 if len(overlap(main_region[1:3], ur)) > 0:
-                    not_aligned_coordinates[
-                        ar + "-extra-" + str(extra_count)
-                    ] = {"chrom": uc,
-                         "begin": ur[0],
-                         "end": ur[1]}
+                    not_aligned_coordinates[ar + "-extra-" + str(extra_count)] = {
+                        "chrom": uc,
+                        "begin": ur[0],
+                        "end": ur[1],
+                    }
     missed_target_regions, missed_target_names = merge_coordinates(
-        not_aligned_coordinates, flank)
+        not_aligned_coordinates, flank
+    )
     for t in list(missed_target_regions.keys()):
-        target_size = (missed_target_regions[t][-1]
-                       - missed_target_regions[t][-2] + 1)
+        target_size = missed_target_regions[t][-1] - missed_target_regions[t][-2] + 1
         if target_size < min_target_size:
             missed_target_regions.pop(t)
             missed_target_names.pop(t)
@@ -1332,17 +1485,34 @@ def get_missed_targets(original_target_regions, target_regions,
         try:
             missed_capt_types[t] = capture_types[t.split("extra")[0][:-1]]
         except KeyError:
-            print(("Capture type not found for {}."
-                   " Setting capture type to 'whole'").format(t))
+            print(
+                (
+                    "Capture type not found for {}." " Setting capture type to 'whole'"
+                ).format(t)
+            )
             missed_capt_types[t] = "whole"
     return [missed_target_regions, missed_target_names, missed_capt_types]
 
 
-def align_targets(res_dir, target_regions, species, flank, fasta_files,
-                  fasta_capture_type, genome_identity, genome_coverage,
-                  num_process, gene_names, max_allowed_indel_size,
-                  intra_identity, intra_coverage, capture_types,
-                  min_target_size, merge_distance, savefile):
+def align_targets(
+    res_dir,
+    target_regions,
+    species,
+    flank,
+    fasta_files,
+    fasta_capture_type,
+    genome_identity,
+    genome_coverage,
+    num_process,
+    gene_names,
+    max_allowed_indel_size,
+    intra_identity,
+    intra_coverage,
+    capture_types,
+    min_target_size,
+    merge_distance,
+    savefile,
+):
     # create fasta files for each target coordinate
     create_target_fastas(res_dir, target_regions, species, flank)
 
@@ -1351,24 +1521,28 @@ def align_targets(res_dir, target_regions, species, flank, fasta_files,
     else:
         # add target sequences provided by fasta files
         fasta_targets = add_fasta_targets(
-            res_dir, fasta_files, fasta_capture_type=fasta_capture_type)
+            res_dir, fasta_files, fasta_capture_type=fasta_capture_type
+        )
         fasta_sequences = fasta_targets["fasta_sequences"]
         fasta_capture_types = fasta_targets["capture_types"]
     capture_types.update(fasta_capture_types)
 
     # create a list of target names from all sources
-    targets_list = (list(target_regions.keys())
-                    + list(fasta_sequences.keys()))
+    targets_list = list(target_regions.keys()) + list(fasta_sequences.keys())
 
     # align target sequences to reference genome
     # create alignment options
     genomic_alignment_list = set_genomic_target_alignment_options(
-        target_regions, fasta_sequences, genome_identity, genome_coverage,
-        flank)
+        target_regions, fasta_sequences, genome_identity, genome_coverage, flank
+    )
     # perform genome alignment
-    align_genes_for_design(genomic_alignment_list, res_dir,
-                           alignment_types="general", species=species,
-                           num_processor=num_process)
+    align_genes_for_design(
+        genomic_alignment_list,
+        res_dir,
+        alignment_types="general",
+        species=species,
+        num_processor=num_process,
+    )
 
     # merge all alignment files
     merge_alignments(res_dir, targets_list, output_prefix="merged")
@@ -1381,9 +1555,9 @@ def align_targets(res_dir, target_regions, species, flank, fasta_files,
     # merge_distance 0 here for positive values.
     if merge_distance > 0:
         merge_distance = 0
-    genome_alignment = alignment_parser(res_dir, "merged",
-                                        spacer=merge_distance,
-                                        gene_names=gene_names)
+    genome_alignment = alignment_parser(
+        res_dir, "merged", spacer=merge_distance, gene_names=gene_names
+    )
     target_regions = copy.deepcopy(genome_alignment[0])
     region_names = copy.deepcopy(genome_alignment[1])
     imperfect_aligners = copy.deepcopy(genome_alignment[2])
@@ -1391,32 +1565,49 @@ def align_targets(res_dir, target_regions, species, flank, fasta_files,
     overlaps = copy.deepcopy(genome_alignment[4])
 
     # align sequences within target groups (paralog sequences)
-    align_paralogs(res_dir, target_regions, region_names, imperfect_aligners,
-                   fasta_sequences, species, intra_identity, intra_coverage,
-                   max_allowed_indel_size, num_process)
+    align_paralogs(
+        res_dir,
+        target_regions,
+        region_names,
+        imperfect_aligners,
+        fasta_sequences,
+        species,
+        intra_identity,
+        intra_coverage,
+        max_allowed_indel_size,
+        num_process,
+    )
 
     # compare original target_regions to the final target regions
     # to determine if any region is missing due to alignments performed
     original_target_regions = genome_alignment[0]
     missed_target_regions, missed_target_names, missed_capture_types = (
-        get_missed_targets(original_target_regions, target_regions,
-                           aligned_regions, min_target_size, flank,
-                           capture_types))
+        get_missed_targets(
+            original_target_regions,
+            target_regions,
+            aligned_regions,
+            min_target_size,
+            flank,
+            capture_types,
+        )
+    )
 
-    out_dict = {"original_target_regions": genome_alignment[0],
-                "original_region_names": genome_alignment[1],
-                "original_imperfect_aligners": genome_alignment[2],
-                "original_aligned_regions": genome_alignment[3],
-                "original_overlaps": genome_alignment[4],
-                "target_regions": target_regions,
-                "region_names": region_names,
-                "aligned_regions": aligned_regions,
-                "capture_types": capture_types,
-                "imperfect_aligners": imperfect_aligners,
-                "overlaps": overlaps,
-                "missed_target_regions": missed_target_regions,
-                "missed_target_names": missed_target_names,
-                "missed_capture_types": missed_capture_types}
+    out_dict = {
+        "original_target_regions": genome_alignment[0],
+        "original_region_names": genome_alignment[1],
+        "original_imperfect_aligners": genome_alignment[2],
+        "original_aligned_regions": genome_alignment[3],
+        "original_overlaps": genome_alignment[4],
+        "target_regions": target_regions,
+        "region_names": region_names,
+        "aligned_regions": aligned_regions,
+        "capture_types": capture_types,
+        "imperfect_aligners": imperfect_aligners,
+        "overlaps": overlaps,
+        "missed_target_regions": missed_target_regions,
+        "missed_target_names": missed_target_names,
+        "missed_capture_types": missed_capture_types,
+    }
     with open(os.path.join(res_dir, savefile), "w") as outfile:
         json.dump(out_dict, outfile, indent=1)
     return out_dict
@@ -1427,7 +1618,8 @@ def alignment_mapper(family_name, res_dir):
     alignment_file = family_name + ".aligned"
     difference_file = family_name + ".differences"
     with open(os.path.join(res_dir, alignment_file), "r") as alignment, open(
-            os.path.join(res_dir, difference_file), "r") as difference:
+        os.path.join(res_dir, difference_file), "r"
+    ) as difference:
         # create an alignment dictionary for each region that a query
         # aligns to these correspond to each line in the alignment file
         # and thus, are relative coordinates.
@@ -1446,9 +1638,13 @@ def alignment_mapper(family_name, res_dir):
                     temp_dict[colnames[i]] = newline[i]
                 alignment_id = temp_dict["name1"]
                 if alignment_id in alignment_dic:
-                    print(("{} aligned to the reference copy multiple times. "
-                           "Only the first alignment will be used for "
-                           "coordinate mapping.").format(alignment_id))
+                    print(
+                        (
+                            "{} aligned to the reference copy multiple times. "
+                            "Only the first alignment will be used for "
+                            "coordinate mapping."
+                        ).format(alignment_id)
+                    )
                     continue
                 alignment_dic[alignment_id] = temp_dict
                 cov = float(alignment_dic[alignment_id]["covPct"][:-1])
@@ -1486,8 +1682,7 @@ def alignment_mapper(family_name, res_dir):
                     # for each diff, fill in the coordinates
                     # between the last_key in the coord dic and
                     # start_key - diff start
-                    for j in range(last_key - 1, query_length
-                                   - diff_start - 1, -1):
+                    for j in range(last_key - 1, query_length - diff_start - 1, -1):
                         # j decreases by one, starting from the last
                         # available key the value will be 1 more than the
                         # previous key (j+1)
@@ -1517,8 +1712,7 @@ def alignment_mapper(family_name, res_dir):
                     elif diff_start == diff_end:
                         inserted = 0
                         for i in range(tar_end - tar_start):
-                            rev_co[co[last_key + 1] + i + 1] = (
-                                last_key + 0.5)
+                            rev_co[co[last_key + 1] + i + 1] = last_key + 0.5
                             inserted += 1
                         last_key += 1
                     # last_key will be mapped to target start
@@ -1528,22 +1722,23 @@ def alignment_mapper(family_name, res_dir):
                         co[last_key] = tar_start
                         rev_co[tar_start] = last_key
                     query_diff_start = last_key
-                    diff_key = str(query_diff_start) + "-" + str(
-                        query_diff_end)
-                    snps[diff_key] = {"chrom": d[0],
-                                      "target_begin": int(d[1]),
-                                      "target_end": int(d[2]),
-                                      "target_orientation": d[3],
-                                      "query_start": diff_start,
-                                      "query_end": diff_end,
-                                      "query_orientation": d[8],
-                                      "target_base": d[10],
-                                      "query_base": d[11]}
+                    diff_key = str(query_diff_start) + "-" + str(query_diff_end)
+                    snps[diff_key] = {
+                        "chrom": d[0],
+                        "target_begin": int(d[1]),
+                        "target_end": int(d[2]),
+                        "target_orientation": d[3],
+                        "query_start": diff_start,
+                        "query_end": diff_end,
+                        "query_orientation": d[8],
+                        "target_base": d[10],
+                        "query_base": d[11],
+                    }
                 # fill in the coordinates between last diff
                 # and the alignment end
                 query_plus_start = int(alignment_dic[a]["zstart2+"])
                 for k in range(last_key - 1, query_plus_start - 1, -1):
-                    co[k] = round(co[k+1] - 0.1) + 1
+                    co[k] = round(co[k + 1] - 0.1) + 1
                     rev_co[co[k]] = k
             # when the alignment is on the forward strand
             else:
@@ -1564,24 +1759,26 @@ def alignment_mapper(family_name, res_dir):
                     diff_end = int(d[7])
                     diff_key = d[6] + "-" + d[7]
                     query_length = d[9]
-                    snps[diff_key] = {"chrom": d[0],
-                                      "target_begin": int(d[1]),
-                                      "target_end": int(d[2]),
-                                      "target_orientation": d[3],
-                                      "query_start": diff_start,
-                                      "query_end": diff_end,
-                                      "query_orientation": d[8],
-                                      "target_base": d[10],
-                                      "query_base": d[11]}
+                    snps[diff_key] = {
+                        "chrom": d[0],
+                        "target_begin": int(d[1]),
+                        "target_end": int(d[2]),
+                        "target_orientation": d[3],
+                        "query_start": diff_start,
+                        "query_end": diff_end,
+                        "query_orientation": d[8],
+                        "target_base": d[10],
+                        "query_base": d[11],
+                    }
                     # from the last key to the diff start the query and
                     # target sequences are the same in length and co dict
                     # is filled so
                     for i in range(last_key + 1, diff_start):
                         if i == last_key + 1:
-                            co[i] = round(co[i-1] - 0.1) + 1 + inserted
+                            co[i] = round(co[i - 1] - 0.1) + 1 + inserted
                             inserted = 0
                         else:
-                            co[i] = round(co[i-1] - 0.1) + 1
+                            co[i] = round(co[i - 1] - 0.1) + 1
                         rev_co[co[i]] = i
                     # update last used key in co dict
                     last_key = diff_start
@@ -1603,8 +1800,7 @@ def alignment_mapper(family_name, res_dir):
                     elif diff_start == diff_end:
                         inserted = 0
                         for i in range(tar_end - tar_start):
-                            rev_co[co[last_key - 1] + 1 + i] = (
-                                last_key - 0.5)
+                            rev_co[co[last_key - 1] + 1 + i] = last_key - 0.5
                             inserted += 1
                         last_key -= 1
                     # if there is no indel
@@ -1617,7 +1813,7 @@ def alignment_mapper(family_name, res_dir):
                 # and the alignment end
                 q_end = int(alignment_dic[a]["end2"])
                 for k in range(last_key + 1, q_end):
-                    co[k] = round(co[k-1] - 0.1) + 1
+                    co[k] = round(co[k - 1] - 0.1) + 1
                     rev_co[co[k]] = k
     return alignment_dic
 
@@ -1650,10 +1846,10 @@ def order_mips(mip_info, design_name, res_dir):
     columns = list(range(1, 13))
     for i in range(len(mip_sequences)):
         m = mip_sequences[i]
-        plate = i/96
+        plate = i / 96
         pl_pos = i % 96
         col = columns[pl_pos % 12]
-        row = rows[pl_pos/12]
+        row = rows[pl_pos / 12]
         m.extend([row, col, plate])
     for i in range(len(mip_sequences)):
         m = mip_sequences[i]
@@ -1688,7 +1884,7 @@ def order_mips(mip_info, design_name, res_dir):
 
 
 def create_dirs(dir_name):
-    """ create subdirectory names for a given dir,
+    """create subdirectory names for a given dir,
     to be used by os.makedirs, Return a list of
     subdirectory names."""
     primer3_input_DIR = dir_name + "/primer3_input_files/"
@@ -1697,25 +1893,29 @@ def create_dirs(dir_name):
     bowtie2_output_DIR = dir_name + "/bowtie2_output/"
     mfold_input_DIR = dir_name + "/mfold_input/"
     mfold_output_DIR = dir_name + "/mfold_output/"
-    return [primer3_input_DIR, primer3_output_DIR, bowtie2_input_DIR,
-            bowtie2_output_DIR, mfold_input_DIR, mfold_output_DIR]
+    return [
+        primer3_input_DIR,
+        primer3_output_DIR,
+        bowtie2_input_DIR,
+        bowtie2_output_DIR,
+        mfold_input_DIR,
+        mfold_output_DIR,
+    ]
 
 
 def get_snps(region, snp_file):
-    """ Take a region string and a  tabix'ed snp file,
+    """Take a region string and a  tabix'ed snp file,
     return a list of snps which are lists of
-    tab delimited information from the snp file. """
+    tab delimited information from the snp file."""
     # extract snps using tabix, in tab separated lines
-    snp_temp = subprocess.check_output(["tabix", snp_file, region]).decode(
-        "UTF-8"
-    )
+    snp_temp = subprocess.check_output(["tabix", snp_file, region]).decode("UTF-8")
     # split the lines (each SNP)
     snps_split = snp_temp.split("\n")
     # add each snp in the region to a list
     # as lists of
     snps = []
     for line in snps_split:
-        snp = line.split('\t')
+        snp = line.split("\t")
         snps.append(snp)
     # remove last item which is coming from the new line at the end
     del snps[-1]
@@ -1723,25 +1923,26 @@ def get_snps(region, snp_file):
 
 
 def get_vcf_snps(region, snp_file):
-    """ Take a region string and a tabix'ed snp file,
+    """Take a region string and a tabix'ed snp file,
     return a list of snps which are lists of
-    tab delimited information from the snp file. """
+    tab delimited information from the snp file."""
     # extract snps using tabix, in tab separated lines
-    snp_temp = subprocess.check_output(["bcftools", "view", "-H", "-G", "-r",
-                                        region, snp_file]).decode("UTF-8")
+    snp_temp = subprocess.check_output(
+        ["bcftools", "view", "-H", "-G", "-r", region, snp_file]
+    ).decode("UTF-8")
     # split the lines (each SNP)
     snps_split = snp_temp.split("\n")[:-1]
     # add each snp in the region to a list
     # as lists of
     snps = []
     for line in snps_split:
-        snp = line.split('\t')[:8]
+        snp = line.split("\t")[:8]
         snps.append(snp)
     return snps
 
 
 def get_exons(gene_list):
-    """ Take a list of transcript information in refgene format and return a
+    """Take a list of transcript information in refgene format and return a
     list of exons in the region as [[e1_start, e1_end], [e2_start], [e2_end],
     ..]. The transcripts must belong to the same gene (i.e. have the same gene
     name).Merge overlapping exons.
@@ -1759,10 +1960,14 @@ def get_exons(gene_list):
         return {}
     chrom_set = [c for c in chrom_set if len(c) < 6]
     if len(chrom_set) > 1:
-        print(("More than one chromosomes, ",
-               chrom_set,
-               ", has specified gene ",
-               gene[12]))
+        print(
+            (
+                "More than one chromosomes, ",
+                chrom_set,
+                ", has specified gene ",
+                gene[12],
+            )
+        )
         return {}
     chrom = chrom_set[0]
     for gene in gene_list:
@@ -1784,9 +1989,11 @@ def get_exons(gene_list):
             e = exons[i]
             for j in range(len(exons)):
                 x = exons[j]
-                if (i != j) and ((e[0] <= x[0] <= e[1])
-                                 or (e[0] <= x[1] <= e[1])
-                                 or (x[0] <= e[0] <= x[1])):
+                if (i != j) and (
+                    (e[0] <= x[0] <= e[1])
+                    or (e[0] <= x[1] <= e[1])
+                    or (x[0] <= e[0] <= x[1])
+                ):
                     # merge exons and add to the exon list
                     exons.append([min(e[0], x[0]), max(e[1], x[1])])
                     # remove the exons e and x
@@ -1805,7 +2012,7 @@ def get_exons(gene_list):
         start = min(starts)
         end = max(ends)
     else:
-        print(("No exons found for ",  gene_list[0][1]))
+        print(("No exons found for ", gene_list[0][1]))
         return {}
     # create an output dict
     out = {}
@@ -1820,11 +2027,10 @@ def get_exons(gene_list):
 
 
 def get_gene_name(region, species):
-    """ Return the gene(s) in a region. """
+    """Return the gene(s) in a region."""
     gene_names = []
     try:
-        genes = get_snps(region, get_file_locations()[species][
-            "refgene_tabix"])
+        genes = get_snps(region, get_file_locations()[species]["refgene_tabix"])
         for g in genes:
             gene_names.append(g[12])
     except KeyError:
@@ -1833,7 +2039,7 @@ def get_gene_name(region, species):
 
 
 def get_gene(gene_name, refgene_file, chrom=None, alternative_chr=1):
-    """ Return genomic coordinates of a gene extracted from the refseq genes file.
+    """Return genomic coordinates of a gene extracted from the refseq genes file.
     Refgene fields are as follows:
     0:bin, 1:name, 2:chrom, 3:strand, 4:txStart, 5:txEnd, 6:cdsStart, 7:cdsEnd,
     8:exonCount, 9:exonStarts, 10:exonEnds, 11:score, 12:name2,
@@ -1842,16 +2048,19 @@ def get_gene(gene_name, refgene_file, chrom=None, alternative_chr=1):
     # all chromosomes must be included if chromosome of the gene is not
     # provided therefore, chrom cannot be None when alternative_chr is set to 0
     if not (chrom or alternative_chr):
-        print(("Chromosome of the gene %s must be specified "
-               "or all chromosomes must be searched."))
-        print(("Specify a chromosome or set alternative chromosome to 1."
-               % gene_name))
+        print(
+            (
+                "Chromosome of the gene %s must be specified "
+                "or all chromosomes must be searched."
+            )
+        )
+        print(("Specify a chromosome or set alternative chromosome to 1." % gene_name))
         return 1
-    with open(refgene_file, 'r') as infile:
+    with open(refgene_file, "r") as infile:
         coord = []
         for line in infile:
-            if not line.startswith('#'):
-                newline = line.strip().split('\t')
+            if not line.startswith("#"):
+                newline = line.strip().split("\t")
                 if newline[12] == gene_name:
                     coord.append(newline)
     if len(coord) < 1:
@@ -1870,9 +2079,8 @@ def get_gene(gene_name, refgene_file, chrom=None, alternative_chr=1):
     return alter
 
 
-def create_gene_fasta(gene_name_list, wdir, species="hs", flank=150,
-                      multi_file=False):
-    """ Get a list of genes, extract exonic sequence + flanking sequence.
+def create_gene_fasta(gene_name_list, wdir, species="hs", flank=150, multi_file=False):
+    """Get a list of genes, extract exonic sequence + flanking sequence.
     Create fasta files in corresponding directory for each gene if multi_file
     is True, create a single fasta file if False.
     """
@@ -1883,11 +2091,15 @@ def create_gene_fasta(gene_name_list, wdir, species="hs", flank=150,
             query = make_region(coord[0], coord[1] - flank, coord[2] + flank)
         else:
             e = get_exons(
-                get_gene(gene_name, get_file_locations()[species]["refgene"],
-                         alternative_chr=1)
+                get_gene(
+                    gene_name,
+                    get_file_locations()[species]["refgene"],
+                    alternative_chr=1,
                 )
-            query = e["chrom"] + ":" + str(e["begin"] - flank) + "-" + str(
-               e["end"] + flank)
+            )
+            query = (
+                e["chrom"] + ":" + str(e["begin"] - flank) + "-" + str(e["end"] + flank)
+            )
         region_list.append(query)
     regions = get_fasta_list(region_list, species)
     fasta_dict = {}
@@ -1906,30 +2118,29 @@ def create_gene_fasta(gene_name_list, wdir, species="hs", flank=150,
 
 def get_region_exons(region, species):
     try:
-        genes = get_snps(region, get_file_locations()[species][
-            "refgene_tabix"])
+        genes = get_snps(region, get_file_locations()[species]["refgene_tabix"])
     except KeyError:
         genes = []
     return get_exons(genes)
 
 
 def get_cds(gene_name, species):
-    gene_list = get_gene(gene_name,
-                         get_file_locations()[species]["refgene"],
-                         alternative_chr=1)
+    gene_list = get_gene(
+        gene_name, get_file_locations()[species]["refgene"], alternative_chr=1
+    )
     if len(gene_list) > 1:
-        print(("More than one refgene entry was found for the gene ",
-               gene_name))
-        print(("Exons from alternative transcripts will be merged "
-               "and CDS will be generated from that."))
+        print(("More than one refgene entry was found for the gene ", gene_name))
+        print(
+            (
+                "Exons from alternative transcripts will be merged "
+                "and CDS will be generated from that."
+            )
+        )
         print("This may lead to unreliable CDS sequence information.")
     if len(gene_list) == 0:
         return {}
     g = gene_list[0]
-    cds = {"chrom": g[2],
-           "orientation": g[3],
-           "begin": int(g[6]) + 1,
-           "end": int(g[7])}
+    cds = {"chrom": g[2], "orientation": g[3], "begin": int(g[6]) + 1, "end": int(g[7])}
     exons = get_exons(gene_list)["exons"]
     exons_nuc = []
     for i in range(len(exons)):
@@ -1951,10 +2162,11 @@ def get_cds(gene_name, species):
     sequences = []
     for e in exons:
         exons_nuc.extend(list(range(e[0], e[1] + 1)))
-        sequences.append(fasta_to_sequence(
-            get_fasta(cds["chrom"]
-                      + ":" + str(e[0]) + "-"
-                      + str(e[1]), species)))
+        sequences.append(
+            fasta_to_sequence(
+                get_fasta(cds["chrom"] + ":" + str(e[0]) + "-" + str(e[1]), species)
+            )
+        )
     coord = {}
     if cds["orientation"] == "+":
         cds["sequence"] = "".join(sequences)
@@ -1970,9 +2182,10 @@ def get_cds(gene_name, species):
     return cds
 
 
-def make_boulder(fasta, primer3_input_DIR, exclude_list=[],
-                 output_file_name="", sequence_targets=[]):
-    """ Create a boulder record file in primer3_input_DIR from a given fasta
+def make_boulder(
+    fasta, primer3_input_DIR, exclude_list=[], output_file_name="", sequence_targets=[]
+):
+    """Create a boulder record file in primer3_input_DIR from a given fasta
     STRING. SEQUENCE_ID is the fasta header, usually the genomic region
     (chrX:m-n) exclude_list is [coordinate,length] of any regions primers
     cannot overlap.
@@ -1985,23 +2198,35 @@ def make_boulder(fasta, primer3_input_DIR, exclude_list=[],
     exclude_string_list = []
     exclude_region = ""
     for i in exclude_list:
-        exclude_string_list.append(str(i[0])+","+str(i[1]))
+        exclude_string_list.append(str(i[0]) + "," + str(i[1]))
         exclude_region = " ".join(exclude_string_list)
     # create the boulder record
     if len(sequence_targets) == 0:
         sequence_target_string = ""
     else:
-        sequence_target_string = " ".join([",".join(map(str, s))
-                                           for s in sequence_targets])
-    boulder = ("SEQUENCE_ID=" + fasta_head + "\n" +
-               "SEQUENCE_TEMPLATE=" + seq_template + "\n" +
-               "SEQUENCE_TARGET=" + sequence_target_string + "\n" +
-               "SEQUENCE_EXCLUDED_REGION=" + exclude_region + "\n" + "=")
+        sequence_target_string = " ".join(
+            [",".join(map(str, s)) for s in sequence_targets]
+        )
+    boulder = (
+        "SEQUENCE_ID="
+        + fasta_head
+        + "\n"
+        + "SEQUENCE_TEMPLATE="
+        + seq_template
+        + "\n"
+        + "SEQUENCE_TARGET="
+        + sequence_target_string
+        + "\n"
+        + "SEQUENCE_EXCLUDED_REGION="
+        + exclude_region
+        + "\n"
+        + "="
+    )
     if output_file_name == "":
         outname = fasta_head
     else:
         outname = output_file_name
-    with open(os.path.join(primer3_input_DIR, outname), 'w') as outfile:
+    with open(os.path.join(primer3_input_DIR, outname), "w") as outfile:
         outfile.write(boulder)
     return boulder
 
@@ -2033,19 +2258,24 @@ def make_primers_worker(l):
     output_file = os.path.join(primer3_output_DIR, output_file)
     settings = os.path.join(primer3_settings_DIR, settings)
     # call primer3 program using the input and settings file
-    res = subprocess.run(["primer3_core",
-                          "-p3_settings_file=" + settings, input_file],
-                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    res = subprocess.run(
+        ["primer3_core", "-p3_settings_file=" + settings, input_file],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
 
     if res.returncode != 0:
-        print(("Primer design for the gene {} subregion {} {} arm failed "
-               "with error {}").format(paralog_name, subregion_name,
-                                       primer_type, res.stderr))
+        print(
+            (
+                "Primer design for the gene {} subregion {} {} arm failed "
+                "with error {}"
+            ).format(paralog_name, subregion_name, primer_type, res.stderr)
+        )
         return
     else:
         primer3_output = res.stdout
         # write boulder record to file.
-        with open(output_file, 'w') as outfile:
+        with open(output_file, "w") as outfile:
             outfile.write(primer3_output.decode("UTF-8"))
         return
 
@@ -2066,8 +2296,9 @@ def make_primers_multi(ext_list, lig_list, pro):
     return
 
 
-def primer_parser3(input_file, primer3_output_DIR, bowtie2_input_DIR,
-                   parse_out, fasta=1, outp=1):
+def primer_parser3(
+    input_file, primer3_output_DIR, bowtie2_input_DIR, parse_out, fasta=1, outp=1
+):
     """
     Parse a primer3 output file and generate a primer fasta file.
 
@@ -2087,13 +2318,13 @@ def primer_parser3(input_file, primer3_output_DIR, bowtie2_input_DIR,
     # primer information will be kept in primer_information dicts.
     primer_dic["primer_information"] = {}
     # load the whole input file into a list.
-    infile = open(primer3_output_DIR + input_file, 'r')
+    infile = open(primer3_output_DIR + input_file, "r")
     lines = []
     for line in infile:
         # if a line starts with "=" that line is a record separator
         if not line.startswith("="):
             # boulder record tag-value pairs separated by "="
-            inline = line.strip('\n').split('=')
+            inline = line.strip("\n").split("=")
             lines.append(inline)
     infile.close()
     # find sequence related information and add it to appropriate dic.
@@ -2114,8 +2345,7 @@ def primer_parser3(input_file, primer3_output_DIR, bowtie2_input_DIR,
         if tag == "PRIMER_LEFT_NUM_RETURNED":
             # Add this to sequence information dic because it is sequence
             # specific information
-            primer_dic["sequence_information"][
-                "SEQUENCE_LEFT_NUM_RETURNED"] = value
+            primer_dic["sequence_information"]["SEQUENCE_LEFT_NUM_RETURNED"] = value
             # create empty dictionaries with primer name keys
             for i in range(int(value)):
                 primer_key = "PRIMER_LEFT_" + str(i)
@@ -2125,41 +2355,40 @@ def primer_parser3(input_file, primer3_output_DIR, bowtie2_input_DIR,
         tag = pair[0]
         value = pair[1]
         if tag == "PRIMER_RIGHT_NUM_RETURNED":
-            primer_dic["sequence_information"][
-                "SEQUENCE_RIGHT_NUM_RETURNED"] = value
+            primer_dic["sequence_information"]["SEQUENCE_RIGHT_NUM_RETURNED"] = value
             for i in range(int(value)):
                 primer_key = "PRIMER_RIGHT_" + str(i)
                 primer_dic["primer_information"][primer_key] = {}
     # get sequence coordinate information to determine genomic coordinates of
     # primers because primer information is relative to template sequence
-    sequence_coordinates = get_coordinates(primer_dic[
-        "sequence_information"]["SEQUENCE_ID"])
+    sequence_coordinates = get_coordinates(
+        primer_dic["sequence_information"]["SEQUENCE_ID"]
+    )
     seq_chr = sequence_coordinates[0]
     seq_start = int(sequence_coordinates[1])
     # get primer information from input file and add to primer dictionary
     for pair in lines:
         tag = pair[0]
         value = pair[1]
-        if ((tag.startswith("PRIMER_LEFT_")
-             or tag.startswith("PRIMER_RIGHT_"))
+        if (
+            (tag.startswith("PRIMER_LEFT_") or tag.startswith("PRIMER_RIGHT_"))
             and (tag != "PRIMER_LEFT_NUM_RETURNED")
-                and (tag != "PRIMER_RIGHT_NUM_RETURNED")):
-            attributes = tag.split('_')
+            and (tag != "PRIMER_RIGHT_NUM_RETURNED")
+        ):
+            attributes = tag.split("_")
             # primer coordinates tag does not include an attribute value
             # it is only primer name = coordinates, so:
             if len(attributes) > 3:
                 # then this attribute is not coordinates and should have an
                 # attribute value such as TM or HAIRPIN etc.
-                primer_name = '_'.join(attributes[0:3])
-                attribute_value = '_'.join(attributes[3:])
-                primer_dic["primer_information"][primer_name][
-                    attribute_value] = value
+                primer_name = "_".join(attributes[0:3])
+                attribute_value = "_".join(attributes[3:])
+                primer_dic["primer_information"][primer_name][attribute_value] = value
             else:
                 # then this attribute is coordinates and has no attribute value
                 # give it an attribute valute "COORDINATES"
-                primer_name = '_'.join(attributes[0:3])
-                primer_dic["primer_information"][primer_name][
-                    'COORDINATES'] = value
+                primer_name = "_".join(attributes[0:3])
+                primer_dic["primer_information"][primer_name]["COORDINATES"] = value
                 # the coordinates are relative to sequence template
                 # find the genomic coordinates
                 coordinate_values = value.split(",")
@@ -2171,13 +2400,13 @@ def primer_parser3(input_file, primer3_output_DIR, bowtie2_input_DIR,
                     # left primer
                     genomic_end = genomic_start + int(coordinate_values[1]) - 1
                     primer_dic["primer_information"][primer_name][
-                        'GENOMIC_START'] = genomic_start
+                        "GENOMIC_START"
+                    ] = genomic_start
                     primer_dic["primer_information"][primer_name][
-                        'GENOMIC_END'] = genomic_end
-                    primer_dic["primer_information"][primer_name][
-                        'CHR'] = seq_chr
-                    primer_dic["primer_information"][primer_name][
-                        'ORI'] = "forward"
+                        "GENOMIC_END"
+                    ] = genomic_end
+                    primer_dic["primer_information"][primer_name]["CHR"] = seq_chr
+                    primer_dic["primer_information"][primer_name]["ORI"] = "forward"
                 else:
                     # sequence start is added to primer start to get genomic
                     # primer start
@@ -2186,15 +2415,15 @@ def primer_parser3(input_file, primer3_output_DIR, bowtie2_input_DIR,
                     # a right primer
                     genomic_end = genomic_start - int(coordinate_values[1]) + 1
                     primer_dic["primer_information"][primer_name][
-                        'GENOMIC_START'] = genomic_start
+                        "GENOMIC_START"
+                    ] = genomic_start
                     primer_dic["primer_information"][primer_name][
-                        'GENOMIC_END'] = genomic_end
-                    primer_dic["primer_information"][primer_name][
-                        'CHR'] = seq_chr
-                    primer_dic["primer_information"][primer_name][
-                        'ORI'] = "reverse"
+                        "GENOMIC_END"
+                    ] = genomic_end
+                    primer_dic["primer_information"][primer_name]["CHR"] = seq_chr
+                    primer_dic["primer_information"][primer_name]["ORI"] = "reverse"
             # add NAME as a key to primer information dictionary
-            primer_dic["primer_information"][primer_name]['NAME'] = primer_name
+            primer_dic["primer_information"][primer_name]["NAME"] = primer_name
     # if some primers were eliminated from initial primer3 output, remove from
     # dictionary
     for primer in list(primer_dic["primer_information"].keys()):
@@ -2203,12 +2432,12 @@ def primer_parser3(input_file, primer3_output_DIR, bowtie2_input_DIR,
     # dump the dictionary to json file in primer3_output_DIR if outp parameter
     # is true
     if outp:
-        dict_file = open(os.path.join(primer3_output_DIR, parse_out), 'w')
+        dict_file = open(os.path.join(primer3_output_DIR, parse_out), "w")
         json.dump(primer_dic, dict_file, indent=1)
         dict_file.close()
     # generate a simple fasta file with primer names
     if fasta:
-        outfile = open(bowtie2_input_DIR+parse_out, 'w')
+        outfile = open(bowtie2_input_DIR + parse_out, "w")
         for primer in primer_dic["primer_information"]:
             # primer name is fasta header and sequence is fasta sequence
             fasta_head = primer
@@ -2218,8 +2447,16 @@ def primer_parser3(input_file, primer3_output_DIR, bowtie2_input_DIR,
     return primer_dic
 
 
-def paralog_primers(primer_dict, copies, coordinate_converter, settings,
-                    primer3_output_DIR, outname, species, outp=0):
+def paralog_primers(
+    primer_dict,
+    copies,
+    coordinate_converter,
+    settings,
+    primer3_output_DIR,
+    outname,
+    species,
+    outp=0,
+):
     """
     Process primers generated for paralogs.
 
@@ -2247,13 +2484,15 @@ def paralog_primers(primer_dict, copies, coordinate_converter, settings,
         p_dic["PARALOG_COORDINATES"] = {}
         primer_seq = p_dic["SEQUENCE"]
         # add reference copy as paralog
-        p_dic["PARALOG_COORDINATES"]["C0"] = {"SEQUENCE": primer_seq,
-                                              "ORI": primer_ori,
-                                              "CHR": chroms["C0"],
-                                              "NAME": p_name,
-                                              "GENOMIC_START": start,
-                                              "GENOMIC_END": end,
-                                              "COORDINATES": ref_coord}
+        p_dic["PARALOG_COORDINATES"]["C0"] = {
+            "SEQUENCE": primer_seq,
+            "ORI": primer_ori,
+            "CHR": chroms["C0"],
+            "NAME": p_name,
+            "GENOMIC_START": start,
+            "GENOMIC_END": end,
+            "COORDINATES": ref_coord,
+        }
         for c in p_copies:
             if c != "C0":
                 # check if both ends of the primer has aligned with reference
@@ -2265,20 +2504,32 @@ def paralog_primers(primer_dict, copies, coordinate_converter, settings,
                     continue
                 para_primer_ori = para_start < para_end
                 if para_primer_ori:
-                    para_primer_key = (chroms[c] + ":" + str(para_start) + "-"
-                                       + str(para_end))
+                    para_primer_key = (
+                        chroms[c] + ":" + str(para_start) + "-" + str(para_end)
+                    )
                     p_dic["PARALOG_COORDINATES"][c] = {
-                        "ORI": "forward", "CHR": chroms[c], "NAME": p_name,
-                        "GENOMIC_START": para_start, "GENOMIC_END": para_end,
-                        "COORDINATES": ref_coord, "KEY": para_primer_key}
+                        "ORI": "forward",
+                        "CHR": chroms[c],
+                        "NAME": p_name,
+                        "GENOMIC_START": para_start,
+                        "GENOMIC_END": para_end,
+                        "COORDINATES": ref_coord,
+                        "KEY": para_primer_key,
+                    }
                     primer_keys.add(para_primer_key)
                 else:
-                    para_primer_key = chroms[c] + ":" + str(
-                        para_end) + "-" + str(para_start)
+                    para_primer_key = (
+                        chroms[c] + ":" + str(para_end) + "-" + str(para_start)
+                    )
                     p_dic["PARALOG_COORDINATES"][c] = {
-                        "ORI": "reverse", "CHR": chroms[c], "NAME": p_name,
-                        "GENOMIC_START": para_start, "GENOMIC_END": para_end,
-                        "COORDINATES": ref_coord, "KEY": para_primer_key}
+                        "ORI": "reverse",
+                        "CHR": chroms[c],
+                        "NAME": p_name,
+                        "GENOMIC_START": para_start,
+                        "GENOMIC_END": para_end,
+                        "COORDINATES": ref_coord,
+                        "KEY": para_primer_key,
+                    }
                     primer_keys.add(para_primer_key)
     if len(primer_keys) > 0:
         primer_sequences = get_fasta_list(primer_keys, species)
@@ -2299,9 +2550,19 @@ def paralog_primers(primer_dict, copies, coordinate_converter, settings,
     return primer_dict
 
 
-def bowtie2_run(fasta_file, output_file, bowtie2_input_DIR,
-                bowtie2_output_DIR, species, process_num=4,
-                seed_MM=1, mode="-a", seed_len=18, gbar=1, local=0):
+def bowtie2_run(
+    fasta_file,
+    output_file,
+    bowtie2_input_DIR,
+    bowtie2_output_DIR,
+    species,
+    process_num=4,
+    seed_MM=1,
+    mode="-a",
+    seed_len=18,
+    gbar=1,
+    local=0,
+):
     """Align primers from a fasta file to specified species genome."""
     file_locations = get_file_locations()
     # check if entered species is supported
@@ -2312,23 +2573,56 @@ def bowtie2_run(fasta_file, output_file, bowtie2_input_DIR,
         check_local = "--local"
     else:
         check_local = "--end-to-end"
-    res = subprocess.Popen(["bowtie2", "-p", str(process_num),  "-D", "20",
-                            "-R", "3", "-N", str(seed_MM), "-L",
-                            str(seed_len), "-i", "S,1,0.5", "--gbar",
-                            str(gbar), mode, check_local, "-x", genome, "-f",
-                            os.path.join(bowtie2_input_DIR, fasta_file), "-S",
-                            os.path.join(bowtie2_output_DIR, output_file)],
-                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    res = subprocess.Popen(
+        [
+            "bowtie2",
+            "-p",
+            str(process_num),
+            "-D",
+            "20",
+            "-R",
+            "3",
+            "-N",
+            str(seed_MM),
+            "-L",
+            str(seed_len),
+            "-i",
+            "S,1,0.5",
+            "--gbar",
+            str(gbar),
+            mode,
+            check_local,
+            "-x",
+            genome,
+            "-f",
+            os.path.join(bowtie2_input_DIR, fasta_file),
+            "-S",
+            os.path.join(bowtie2_output_DIR, output_file),
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
     log_file = os.path.join(
-        bowtie2_output_DIR, "log_" + species + "_" + id_generator(6))
+        bowtie2_output_DIR, "log_" + species + "_" + id_generator(6)
+    )
     with open(log_file, "wb") as outfile:
         outfile.write(res.communicate()[1])
 
     return 0
 
 
-def bowtie(fasta_file, output_file, bowtie2_input_DIR, bowtie2_output_DIR,
-           options, species, process_num=4, mode="-a", local=0, fastq=0):
+def bowtie(
+    fasta_file,
+    output_file,
+    bowtie2_input_DIR,
+    bowtie2_output_DIR,
+    options,
+    species,
+    process_num=4,
+    mode="-a",
+    local=0,
+    fastq=0,
+):
     """Align a fasta or fastq file to a genome using bowtie2."""
     file_locations = get_file_locations()
     # check if entered species is supported
@@ -2353,8 +2647,16 @@ def bowtie(fasta_file, output_file, bowtie2_input_DIR, bowtie2_output_DIR,
     return 0
 
 
-def bwa(fastq_file, output_file, output_type, input_dir,
-        output_dir, options, species, base_name="None"):
+def bwa(
+    fastq_file,
+    output_file,
+    output_type,
+    input_dir,
+    output_dir,
+    options,
+    species,
+    base_name="None",
+):
     """
     Align a fastq file to species genome using bwa.
 
@@ -2366,8 +2668,15 @@ def bwa(fastq_file, output_file, output_type, input_dir,
     reporting secondary alignments, assuming their score is below 100.
     """
     genome_file = get_file_locations()[species]["bwa_genome"]
-    read_group = ("@RG\\tID:" + base_name + "\\tSM:" + base_name + "\\tLB:"
-                  + base_name + "\\tPL:ILLUMINA")
+    read_group = (
+        "@RG\\tID:"
+        + base_name
+        + "\\tSM:"
+        + base_name
+        + "\\tLB:"
+        + base_name
+        + "\\tPL:ILLUMINA"
+    )
     options = copy.deepcopy(options)
     options.append("-R" + read_group)
     if output_type == "sam":
@@ -2384,27 +2693,35 @@ def bwa(fastq_file, output_file, output_type, input_dir,
         com.append(os.path.join(input_dir, fastq_file))
         sam = subprocess.Popen(com, stdout=subprocess.PIPE)
         bam_com = ["samtools", "view", "-b"]
-        bam = subprocess.Popen(bam_com, stdin=sam.stdout,
-                               stdout=subprocess.PIPE)
+        bam = subprocess.Popen(bam_com, stdin=sam.stdout, stdout=subprocess.PIPE)
         bam_file = os.path.join(output_dir, output_file)
         sort_com = ["samtools", "sort", "-T", "/tmp/", "-o", bam_file]
         subprocess.run(sort_com, stdin=bam.stdout)
-        subprocess.run(["samtools", "index", bam_file], check=True,
-                       stderr=subprocess.PIPE)
+        subprocess.run(
+            ["samtools", "index", bam_file], check=True, stderr=subprocess.PIPE
+        )
 
 
-def bwa_multi(fastq_files, output_type, fastq_dir, bam_dir, options, species,
-              processor_number, parallel_processes):
+def bwa_multi(
+    fastq_files,
+    output_type,
+    fastq_dir,
+    bam_dir,
+    options,
+    species,
+    processor_number,
+    parallel_processes,
+):
     """Align fastq files to species genome using bwa in parallel."""
-    #if a person doesn't add any extra bwa options, bwa options will be a
-    #string 'mem' - needs to be a list so it can be concatenated to -t options
-    #below
-    if type(options)==str:
-        options=[options]
-    #remove threads argument if present, so it doesn't get added twice below
-    if '-t' in options:
-        thread_location=options.index('-t')
-        options=options[:thread_location]+options[thread_location+2:]
+    # if a person doesn't add any extra bwa options, bwa options will be a
+    # string 'mem' - needs to be a list so it can be concatenated to -t options
+    # below
+    if type(options) == str:
+        options = [options]
+    # remove threads argument if present, so it doesn't get added twice below
+    if "-t" in options:
+        thread_location = options.index("-t")
+        options = options[:thread_location] + options[thread_location + 2 :]
     if len(fastq_files) == 0:
         fastq_files = [f.name for f in os.scandir(fastq_dir)]
     if output_type == "sam":
@@ -2412,8 +2729,7 @@ def bwa_multi(fastq_files, output_type, fastq_dir, bam_dir, options, species,
     elif output_type == "bam":
         extension = ".srt.bam"
     else:
-        print(("Output type must be bam or sam, {} was given").format(
-            output_type))
+        print(("Output type must be bam or sam, {} was given").format(output_type))
         return
     if not os.path.exists(bam_dir):
         os.makedirs(bam_dir)
@@ -2426,8 +2742,16 @@ def bwa_multi(fastq_files, output_type, fastq_dir, bam_dir, options, species,
             # get base file name
             base_name = f.split(".")[0]
             bam_name = base_name + extension
-            bwa(f, bam_name, output_type, fastq_dir, bam_dir, options, species,
-                base_name)
+            bwa(
+                f,
+                bam_name,
+                output_type,
+                fastq_dir,
+                bam_dir,
+                options,
+                species,
+                base_name,
+            )
     else:
         # Determine number of processors per parallel process
         processor_per_process = processor_number // parallel_processes
@@ -2444,10 +2768,21 @@ def bwa_multi(fastq_files, output_type, fastq_dir, bam_dir, options, species,
         for f in fastq_files:
             base_name = f.split(".")[0]
             bam_name = base_name + extension
-            p.apply_async(bwa, (f, bam_name, output_type, fastq_dir, bam_dir,
-                                options, species, base_name),
-                          callback=results.append,
-                          error_callback=errors.append)
+            p.apply_async(
+                bwa,
+                (
+                    f,
+                    bam_name,
+                    output_type,
+                    fastq_dir,
+                    bam_dir,
+                    options,
+                    species,
+                    base_name,
+                ),
+                callback=results.append,
+                error_callback=errors.append,
+            )
         p.close()
         p.join()
         if len(errors) > 0:
@@ -2504,8 +2839,16 @@ def get_cigar_length(cigar):
     return sum(parse_cigar(cigar).values()) - insertions
 
 
-def parse_bowtie(primer_dict, bt_file, primer_out, primer3_output_DIR,
-                 bowtie2_output_DIR, species, settings, outp=1):
+def parse_bowtie(
+    primer_dict,
+    bt_file,
+    primer_out,
+    primer3_output_DIR,
+    bowtie2_output_DIR,
+    species,
+    settings,
+    outp=1,
+):
     """
     Take a bowtie output (sam) file and filter top N hits per primer.
 
@@ -2520,7 +2863,7 @@ def parse_bowtie(primer_dict, bt_file, primer_out, primer3_output_DIR,
     # how many total bowtie hits gets a primer fired
     M = int(settings["upper_hit_limit"])
     # read in bowtie file
-    infile = open(os.path.join(bowtie2_output_DIR, bt_file), 'r')
+    infile = open(os.path.join(bowtie2_output_DIR, bt_file), "r")
     primers = copy.deepcopy(primer_dict)
     # create a temp dic to count hits/primer
     counter_dic = {}
@@ -2537,7 +2880,7 @@ def parse_bowtie(primer_dict, bt_file, primer_out, primer3_output_DIR,
     for line in infile:
         try:
             if not line.startswith("@"):
-                record = line.strip('\n').split('\t')
+                record = line.strip("\n").split("\t")
                 primer_name = record[0]
                 # increment hit counter for primer
                 try:
@@ -2547,7 +2890,7 @@ def parse_bowtie(primer_dict, bt_file, primer_out, primer3_output_DIR,
                 # check how many hits have been analyzed for this primer
                 # if upper hit limit has been reached, mark primer for removal
                 if counter_dic[primer_name] >= M:
-                    primers['primer_information'][primer_name]["remove"] = True
+                    primers["primer_information"][primer_name]["remove"] = True
                     continue
                 # move on to the next hit if primer hit limit has been reached.
                 # no further hits will be added for those primers
@@ -2565,7 +2908,7 @@ def parse_bowtie(primer_dict, bt_file, primer_out, primer3_output_DIR,
                 cigar = record[5]
                 # extract which strand is the bowtie hit on
                 # true if forward
-                strand = ((int(record[1]) % 256) == 0)
+                strand = (int(record[1]) % 256) == 0
                 # get hit coordinates
                 hit_start = pos
                 # bowtie gives us the start position of the hit
@@ -2583,29 +2926,34 @@ def parse_bowtie(primer_dict, bt_file, primer_out, primer3_output_DIR,
                     bt_start = hit_start
                     bt_end = hit_end
                     hit_str = "forward"
-                    hit_region_key = (chrom + ":" + str(hit_start)
-                                      + "-" + str(hit_end))
+                    hit_region_key = chrom + ":" + str(hit_start) + "-" + str(hit_end)
                 else:
                     bt_start = hit_end
                     bt_end = hit_start
                     hit_str = "reverse"
-                    hit_region_key = (chrom + ":" + str(hit_start)
-                                      + "-" + str(hit_end))
+                    hit_region_key = chrom + ":" + str(hit_start) + "-" + str(hit_end)
                 # add region key to keys list for fasta retrieval later
                 keys.add(hit_region_key)
                 # add all hit information to primer dictionary
                 try:
                     primers["primer_information"][primer_name][bowtie_key][
                         str(counter_dic[primer_name])
-                    ] = {"chrom": chrom, "begin": bt_start, "end": bt_end,
-                         "key": hit_region_key, "strand": hit_str}
+                    ] = {
+                        "chrom": chrom,
+                        "begin": bt_start,
+                        "end": bt_end,
+                        "key": hit_region_key,
+                        "strand": hit_str,
+                    }
                 except KeyError:
                     primers["primer_information"][primer_name][bowtie_key] = {
-                         str(counter_dic[primer_name]): {"chrom": chrom,
-                                                         "begin": bt_start,
-                                                         "end": bt_end,
-                                                         "key": hit_region_key,
-                                                         "strand": hit_str}
+                        str(counter_dic[primer_name]): {
+                            "chrom": chrom,
+                            "begin": bt_start,
+                            "end": bt_end,
+                            "key": hit_region_key,
+                            "strand": hit_str,
+                        }
                     }
         except KeyError:
             # in earlier versions of this function the primers with
@@ -2629,19 +2977,22 @@ def parse_bowtie(primer_dict, bt_file, primer_out, primer3_output_DIR,
         # and similar in sequence"
         try:
             for h in primers["primer_information"][p][bowtie_key]:
-                if (primers["primer_information"][p]
-                        [bowtie_key][h]["strand"] == "forward"):
-                    primers["primer_information"][p][bowtie_key][h][
-                        "sequence"
-                    ] = sequence_dic[primers["primer_information"][p][
-                        bowtie_key][h]["key"]
-                    ]
+                if (
+                    primers["primer_information"][p][bowtie_key][h]["strand"]
+                    == "forward"
+                ):
+                    primers["primer_information"][p][bowtie_key][h]["sequence"] = (
+                        sequence_dic[
+                            primers["primer_information"][p][bowtie_key][h]["key"]
+                        ]
+                    )
                 else:
-                    primers["primer_information"][p][bowtie_key][h][
-                        "sequence"
-                    ] = reverse_complement(
-                        sequence_dic[primers["primer_information"]
-                                     [p][bowtie_key][h]["key"]]
+                    primers["primer_information"][p][bowtie_key][h]["sequence"] = (
+                        reverse_complement(
+                            sequence_dic[
+                                primers["primer_information"][p][bowtie_key][h]["key"]
+                            ]
+                        )
                     )
         except KeyError:
             # if there is no bowtie hit for this primer (happens for host
@@ -2649,14 +3000,21 @@ def parse_bowtie(primer_dict, bt_file, primer_out, primer3_output_DIR,
             primers["primer_information"][p][bowtie_key] = {}
     # save the updated primers file
     if outp:
-        with open(os.path.join(
-                primer3_output_DIR, primer_out), 'w') as outfile:
+        with open(os.path.join(primer3_output_DIR, primer_out), "w") as outfile:
             json.dump(primers, outfile, indent=1)
     return primers
 
 
-def process_bowtie(primers, primer_out, primer3_output_DIR,
-                   bowtie2_output_DIR, species, settings, host=False, outp=1):
+def process_bowtie(
+    primers,
+    primer_out,
+    primer3_output_DIR,
+    bowtie2_output_DIR,
+    species,
+    settings,
+    host=False,
+    outp=1,
+):
     """
     Process a primer dict with bowtie information added.
 
@@ -2683,24 +3041,21 @@ def process_bowtie(primers, primer_out, primer3_output_DIR,
     for r in genome_sam.references:
         reference_lengths[r] = genome_sam.get_reference_length(r)
     # read bowtie hits
-    for primer_name in primers['primer_information']:
+    for primer_name in primers["primer_information"]:
         try:
-            primer_seq = primers['primer_information'][primer_name]["SEQUENCE"]
+            primer_seq = primers["primer_information"][primer_name]["SEQUENCE"]
             if not host:
-                para = (primers['primer_information'][primer_name]
-                        ["PARALOG_COORDINATES"])
-                if ("BOWTIE_BINDS" not in
-                        primers['primer_information'][primer_name]):
-                    primers[
-                        'primer_information'][primer_name]["BOWTIE_BINDS"] = []
-                if ("ALT_BINDS" not in
-                        primers['primer_information'][primer_name]):
-                    primers[
-                        'primer_information'][primer_name]["ALT_BINDS"] = []
-            for bt_hit_name in list(primers['primer_information']
-                                    [primer_name][bowtie_key].keys()):
-                bt_hit = (primers['primer_information'][primer_name]
-                          [bowtie_key][bt_hit_name])
+                para = primers["primer_information"][primer_name]["PARALOG_COORDINATES"]
+                if "BOWTIE_BINDS" not in primers["primer_information"][primer_name]:
+                    primers["primer_information"][primer_name]["BOWTIE_BINDS"] = []
+                if "ALT_BINDS" not in primers["primer_information"][primer_name]:
+                    primers["primer_information"][primer_name]["ALT_BINDS"] = []
+            for bt_hit_name in list(
+                primers["primer_information"][primer_name][bowtie_key].keys()
+            ):
+                bt_hit = primers["primer_information"][primer_name][bowtie_key][
+                    bt_hit_name
+                ]
                 bt_chrom = bt_hit["chrom"]
                 bt_begin = bt_hit["begin"]
                 bt_end = bt_hit["end"]
@@ -2713,7 +3068,7 @@ def process_bowtie(primers, primer_out, primer3_output_DIR,
                         mv_conc=Na,
                         dv_conc=Mg,
                         dntp_conc=0,
-                        dna_conc=conc
+                        dna_conc=conc,
                     )
                     continue
                 intended = 0
@@ -2734,9 +3089,12 @@ def process_bowtie(primers, primer_out, primer3_output_DIR,
                     para_chr = para[k]["CHR"]
                     para_begin = para[k]["GENOMIC_START"]
                     para_end = para[k]["GENOMIC_END"]
-                    if ((para_ori == bt_ori) and (para_chr == bt_chrom)
-                            and (abs(para_begin - bt_begin) < map_padding)
-                            and (abs(para_end - bt_end) < map_padding)):
+                    if (
+                        (para_ori == bt_ori)
+                        and (para_chr == bt_chrom)
+                        and (abs(para_begin - bt_begin) < map_padding)
+                        and (abs(para_end - bt_end) < map_padding)
+                    ):
                         intended = 1
                         # Get bowtie determined coordinates and sequences
                         # for the paralog copy. These will have priority
@@ -2749,8 +3107,9 @@ def process_bowtie(primers, primer_out, primer3_output_DIR,
                         # this primer should bind to the paralog copy as well.
                         if bt_seq.upper() == primer_seq.upper():
                             para[k]["BOWTIE_BOUND"] = True
-                            primers['primer_information'][
-                                primer_name]["BOWTIE_BINDS"].append(k)
+                            primers["primer_information"][primer_name][
+                                "BOWTIE_BINDS"
+                            ].append(k)
                         else:
                             # if the sequences are not exactly the same
                             # we'll assume the primer does not bind to the
@@ -2771,28 +3130,27 @@ def process_bowtie(primers, primer_out, primer3_output_DIR,
                                     mv_conc=Na,
                                     dv_conc=Mg,
                                     dntp_conc=0,
-                                    dna_conc=conc
+                                    dna_conc=conc,
                                 )
                                 for j in range(-3, 4):
                                     if j == 0:
                                         continue
                                     alt_start = bt_begin + j
                                     alt_end = bt_end
-                                    if ((alt_start < 0) or (alt_end < 0)
-                                            or (alt_start > para_chr_length)
-                                            or (alt_end > para_chr_length)):
+                                    if (
+                                        (alt_start < 0)
+                                        or (alt_end < 0)
+                                        or (alt_start > para_chr_length)
+                                        or (alt_end > para_chr_length)
+                                    ):
                                         continue
                                     if para_ori == "forward":
                                         alt_primer_key = create_region(
-                                            bt_chrom,
-                                            alt_start,
-                                            alt_end
+                                            bt_chrom, alt_start, alt_end
                                         )
                                     else:
                                         alt_primer_key = create_region(
-                                            bt_chrom,
-                                            alt_end,
-                                            alt_start
+                                            bt_chrom, alt_end, alt_start
                                         )
                                     al[j] = {}
                                     al[j]["ALT_START"] = alt_start
@@ -2807,8 +3165,9 @@ def process_bowtie(primers, primer_out, primer3_output_DIR,
                                 para[k]["ALT_TM_DIFF"] = 100
                                 para[k]["ALT_BOUND"] = False
                         # remove bowtie hit for intended target
-                        primers['primer_information'][
-                            primer_name][bowtie_key].pop(bt_hit_name)
+                        primers["primer_information"][primer_name][bowtie_key].pop(
+                            bt_hit_name
+                        )
                         break
                 # add TM value for unindended target
                 if not intended:
@@ -2818,7 +3177,7 @@ def process_bowtie(primers, primer_out, primer3_output_DIR,
                         mv_conc=Na,
                         dv_conc=Mg,
                         dntp_conc=0,
-                        dna_conc=conc
+                        dna_conc=conc,
                     )
             # Design alternative primers (if allowed) for paralogs
             # when there is no bowtie hit for that paralog.
@@ -2844,28 +3203,27 @@ def process_bowtie(primers, primer_out, primer3_output_DIR,
                                 mv_conc=Na,
                                 dv_conc=Mg,
                                 dntp_conc=0,
-                                dna_conc=conc
+                                dna_conc=conc,
                             )
                             for j in range(-3, 4):
                                 if j == 0:
                                     continue
                                 alt_start = para_begin + j
                                 alt_end = para_end
-                                if ((alt_start < 0) or (alt_end < 0)
-                                        or (alt_start > para_chr_length)
-                                        or (alt_end > para_chr_length)):
+                                if (
+                                    (alt_start < 0)
+                                    or (alt_end < 0)
+                                    or (alt_start > para_chr_length)
+                                    or (alt_end > para_chr_length)
+                                ):
                                     continue
                                 if para_ori == "forward":
                                     alt_primer_key = create_region(
-                                        para_chr,
-                                        alt_start,
-                                        alt_end
+                                        para_chr, alt_start, alt_end
                                     )
                                 else:
                                     alt_primer_key = create_region(
-                                        para_chr,
-                                        alt_end,
-                                        alt_start
+                                        para_chr, alt_end, alt_start
                                     )
                                 al[j] = {}
                                 al[j]["ALT_START"] = alt_start
@@ -2884,9 +3242,8 @@ def process_bowtie(primers, primer_out, primer3_output_DIR,
             continue
     if len(alt_keys) > 0:
         alt_sequences = get_fasta_list(alt_keys, species)
-        for primer_name in primers['primer_information']:
-            para = (primers['primer_information'][primer_name]
-                    ["PARALOG_COORDINATES"])
+        for primer_name in primers["primer_information"]:
+            para = primers["primer_information"][primer_name]["PARALOG_COORDINATES"]
             for k in para:
                 try:
                     alt_candidates = para[k]["ALTERNATIVES"]
@@ -2908,21 +3265,29 @@ def process_bowtie(primers, primer_out, primer3_output_DIR,
                                 mv_conc=Na,
                                 dv_conc=Mg,
                                 dntp_conc=0,
-                                dna_conc=conc
+                                dna_conc=conc,
                             )
                             alt_candidates[c]["ALT_TM"] = alt_tm
                             alt_candidates[c]["ALT_SEQUENCE"] = alt_seq
                         else:
                             alt_candidates.pop(c)
     if outp:
-        with open(os.path.join(
-                primer3_output_DIR, primer_out), 'w') as outfile:
+        with open(os.path.join(primer3_output_DIR, primer_out), "w") as outfile:
             json.dump(primers, outfile, indent=1)
     return primers
 
 
-def filter_bowtie(primers, output_file, primer3_output_DIR, species, TM=46,
-                  hit_threshold=0, lower_tm=46, lower_hit_threshold=3, outp=1):
+def filter_bowtie(
+    primers,
+    output_file,
+    primer3_output_DIR,
+    species,
+    TM=46,
+    hit_threshold=0,
+    lower_tm=46,
+    lower_hit_threshold=3,
+    outp=1,
+):
     """
     Check TMs of bowtie hits of given primers, on a given genome.
 
@@ -2964,14 +3329,13 @@ def filter_bowtie(primers, output_file, primer3_output_DIR, species, TM=46,
             continue
     if outp:
         # write dictionary to file in primer3_output_DIR
-        outfile = open(os.path.join(primer3_output_DIR, output_file), 'w')
+        outfile = open(os.path.join(primer3_output_DIR, output_file), "w")
         json.dump(primers, outfile, indent=1)
         outfile.close()
     return primers
 
 
-def alternative(primer_dic, output_file,
-                primer3_output_DIR, tm_diff, outp=1):
+def alternative(primer_dic, output_file, primer3_output_DIR, tm_diff, outp=1):
     """
     Pick the best alternative arm for primers that do not bind all paralogs.
 
@@ -3012,14 +3376,21 @@ def alternative(primer_dic, output_file,
     except KeyError:
         pass
     if outp:
-        with open(os.path.join(
-                primer3_output_DIR, output_file), "w") as outfile:
+        with open(os.path.join(primer3_output_DIR, output_file), "w") as outfile:
             json.dump(primer_dic, outfile, indent=1)
     return primer_dic
 
 
-def score_paralog_primers(primer_dict, output_file, primer3_output_DIR,
-                          ext, mask_penalty, species, backbone, outp=1):
+def score_paralog_primers(
+    primer_dict,
+    output_file,
+    primer3_output_DIR,
+    ext,
+    mask_penalty,
+    species,
+    backbone,
+    outp=1,
+):
     """
     Score primers in a dictionary according to a scoring matrix.
 
@@ -3028,7 +3399,7 @@ def score_paralog_primers(primer_dict, output_file, primer3_output_DIR,
     Next_base values are last.
     """
     primers = primer_dict["primer_information"]
-    extension = (ext == "extension")
+    extension = ext == "extension"
     # primer scoring coefficients were calculated based on
     # linear models of various parameters and provided as a dict
     with open("/opt/resources/mip_scores.dict", "rb") as infile:
@@ -3050,12 +3421,15 @@ def score_paralog_primers(primer_dict, output_file, primer3_output_DIR,
             # for variation underneath.
             extension_lowercase = sum([c.islower() for c in extension_arm])
             # calculate TM with the model parameters for TM
-            ext_TM = primer3.calcTm(extension_arm, mv_conc=na, dv_conc=mg,
-                                    dna_conc=conc, dntp_conc=0)
+            ext_TM = primer3.calcTm(
+                extension_arm, mv_conc=na, dv_conc=mg, dna_conc=conc, dntp_conc=0
+            )
             # create a mip parameter dict
-            score_features = {"extension_gc": extension_gc,
-                              "extension_lowercase": extension_lowercase,
-                              "ext_TM": ext_TM}
+            score_features = {
+                "extension_gc": extension_gc,
+                "extension_lowercase": extension_lowercase,
+                "ext_TM": ext_TM,
+            }
             # calculate primer score using the linear model provided
             tech_score = 0
             for feature in score_features:
@@ -3074,17 +3448,23 @@ def score_paralog_primers(primer_dict, output_file, primer3_output_DIR,
             ligation_gc = calculate_gc(ligation_arm)
             # only the 3' end of the ligation arm was important in terms of
             # lowercase masking.
-            ligation_lowercase_end = sum([c.islower()
-                                          for c in ligation_arm[-5:]])
+            ligation_lowercase_end = sum([c.islower() for c in ligation_arm[-5:]])
             # calculate TM of ligation sequence (actual ligation probe arm)
             # agains probe backbone.
             ligation_bb_TM = primer3.calcHeterodimerTm(
-                reverse_complement(ligation_arm), backbone,
-                mv_conc=na, dv_conc=mg, dna_conc=conc, dntp_conc=0)
+                reverse_complement(ligation_arm),
+                backbone,
+                mv_conc=na,
+                dv_conc=mg,
+                dna_conc=conc,
+                dntp_conc=0,
+            )
             # create a mip parameter dict
-            score_features = {"ligation_gc": ligation_gc,
-                              "ligation_lowercase_end": ligation_lowercase_end,
-                              "ligation_bb_TM": ligation_bb_TM}
+            score_features = {
+                "ligation_gc": ligation_gc,
+                "ligation_lowercase_end": ligation_lowercase_end,
+                "ligation_bb_TM": ligation_bb_TM,
+            }
             # calculate primer score using the linear model provided
             tech_score = 0
             for feature in score_features:
@@ -3103,8 +3483,7 @@ def score_paralog_primers(primer_dict, output_file, primer3_output_DIR,
     return primer_dict
 
 
-def filter_primers(primer_dict, output_file,
-                   primer3_output_DIR, n, bin_size, outp=1):
+def filter_primers(primer_dict, output_file, primer3_output_DIR, n, bin_size, outp=1):
     """
     Filter primers so that only top n scoring primers remain for each bin.
 
@@ -3119,23 +3498,25 @@ def filter_primers(primer_dict, output_file,
     template_len = len(template_seq)
     forward_bins = {}
     reverse_bins = {}
-    for i in range(template_len//bin_size + 1):
+    for i in range(template_len // bin_size + 1):
         forward_bins[i] = []
         reverse_bins[i] = []
     for primer in list(primer_dict["primer_information"].keys()):
         # get primer orientation
         ori = primer_dict["primer_information"][primer]["ORI"]
         # get primer start coordinate
-        start = int(primer_dict["primer_information"][primer]
-                    ["COORDINATES"].split(",")[0])
-        primer_len = int(primer_dict["primer_information"][primer]
-                         ["COORDINATES"].split(",")[1])
+        start = int(
+            primer_dict["primer_information"][primer]["COORDINATES"].split(",")[0]
+        )
+        primer_len = int(
+            primer_dict["primer_information"][primer]["COORDINATES"].split(",")[1]
+        )
         if ori == "forward":
             end = start + primer_len - 1
         elif ori == "reverse":
             end = start - primer_len + 1
         # which bin the start coordinate falls into
-        end_bin = end//bin_size
+        end_bin = end // bin_size
         # get primer score
         score = primer_dict["primer_information"][primer]["SCORE"]
         # append the primer name/score to appropriate bin dic
@@ -3144,8 +3525,7 @@ def filter_primers(primer_dict, output_file,
         elif ori == "reverse":
             reverse_bins[end_bin].append([primer, score])
     best_primer_dict = {}
-    best_primer_dict["sequence_information"] = primer_dict[
-        "sequence_information"]
+    best_primer_dict["sequence_information"] = primer_dict["sequence_information"]
     best_primer_dict["primer_information"] = {}
     # find best scoring mips in each forward bin
     for key in forward_bins:
@@ -3160,7 +3540,8 @@ def filter_primers(primer_dict, output_file,
         for primers in best_primers:
             primer_name = primers[0]
             best_primer_dict["primer_information"][primer_name] = primer_dict[
-                "primer_information"][primer_name]
+                "primer_information"
+            ][primer_name]
     # find best scoring mips in each reverse bin
     for key in reverse_bins:
         # sort primers for score
@@ -3174,19 +3555,27 @@ def filter_primers(primer_dict, output_file,
         for primers in best_primers:
             primer_name = primers[0]
             best_primer_dict["primer_information"][primer_name] = primer_dict[
-                "primer_information"][primer_name]
+                "primer_information"
+            ][primer_name]
     # write new dic to file
     if outp:
-        with open(os.path.join(
-                primer3_output_DIR, output_file), "w") as outfile:
+        with open(os.path.join(primer3_output_DIR, output_file), "w") as outfile:
             json.dump(best_primer_dict, outfile, indent=1)
     return best_primer_dict
 
 
-def pick_paralog_primer_pairs(extension, ligation, output_file,
-                              primer3_output_DIR, min_size, max_size,
-                              alternative_arms, region_insertions,
-                              subregion_name, outp=1):
+def pick_paralog_primer_pairs(
+    extension,
+    ligation,
+    output_file,
+    primer3_output_DIR,
+    min_size,
+    max_size,
+    alternative_arms,
+    region_insertions,
+    subregion_name,
+    outp=1,
+):
     """Pick primer pairs satisfying a given size range."""
     # assign primer information dictionaries to a shorter name
     ext = extension["primer_information"]
@@ -3203,15 +3592,18 @@ def pick_paralog_primer_pairs(extension, ligation, output_file,
     # has pair information key instead of primer_information
     primer_pairs["pair_information"] = {}
     # populate sequence information (same as extension or ligation)
-    primer_pairs["sequence_information"]['SEQUENCE_TEMPLATE'] = extension[
-        "sequence_information"]['SEQUENCE_TEMPLATE']
-    primer_pairs["sequence_information"]['SEQUENCE_EXCLUDED_REGION'] = (
-        extension["sequence_information"]['SEQUENCE_EXCLUDED_REGION']
-    )
-    primer_pairs["sequence_information"]['SEQUENCE_TARGET'] = extension[
-        "sequence_information"]['SEQUENCE_TARGET']
-    primer_pairs["sequence_information"]['SEQUENCE_ID'] = extension[
-        "sequence_information"]['SEQUENCE_ID']
+    primer_pairs["sequence_information"]["SEQUENCE_TEMPLATE"] = extension[
+        "sequence_information"
+    ]["SEQUENCE_TEMPLATE"]
+    primer_pairs["sequence_information"]["SEQUENCE_EXCLUDED_REGION"] = extension[
+        "sequence_information"
+    ]["SEQUENCE_EXCLUDED_REGION"]
+    primer_pairs["sequence_information"]["SEQUENCE_TARGET"] = extension[
+        "sequence_information"
+    ]["SEQUENCE_TARGET"]
+    primer_pairs["sequence_information"]["SEQUENCE_ID"] = extension[
+        "sequence_information"
+    ]["SEQUENCE_ID"]
     # pick primer pairs
     for e in ext.keys():
         # extension primer information for this mip will be e_info
@@ -3285,8 +3677,7 @@ def pick_paralog_primer_pairs(extension, ligation, output_file,
                                     p_position = lp_end < ep_end
                                     pair_ori = "reverse"
                                 if p_position:
-                                    p_coord = [ep_start, ep_end,
-                                               lp_start, lp_end]
+                                    p_coord = [ep_start, ep_end, lp_start, lp_end]
                                     p_coord.sort()
                                     prod_size = p_coord[-1] - p_coord[0] + 1
                                     pairs[p] = {
@@ -3300,7 +3691,7 @@ def pick_paralog_primer_pairs(extension, ligation, output_file,
                                         "capture_start": p_coord[1] + 1,
                                         "capture_end": p_coord[2] - 1,
                                         "chrom": lp_chrom,
-                                        "orientation": pair_ori
+                                        "orientation": pair_ori,
                                     }
                         except KeyError:
                             continue
@@ -3318,27 +3709,32 @@ def pick_paralog_primer_pairs(extension, ligation, output_file,
                     for p in list(pairs.keys()):
                         if not region_insertions.empty:
                             max_insertion_size = region_insertions.loc[
-                                (region_insertions["copy_chrom"]
-                                 == pairs[p]["chrom"])
-                                & (region_insertions["copy_begin"]
-                                   > pairs[p]["capture_start"])
-                                & (region_insertions["copy_end"]
-                                   < pairs[p]["capture_end"]),
-                                "max_size"].sum()
+                                (region_insertions["copy_chrom"] == pairs[p]["chrom"])
+                                & (
+                                    region_insertions["copy_begin"]
+                                    > pairs[p]["capture_start"]
+                                )
+                                & (
+                                    region_insertions["copy_end"]
+                                    < pairs[p]["capture_end"]
+                                ),
+                                "max_size",
+                            ].sum()
                         else:
                             max_insertion_size = 0
                         adjusted_max_size = max_size - max_insertion_size
-                        if adjusted_max_size < (min_size/2):
+                        if adjusted_max_size < (min_size / 2):
                             continue
                         # we do not have to adsjust min_size unless the max
                         # size get too close to min_size, in which case
                         # we leave a 30 bp distance between min an max so
                         # that we're not very limited in primer  pair choices.
-                        adjusted_min_size = min(adjusted_max_size - 30,
-                                                min_size)
-                        if (adjusted_max_size
-                                >= pairs[p]["capture_size"]
-                                >= adjusted_min_size):
+                        adjusted_min_size = min(adjusted_max_size - 30, min_size)
+                        if (
+                            adjusted_max_size
+                            >= pairs[p]["capture_size"]
+                            >= adjusted_min_size
+                        ):
                             captured_copies.append(p)
                             pair_found = 1
                     if pair_found:
@@ -3349,20 +3745,26 @@ def pick_paralog_primer_pairs(extension, ligation, output_file,
                                 continue
                             if not region_insertions.empty:
                                 max_insertion_size = region_insertions.loc[
-                                    (region_insertions["copy_chrom"]
-                                     == pairs[p]["chrom"])
-                                    & (region_insertions["copy_begin"]
-                                       > pairs[p]["capture_start"])
-                                    & (region_insertions["copy_end"]
-                                       < pairs[p]["capture_end"]),
-                                    "max_size"].sum()
+                                    (
+                                        region_insertions["copy_chrom"]
+                                        == pairs[p]["chrom"]
+                                    )
+                                    & (
+                                        region_insertions["copy_begin"]
+                                        > pairs[p]["capture_start"]
+                                    )
+                                    & (
+                                        region_insertions["copy_end"]
+                                        < pairs[p]["capture_end"]
+                                    ),
+                                    "max_size",
+                                ].sum()
                             else:
                                 max_insertion_size = 0
                             adjusted_max_size = max_size - max_insertion_size
-                            if adjusted_max_size < (min_size/2):
+                            if adjusted_max_size < (min_size / 2):
                                 continue
-                            if (adjusted_max_size
-                                    >= pairs[p]["capture_size"] >= 0):
+                            if adjusted_max_size >= pairs[p]["capture_size"] >= 0:
                                 captured_copies.append(p)
                         # C0 must be in the captured copies because the
                         # reference copy is used for picking mip sets
@@ -3370,10 +3772,11 @@ def pick_paralog_primer_pairs(extension, ligation, output_file,
                             continue
                         # create a pair name as
                         # PAIR_extension primer number_ligation primer number
-                        ext_name = e.split('_')[2]
-                        lig_name = l.split('_')[2]
-                        pair_name = ("PAIR_" + subregion_name + "_" + ext_name
-                                     + "_" + lig_name)
+                        ext_name = e.split("_")[2]
+                        lig_name = l.split("_")[2]
+                        pair_name = (
+                            "PAIR_" + subregion_name + "_" + ext_name + "_" + lig_name
+                        )
                         if ext_ori:
                             orientation = "forward"
                             pair_name = pair_name + "_F"
@@ -3385,12 +3788,13 @@ def pick_paralog_primer_pairs(extension, ligation, output_file,
                             "extension_primer_information": ext[e],
                             "ligation_primer_information": lig[l],
                             "orientation": orientation,
-                            "captured_copies": captured_copies
+                            "captured_copies": captured_copies,
                         }
                         # Check if there are any paralog copies that require
                         # alt primers to be used. If so, create those pairs.
-                        alt_paralogs = list((set(l_alt_binds).union(
-                                            e_alt_binds)).difference(paralogs))
+                        alt_paralogs = list(
+                            (set(l_alt_binds).union(e_alt_binds)).difference(paralogs)
+                        )
                         alts = {}
                         for a in alt_paralogs:
                             try:
@@ -3431,11 +3835,9 @@ def pick_paralog_primer_pairs(extension, ligation, output_file,
                                         p_position = lp_end < ep_end
                                         pair_ori = "reverse"
                                     if p_position:
-                                        p_coord = [ep_start, ep_end,
-                                                   lp_start, lp_end]
+                                        p_coord = [ep_start, ep_end, lp_start, lp_end]
                                         p_coord.sort()
-                                        prod_size = (p_coord[-1]
-                                                     - p_coord[0] + 1)
+                                        prod_size = p_coord[-1] - p_coord[0] + 1
                                         alts[a] = {
                                             "capture_size": prod_size,
                                             "extension_start": ep_start,
@@ -3448,7 +3850,7 @@ def pick_paralog_primer_pairs(extension, ligation, output_file,
                                             "capture_end": p_coord[2] - 1,
                                             "chrom": lp_chrom,
                                             "orientation": pair_ori,
-                                            "alternative_arms": alt_arms
+                                            "alternative_arms": alt_arms,
                                         }
                             except KeyError:
                                 # if extension or ligation primer coordinates
@@ -3470,10 +3872,10 @@ def pick_paralog_primer_pairs(extension, ligation, output_file,
                             # if only one arm is allowed to have alt sequence,
                             # it could be specified as "one" or the specific
                             # arm (extension or ligation).
-                            elif ((len(alts[a]["alternative_arms"]) == 1)
-                                  and ((alternative_arms
-                                        == alts[a]["alternative_arms"][0])
-                                       or (alternative_arms == "one"))):
+                            elif (len(alts[a]["alternative_arms"]) == 1) and (
+                                (alternative_arms == alts[a]["alternative_arms"][0])
+                                or (alternative_arms == "one")
+                            ):
                                 good_alt = 1
                             # if the alt capture is valid, check the capture
                             # size and determined if it is likely to be
@@ -3481,40 +3883,47 @@ def pick_paralog_primer_pairs(extension, ligation, output_file,
                             if good_alt:
                                 if not region_insertions.empty:
                                     max_insertion_size = region_insertions.loc[
-                                        (region_insertions["copy_chrom"]
-                                         == alts[a]["chrom"])
-                                        & (region_insertions["copy_begin"]
-                                           > alts[a]["capture_start"])
-                                        & (region_insertions["copy_end"]
-                                           < alts[a]["capture_end"]),
-                                        "max_size"].sum()
+                                        (
+                                            region_insertions["copy_chrom"]
+                                            == alts[a]["chrom"]
+                                        )
+                                        & (
+                                            region_insertions["copy_begin"]
+                                            > alts[a]["capture_start"]
+                                        )
+                                        & (
+                                            region_insertions["copy_end"]
+                                            < alts[a]["capture_end"]
+                                        ),
+                                        "max_size",
+                                    ].sum()
                                 else:
                                     max_insertion_size = 0
-                                adjusted_max_size = (max_size
-                                                     - max_insertion_size)
-                                if adjusted_max_size < (min_size/2):
+                                adjusted_max_size = max_size - max_insertion_size
+                                if adjusted_max_size < (min_size / 2):
                                     continue
-                                if (adjusted_max_size
-                                        >= alts[a]["capture_size"] >= 0):
+                                if adjusted_max_size >= alts[a]["capture_size"] >= 0:
                                     captured_copies.append(a)
-                                    primer_pairs["pair_information"][
-                                        pair_name]["pairs"][a] = alts[a]
+                                    primer_pairs["pair_information"][pair_name][
+                                        "pairs"
+                                    ][a] = alts[a]
                         primer_pairs["pair_information"][pair_name][
-                            "alt_copies"] = captured_copies
+                            "alt_copies"
+                        ] = captured_copies
     # return if no pairs found
     if len(primer_pairs["pair_information"]) == 0:
         # No primer pairs found.
         return 1
     # write dict to file in primer_output_DIR
     if outp:
-        with open(os.path.join(
-               primer3_output_DIR, output_file), 'w') as outfile:
+        with open(os.path.join(primer3_output_DIR, output_file), "w") as outfile:
             json.dump(primer_pairs, outfile, indent=1)
     return primer_pairs
 
 
-def add_capture_sequence(primer_pairs, output_file, primer3_output_DIR,
-                         species, outp=1):
+def add_capture_sequence(
+    primer_pairs, output_file, primer3_output_DIR, species, outp=1
+):
     """
     Extract the sequence between primers.
 
@@ -3524,8 +3933,13 @@ def add_capture_sequence(primer_pairs, output_file, primer3_output_DIR,
     for p_pair in primer_pairs["pair_information"]:
         pairs = primer_pairs["pair_information"][p_pair]["pairs"]
         for p in pairs:
-            paralog_key = pairs[p]["chrom"] + ":" + str(pairs[p][
-                "capture_start"]) + "-" + str(pairs[p]["capture_end"])
+            paralog_key = (
+                pairs[p]["chrom"]
+                + ":"
+                + str(pairs[p]["capture_start"])
+                + "-"
+                + str(pairs[p]["capture_end"])
+            )
             pairs[p]["capture_key"] = paralog_key
             capture_keys.add(paralog_key)
     capture_sequence_dic = get_fasta_list(capture_keys, species)
@@ -3533,21 +3947,22 @@ def add_capture_sequence(primer_pairs, output_file, primer3_output_DIR,
         pairs = primer_pairs["pair_information"][p_pair]["pairs"]
         for p in pairs:
             if pairs[p]["orientation"] == "forward":
-                pairs[p]["capture_sequence"] = capture_sequence_dic[pairs[p][
-                    "capture_key"]]
+                pairs[p]["capture_sequence"] = capture_sequence_dic[
+                    pairs[p]["capture_key"]
+                ]
             else:
                 pairs[p]["capture_sequence"] = reverse_complement(
                     capture_sequence_dic[pairs[p]["capture_key"]]
                 )
     if outp:
-        with open(os.path.join(
-                primer3_output_DIR, output_file), "w") as outfile:
+        with open(os.path.join(primer3_output_DIR, output_file), "w") as outfile:
             json.dump(primer_pairs, outfile, indent=1)
     return primer_pairs
 
 
-def make_mips(pairs, output_file, primer3_output_DIR, mfold_input_DIR,
-              backbone, outp=1):
+def make_mips(
+    pairs, output_file, primer3_output_DIR, mfold_input_DIR, backbone, outp=1
+):
     """
     Make mips from primer pairs.
 
@@ -3564,29 +3979,36 @@ def make_mips(pairs, output_file, primer3_output_DIR, mfold_input_DIR,
     # get primer sequences for each primer pair
     for primers in pairs["pair_information"]:
         extension_sequence = pairs["pair_information"][primers][
-            "extension_primer_information"]["SEQUENCE"]
+            "extension_primer_information"
+        ]["SEQUENCE"]
         ligation_sequence = pairs["pair_information"][primers][
-            "ligation_primer_information"]["SEQUENCE"]
+            "ligation_primer_information"
+        ]["SEQUENCE"]
         # reverse complement ligation primer
         ligation_rc = reverse_complement(ligation_sequence)
         # add sequences to make the mip
         mip_sequence = ligation_rc + backbone + extension_sequence
         # create a dictionary to hold mip information
-        mip_dic = {"ref": {"SEQUENCE": mip_sequence,
-                           "captures": copy.deepcopy(
-                               pairs["pair_information"][primers]
-                               ["captured_copies"]
-                           )}}
+        mip_dic = {
+            "ref": {
+                "SEQUENCE": mip_sequence,
+                "captures": copy.deepcopy(
+                    pairs["pair_information"][primers]["captured_copies"]
+                ),
+            }
+        }
         # create alternative mips where necessary
         if "alt_copies" in list(pairs["pair_information"][primers].keys()):
             alt_sequences = {}
             alt_counter = 0
             alt = pairs["pair_information"][primers]["alt_copies"]
             p_para = pairs["pair_information"][primers]["pairs"]
-            e_para = pairs["pair_information"][primers][
-                "extension_primer_information"]["PARALOG_COORDINATES"]
-            l_para = pairs["pair_information"][primers][
-                "ligation_primer_information"]["PARALOG_COORDINATES"]
+            e_para = pairs["pair_information"][primers]["extension_primer_information"][
+                "PARALOG_COORDINATES"
+            ]
+            l_para = pairs["pair_information"][primers]["ligation_primer_information"][
+                "PARALOG_COORDINATES"
+            ]
             # since alt primers are created for each copy, it is possible
             # that some copies have the same primer pair. Pick just one
             # such pair and remove the others.
@@ -3599,8 +4021,7 @@ def make_mips(pairs, output_file, primer3_output_DIR, mfold_input_DIR,
                 # search through already created alt pairs to see if this one
                 # is already there.
                 for key, value in list(alt_sequences.items()):
-                    if ([extension_sequence, ligation_sequence]
-                            == value["sequences"]):
+                    if [extension_sequence, ligation_sequence] == value["sequences"]:
                         value_found = 1
                         # add the copy name to the dict and not create
                         # a new key for this copy.
@@ -3610,7 +4031,7 @@ def make_mips(pairs, output_file, primer3_output_DIR, mfold_input_DIR,
                 if not value_found:
                     alt_sequences[alt_counter] = {
                         "sequences": [extension_sequence, ligation_sequence],
-                        "copies": [a]
+                        "copies": [a],
                     }
                     alt_counter += 1
             # create mip sequence and dict for the alt pairs
@@ -3621,20 +4042,29 @@ def make_mips(pairs, output_file, primer3_output_DIR, mfold_input_DIR,
                 ligation_rc = reverse_complement(seq_dic[1])
                 # add sequences to make the mip
                 mip = ligation_rc + backbone + seq_dic[0]
-                mip_dic["alt" + str(alt_pair)] = {"SEQUENCE": mip,
-                                                  "captures": alt_copies}
+                mip_dic["alt" + str(alt_pair)] = {
+                    "SEQUENCE": mip,
+                    "captures": alt_copies,
+                }
         pairs["pair_information"][primers]["mip_information"] = mip_dic
 
     # write mip sequences to a fasta file in mfold_input_DIR
     # to check hairpin formation
     with open(os.path.join(mfold_input_DIR, output_file), "w") as outfile:
         for primers in pairs["pair_information"]:
-            outline = (">" + primers + "\n" + pairs["pair_information"]
-                       [primers]["mip_information"]["ref"]['SEQUENCE'] + "\n")
+            outline = (
+                ">"
+                + primers
+                + "\n"
+                + pairs["pair_information"][primers]["mip_information"]["ref"][
+                    "SEQUENCE"
+                ]
+                + "\n"
+            )
             outfile.write(outline)
     # write mip dictionary to file in primer3_output_DIR
     if outp:
-        outfile = open(os.path.join(primer3_output_DIR, output_file), 'w')
+        outfile = open(os.path.join(primer3_output_DIR, output_file), "w")
         json.dump(pairs, outfile, indent=1)
         outfile.close()
     return pairs
@@ -3679,24 +4109,29 @@ def check_hairpin(pairs, output_file, settings, output_dir, outp=1):
         for m in list(mip_dict.keys()):
             mip_seq = mip_dict[m]["SEQUENCE"]
             # extract arm and backbone sequences from the mip sequence
-            lig = mip_seq[:mip_seq.index(backbone)]
-            ext = mip_seq[mip_seq.index(backbone) + len(backbone):]
+            lig = mip_seq[: mip_seq.index(backbone)]
+            ext = mip_seq[mip_seq.index(backbone) + len(backbone) :]
             bb = backbone.replace("N", "")
             # calculate dimer TMs between sequence combinations
-            ext_lig = calcHeterodimerTm(ext, lig, mv_conc=Na, dv_conc=Mg,
-                                        dntp_conc=0, dna_conc=conc)
-            bb_ext_arm = calcHeterodimerTm(ext, bb, mv_conc=Na, dv_conc=Mg,
-                                           dntp_conc=0, dna_conc=conc)
-            bb_lig_arm = calcHeterodimerTm(lig, bb, mv_conc=Na, dv_conc=Mg,
-                                           dntp_conc=0, dna_conc=conc)
+            ext_lig = calcHeterodimerTm(
+                ext, lig, mv_conc=Na, dv_conc=Mg, dntp_conc=0, dna_conc=conc
+            )
+            bb_ext_arm = calcHeterodimerTm(
+                ext, bb, mv_conc=Na, dv_conc=Mg, dntp_conc=0, dna_conc=conc
+            )
+            bb_lig_arm = calcHeterodimerTm(
+                lig, bb, mv_conc=Na, dv_conc=Mg, dntp_conc=0, dna_conc=conc
+            )
             # take the maximum TM for hairpin threshold comparison
             arms = max([ext_lig, bb_ext_arm, bb_lig_arm])
             # calculate TM between arms and the whole reaction backbones
             # backbone concentration will be more for this calculation.
-            bb_ext = calcHeterodimerTm(ext, bb, mv_conc=Na, dv_conc=Mg,
-                                       dntp_conc=0, dna_conc=conc * mip_count)
-            bb_lig = calcHeterodimerTm(lig, bb, mv_conc=Na, dv_conc=Mg,
-                                       dntp_conc=0, dna_conc=conc * mip_count)
+            bb_ext = calcHeterodimerTm(
+                ext, bb, mv_conc=Na, dv_conc=Mg, dntp_conc=0, dna_conc=conc * mip_count
+            )
+            bb_lig = calcHeterodimerTm(
+                lig, bb, mv_conc=Na, dv_conc=Mg, dntp_conc=0, dna_conc=conc * mip_count
+            )
             bb_temp = max([bb_ext, bb_lig])
             # if either hairpin tms is higher than the limit, remove the mip
             # and remove the paralog copy that is supposed to be captured
@@ -3711,11 +4146,13 @@ def check_hairpin(pairs, output_file, settings, output_dir, outp=1):
                 pair_dict["alt_copies"] = alt_copies
                 mip_dict.pop(m)
             else:
-                mip_dict[m]["Melting Temps"] = {"arms_hp": ext_lig,
-                                                "ext_hp": bb_ext_arm,
-                                                "lig_hp": bb_lig_arm,
-                                                "ext_backbone": bb_ext,
-                                                "lig_backbone": bb_lig}
+                mip_dict[m]["Melting Temps"] = {
+                    "arms_hp": ext_lig,
+                    "ext_hp": bb_ext_arm,
+                    "lig_hp": bb_lig_arm,
+                    "ext_backbone": bb_ext,
+                    "lig_backbone": bb_lig,
+                }
         if len(mip_dict) == 0:
             pairs["pair_information"].pop(p)
     for p in pairs["pair_information"].keys():
@@ -3760,9 +4197,10 @@ def filter_mips(mip_dic, bin_size, mip_limit):
                         n_func = mip_dic[n].func_score
                         n_tech = mip_dic[n].tech_score
                         n_ori = mip_dic[n].mip["C0"]["orientation"]
-                        if (((abs(n_start - m_start) <= bin_size)
-                             and (abs(n_end - m_end) <= bin_size))
-                                and (m_ori == n_ori)):
+                        if (
+                            (abs(n_start - m_start) <= bin_size)
+                            and (abs(n_end - m_end) <= bin_size)
+                        ) and (m_ori == n_ori):
                             if (m_tech + m_func) >= (n_tech + n_func):
                                 mip_dic.pop(n)
                             else:
@@ -3797,37 +4235,57 @@ def compatible_mip_check(m1, m2, overlap_same, overlap_opposite):
     if ori == next_ori:
         m1_start = min([ext_start, ext_end, lig_start, lig_end])
         m1_end = max([ext_start, ext_end, lig_start, lig_end])
-        m2_start = min([next_ext_start, next_ext_end, next_lig_start,
-                       next_lig_end])
-        m2_end = max([next_ext_start, next_ext_end, next_lig_start,
-                      next_lig_end])
+        m2_start = min([next_ext_start, next_ext_end, next_lig_start, next_lig_end])
+        m2_end = max([next_ext_start, next_ext_end, next_lig_start, next_lig_end])
         ol = overlap([m1_start, m1_end], [m2_start, m2_end])
         if len(ol) == 0:
             return True
         else:
             return (ol[1] - ol[0] + 1) <= overlap_same
     else:
-        m1_set = set(list(range(min([ext_start, ext_end]),
-                                max([ext_start, ext_end]) + 1))
-                     + list(range(min([lig_start, lig_end]),
-                                  max([lig_start, lig_end]) + 1)))
+        m1_set = set(
+            list(range(min([ext_start, ext_end]), max([ext_start, ext_end]) + 1))
+            + list(range(min([lig_start, lig_end]), max([lig_start, lig_end]) + 1))
+        )
 
-        m2_set = set(list(range(min([next_ext_start, next_ext_end]),
-                                max([next_ext_start, next_ext_end]) + 1))
-                     + list(range(min([next_lig_start, next_lig_end]),
-                                  max([next_lig_start, next_lig_end]) + 1)))
+        m2_set = set(
+            list(
+                range(
+                    min([next_ext_start, next_ext_end]),
+                    max([next_ext_start, next_ext_end]) + 1,
+                )
+            )
+            + list(
+                range(
+                    min([next_lig_start, next_lig_end]),
+                    max([next_lig_start, next_lig_end]) + 1,
+                )
+            )
+        )
         ol = len(m1_set.intersection(m2_set))
         return ol <= overlap_opposite
 
 
-def compatible_chains(primer_file, mip_dict, primer3_output_DIR,
-                      primer_out, output_file, must_bonus, set_copy_bonus,
-                      overlap_same, overlap_opposite, outp, bin_size,
-                      trim_increment, trim_limit, set_size, chain_mips,
-                      intervals):
+def compatible_chains(
+    primer_file,
+    mip_dict,
+    primer3_output_DIR,
+    primer_out,
+    output_file,
+    must_bonus,
+    set_copy_bonus,
+    overlap_same,
+    overlap_opposite,
+    outp,
+    bin_size,
+    trim_increment,
+    trim_limit,
+    set_size,
+    chain_mips,
+    intervals,
+):
     try:
-        with open(os.path.join(
-                primer3_output_DIR, primer_file), "r") as infile:
+        with open(os.path.join(primer3_output_DIR, primer_file), "r") as infile:
             scored_mips = json.load(infile)
     except IOError:
         print("Primer file does not exist.")
@@ -3902,37 +4360,49 @@ def compatible_chains(primer_file, mip_dict, primer3_output_DIR,
                 # check if the two mips are compatible in terms of
                 # orientation and coordinates
                 if ori == next_ori == "forward":
-                    if (((ls < nls) and (ls < nes + overlap_same))
-                            or ((ls > nls) and (es + overlap_same > nls))):
+                    if ((ls < nls) and (ls < nes + overlap_same)) or (
+                        (ls > nls) and (es + overlap_same > nls)
+                    ):
                         compat = 1
                 elif ori == next_ori == "reverse":
-                    if (((ls < nls) and (es < nls + overlap_same))
-                            or ((ls > nls) and (ls + overlap_same > nes))):
+                    if ((ls < nls) and (es < nls + overlap_same)) or (
+                        (ls > nls) and (ls + overlap_same > nes)
+                    ):
                         compat = 1
                 elif (ori == "forward") and (next_ori == "reverse"):
-                    if ((ls < nls + overlap_opposite)
-                            or (es + overlap_opposite > nes)):
+                    if (ls < nls + overlap_opposite) or (es + overlap_opposite > nes):
                         compat = 1
-                    elif ((es < nls) and (ee < nls + overlap_opposite)
-                          and (le + overlap_opposite > nle)
-                          and (ls < nee + overlap_opposite)):
+                    elif (
+                        (es < nls)
+                        and (ee < nls + overlap_opposite)
+                        and (le + overlap_opposite > nle)
+                        and (ls < nee + overlap_opposite)
+                    ):
                         compat = 1
                         next_compat = 1
-                    elif ((es > nls) and (es + overlap_opposite > nle)
-                          and (ee < nee + overlap_opposite)
-                          and (le + overlap_opposite > nes)):
+                    elif (
+                        (es > nls)
+                        and (es + overlap_opposite > nle)
+                        and (ee < nee + overlap_opposite)
+                        and (le + overlap_opposite > nes)
+                    ):
                         compat = 1
                 elif (ori == "reverse") and (next_ori == "forward"):
-                    if ((ls + overlap_opposite > nls)
-                            or (es < nes + overlap_opposite)):
+                    if (ls + overlap_opposite > nls) or (es < nes + overlap_opposite):
                         compat = 1
-                    elif ((ls > nes) and (ls + overlap_opposite > nee)
-                          and (le < nle + overlap_opposite)
-                          and (ee + overlap_opposite > nls)):
+                    elif (
+                        (ls > nes)
+                        and (ls + overlap_opposite > nee)
+                        and (le < nle + overlap_opposite)
+                        and (ee + overlap_opposite > nls)
+                    ):
                         compat = 1
-                    elif ((ls < nes) and (le < nes + overlap_opposite)
-                          and (ee + overlap_opposite > nee)
-                          and (es < nle + overlap_opposite)):
+                    elif (
+                        (ls < nes)
+                        and (le < nes + overlap_opposite)
+                        and (ee + overlap_opposite > nee)
+                        and (es < nle + overlap_opposite)
+                    ):
                         compat = 1
                         next_compat = 1
                 if not compat:
@@ -3956,12 +4426,14 @@ def compatible_chains(primer_file, mip_dict, primer3_output_DIR,
             # the starting list.
             incomp = set(l)
             for il in l:
-                incomp.update(scored_mips["pair_information"][il][
-                    "incompatible"])
+                incomp.update(scored_mips["pair_information"][il]["incompatible"])
             # create a set of mips that can be the "next" mip that can be
             # added to the mip list
-            comp = scored_mips["pair_information"][l[-1]][
-                "compatible"].difference(incomp).intersection(subset)
+            comp = (
+                scored_mips["pair_information"][l[-1]]["compatible"]
+                .difference(incomp)
+                .intersection(subset)
+            )
             # if there are mips that can be added, call compatible_recurse
             # function for each of those mips
             if len(comp) > 0:
@@ -3971,9 +4443,12 @@ def compatible_chains(primer_file, mip_dict, primer3_output_DIR,
             else:
                 mip_sets.append((l))
 
-        keys = sorted(scored_mips["pair_information"],
-                      key=lambda a: scored_mips["pair_information"][a]
-                      ["pairs"]["C0"]["capture_start"])
+        keys = sorted(
+            scored_mips["pair_information"],
+            key=lambda a: scored_mips["pair_information"][a]["pairs"]["C0"][
+                "capture_start"
+            ],
+        )
         ms_dict = {}
         for i in binned:
             subset = binned[i]
@@ -3981,7 +4456,8 @@ def compatible_chains(primer_file, mip_dict, primer3_output_DIR,
             for k in keys:
                 if k in subset:
                     comp_list = scored_mips["pair_information"][k][
-                        "compatible"].intersection(subset)
+                        "compatible"
+                    ].intersection(subset)
                     if len(comp_list) > 0:
                         # for each of the mips in the compatibility list,
                         for m in comp_list:
@@ -4025,26 +4501,24 @@ def compatible_chains(primer_file, mip_dict, primer3_output_DIR,
                 merged_caps.extend(uniq)
                 must_captured.extend(mip_obj.captures)
                 targets_captured.extend(mip_obj.captured_targets)
-                if ((mip_obj.tech_score > 0)
-                        and (mip_obj.func_score > 0)):
+                if (mip_obj.tech_score > 0) and (mip_obj.func_score > 0):
                     mip_scores.append(
-                        float(mip_obj.tech_score * mip_obj.func_score)
-                        / 1000
+                        float(mip_obj.tech_score * mip_obj.func_score) / 1000
                     )
                 else:
                     mip_scores.append(
-                        float(mip_obj.tech_score + mip_obj.func_score)
-                        / 1000)
+                        float(mip_obj.tech_score + mip_obj.func_score) / 1000
+                    )
                 mcoord = sorted(
-                    [mip_obj.extension["C0"]["GENOMIC_START"],
-                     mip_obj.ligation["C0"]["GENOMIC_START"],
-                     mip_obj.extension["C0"]["GENOMIC_END"],
-                     mip_obj.ligation["C0"]["GENOMIC_END"]]
+                    [
+                        mip_obj.extension["C0"]["GENOMIC_START"],
+                        mip_obj.ligation["C0"]["GENOMIC_START"],
+                        mip_obj.extension["C0"]["GENOMIC_END"],
+                        mip_obj.ligation["C0"]["GENOMIC_END"],
+                    ]
                 )
-                capture_coordinates.append([mcoord[1] + 1,
-                                            mcoord[2] - 1])
-            merged_capture_coordinates = merge_overlap(
-                capture_coordinates, 50)
+                capture_coordinates.append([mcoord[1] + 1, mcoord[2] - 1])
+            merged_capture_coordinates = merge_overlap(capture_coordinates, 50)
             scp = len(set(merged_caps)) * set_copy_bonus
             must_set = list(set(must_captured))
             mb = len(must_set) * must_bonus
@@ -4055,16 +4529,19 @@ def compatible_chains(primer_file, mip_dict, primer3_output_DIR,
         mip_set_dict = {}
         for i in ms_dict:
             mip_set_dict[i] = {}
-            bin_co = bins[i: i + 2]
+            bin_co = bins[i : i + 2]
             bin_size = bin_co[1] - bin_co[0] + 1
             for j in range(len(ms_dict[i])):
                 ms = ms_dict[i][j]
                 sc = score_mipset(ms)
                 coverage = overlap(sc[1][0], bin_co)
                 coverage = (coverage[1] - coverage[0] + 1) / bin_size
-                mip_set_dict[i][j] = {"mip_list": ms, "score": sc[0],
-                                      "coordinates": sc[1][0],
-                                      "coverage": coverage}
+                mip_set_dict[i][j] = {
+                    "mip_list": ms,
+                    "score": sc[0],
+                    "coordinates": sc[1][0],
+                    "coverage": coverage,
+                }
         for i in mip_set_dict:
             iter_keys = list(mip_set_dict[i].keys())
             for j in iter_keys:
@@ -4127,8 +4604,7 @@ def compatible_chains(primer_file, mip_dict, primer3_output_DIR,
                 for s1 in mip_sets:
                     inc = set()
                     for m in s1:
-                        inc.update(scored_mips["pair_information"][m][
-                            "incompatible"])
+                        inc.update(scored_mips["pair_information"][m]["incompatible"])
                     new_set = set(s1)
                     for s2 in mip_sets:
                         counter += 1
@@ -4136,8 +4612,9 @@ def compatible_chains(primer_file, mip_dict, primer3_output_DIR,
                         if len(s3) > 0:
                             new_set.update(s3)
                             for m in new_set:
-                                inc.update(scored_mips["pair_information"][m][
-                                    "incompatible"])
+                                inc.update(
+                                    scored_mips["pair_information"][m]["incompatible"]
+                                )
                     new_mip_sets.add(frozenset(new_set))
                 mip_sets = new_mip_sets
             if len(mip_sets) > 0:
@@ -4152,9 +4629,11 @@ def compatible_chains(primer_file, mip_dict, primer3_output_DIR,
         # sets for each bin
         if combo_length > pow(10, 7):
             for i in list(merged_sets.keys()):
-                top_sets = set(sorted(merged_sets[i],
-                                      key=lambda a: score_mipset(a)[0],
-                                      reverse=True)[:5])
+                top_sets = set(
+                    sorted(
+                        merged_sets[i], key=lambda a: score_mipset(a)[0], reverse=True
+                    )[:5]
+                )
                 merged_sets[i] = top_sets
             combo_length = 1
             for i in merged_sets:
@@ -4162,15 +4641,20 @@ def compatible_chains(primer_file, mip_dict, primer3_output_DIR,
             # if still too many combinations, take the top set for each bin
             if combo_length > pow(10, 7):
                 for i in list(merged_sets.keys()):
-                    top_sets = set(sorted(merged_sets[i],
-                                          key=lambda a: score_mipset(a)[0],
-                                          reverse=True)[:1])
+                    top_sets = set(
+                        sorted(
+                            merged_sets[i],
+                            key=lambda a: score_mipset(a)[0],
+                            reverse=True,
+                        )[:1]
+                    )
                     merged_sets[i] = top_sets
 
         # combine mip sets in different bins
         combined_sets = set()
-        combo_list = list(itertools.product(
-            *[merged_sets[i] for i in sorted(merged_sets)]))
+        combo_list = list(
+            itertools.product(*[merged_sets[i] for i in sorted(merged_sets)])
+        )
         for l in combo_list:
             if len(l) == 1:
                 m_set = set(l[0])
@@ -4181,19 +4665,15 @@ def compatible_chains(primer_file, mip_dict, primer3_output_DIR,
                     s2 = l[i + 1]
                     inc = set()
                     for m in s1:
-                        inc.update(scored_mips["pair_information"][m][
-                            "incompatible"])
+                        inc.update(scored_mips["pair_information"][m]["incompatible"])
                     s3 = s2.difference(inc)
                     m_set.update(s1.union(s3))
             combined_sets.add(frozenset(m_set))
 
         if outp:
-            with open(os.path.join(
-                    primer3_output_DIR, output_file), "w") as outfile:
-                outfile.write("\n".join([",".join(s) for s in combined_sets])
-                              + "\n")
-        with open(os.path.join(
-                primer3_output_DIR, primer_out), "wb") as outfile:
+            with open(os.path.join(primer3_output_DIR, output_file), "w") as outfile:
+                outfile.write("\n".join([",".join(s) for s in combined_sets]) + "\n")
+        with open(os.path.join(primer3_output_DIR, primer_out), "wb") as outfile:
             pickle.dump(scored_mips, outfile)
     return combined_sets
 
@@ -4201,14 +4681,12 @@ def compatible_chains(primer_file, mip_dict, primer3_output_DIR,
 def design_mips(design_dir, g):
     print(("Designing MIPs for ", g))
     try:
-        Par = mod.Paralog(os.path.join(design_dir, g, "resources",
-                                       g + ".rinfo"))
+        Par = mod.Paralog(os.path.join(design_dir, g, "resources", g + ".rinfo"))
         Par.run_paralog()
         if Par.copies_captured:
             print(("All copies were captured for paralog ", Par.paralog_name))
         else:
-            print(("Some copies were NOT captured for paralog ",
-                   Par.paralog_name))
+            print(("Some copies were NOT captured for paralog ", Par.paralog_name))
         if Par.chain_mips:
             if Par.chained_mips:
                 print(("All MIPs are chained for paralog ", Par.paralog_name))
@@ -4231,8 +4709,7 @@ def design_mips_worker(design_list):
         if Par.copies_captured:
             print(("All copies were captured for paralog ", Par.paralog_name))
         else:
-            print(("Some copies were NOT captured for paralog ",
-                   Par.paralog_name))
+            print(("Some copies were NOT captured for paralog ", Par.paralog_name))
         if Par.chain_mips:
             if Par.chained_mips:
                 print(("All MIPs are chained for paralog ", Par.paralog_name))
@@ -4257,11 +4734,13 @@ def design_mips_multi(design_dir, g_list, num_processor):
     return res
 
 
-def parasight(resource_dir,
-              design_info_file,
-              designed_gene_list=None,
-              extra_extension=".extra",
-              use_json=False):
+def parasight(
+    resource_dir,
+    design_info_file,
+    designed_gene_list=None,
+    extra_extension=".extra",
+    use_json=False,
+):
     if not use_json:
         with open(design_info_file, "rb") as infile:
             design_info = pickle.load(infile)
@@ -4274,45 +4753,56 @@ def parasight(resource_dir,
     gs_list = ["#!/usr/bin/env bash"]
     pdf_list = ["#!/usr/bin/env bash"]
     pdf_merge_list = ["#!/usr/bin/env bash", "cd " + pdf_dir]
-    pdf_convert_list = ["gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite "
-                        + "-dPDFSETTINGS=/prepress -dAutoRotatePages=/All "
-                        "-sOutputFile=merged.pdf"]
+    pdf_convert_list = [
+        "gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite "
+        + "-dPDFSETTINGS=/prepress -dAutoRotatePages=/All "
+        "-sOutputFile=merged.pdf"
+    ]
     if not os.path.exists(pdf_dir):
         os.makedirs(pdf_dir)
     for t in design_info:
-        basename = os.path.join(design_info[t]["design_dir"], t,  t)
+        basename = os.path.join(design_info[t]["design_dir"], t, t)
         backup_name = basename + ".extra"
         filtered_name = basename + "_filtered.pse"
         backup_list.append("scp " + backup_name + " " + backup_name + ".bak")
         backup_list.append("mv " + filtered_name + " " + backup_name)
         psname = basename + ".01.01.ps"
         pdfname = basename + ".pdf"
-        gs_command = ("gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite "
-                      + "-dPDFSETTINGS=/prepress -dAutoRotatePages=/All "
-                      "-sOutputFile=" + pdfname + " " + psname)
+        gs_command = (
+            "gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite "
+            + "-dPDFSETTINGS=/prepress -dAutoRotatePages=/All "
+            "-sOutputFile=" + pdfname + " " + psname
+        )
         if designed_gene_list is not None:
             if t in designed_gene_list:
                 pdf_convert_list.append(t + ".pdf")
         else:
             pdf_convert_list.append(t + ".pdf")
         gs_list.append(gs_command)
-        pdf_list.append("cp " + basename + ".pdf "
-                        + os.path.join(pdf_dir, t + ".pdf"))
-        outlist = ["parasight.pl",
-                   "-showseq", basename + ".show",
-                   "-extra", basename + extra_extension,
-                   "-template", "/opt/resources/nolabel.pst",
-                   "-precode file:" + basename + ".precode",
-                   "-die"]
+        pdf_list.append("cp " + basename + ".pdf " + os.path.join(pdf_dir, t + ".pdf"))
+        outlist = [
+            "parasight.pl",
+            "-showseq",
+            basename + ".show",
+            "-extra",
+            basename + extra_extension,
+            "-template",
+            "/opt/resources/nolabel.pst",
+            "-precode file:" + basename + ".precode",
+            "-die",
+        ]
         output_list.append(" ".join(outlist))
         with open(basename + ".precode", "w") as outfile:
-            outfile.write("$opt{'filename'}='" + t
-                          + "';&fitlongestline; &print_all (0,'"
-                          + basename + "')")
+            outfile.write(
+                "$opt{'filename'}='"
+                + t
+                + "';&fitlongestline; &print_all (0,'"
+                + basename
+                + "')"
+            )
     with open(os.path.join(resource_dir, "backup_commands"), "w") as outfile:
         outfile.write("\n".join(backup_list))
-    with open(
-            os.path.join(resource_dir, "parasight_commands"), "w") as outfile:
+    with open(os.path.join(resource_dir, "parasight_commands"), "w") as outfile:
         outfile.write("\n".join(output_list))
     with open(os.path.join(resource_dir, "gs_commands"), "w") as outfile:
         outfile.write("\n".join(gs_list))
@@ -4337,9 +4827,15 @@ def parasight(resource_dir,
     return
 
 
-def parasight_print(resource_dir, design_dir, design_info_file,
-                    designed_gene_list=None, extra_extension=".extra",
-                    use_json=False, print_out=False):
+def parasight_print(
+    resource_dir,
+    design_dir,
+    design_info_file,
+    designed_gene_list=None,
+    extra_extension=".extra",
+    use_json=False,
+    print_out=False,
+):
     if not use_json:
         with open(design_info_file, "rb") as infile:
             design_info = pickle.load(infile)
@@ -4352,8 +4848,7 @@ def parasight_print(resource_dir, design_dir, design_info_file,
             if (designed_gene_list is None) or (g in designed_gene_list):
                 show_file = os.path.join(design_dir, g, g + ".show")
                 extras_file = os.path.join(design_dir, g, g + extra_extension)
-                line = ["parasight.pl", "-showseq", show_file,
-                        "-extra ", extras_file]
+                line = ["parasight.pl", "-showseq", show_file, "-extra ", extras_file]
                 if print_out:
                     print(" ".join(line))
                 outfile.write(" ".join(line) + "\n")
@@ -4378,8 +4873,12 @@ def get_analysis_settings(settings_file):
                     else:
                         settings[newline[0]] = [v for v in value if v != ""]
             except Exception as e:
-                print(("Formatting error in settings file, line {}"
-                       "causing error '{}''").format(line, e))
+                print(
+                    (
+                        "Formatting error in settings file, line {}"
+                        "causing error '{}''"
+                    ).format(line, e)
+                )
                 print(newline)
                 return
     return settings
@@ -4403,6 +4902,7 @@ def write_analysis_settings(settings, settings_file):
 # New contig based analysis for vcf generation
 ###############################################################################
 
+
 def map_haplotypes(settings):
     """Bwa-map haplotypes from MIPWrangler output to the reference genome.
 
@@ -4423,8 +4923,7 @@ def map_haplotypes(settings):
     except KeyError:
         tol = 200
     # DATA EXTRACTION ###
-    raw_results = pd.read_table(os.path.join(wdir,
-                                             settings["mipsterFile"]))
+    raw_results = pd.read_table(os.path.join(wdir, settings["mipsterFile"]))
     ##########################################################
     # Add the statistics for each haplotype to the data
     # such as how many samples had a given haplotype
@@ -4435,46 +4934,59 @@ def map_haplotypes(settings):
     # Haplotype Filters from the settings file
     haplotype_min_barcode_filter = int(settings["minHaplotypeBarcodes"])
     haplotype_min_sample_filter = int(settings["minHaplotypeSamples"])
-    haplotype_min_sample_fraction_filter = float(
-        settings["minHaplotypeSampleFraction"]
-    )
+    haplotype_min_sample_fraction_filter = float(settings["minHaplotypeSampleFraction"])
     # Gather per haplotype data across samples
-    hap_counts = raw_results.groupby(
-        "haplotype_ID"
-    )["barcode_count"].sum().reset_index().rename(
-        columns={"barcode_count": "Haplotype Barcodes"})
-    hap_sample_counts = raw_results.groupby("haplotype_ID")[
-        "sample_name"].apply(lambda a: len(set(a))).reset_index().rename(
-        columns={"sample_name": "Haplotype Samples"})
+    hap_counts = (
+        raw_results.groupby("haplotype_ID")["barcode_count"]
+        .sum()
+        .reset_index()
+        .rename(columns={"barcode_count": "Haplotype Barcodes"})
+    )
+    hap_sample_counts = (
+        raw_results.groupby("haplotype_ID")["sample_name"]
+        .apply(lambda a: len(set(a)))
+        .reset_index()
+        .rename(columns={"sample_name": "Haplotype Samples"})
+    )
     num_samples = float(raw_results["sample_name"].unique().size)
     hap_sample_counts["Haplotype Sample Fraction"] = (
         hap_sample_counts["Haplotype Samples"] / num_samples
     )
     hap_counts = hap_counts.merge(hap_sample_counts)
     initial_hap_count = len(hap_counts)
-    hap_counts = hap_counts.loc[(hap_counts["Haplotype Samples"]
-                                 >= haplotype_min_sample_filter)
-                                & (hap_counts["Haplotype Sample Fraction"]
-                                   >= haplotype_min_sample_fraction_filter)
-                                & (hap_counts["Haplotype Barcodes"]
-                                   >= haplotype_min_barcode_filter)]
-    print(("Out of {} initial haplotypes, {} were filtered using {}, {}, and "
-           "{} as minimum total UMI count; number and fraction of samples "
-           " the haplotype was observed in, respectively.").format(
-               initial_hap_count, initial_hap_count - len(hap_counts),
-               haplotype_min_barcode_filter, haplotype_min_sample_filter,
-               haplotype_min_sample_fraction_filter))
+    hap_counts = hap_counts.loc[
+        (hap_counts["Haplotype Samples"] >= haplotype_min_sample_filter)
+        & (
+            hap_counts["Haplotype Sample Fraction"]
+            >= haplotype_min_sample_fraction_filter
+        )
+        & (hap_counts["Haplotype Barcodes"] >= haplotype_min_barcode_filter)
+    ]
+    print(
+        (
+            "Out of {} initial haplotypes, {} were filtered using {}, {}, and "
+            "{} as minimum total UMI count; number and fraction of samples "
+            " the haplotype was observed in, respectively."
+        ).format(
+            initial_hap_count,
+            initial_hap_count - len(hap_counts),
+            haplotype_min_barcode_filter,
+            haplotype_min_sample_filter,
+            haplotype_min_sample_fraction_filter,
+        )
+    )
 
-    hap_df = raw_results.loc[raw_results["haplotype_ID"].isin(
-        hap_counts["haplotype_ID"])].groupby(
-        ["gene_name", "mip_name", "haplotype_ID"])[
-        "haplotype_sequence"].first().reset_index()
+    hap_df = (
+        raw_results.loc[raw_results["haplotype_ID"].isin(hap_counts["haplotype_ID"])]
+        .groupby(["gene_name", "mip_name", "haplotype_ID"])["haplotype_sequence"]
+        .first()
+        .reset_index()
+    )
     # fill in fake sequence quality scores for each haplotype. These scores
     # will be used for mapping only and the real scores for each haplotype
     # for each sample will be added later.This step is probably unnecessary
     # as the bwa mem algorithm does not seem to use the quality scores.
-    hap_df["quality"] = hap_df["haplotype_sequence"].apply(
-        lambda a: "H" * len(a))
+    hap_df["quality"] = hap_df["haplotype_sequence"].apply(lambda a: "H" * len(a))
     haps = hap_df.set_index("haplotype_ID").to_dict(orient="index")
     # BWA alignment
     # create a fastq file for bwa input
@@ -4484,11 +4996,21 @@ def map_haplotypes(settings):
             outfile.write(haps[h]["haplotype_sequence"] + "\n" + "+" + "\n")
             outfile.write(haps[h]["quality"] + "\n")
     # run bwa
-    bwa(haplotypes_fq_file, haplotypes_sam_file, "sam", "", "", bwa_options,
-        species)
+    bwa(haplotypes_fq_file, haplotypes_sam_file, "sam", "", "", bwa_options, species)
     # process alignment output sam file
-    header = ["haplotype_ID", "FLAG", "CHROM", "POS", "MAPQ", "CIGAR", "RNEXT",
-              "PNEXT", "TLEN", "SEQ", "QUAL"]
+    header = [
+        "haplotype_ID",
+        "FLAG",
+        "CHROM",
+        "POS",
+        "MAPQ",
+        "CIGAR",
+        "RNEXT",
+        "PNEXT",
+        "TLEN",
+        "SEQ",
+        "QUAL",
+    ]
     sam_list = []
     with open(haplotypes_sam_file) as infile:
         for line in infile:
@@ -4506,8 +5028,9 @@ def map_haplotypes(settings):
     sam = pd.DataFrame(sam_list, columns=header + ["alignment_score"])
     # find alignment with the highest alignment score. We will consider these
     # the primary alignments and the source of the sequence.
-    sam["best_alignment"] = (sam["alignment_score"] == sam.groupby(
-        "haplotype_ID")["alignment_score"].transform("max"))
+    sam["best_alignment"] = sam["alignment_score"] == sam.groupby("haplotype_ID")[
+        "alignment_score"
+    ].transform("max")
     # add MIP column to alignment results
     sam["MIP"] = sam["haplotype_ID"].apply(lambda a: a.split(".")[0])
     # create call_info data frame for all used probes in the experiment
@@ -4544,61 +5067,71 @@ def map_haplotypes(settings):
     call_df = pd.concat(call_df_list, ignore_index=True, sort=True)
     # combine alignment information with design information (call_info)
     haplotype_maps = call_df.merge(
-        sam[["MIP", "haplotype_ID", "CHROM", "POS", "best_alignment",
-             "alignment_score"]])
+        sam[
+            ["MIP", "haplotype_ID", "CHROM", "POS", "best_alignment", "alignment_score"]
+        ]
+    )
     haplotype_maps["POS"] = haplotype_maps["POS"].astype(int)
     haplotype_maps = haplotype_maps.merge(
-        hap_df[["haplotype_ID", "haplotype_sequence"]])
+        hap_df[["haplotype_ID", "haplotype_sequence"]]
+    )
     # determine which haplotype/mapping combinations are for intended targets
     # first, compare mapping coordinate to the MIP coordinate to see  if
     # a MIP copy matches with the alignment.
     haplotype_maps["aligned_copy"] = (
-        (haplotype_maps["CHROM"] == haplotype_maps["chrom"])
-        & (abs(haplotype_maps["POS"] - haplotype_maps["capture_start"]) <= tol)
-    )
+        haplotype_maps["CHROM"] == haplotype_maps["chrom"]
+    ) & (abs(haplotype_maps["POS"] - haplotype_maps["capture_start"]) <= tol)
     # aligned_copy means the alignment is on the intended MIP target
     # this is not necessarily the best target, though. For a haplotype sequence
     # to be matched to a MIP target, it also needs to be the best alignment.
-    haplotype_maps["mapped_copy"] = (haplotype_maps["aligned_copy"]
-                                     & haplotype_maps["best_alignment"])
+    haplotype_maps["mapped_copy"] = (
+        haplotype_maps["aligned_copy"] & haplotype_maps["best_alignment"]
+    )
     # rename some fields to be compatible with previous code
-    haplotype_maps.rename(columns={"gene": "Gene", "copy": "Copy",
-                                   "chrom": "Chrom"}, inplace=True)
+    haplotype_maps.rename(
+        columns={"gene": "Gene", "copy": "Copy", "chrom": "Chrom"}, inplace=True
+    )
     # any haplotype that does was not best mapped to at least one target
     # will be considered an off target haplotype.
-    haplotype_maps["off_target"] = ~haplotype_maps.groupby(
-        "haplotype_ID")["mapped_copy"].transform("any")
+    haplotype_maps["off_target"] = ~haplotype_maps.groupby("haplotype_ID")[
+        "mapped_copy"
+    ].transform("any")
     off_target_haplotypes = haplotype_maps.loc[haplotype_maps["off_target"]]
     # filter off targets and targets that do not align to haplotypes
-    haplotypes = haplotype_maps.loc[(~haplotype_maps["off_target"])
-                                    & haplotype_maps["aligned_copy"]]
+    haplotypes = haplotype_maps.loc[
+        (~haplotype_maps["off_target"]) & haplotype_maps["aligned_copy"]
+    ]
     # each MIP copy/haplotype_ID combination must have a single alignment
     # if there are multiple, the best one will be chosen
 
     def get_best_alignment(group):
         return group.sort_values("alignment_score", ascending=False).iloc[0]
 
-    haplotypes = haplotypes.groupby(["MIP", "Copy", "haplotype_ID"],
-                                    as_index=False).apply(get_best_alignment)
-    haplotypes.index = (range(len(haplotypes)))
+    haplotypes = haplotypes.groupby(
+        ["MIP", "Copy", "haplotype_ID"], as_index=False
+    ).apply(get_best_alignment)
+    haplotypes.index = range(len(haplotypes))
     # filter to best mapping copy/haplotype pairs
     mapped_haplotypes = haplotypes.loc[haplotypes["mapped_copy"]]
     mapped_haplotypes["mapped_copy_number"] = mapped_haplotypes.groupby(
-        ["haplotype_ID"])["haplotype_ID"].transform(len)
+        ["haplotype_ID"]
+    )["haplotype_ID"].transform(len)
 
-    mapped_haplotypes.to_csv(os.path.join(
-        wdir, "mapped_haplotypes.csv"), index=False)
-    off_target_haplotypes.to_csv(os.path.join(
-        wdir, "offtarget_haplotypes.csv"), index=False)
-    haplotypes.to_csv(os.path.join(
-        wdir, "aligned_haplotypes.csv"), index=False)
-    haplotype_maps.to_csv(os.path.join(
-        wdir, "all_haplotypes.csv"), index=False)
+    mapped_haplotypes.to_csv(os.path.join(wdir, "mapped_haplotypes.csv"), index=False)
+    off_target_haplotypes.to_csv(
+        os.path.join(wdir, "offtarget_haplotypes.csv"), index=False
+    )
+    haplotypes.to_csv(os.path.join(wdir, "aligned_haplotypes.csv"), index=False)
+    haplotype_maps.to_csv(os.path.join(wdir, "all_haplotypes.csv"), index=False)
     num_hap = len(set(haplotype_maps["haplotype_ID"]))
     num_off = len(set(off_target_haplotypes["haplotype_ID"]))
-    print(("{} of {} haplotypes were off-target, either not mapping to "
-           "the reference genome, or best mapping to a region which was "
-           "not targeted.").format(num_off, num_hap))
+    print(
+        (
+            "{} of {} haplotypes were off-target, either not mapping to "
+            "the reference genome, or best mapping to a region which was "
+            "not targeted."
+        ).format(num_off, num_hap)
+    )
     return
 
 
@@ -4641,13 +5174,11 @@ def get_haplotype_counts(settings):
     run_meta = pd.read_table(os.path.join(wdir, "samples.tsv"))
     # create a unique sample ID for each sample using sample name,
     # sample set and replicate fields from the sample list file.
-    run_meta["sample_name"] = (
-            run_meta["sample_name"].astype(str)
-        )
+    run_meta["sample_name"] = run_meta["sample_name"].astype(str)
     run_meta["Sample Name"] = run_meta["sample_name"]
-    run_meta["Sample ID"] = run_meta[
-        ["sample_name", "sample_set", "replicate"]
-    ].apply(lambda a: "-".join(map(str, a)), axis=1)
+    run_meta["Sample ID"] = run_meta[["sample_name", "sample_set", "replicate"]].apply(
+        lambda a: "-".join(map(str, a)), axis=1
+    )
     # Sample Set key is reserved for meta data
     # but sometimes erroneously included in the
     # sample sheet. It should be removed.
@@ -4661,9 +5192,7 @@ def get_haplotype_counts(settings):
     # drop duplicate values originating from
     # multiple sequencing runs of the same libraries
     run_meta = run_meta.drop_duplicates()
-    run_meta = run_meta.groupby(
-        ["Sample ID", "Library Prep"]
-    ).first().reset_index()
+    run_meta = run_meta.groupby(["Sample ID", "Library Prep"]).first().reset_index()
     run_meta.to_csv(os.path.join(wdir, "run_meta.csv"))
     # get used sample ids
     sample_ids = run_meta["Sample ID"].unique().tolist()
@@ -4675,8 +5204,7 @@ def get_haplotype_counts(settings):
     ##########################################################
     ##########################################################
     # get the haplotype dataframe for all mapped haplotypes
-    mapped_haplotype_df = pd.read_csv(
-        os.path.join(wdir, "mapped_haplotypes.csv"))
+    mapped_haplotype_df = pd.read_csv(os.path.join(wdir, "mapped_haplotypes.csv"))
     ##########################################################
     ##########################################################
     # Process 3: load the MIPWrangler output which has
@@ -4690,17 +5218,17 @@ def get_haplotype_counts(settings):
     # get the MIPWrangler Output
     raw_results = pd.read_table(os.path.join(wdir, settings["mipsterFile"]))
     # limit the results to the samples intended for this analysis
-    raw_results = raw_results.loc[
-        raw_results["sample_name"].isin(sample_ids)
-    ]
+    raw_results = raw_results.loc[raw_results["sample_name"].isin(sample_ids)]
     # rename some columns for better visualization in tables
     raw_results.rename(
-        columns={"sample_name": "Sample ID",
-                 "mip_name": "MIP",
-                 "gene_name": "Gene",
-                 "barcode_count": "Barcode Count",
-                 "read_count": "Read Count"},
-        inplace=True
+        columns={
+            "sample_name": "Sample ID",
+            "mip_name": "MIP",
+            "gene_name": "Gene",
+            "barcode_count": "Barcode Count",
+            "read_count": "Read Count",
+        },
+        inplace=True,
     )
     # use only the data corresponding to mapped haplotypes
     # filtering the off target haplotypes.
@@ -4710,11 +5238,13 @@ def get_haplotype_counts(settings):
     # This is done in 4 steps.
     # 1) Get uniquely mapping haplotypes and barcode counts
     unique_df = mapped_results.loc[mapped_results["mapped_copy_number"] == 1]
-    unique_table = pd.pivot_table(unique_df,
-                                  index="Sample ID",
-                                  columns=["Gene", "MIP", "Copy", "Chrom"],
-                                  values=["Barcode Count"],
-                                  aggfunc=np.sum)
+    unique_table = pd.pivot_table(
+        unique_df,
+        index="Sample ID",
+        columns=["Gene", "MIP", "Copy", "Chrom"],
+        values=["Barcode Count"],
+        aggfunc=np.sum,
+    )
     # 2) Estimate the copy number of each paralog gene
     # for each sample from the uniquely mapping data
     # Two values from the settings are used to determine the copy number
@@ -4728,8 +5258,7 @@ def get_haplotype_counts(settings):
     # for each probe and each sample.
     try:
         average_copy_count = float(settings["averageCopyCount"])
-        norm_percentiles = list(map(float,
-                                settings["normalizationPercentiles"]))
+        norm_percentiles = list(map(float, settings["normalizationPercentiles"]))
     except KeyError:
         average_copy_count = 2
         norm_percentiles = [0.4, 0.6]
@@ -4747,9 +5276,7 @@ def get_haplotype_counts(settings):
     # calculate the copy counts using the get_copy_counts function.
     # this function normalizes data for each probe across samples
     # and estimates copy counts using the percentile values as mentioned.
-    copy_counts = get_copy_counts(unique_table,
-                                  average_copy_count,
-                                  norm_percentiles)
+    copy_counts = get_copy_counts(unique_table, average_copy_count, norm_percentiles)
     # 3) Estimate the copy number of each "Gene"
     # from the average copy count of uniquely mapping
     # data for all MIPs within the gene.
@@ -4764,42 +5291,44 @@ def get_haplotype_counts(settings):
         # get the average copy count for the gene the haplotype belongs to
         mca = multi_df.apply(lambda r: get_copy_average(r, ac), axis=1)
         multi_df.loc[mca.index, "Copy Average"] = mca
-        multi_df["copy_sum"] = multi_df.groupby(
-            ["Sample ID", "haplotype_ID"])["Copy Average"].transform("sum")
-        multi_df["copy_len"] = multi_df.groupby(
-            ["Sample ID", "haplotype_ID"])["Copy Average"].transform("size")
+        multi_df["copy_sum"] = multi_df.groupby(["Sample ID", "haplotype_ID"])[
+            "Copy Average"
+        ].transform("sum")
+        multi_df["copy_len"] = multi_df.groupby(["Sample ID", "haplotype_ID"])[
+            "Copy Average"
+        ].transform("size")
         null_index = multi_df["copy_sum"] == 0
         multi_df.loc[null_index, "Copy Average"] = (
-            average_copy_count / multi_df.loc[null_index, "copy_len"])
+            average_copy_count / multi_df.loc[null_index, "copy_len"]
+        )
         multi_df.loc[null_index, "copy_sum"] = average_copy_count
         multi_df["Copy Average"].fillna(0, inplace=True)
-        multi_df["Adjusted Barcode Count"] = (multi_df["Barcode Count"]
-                                              * multi_df["Copy Average"]
-                                              / multi_df["copy_sum"])
-        multi_df["Adjusted Read Count"] = (multi_df["Read Count"]
-                                           * multi_df["Copy Average"]
-                                           / multi_df["copy_sum"])
+        multi_df["Adjusted Barcode Count"] = (
+            multi_df["Barcode Count"] * multi_df["Copy Average"] / multi_df["copy_sum"]
+        )
+        multi_df["Adjusted Read Count"] = (
+            multi_df["Read Count"] * multi_df["Copy Average"] / multi_df["copy_sum"]
+        )
 
     # Combine unique and multimapping data
-    combined_df = pd.concat([unique_df, multi_df], ignore_index=True,
-                            sort=True)
+    combined_df = pd.concat([unique_df, multi_df], ignore_index=True, sort=True)
     combined_df.rename(
         columns={
             "Barcode Count": "Raw Barcode Count",
             "Adjusted Barcode Count": "Barcode Count",
             "Read Count": "Raw Read Count",
-            "Adjusted Read Count": "Read Count"
+            "Adjusted Read Count": "Read Count",
         },
-        inplace=True
+        inplace=True,
     )
     # print total read and barcode counts
     print(
         (
-         "Total number of reads and barcodes were {0[0]} and {0[1]}."
-         " On target number of reads and barcodes were {1[0]} and {1[1]}."
+            "Total number of reads and barcodes were {0[0]} and {0[1]}."
+            " On target number of reads and barcodes were {1[0]} and {1[1]}."
         ).format(
             raw_results[["Read Count", "Barcode Count"]].sum(),
-            combined_df[["Read Count", "Barcode Count"]].sum().astype(int)
+            combined_df[["Read Count", "Barcode Count"]].sum().astype(int),
         )
     )
     combined_df.to_csv(os.path.join(wdir, "haplotype_counts.csv"), index=False)
@@ -4831,21 +5360,20 @@ def get_haplotype_counts(settings):
     # Create pivot table of combined barcode counts
     # This is a per MIP per sample barcode count table
     # of the samples with sequencing data
-    barcode_counts = pd.pivot_table(combined_df,
-                                    index="Sample ID",
-                                    columns=["MIP",
-                                             "Copy"],
-                                    values=["Barcode Count"],
-                                    aggfunc=np.sum)
+    barcode_counts = pd.pivot_table(
+        combined_df,
+        index="Sample ID",
+        columns=["MIP", "Copy"],
+        values=["Barcode Count"],
+        aggfunc=np.sum,
+    )
     # Sample name for probes without data would be NA and replaced to 0
     # remove that if it exists
     try:
         barcode_counts.drop(0, inplace=True)
     except KeyError:
         pass
-    print("There are {} samples with sequence data".format(
-        barcode_counts.shape[0]
-    ))
+    print("There are {} samples with sequence data".format(barcode_counts.shape[0]))
     # After pivot table is created, the column names have an extra
     # row with the name "Barcode Count". Remove that from column names.
     bc_cols = barcode_counts.columns
@@ -4853,10 +5381,14 @@ def get_haplotype_counts(settings):
     # barcode count data is only available for samples with data
     # so if a sample has not produced any data, it will be missing
     # these samples should be added with 0 values for each probe
-    print('run meta is', run_meta)
+    print("run meta is", run_meta)
     all_barcode_counts = pd.merge(
         run_meta[["Sample ID", "replicate"]].set_index("Sample ID"),
-        barcode_counts, left_index=True, right_index=True, how="left")
+        barcode_counts,
+        left_index=True,
+        right_index=True,
+        how="left",
+    )
     all_barcode_counts.drop("replicate", axis=1, inplace=True)
     # fix column names
     all_barcode_counts.columns = pd.MultiIndex.from_tuples(
@@ -4867,53 +5399,70 @@ def get_haplotype_counts(settings):
     all_barcode_counts.to_csv(os.path.join(wdir, "barcode_counts.csv"))
     # Create an overview statistics file for samples including
     # total read count, barcode count, and how well they cover each MIP.
-    sample_counts = combined_df.groupby("Sample ID")[["Read Count",
-                                                      "Barcode Count"]].sum()
+    sample_counts = combined_df.groupby("Sample ID")[
+        ["Read Count", "Barcode Count"]
+    ].sum()
     # Find samples without any data and print the number
-    no_data = run_meta.loc[
-        ~run_meta["Sample ID"].isin(sample_counts.index)
-    ]
-    print(("{} out of {} samples had no data and they will be excluded from "
-           "the variant calls.").format(no_data.shape[0], run_meta.shape[0]))
+    no_data = run_meta.loc[~run_meta["Sample ID"].isin(sample_counts.index)]
+    print(
+        (
+            "{} out of {} samples had no data and they will be excluded from "
+            "the variant calls."
+        ).format(no_data.shape[0], run_meta.shape[0])
+    )
 
     # add samples with no data
     sample_counts = pd.merge(
         run_meta[["Sample ID", "replicate"]].set_index("Sample ID"),
-        sample_counts, left_index=True, right_index=True, how="left")
+        sample_counts,
+        left_index=True,
+        right_index=True,
+        how="left",
+    )
     sample_counts.drop("replicate", axis=1, inplace=True)
     target_cov = pd.concat(
-        [(all_barcode_counts >= 1).sum(axis=1),
-         (all_barcode_counts >= 5).sum(axis=1),
-         (all_barcode_counts >= 10).sum(axis=1)],
+        [
+            (all_barcode_counts >= 1).sum(axis=1),
+            (all_barcode_counts >= 5).sum(axis=1),
+            (all_barcode_counts >= 10).sum(axis=1),
+        ],
         axis=1,
     ).rename(
         columns={
             0: "targets_with_1_barcodes",
             1: "targets_with_5_barcodes",
-            2: "targets_with_10_barcodes"
+            2: "targets_with_10_barcodes",
         }
     )
-    sample_counts = sample_counts.merge(target_cov,
-                                        how="outer",
-                                        left_index=True,
-                                        right_index=True).fillna(0)
+    sample_counts = sample_counts.merge(
+        target_cov, how="outer", left_index=True, right_index=True
+    ).fillna(0)
     target_cov_file = os.path.join(wdir, "sample_summary.csv")
     sample_counts.to_csv(target_cov_file)
 
     return
 
 
-def freebayes_call(bam_dir="/opt/analysis/padded_bams",
-                   fastq_dir="/opt/analysis/padded_fastqs",
-                   options=[],
-                   vcf_file="/opt/analysis/variants.vcf.gz",
-                   targets_file=None, make_fastq=True,
-                   align=True, settings=None, settings_file=None,
-                   bam_files=None, bam_list=None, verbose=True,
-                   fastq_padding=20, min_base_quality=1,
-                   errors_file="/opt/analysis/freebayes_errors.txt",
-                   warnings_file="/opt/analysis/freebayes_warnings.txt",
-                   merge_distance=1000, contig_padding=500):
+def freebayes_call(
+    bam_dir="/opt/analysis/padded_bams",
+    fastq_dir="/opt/analysis/padded_fastqs",
+    options=[],
+    vcf_file="/opt/analysis/variants.vcf.gz",
+    targets_file=None,
+    make_fastq=True,
+    align=True,
+    settings=None,
+    settings_file=None,
+    bam_files=None,
+    bam_list=None,
+    verbose=True,
+    fastq_padding=20,
+    min_base_quality=1,
+    errors_file="/opt/analysis/freebayes_errors.txt",
+    warnings_file="/opt/analysis/freebayes_warnings.txt",
+    merge_distance=1000,
+    contig_padding=500,
+):
     """Call variants for MIP data using freebayes.
 
     A mapped haplotype file must be present in the working directory. This
@@ -4987,18 +5536,28 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
     mipster_file = os.path.join(wdir, settings["mipsterFile"])
     if make_fastq:
         # create fastq files from MIP data. One read per UMI will be created.
-        generate_mapped_fastqs(fastq_dir, mipster_file,
-                               mapped_haplotypes_file, settings["species"],
-                               pro=int(settings["processorNumber"]),
-                               pad_size=fastq_padding)
+        generate_mapped_fastqs(
+            fastq_dir,
+            mipster_file,
+            mapped_haplotypes_file,
+            settings["species"],
+            pro=int(settings["processorNumber"]),
+            pad_size=fastq_padding,
+        )
     if align:
         # map per sample fastqs to the reference genome, creating bam files.
         # bam files will have sample groups added, which is required for
         # calling variants across the samples.
-        bwa_multi([], "bam", fastq_dir, bam_dir,
-                  settings["bwaOptions"], settings["species"],
-                  int(settings["processorNumber"]),
-                  int(settings["processorNumber"]))
+        bwa_multi(
+            [],
+            "bam",
+            fastq_dir,
+            bam_dir,
+            settings["bwaOptions"],
+            settings["species"],
+            int(settings["processorNumber"]),
+            int(settings["processorNumber"]),
+        )
 
     # divide data into contigs to make parallelization more efficient
     # we'll create contigs from overlapping MIPs.
@@ -5012,25 +5571,31 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
         for m in call_dict[g]:
             for c in call_dict[g][m]["copies"]:
                 cdict = call_dict[g][m]["copies"][c]
-                call_df.append([cdict["chrom"], cdict["capture_start"],
-                                cdict["capture_end"]])
-    call_df = pd.DataFrame(call_df, columns=["chrom", "capture_start",
-                                             "capture_end"])
+                call_df.append(
+                    [cdict["chrom"], cdict["capture_start"], cdict["capture_end"]]
+                )
+    call_df = pd.DataFrame(call_df, columns=["chrom", "capture_start", "capture_end"])
 
     # create a function that generates contigs of MIPs which overlap
     # with 1 kb padding on both sides.
     def get_contig(g):
         intervals = zip(g["capture_start"], g["capture_end"])
-        return pd.DataFrame(merge_overlap(
-            [list(i) for i in intervals], spacer=merge_distance))
+        return pd.DataFrame(
+            merge_overlap([list(i) for i in intervals], spacer=merge_distance)
+        )
 
     # create contigs per chromosome
     contigs = call_df.groupby("chrom").apply(get_contig)
     contigs = contigs.reset_index()
-    contigs.rename(columns={"level_1": "contig", 0: "contig_capture_start",
-                            1: "contig_capture_end"}, inplace=True)
-    contigs["contig_name"] = contigs["chrom"] + "_" + contigs["contig"].astype(
-        str)
+    contigs.rename(
+        columns={
+            "level_1": "contig",
+            0: "contig_capture_start",
+            1: "contig_capture_end",
+        },
+        inplace=True,
+    )
+    contigs["contig_name"] = contigs["chrom"] + "_" + contigs["contig"].astype(str)
     # we'll call freebayes on each contig by providing a region string in the
     # form chrx:begin-end. Create those strings for each contig with some
     # padding. It is important to check that we don't end up with a start
@@ -5046,11 +5611,16 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
     contigs["region_start"] = contigs["contig_capture_start"] - contig_padding
     contigs.loc[contigs["region_start"] < 1, "region_start"] = 1
     contigs["region_end"] = contigs["contig_capture_end"] + contig_padding
-    contigs["region_end"] = contigs[
-        ["region_end", "chromosome_length"]].min(axis=1).values
-    contigs["region"] = contigs["chrom"] + ":" + (
-        contigs["region_start"]).astype(str) + "-" + (
-        contigs["region_end"]).astype(str)
+    contigs["region_end"] = (
+        contigs[["region_end", "chromosome_length"]].min(axis=1).values
+    )
+    contigs["region"] = (
+        contigs["chrom"]
+        + ":"
+        + (contigs["region_start"]).astype(str)
+        + "-"
+        + (contigs["region_end"]).astype(str)
+    )
     # we'll force calls on targeted variants if so specified
     if targets_file is not None:
         # each contig must include at least one of the targets, otherwise
@@ -5065,39 +5635,43 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
         # of contig boundries.
         targets = targets.loc[
             (targets["contig_capture_start"] <= targets["POS"])
-            & (targets["POS"] <= targets["contig_capture_end"])]
+            & (targets["POS"] <= targets["contig_capture_end"])
+        ]
         targets["contains_targets"] = True
         # merge only two columns of the targets df to contigs so that
         # the only shared column is contig_name. More than one target can
         # be in a single contig, so we need to drop duplicates from targets.
-        contigs = contigs.merge(targets[
-            ["contig_name", "contains_targets"]].drop_duplicates(), how="left")
+        contigs = contigs.merge(
+            targets[["contig_name", "contains_targets"]].drop_duplicates(), how="left"
+        )
         contigs["contains_targets"].fillna(False, inplace=True)
         # create a targets.vcf file for freebayes
         targets_vcf = os.path.join(wdir, "targets.vcf")
         with open(targets_vcf, "w") as outfile:
-            outfile.write('##fileformat=VCFv4.2\n')
+            outfile.write("##fileformat=VCFv4.2\n")
+            outfile.write('##FILTER=<ID=PASS,Description="All filters passed">\n')
             outfile.write(
-                '##FILTER=<ID=PASS,Description="All filters passed">\n')
-            outfile.write('##INFO=<ID=TR,Number=.,Type=String,Description'
-                          '="Targeted variant.">\n')
+                "##INFO=<ID=TR,Number=.,Type=String,Description"
+                '="Targeted variant.">\n'
+            )
             vcf_fields = ["ID", "QUAL", "FILTER"]
             for vf in vcf_fields:
                 targets[vf] = "."
             targets["INFO"] = "TR"
-            vcf_fields = ["#CHROM", "POS", "ID", "REF", "ALT", "QUAL",
-                          "FILTER", "INFO"]
+            vcf_fields = ["#CHROM", "POS", "ID", "REF", "ALT", "QUAL", "FILTER", "INFO"]
             targets = targets.rename(columns={"CHROM": "#CHROM"})[vcf_fields]
             targets.sort_values(["#CHROM", "POS"]).to_csv(
-                outfile, sep="\t", index=False)
+                outfile, sep="\t", index=False
+            )
         # bgzip and index
-        res = subprocess.run(["bgzip", "-f", targets_vcf],
-                             stderr=subprocess.PIPE)
+        res = subprocess.run(["bgzip", "-f", targets_vcf], stderr=subprocess.PIPE)
         if res.returncode != 0:
             print("Error in compressing targets.vcf file", res.stderr)
         targets_vcf = targets_vcf + ".gz"
-        res = subprocess.run(["tabix", "-s", "1", "-b", "2", "-e", "2", "-f",
-                              targets_vcf], stderr=subprocess.PIPE)
+        res = subprocess.run(
+            ["tabix", "-s", "1", "-b", "2", "-e", "2", "-f", targets_vcf],
+            stderr=subprocess.PIPE,
+        )
         if res.returncode != 0:
             print("Error in indexing targets.vcf.gz file ", res.stderr)
     else:
@@ -5109,9 +5683,11 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
     gb = contigs.groupby("chrom")
     for g in gb.groups.keys():
         gr = gb.get_group(g)
-        chrom_dict[g] = gr[["contig_name", "region",
-                            "contains_targets"]].set_index(
-            "contig_name").to_dict(orient="index")
+        chrom_dict[g] = (
+            gr[["contig_name", "region", "contains_targets"]]
+            .set_index("contig_name")
+            .to_dict(orient="index")
+        )
 
     # populate the contigs dictionary for freebayes parameters
     # start with options to be added for each contig
@@ -5160,16 +5736,14 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
             region = contig_dict["region"]
             contig_options = ["-r", region]
             # add contigs vcf file name
-            contig_vcf = os.path.join(wdir, "contig_vcfs",
-                                      contig_name + ".vcf")
+            contig_vcf = os.path.join(wdir, "contig_vcfs", contig_name + ".vcf")
             contig_dict["vcf_path"] = contig_vcf
             # add output file to the freebayes options
             contig_options.extend(["-v", contig_vcf])
             # add contig vcf path to the list
             contig_vcf_paths.append(contig_vcf)
             # add contigs vcf.gz file name
-            contig_vcf_gz = os.path.join(wdir, "contig_vcfs",
-                                         contig_name + ".vcf.gz")
+            contig_vcf_gz = os.path.join(wdir, "contig_vcfs", contig_name + ".vcf.gz")
             contig_vcf_gz_paths.append(contig_vcf_gz)
             contig_dict["vcf_gz_path"] = contig_vcf_gz
             # if contig includes targets, we'll force calls on those
@@ -5179,12 +5753,14 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
             # the options list in case bam files were added to the options
             # and they must stay at the end because they are positional args.
             contig_dict["options"] = contig_options + options
-            #contig_name = contig_dict['options'].split(' ')[3].split('/')[-1]
+            # contig_name = contig_dict['options'].split(' ')[3].split('/')[-1]
             # add the contig dict to contig dict list
-            contig_value = ('freebayes '+' '.join(contig_dict['options']))
-            freebayes_command_dict[contig_name]=contig_value
-    return(freebayes_command_dict,contig_vcf_gz_paths)
-'''
+            contig_value = "freebayes " + " ".join(contig_dict["options"])
+            freebayes_command_dict[contig_name] = contig_value
+    return (freebayes_command_dict, contig_vcf_gz_paths)
+
+
+"""
     # create a processor pool for parallel processing
     pool = Pool(int(settings["processorNumber"]))
     # create a results container for the return values from the worker function
@@ -5258,8 +5834,7 @@ def freebayes_call(bam_dir="/opt/analysis/padded_bams",
         subprocess.run(["mv", temp_vcf_path, vcf_file])
         subprocess.run(["bcftools", "index", "-f", vcf_file], check=True)
     return (contig_dict_list, results, errors)
-'''
-
+"""
 
 
 def freebayes_worker(command):
@@ -5268,21 +5843,21 @@ def freebayes_worker(command):
     Run freebayes program with the specified options and return a
     subprocess.CompletedProcess object.
     """
-    command=command.split(' ')
+    command = command.split(" ")
     # run freebayes command piping the output
     fres = subprocess.run(command, stderr=subprocess.PIPE)
     # check the return code of the freebayes run. if succesfull continue
     if fres.returncode == 0:
         # bgzip the vcf output, using the freebayes output as bgzip input
-        vcf_index=command.index('-v')+1
-        vcf_path=command[vcf_index]
-        gres = subprocess.run(["bgzip", "-f", vcf_path],
-                              stderr=subprocess.PIPE)
+        vcf_index = command.index("-v") + 1
+        vcf_path = command[vcf_index]
+        gres = subprocess.run(["bgzip", "-f", vcf_path], stderr=subprocess.PIPE)
         # make sure bugzip process completed successfully
         if gres.returncode == 0:
             # index the vcf.gz file
-            ires = subprocess.run(["bcftools", "index", "-f", vcf_path+'.gz'],
-                                  stderr=subprocess.PIPE)
+            ires = subprocess.run(
+                ["bcftools", "index", "-f", vcf_path + ".gz"], stderr=subprocess.PIPE
+            )
             # return the CompletedProcess objects
             return (fres, gres, ires)
         else:
@@ -5291,7 +5866,7 @@ def freebayes_worker(command):
     # instead of attempting to zip the vcf file which does not exist if
     # freebayes failed.
     else:
-        return (fres, )
+        return (fres,)
 
 
 def vcf_reheader(vcf_file, fixed_vcf_file, wdir="/opt/analysis/"):
@@ -5304,8 +5879,11 @@ def vcf_reheader(vcf_file, fixed_vcf_file, wdir="/opt/analysis/"):
     """
     # get the current header
     vcf_path = os.path.join(wdir, vcf_file)
-    header = subprocess.Popen(["bcftools", "view", "-h", vcf_path],
-                              stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+    header = subprocess.Popen(
+        ["bcftools", "view", "-h", vcf_path],
+        stderr=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+    )
     com = header.communicate()
     if header.returncode != 0:
         print("Failed to extract vcf header. Header will not be fixed.")
@@ -5326,29 +5904,36 @@ def vcf_reheader(vcf_file, fixed_vcf_file, wdir="/opt/analysis/"):
         outfile.write("\n".join(new_head) + "\n")
 
     fixed_vcf_path = os.path.join(wdir, fixed_vcf_file)
-    subprocess.run(["bcftools", "reheader", "-h", new_header_path,
-                    vcf_path,  "-o", fixed_vcf_path], check=True)
+    subprocess.run(
+        ["bcftools", "reheader", "-h", new_header_path, vcf_path, "-o", fixed_vcf_path],
+        check=True,
+    )
     return
 
-def concatenate_headers(settings=None, wdir='/opt/analysis', freebayes_settings=None, vcf_paths=None):
-	vcf_file="/opt/analysis/variants.vcf.gz"
-	# concatanate contig vcfs. The number of contigs may be high, so we'll
-	# write the vcf paths to a file and bcftools will read from that file
-	cvcf_paths_file = os.path.join(wdir, "contig_vcfs", "vcf_file_list.txt")
-	with open(cvcf_paths_file, "w") as outfile:
-	    outfile.write("\n".join(vcf_paths) + "\n")
-	subprocess.run(["bcftools", "concat", "-f", cvcf_paths_file, "-Oz",
-                "-o", vcf_file], check=True)
-	subprocess.run(["bcftools", "index", "-f", vcf_file], check=True)
-	# fix vcf header if --gvcf option has been used
-	if "--gvcf" in freebayes_settings:
-	    temp_vcf_path = os.path.join(wdir, "temp.vcf.gz")
-	    vcf_reheader(os.path.basename(vcf_file), temp_vcf_path, wdir=wdir)
-	    old_vcf_path = os.path.join(wdir, "unfixed.vcf.gz")
-	    subprocess.run(["mv", vcf_file, old_vcf_path])
-	    subprocess.run(["mv", temp_vcf_path, vcf_file])
-	    subprocess.run(["bcftools", "index", "-f", vcf_file], check=True)
-	    print('did a reheader')
+
+def concatenate_headers(
+    settings=None, wdir="/opt/analysis", freebayes_settings=None, vcf_paths=None
+):
+    vcf_file = "/opt/analysis/variants.vcf.gz"
+    # concatanate contig vcfs. The number of contigs may be high, so we'll
+    # write the vcf paths to a file and bcftools will read from that file
+    cvcf_paths_file = os.path.join(wdir, "contig_vcfs", "vcf_file_list.txt")
+    with open(cvcf_paths_file, "w") as outfile:
+        outfile.write("\n".join(vcf_paths) + "\n")
+    subprocess.run(
+        ["bcftools", "concat", "-f", cvcf_paths_file, "-Oz", "-o", vcf_file], check=True
+    )
+    subprocess.run(["bcftools", "index", "-f", vcf_file], check=True)
+    # fix vcf header if --gvcf option has been used
+    if "--gvcf" in freebayes_settings:
+        temp_vcf_path = os.path.join(wdir, "temp.vcf.gz")
+        vcf_reheader(os.path.basename(vcf_file), temp_vcf_path, wdir=wdir)
+        old_vcf_path = os.path.join(wdir, "unfixed.vcf.gz")
+        subprocess.run(["mv", vcf_file, old_vcf_path])
+        subprocess.run(["mv", temp_vcf_path, vcf_file])
+        subprocess.run(["bcftools", "index", "-f", vcf_file], check=True)
+        print("did a reheader")
+
 
 def gatk(options):
     """GATK wrapper function.
@@ -5358,11 +5943,14 @@ def gatk(options):
     return subprocess.run(["gatk", *options], stderr=subprocess.PIPE)
 
 
-def gatk_file_prep(bam_dir="/opt/analysis/padded_bams",
-                   fastq_dir="/opt/analysis/padded_fastqs",
-                   targets_file=None,
-                   settings=None, settings_file=None,
-                   errors_file="/opt/analysis/gatk_file_prep_output.txt"):
+def gatk_file_prep(
+    bam_dir="/opt/analysis/padded_bams",
+    fastq_dir="/opt/analysis/padded_fastqs",
+    targets_file=None,
+    settings=None,
+    settings_file=None,
+    errors_file="/opt/analysis/gatk_file_prep_output.txt",
+):
     """Prepare files for calling variants for MIP data using gatk.
 
     A mapped haplotype file must be present in the working directory. This
@@ -5416,9 +6004,13 @@ def gatk_file_prep(bam_dir="/opt/analysis/padded_bams",
     # information including counts.
     mipster_file = os.path.join(wdir, settings["mipsterFile"])
     # create fastq files from MIP data. One read per UMI will be created.
-    generate_mapped_fastqs(fastq_dir, mipster_file,
-                           mapped_haplotypes_file, settings["species"],
-                           pro=int(settings["processorNumber"]))
+    generate_mapped_fastqs(
+        fastq_dir,
+        mipster_file,
+        mapped_haplotypes_file,
+        settings["species"],
+        pro=int(settings["processorNumber"]),
+    )
     # if there is a targets file provided, we'll create a hypothetical
     # sample that has all of the targeted variants. This way, a variant site
     # for each target will be created in the final vcf file even if a
@@ -5427,18 +6019,29 @@ def gatk_file_prep(bam_dir="/opt/analysis/padded_bams",
         # load the targets as dataframe converting field names to
         # field names in a haplotypes file.
         targets = pd.read_table(targets_file).rename(
-            columns={"CHROM": "Chrom", "POS": "capture_start",
-                     "ALT": "haplotype_sequence",
-                     "mutation_name": "haplotype_ID"})
+            columns={
+                "CHROM": "Chrom",
+                "POS": "capture_start",
+                "ALT": "haplotype_sequence",
+                "mutation_name": "haplotype_ID",
+            }
+        )
         # fill in orientation and copy number information for all targets.
         targets["orientation"] = "forward"
         targets["mapped_copy_number"] = 1
-        targets["capture_end"] = (targets["capture_start"]
-                                  + targets["REF"].apply(len) - 1)
+        targets["capture_end"] = (
+            targets["capture_start"] + targets["REF"].apply(len) - 1
+        )
         # create a haplotype file for the targeted mutations
-        haplotype_fields = ['capture_end', 'capture_start', 'Chrom',
-                            'orientation', 'haplotype_ID',
-                            'haplotype_sequence', 'mapped_copy_number']
+        haplotype_fields = [
+            "capture_end",
+            "capture_start",
+            "Chrom",
+            "orientation",
+            "haplotype_ID",
+            "haplotype_sequence",
+            "mapped_copy_number",
+        ]
         mutant_haplotypes = "/opt/analysis/mutant_haplotypes.csv"
         targets[haplotype_fields].to_csv(mutant_haplotypes, index=False)
 
@@ -5447,25 +6050,41 @@ def gatk_file_prep(bam_dir="/opt/analysis/padded_bams",
         # for each observation
         targets["sample_name"] = "control_mutant"
         targets["sequence_quality"] = targets["haplotype_sequence"].apply(
-            lambda a: "".join(["H" for i in range(len(a))]))
+            lambda a: "".join(["H" for i in range(len(a))])
+        )
         targets["barcode_count"] = 20
-        data_fields = ["sample_name", 'haplotype_ID', "haplotype_sequence",
-                       'sequence_quality', 'barcode_count']
+        data_fields = [
+            "sample_name",
+            "haplotype_ID",
+            "haplotype_sequence",
+            "sequence_quality",
+            "barcode_count",
+        ]
         mutant_data_file = "/opt/analysis/mutant_data.tsv"
         targets[data_fields].to_csv(mutant_data_file, index=False, sep="\t")
         # create a fastq file for the "control_mutant" sample
         padding = 100
-        generate_mapped_fastqs(fastq_dir, mutant_data_file,
-                               mutant_haplotypes, settings["species"],
-                               pro=int(settings["processorNumber"]),
-                               pad_size=padding)
+        generate_mapped_fastqs(
+            fastq_dir,
+            mutant_data_file,
+            mutant_haplotypes,
+            settings["species"],
+            pro=int(settings["processorNumber"]),
+            pad_size=padding,
+        )
     # map per sample fastqs to the reference genome, creating bam files.
     # bam files will have sample groups added, which is required for
     # calling variants across the samples.
-    bwa_multi([], "bam", fastq_dir, bam_dir,
-              settings["bwaOptions"], settings["species"],
-              int(settings["processorNumber"]),
-              int(settings["processorNumber"]))
+    bwa_multi(
+        [],
+        "bam",
+        fastq_dir,
+        bam_dir,
+        settings["bwaOptions"],
+        settings["species"],
+        int(settings["processorNumber"]),
+        int(settings["processorNumber"]),
+    )
 
     # create an  intervals file to be used in gatk call
     intervals_bed = "/opt/analysis/intervals.bed"
@@ -5478,35 +6097,60 @@ def gatk_file_prep(bam_dir="/opt/analysis/padded_bams",
         for m in call_dict[g]:
             for c in call_dict[g][m]["copies"]:
                 cdict = call_dict[g][m]["copies"][c]
-                probe_info.append([cdict["chrom"], cdict["capture_start"],
-                                   cdict["capture_end"]])
-    probe_info = pd.DataFrame(probe_info, columns=["chrom", "capture_start",
-                                                   "capture_end"])
+                probe_info.append(
+                    [cdict["chrom"], cdict["capture_start"], cdict["capture_end"]]
+                )
+    probe_info = pd.DataFrame(
+        probe_info, columns=["chrom", "capture_start", "capture_end"]
+    )
     probe_info["bed_start"] = probe_info["capture_start"] - 200
     probe_info["bed_end"] = probe_info["capture_end"] + 200
     probe_info[["chrom", "bed_start", "bed_end"]].to_csv(
-        intervals_bed, index=False, header=(None), sep="\t")
+        intervals_bed, index=False, header=(None), sep="\t"
+    )
     intervals_list = "/opt/analysis/intervals.list"
     genome_dict = get_file_locations()[settings["species"]]["genome_dict"]
-    interval_call = gatk(["BedToIntervalList", "-I", intervals_bed,
-                          "-O", intervals_list, "-SD", genome_dict])
+    interval_call = gatk(
+        [
+            "BedToIntervalList",
+            "-I",
+            intervals_bed,
+            "-O",
+            intervals_list,
+            "-SD",
+            genome_dict,
+        ]
+    )
     # check the return code and if not 0 print warning
     if interval_call.returncode != 0:
-        print(("An error ocurred when creating the intervals list. "
-               "Please see the {} for details.").format(errors_file))
+        print(
+            (
+                "An error ocurred when creating the intervals list. "
+                "Please see the {} for details."
+            ).format(errors_file)
+        )
     # save command output
     with open(errors_file, "ab") as outfile:
         outfile.write(interval_call.stderr)
 
 
 def gatk_haplotype_caller(
-        options, bam_dir, settings,
-        errors_file="/opt/analysis/gatk_haplotype_caller_output.txt"):
+    options,
+    bam_dir,
+    settings,
+    errors_file="/opt/analysis/gatk_haplotype_caller_output.txt",
+):
     genome_fasta = get_file_locations()[settings["species"]]["fasta_genome"]
     intervals_list = "/opt/analysis/intervals.list"
-    haplotype_caller_opts = ["HaplotypeCaller", "-R", genome_fasta,
-                             "--native-pair-hmm-threads", "1",
-                             "-L", intervals_list] + options
+    haplotype_caller_opts = [
+        "HaplotypeCaller",
+        "-R",
+        genome_fasta,
+        "--native-pair-hmm-threads",
+        "1",
+        "-L",
+        intervals_list,
+    ] + options
     # scan the bam directory and get file paths. Assign an output name
     # for each file (gvcf output)
     bam_files = []
@@ -5520,30 +6164,49 @@ def gatk_haplotype_caller(
     errors = []
     for bam in bam_files:
         io_options = ["-I", bam[0], "-O", bam[1]]
-        pool.apply_async(gatk, (haplotype_caller_opts + io_options, ),
-                         callback=results.append, error_callback=errors.append)
+        pool.apply_async(
+            gatk,
+            (haplotype_caller_opts + io_options,),
+            callback=results.append,
+            error_callback=errors.append,
+        )
     pool.close()
     pool.join()
     if len(errors) > 0:
-        print(("An error ocurred during haplotype calling . "
-               "Please see the {} for details.").format(errors_file))
+        print(
+            (
+                "An error ocurred during haplotype calling . "
+                "Please see the {} for details."
+            ).format(errors_file)
+        )
         # save command output
         with open(errors_file, "ab") as outfile:
             for e in errors:
                 outfile.write(str(e))
     for r in results:
         if r.returncode != 0:
-            print(("An error ocurred when creating the intervals list. "
-                   "Please see the {} for details.").format(errors_file))
+            print(
+                (
+                    "An error ocurred when creating the intervals list. "
+                    "Please see the {} for details."
+                ).format(errors_file)
+            )
         # save command output
         with open(errors_file, "ab") as outfile:
             outfile.write(r.stderr)
     return
 
 
-def genotype_gvcfs(settings, bam_dir, options, gdb, vcf_file,
-                   sample_map=None, keep_control_mutant=False,
-                   errors_file="/opt/analysis/gatk_genotype_gvcfs_output.txt"):
+def genotype_gvcfs(
+    settings,
+    bam_dir,
+    options,
+    gdb,
+    vcf_file,
+    sample_map=None,
+    keep_control_mutant=False,
+    errors_file="/opt/analysis/gatk_genotype_gvcfs_output.txt",
+):
     if sample_map is None:
         # scan the bam directory and get file paths. Assign an output name
         # for each file (gvcf output)
@@ -5560,70 +6223,124 @@ def genotype_gvcfs(settings, bam_dir, options, gdb, vcf_file,
                 outfile.write(sample_name + "\t" + f[1] + "\n")
     intervals_list = "/opt/analysis/intervals.list"
     gdb_path = os.path.join("/opt/analysis/", gdb)
-    gdb_import = ["--java-options", "-Xmx32G", "GenomicsDBImport",
-                  "--genomicsdb-workspace-path", gdb_path,
-                  "--sample-name-map", sample_map,
-                  "-L", intervals_list,
-                  "--max-num-intervals-to-import-in-parallel",
-                  settings["processorNumber"]]
+    gdb_import = [
+        "--java-options",
+        "-Xmx32G",
+        "GenomicsDBImport",
+        "--genomicsdb-workspace-path",
+        gdb_path,
+        "--sample-name-map",
+        sample_map,
+        "-L",
+        intervals_list,
+        "--max-num-intervals-to-import-in-parallel",
+        settings["processorNumber"],
+    ]
     gdb_result = gatk(gdb_import)
     if gdb_result.returncode != 0:
-        print(("An error ocurred when during genomics DB import. "
-               "Please see the {} for details.").format(errors_file))
+        print(
+            (
+                "An error ocurred when during genomics DB import. "
+                "Please see the {} for details."
+            ).format(errors_file)
+        )
     # save command output
     with open(errors_file, "ab") as outfile:
         outfile.write(gdb_result.stderr)
 
     # genotype gvcfs
-    genome_fasta = get_file_locations()[settings["species"]][
-        "fasta_genome"]
+    genome_fasta = get_file_locations()[settings["species"]]["fasta_genome"]
     gdb = "gendb://" + gdb
     if keep_control_mutant:
         temp_vcf_file = vcf_file
     else:
         temp_vcf_file = "/opt/analysis/temp.vcf.gz"
-    genotype_gvcfs = ["GenotypeGVCFs", "-R", genome_fasta,
-                      "-V", gdb, "-O", temp_vcf_file, "-L", intervals_list]
+    genotype_gvcfs = [
+        "GenotypeGVCFs",
+        "-R",
+        genome_fasta,
+        "-V",
+        gdb,
+        "-O",
+        temp_vcf_file,
+        "-L",
+        intervals_list,
+    ]
     genotypes = gatk(genotype_gvcfs + options)
     if genotypes.returncode != 0:
-        print(("An error ocurred during genotyping GVCFs. "
-               "Please see the {} for details.").format(errors_file))
+        print(
+            (
+                "An error ocurred during genotyping GVCFs. "
+                "Please see the {} for details."
+            ).format(errors_file)
+        )
     # save command output
     with open(errors_file, "ab") as outfile:
         outfile.write(genotypes.stderr)
 
     # remove control mutant sample if requested
     if not keep_control_mutant:
-        res = subprocess.run(["bcftools", "view", "-s^control_mutant",
-                              "-Oz", "-o", vcf_file, temp_vcf_file,
-                              "--force-samples"],
-                             stderr=subprocess.PIPE)
+        res = subprocess.run(
+            [
+                "bcftools",
+                "view",
+                "-s^control_mutant",
+                "-Oz",
+                "-o",
+                vcf_file,
+                temp_vcf_file,
+                "--force-samples",
+            ],
+            stderr=subprocess.PIPE,
+        )
         if res.returncode != 0:
-            print(("An error ocurred while removing control mutant. "
-                   "Please see the {} for details.").format(errors_file))
+            print(
+                (
+                    "An error ocurred while removing control mutant. "
+                    "Please see the {} for details."
+                ).format(errors_file)
+            )
         # save command output
         with open(errors_file, "ab") as outfile:
             outfile.write(res.stderr)
         # index the final vcf file
-        res = subprocess.run(["bcftools", "index", "-f", vcf_file],
-                             stderr=subprocess.PIPE)
+        res = subprocess.run(
+            ["bcftools", "index", "-f", vcf_file], stderr=subprocess.PIPE
+        )
         if res.returncode != 0:
-            print(("An error ocurred while indexing the final vcf file. "
-                   "Please see the {} for details.").format(errors_file))
+            print(
+                (
+                    "An error ocurred while indexing the final vcf file. "
+                    "Please see the {} for details."
+                ).format(errors_file)
+            )
         # save command output
         with open(errors_file, "ab") as outfile:
             outfile.write(res.stderr)
 
 
-def vcf_to_tables_fb(vcf_file, settings=None, settings_file=None,
-                     annotate=True, geneid_to_genename=None,
-                     target_aa_annotation=None, aggregate_aminoacids=False,
-                     target_nt_annotation=None, aggregate_nucleotides=False,
-                     decompose_options=[], annotated_vcf=False,
-                     aggregate_none=False, min_site_qual=-1,
-                     min_target_site_qual=-1, min_genotype_qual=-1,
-                     min_alt_qual=-1, min_ref_qual=-1, min_mean_alt_qual=-1,
-                     min_mean_ref_qual=-1, output_prefix=""):
+def vcf_to_tables_fb(
+    vcf_file,
+    settings=None,
+    settings_file=None,
+    annotate=True,
+    geneid_to_genename=None,
+    target_aa_annotation=None,
+    aggregate_aminoacids=False,
+    target_nt_annotation=None,
+    aggregate_nucleotides=False,
+    decompose_options=[],
+    annotated_vcf=False,
+    aggregate_none=False,
+    min_site_qual=-1,
+    min_target_site_qual=-1,
+    min_genotype_qual=-1,
+    min_alt_qual=-1,
+    min_ref_qual=-1,
+    min_mean_alt_qual=-1,
+    min_mean_ref_qual=-1,
+    output_prefix="",
+):
     """Create various tables from a vcf file.
 
     Create various tables from a vcf file generated by the freebayes
@@ -5727,18 +6444,30 @@ def vcf_to_tables_fb(vcf_file, settings=None, settings_file=None,
     genome_fasta = get_file_locations()[settings["species"]]["fasta_genome"]
     vcf_path = os.path.join(wdir, vcf_file)
     split_vcf_path = os.path.join(wdir, output_prefix + "split." + vcf_file)
-    subprocess.run(["bcftools", "norm", "-f", genome_fasta, "-m-both",
-                    vcf_path, "-Oz", "-o", split_vcf_path], check=True,
-                   stderr=subprocess.PIPE)
-    subprocess.run(["bcftools", "index", "-f", split_vcf_path], check=True,
-                   stderr=subprocess.PIPE)
+    subprocess.run(
+        [
+            "bcftools",
+            "norm",
+            "-f",
+            genome_fasta,
+            "-m-both",
+            vcf_path,
+            "-Oz",
+            "-o",
+            split_vcf_path,
+        ],
+        check=True,
+        stderr=subprocess.PIPE,
+    )
+    subprocess.run(
+        ["bcftools", "index", "-f", split_vcf_path], check=True, stderr=subprocess.PIPE
+    )
 
     # Will protein level aggregation be performed on the variants?
     # This will only be done for simple missense variants but it is important
     # to annotate the vcf file before breaking down the haplotypes.
     if annotate:
-        annotated_vcf_path = os.path.join(wdir, output_prefix + "split.ann."
-                                          + vcf_file)
+        annotated_vcf_path = os.path.join(wdir, output_prefix + "split.ann." + vcf_file)
         res = annotate_vcf_file(settings, split_vcf_path, annotated_vcf_path)
         if res != 0:
             print("Annotating the vcf file failed.")
@@ -5747,16 +6476,21 @@ def vcf_to_tables_fb(vcf_file, settings=None, settings_file=None,
         annotated_vcf_path = split_vcf_path
     if aggregate_aminoacids:
         if not (annotate or annotated_vcf):
-            print("annotate option must be set to true or an annotadet vcf "
-                  "file must be provided and annotated_vcf option must be "
-                  "set to true for amino acid level aggregation. \n"
-                  "Exiting!")
+            print(
+                "annotate option must be set to true or an annotadet vcf "
+                "file must be provided and annotated_vcf option must be "
+                "set to true for amino acid level aggregation. \n"
+                "Exiting!"
+            )
             return
         # check if a target annotation dict is provided.
         target_annotation_dict = {}
         if target_aa_annotation is not None:
-            taa = pd.read_table(target_aa_annotation).set_index(
-                ["gene_name", "aminoacid_change"]).to_dict(orient="index")
+            taa = (
+                pd.read_table(target_aa_annotation)
+                .set_index(["gene_name", "aminoacid_change"])
+                .to_dict(orient="index")
+            )
             for k in taa.keys():
                 target_annotation_dict[k] = taa[k]["mutation_name"]
         # check if a gene id to gene name file is provided
@@ -5768,9 +6502,12 @@ def vcf_to_tables_fb(vcf_file, settings=None, settings_file=None,
                 gene_ids[g] = gids[g]["gene_name"]
 
         # load annotated vcf file
-        variants = allel.read_vcf(annotated_vcf_path, fields=["*"],
-                                  alt_number=1,
-                                  transformers=allel.ANNTransformer())
+        variants = allel.read_vcf(
+            annotated_vcf_path,
+            fields=["*"],
+            alt_number=1,
+            transformers=allel.ANNTransformer(),
+        )
         # allel import provides a variants dictionary with keys such as
         # variants/AD, variants/POS for variant level information
         # the values are arrays with each element corresponding to one variant.
@@ -5787,18 +6524,25 @@ def vcf_to_tables_fb(vcf_file, settings=None, settings_file=None,
         # find missense variant locations in the data. We are going to split
         # multi amino acid changes for missense variants only for target
         # annotation and count aggregation.
-        missense = ["missense_variant" == variant for variant
-                    in variants["variants/ANN_Annotation"]]
+        missense = [
+            "missense_variant" == variant
+            for variant in variants["variants/ANN_Annotation"]
+        ]
         # spcecify fields of interest from the INFO fields
-        variant_fields = ["ANN_Gene_ID", "ANN_HGVS_p", "ANN_Annotation",
-                          "QUAL"]
+        variant_fields = ["ANN_Gene_ID", "ANN_HGVS_p", "ANN_Annotation", "QUAL"]
         variant_fields = ["variants/" + v for v in variant_fields]
         # specify fields of interest from individual level data
         # that is basically the count data for tables. AO: alt allele count,
         # RO ref count, DP: coverage.
-        call_data_fields = ['calldata/AO', 'calldata/RO', 'calldata/DP',
-                            'calldata/GT', 'calldata/GQ', 'calldata/QA',
-                            'calldata/QR']
+        call_data_fields = [
+            "calldata/AO",
+            "calldata/RO",
+            "calldata/DP",
+            "calldata/GT",
+            "calldata/GQ",
+            "calldata/QA",
+            "calldata/QR",
+        ]
         variants["calldata/GT"] = variants["calldata/GT"].sum(axis=2)
         # zip variant level  information together, so we have a single value
         # for each variant
@@ -5843,15 +6587,14 @@ def vcf_to_tables_fb(vcf_file, settings=None, settings_file=None,
                 # aa changes are in 3 letter format. Loop through each aa and
                 # split to single aa changes.
                 for j in range(0, len(reference), 3):
-                    new_pos = int(aa_pos + j/3)
+                    new_pos = int(aa_pos + j / 3)
                     # convert single amino acid names to 1 letter code.
-                    new_reference = reference[j:j+3]
-                    new_alternate = alternate[j:j+3]
+                    new_reference = reference[j : j + 3]
+                    new_alternate = alternate[j : j + 3]
                     new_change = new_reference + str(new_pos) + new_alternate
                     try:
                         # if this variant is in the targets, annotate it so.
-                        mut_name = target_annotation_dict[
-                            (gene_name, new_change)]
+                        mut_name = target_annotation_dict[(gene_name, new_change)]
                         targeted_mutation = "Yes"
                         # reset alt observation counts to 0 if quality is low
                         if site_qual < min_target_site_qual:
@@ -5859,34 +6602,35 @@ def vcf_to_tables_fb(vcf_file, settings=None, settings_file=None,
                     except KeyError:
                         # remove low quality non-target alleles as well as
                         # synonymous changes
-                        if ((site_qual < min_site_qual)
-                                or (new_reference == new_alternate)):
+                        if (site_qual < min_site_qual) or (
+                            new_reference == new_alternate
+                        ):
                             continue
                         mut_name = gene_name + "-" + new_change
                         targeted_mutation = "No"
                     # add the split variant information split variants list
-                    split_variants.append(mv + (new_change, gene_name,
-                                                mut_name, targeted_mutation))
+                    split_variants.append(
+                        mv + (new_change, gene_name, mut_name, targeted_mutation)
+                    )
                     # add the individual level data to split calls list.
                     split_calls.append(call_data[i])
             else:
                 try:
                     # if this variant is in the targets, annotate it as such.
-                    mut_name = target_annotation_dict[
-                        (gene_name, aa_change)]
+                    mut_name = target_annotation_dict[(gene_name, aa_change)]
                     targeted_mutation = "Yes"
                     if site_qual < min_target_site_qual:
                         call_data[i][0][:] = 0
                 except KeyError:
                     # remove low qual or synonymous changes
-                    if ((site_qual < min_site_qual)
-                            or (mv[2] == "synonymous_variant")):
+                    if (site_qual < min_site_qual) or (mv[2] == "synonymous_variant"):
                         continue
                     mut_name = gene_name + "-" + aa_change
                     targeted_mutation = "No"
                 # add compound variant data to split variant data
-                split_variants.append(mv + (aa_change, gene_name,
-                                            mut_name, targeted_mutation))
+                split_variants.append(
+                    mv + (aa_change, gene_name, mut_name, targeted_mutation)
+                )
                 # add the individual level data to split calls list.
                 split_calls.append(call_data[i])
 
@@ -5917,24 +6661,38 @@ def vcf_to_tables_fb(vcf_file, settings=None, settings_file=None,
 
         # create a multiindex for the variant df that we'll create next
         index = pd.MultiIndex.from_tuples(
-            split_variants, names=["Gene ID", "Compound Change", "ExonicFunc",
-                                   "AA Change", "Gene", "Mutation Name",
-                                   "Targeted"])
+            split_variants,
+            names=[
+                "Gene ID",
+                "Compound Change",
+                "ExonicFunc",
+                "AA Change",
+                "Gene",
+                "Mutation Name",
+                "Targeted",
+            ],
+        )
         # get alt counts
-        variant_counts = pd.DataFrame(np.array(split_calls)[:, 0],
-                                      columns=variants["samples"],
-                                      index=index).replace(-1, 0)
+        variant_counts = pd.DataFrame(
+            np.array(split_calls)[:, 0], columns=variants["samples"], index=index
+        ).replace(-1, 0)
         # get reference counts
-        reference_counts = pd.DataFrame(np.array(split_calls)[:, 1],
-                                        columns=variants["samples"],
-                                        index=index).replace(-1, 0)
+        reference_counts = pd.DataFrame(
+            np.array(split_calls)[:, 1], columns=variants["samples"], index=index
+        ).replace(-1, 0)
         # get coverage depth
-        coverage = pd.DataFrame(np.array(split_calls)[:, 2],
-                                columns=variants["samples"],
-                                index=index).replace(-1, 0)
+        coverage = pd.DataFrame(
+            np.array(split_calls)[:, 2], columns=variants["samples"], index=index
+        ).replace(-1, 0)
         # combine counts for same changes
-        grouping_keys = ["Gene ID", "Gene", "Mutation Name", "ExonicFunc",
-                         "AA Change", "Targeted"]
+        grouping_keys = [
+            "Gene ID",
+            "Gene",
+            "Mutation Name",
+            "ExonicFunc",
+            "AA Change",
+            "Targeted",
+        ]
         # replace -1 (allel assigned NA values) values with 0
         # sum alt counts
         mutation_counts = variant_counts.groupby(grouping_keys).sum()
@@ -5954,9 +6712,9 @@ def vcf_to_tables_fb(vcf_file, settings=None, settings_file=None,
         exceed_index = ref_difference.loc[ref_difference > 0].index
         mutation_refs.loc[:, exceed_index] = diff_count.loc[:, exceed_index]
         # get genotypes as called by the variant caller
-        gt_calls = pd.DataFrame((np.array(split_calls)[:, 3]),
-                                columns=variants["samples"],
-                                index=index)
+        gt_calls = pd.DataFrame(
+            (np.array(split_calls)[:, 3]), columns=variants["samples"], index=index
+        )
 
         def combine_gt(g):
             if 1 in g.values:
@@ -5975,19 +6733,29 @@ def vcf_to_tables_fb(vcf_file, settings=None, settings_file=None,
 
         # for one pf mutation alt count will be replaced with ref count
         # because reference allele is drug resistant
-        dhps_key = ("PF3D7_0810800", "dhps", "dhps-Gly437Ala",
-                    "missense_variant", "Gly437Ala", "Yes")
-        dhps_new_key = ("PF3D7_0810800", "dhps", "dhps-Ala437Gly",
-                        "missense_variant", "Ala437Gly", "Yes")
+        dhps_key = (
+            "PF3D7_0810800",
+            "dhps",
+            "dhps-Gly437Ala",
+            "missense_variant",
+            "Gly437Ala",
+            "Yes",
+        )
+        dhps_new_key = (
+            "PF3D7_0810800",
+            "dhps",
+            "dhps-Ala437Gly",
+            "missense_variant",
+            "Ala437Gly",
+            "Yes",
+        )
         try:
-            mutation_counts.loc[dhps_new_key, :] = mutation_refs.loc[
-                dhps_key, :]
-            mutation_refs.loc[dhps_new_key, :] = mutation_counts.loc[
-                dhps_key, :]
-            mutation_coverage.loc[dhps_new_key, :] = mutation_coverage.loc[
-                dhps_key, :]
-            gt_calls.loc[dhps_new_key, :] = gt_calls.loc[
-                dhps_key, :].replace({2: 0, 0: 2})
+            mutation_counts.loc[dhps_new_key, :] = mutation_refs.loc[dhps_key, :]
+            mutation_refs.loc[dhps_new_key, :] = mutation_counts.loc[dhps_key, :]
+            mutation_coverage.loc[dhps_new_key, :] = mutation_coverage.loc[dhps_key, :]
+            gt_calls.loc[dhps_new_key, :] = gt_calls.loc[dhps_key, :].replace(
+                {2: 0, 0: 2}
+            )
             gt_calls.drop(dhps_key, inplace=True)
             mutation_counts.drop(dhps_key, inplace=True)
             mutation_refs.drop(dhps_key, inplace=True)
@@ -6000,21 +6768,22 @@ def vcf_to_tables_fb(vcf_file, settings=None, settings_file=None,
             pass
 
         # save count tables
-        mutation_counts.T.to_csv(os.path.join(wdir, output_prefix
-                                              + "alternate_AA_table.csv"))
-        mutation_refs.T.to_csv(os.path.join(wdir, output_prefix
-                                            + "reference_AA_table.csv"))
-        mutation_coverage.T.to_csv(os.path.join(wdir, output_prefix
-                                                + "coverage_AA_table.csv"))
-        gt_calls.T.to_csv(os.path.join(wdir, output_prefix
-                                       + "genotypes_AA_table.csv"))
+        mutation_counts.T.to_csv(
+            os.path.join(wdir, output_prefix + "alternate_AA_table.csv")
+        )
+        mutation_refs.T.to_csv(
+            os.path.join(wdir, output_prefix + "reference_AA_table.csv")
+        )
+        mutation_coverage.T.to_csv(
+            os.path.join(wdir, output_prefix + "coverage_AA_table.csv")
+        )
+        gt_calls.T.to_csv(os.path.join(wdir, output_prefix + "genotypes_AA_table.csv"))
 
     if aggregate_nucleotides:
         # aggregating counts of nucleotides requires decomposing block
         # substitutions, at a minimum. If desired, complex variants involving
         # indels can be decomposed as well.
-        decomposed_vcf = os.path.join(wdir, output_prefix
-                                      + "decomposed." + vcf_file)
+        decomposed_vcf = os.path.join(wdir, output_prefix + "decomposed." + vcf_file)
         # prepare vt decompose command
         comm = ["vt", "decompose_blocksub"] + decompose_options
         comm.append(split_vcf_path)
@@ -6038,9 +6807,15 @@ def vcf_to_tables_fb(vcf_file, settings=None, settings_file=None,
         # specify fields of interest from individual level data
         # that is basically the count data for tables. AO: alt allele count,
         # RO ref count, DP: coverage.
-        call_data_fields = ['calldata/AO', 'calldata/RO', 'calldata/DP',
-                            'calldata/GT', 'calldata/GQ', 'calldata/QA',
-                            'calldata/QR']
+        call_data_fields = [
+            "calldata/AO",
+            "calldata/RO",
+            "calldata/DP",
+            "calldata/GT",
+            "calldata/GQ",
+            "calldata/QA",
+            "calldata/QR",
+        ]
         variants["calldata/GT"] = variants["calldata/GT"].sum(axis=2)
         # zip variant level  information together, so we have a single value
         # for each variant
@@ -6050,12 +6825,14 @@ def vcf_to_tables_fb(vcf_file, settings=None, settings_file=None,
         # check if a target annotation dict is provided.
         target_annotation_dict = {}
         if target_nt_annotation is not None:
-            taa = pd.read_table(target_nt_annotation).set_index(
-                ["CHROM", "POS", "REF", "ALT"]).to_dict(orient="index")
+            taa = (
+                pd.read_table(target_nt_annotation)
+                .set_index(["CHROM", "POS", "REF", "ALT"])
+                .to_dict(orient="index")
+            )
             for k in taa.keys():
                 target_annotation_dict[k] = taa[k]["mutation_name"]
-        grouping_keys = ["CHROM", "POS", "REF", "ALT", "Mutation Name",
-                         "Targeted"]
+        grouping_keys = ["CHROM", "POS", "REF", "ALT", "Mutation Name", "Targeted"]
         split_variants = []
         split_calls = []
         for i in range(len(variant_data)):
@@ -6068,7 +6845,7 @@ def vcf_to_tables_fb(vcf_file, settings=None, settings_file=None,
                     call_data[i][0][:] = 0
             except KeyError:
                 # remove low qual and nonvariant sites
-                if ((site_qual < min_site_qual) or (vd[2] == vd[3])):
+                if (site_qual < min_site_qual) or (vd[2] == vd[3]):
                     continue
                 t_anno = ":".join(map(str, vd))
                 targeted_mutation = "No"
@@ -6104,20 +6881,19 @@ def vcf_to_tables_fb(vcf_file, settings=None, settings_file=None,
         # coverage.
         #############################
         # create a multiindex for the variant df that we'll create next
-        index = pd.MultiIndex.from_tuples(
-            split_variants, names=grouping_keys)
+        index = pd.MultiIndex.from_tuples(split_variants, names=grouping_keys)
         # get alt counts
-        variant_counts = pd.DataFrame(np.array(split_calls)[:, 0],
-                                      columns=variants["samples"],
-                                      index=index).replace(-1, 0)
+        variant_counts = pd.DataFrame(
+            np.array(split_calls)[:, 0], columns=variants["samples"], index=index
+        ).replace(-1, 0)
         # get reference counts
-        reference_counts = pd.DataFrame(np.array(split_calls)[:, 1],
-                                        columns=variants["samples"],
-                                        index=index).replace(-1, 0)
+        reference_counts = pd.DataFrame(
+            np.array(split_calls)[:, 1], columns=variants["samples"], index=index
+        ).replace(-1, 0)
         # get coverage depth
-        coverage = pd.DataFrame(np.array(split_calls)[:, 2],
-                                columns=variants["samples"],
-                                index=index).replace(-1, 0)
+        coverage = pd.DataFrame(
+            np.array(split_calls)[:, 2], columns=variants["samples"], index=index
+        ).replace(-1, 0)
         # combine counts for same changes
         # sum alt counts
         mutation_counts = variant_counts.groupby(grouping_keys).sum()
@@ -6126,16 +6902,19 @@ def vcf_to_tables_fb(vcf_file, settings=None, settings_file=None,
         # take the max of coverage counts
         mutation_coverage = coverage.groupby(grouping_keys).max()
         # save count tables
-        mutation_counts.T.to_csv(os.path.join(wdir, output_prefix
-                                              + "alternate_AN_table.csv"))
-        mutation_refs.T.to_csv(os.path.join(wdir, output_prefix
-                                            + "reference_AN_table.csv"))
-        mutation_coverage.T.to_csv(os.path.join(wdir, output_prefix
-                                                + "coverage_AN_table.csv"))
+        mutation_counts.T.to_csv(
+            os.path.join(wdir, output_prefix + "alternate_AN_table.csv")
+        )
+        mutation_refs.T.to_csv(
+            os.path.join(wdir, output_prefix + "reference_AN_table.csv")
+        )
+        mutation_coverage.T.to_csv(
+            os.path.join(wdir, output_prefix + "coverage_AN_table.csv")
+        )
         # get genotypes
-        gt_calls = pd.DataFrame((np.array(split_calls)[:, 3]),
-                                columns=variants["samples"],
-                                index=index)
+        gt_calls = pd.DataFrame(
+            (np.array(split_calls)[:, 3]), columns=variants["samples"], index=index
+        )
 
         def combine_gt(g):
             if 1 in g.values:
@@ -6151,20 +6930,21 @@ def vcf_to_tables_fb(vcf_file, settings=None, settings_file=None,
                 return -1
 
         gt_calls = gt_calls.groupby(grouping_keys).agg(combine_gt)
-        gt_calls.T.to_csv(os.path.join(wdir, output_prefix
-                                       + "genotypes_AN_table.csv"))
+        gt_calls.T.to_csv(os.path.join(wdir, output_prefix + "genotypes_AN_table.csv"))
 
     if aggregate_none:
         # if no aggregation will be done, load the vcf file
         if annotate or annotated_vcf:
             # if annotation was requested use the annotated vcf path
-            variants = allel.read_vcf(annotated_vcf_path, fields=["*"],
-                                      alt_number=1,
-                                      transformers=allel.ANNTransformer())
+            variants = allel.read_vcf(
+                annotated_vcf_path,
+                fields=["*"],
+                alt_number=1,
+                transformers=allel.ANNTransformer(),
+            )
         else:
             # if the file is not annotated, don't try to parse ANN field.
-            variants = allel.read_vcf(annotated_vcf_path, fields=["*"],
-                                      alt_number=1)
+            variants = allel.read_vcf(annotated_vcf_path, fields=["*"], alt_number=1)
         # Freebayes vcfs have AO and RO counts for alt and ref allele depths
         # but GATK has a combined AD depth. Create AO and RO from AD if
         # needed
@@ -6180,9 +6960,15 @@ def vcf_to_tables_fb(vcf_file, settings=None, settings_file=None,
         # specify fields of interest from individual level data
         # that is basically the count data for tables. AO: alt allele count,
         # RO ref count, DP: coverage.
-        call_data_fields = ['calldata/AO', 'calldata/RO', 'calldata/DP',
-                            'calldata/GT', 'calldata/GQ', 'calldata/QA',
-                            'calldata/QR']
+        call_data_fields = [
+            "calldata/AO",
+            "calldata/RO",
+            "calldata/DP",
+            "calldata/GT",
+            "calldata/GQ",
+            "calldata/QA",
+            "calldata/QR",
+        ]
         variants["calldata/GT"] = variants["calldata/GT"].sum(axis=2)
         # zip variant level  information together, so we have a single value
         # for each variant
@@ -6238,46 +7024,56 @@ def vcf_to_tables_fb(vcf_file, settings=None, settings_file=None,
         # coverage.
         #############################
         # create a multiindex for the variant df that we'll create next
-        variant_fields = variant_fields[:4] + [
-            "variants/Gene ID", "variants/AA Change"]
-        index = pd.MultiIndex.from_tuples(split_variants,
-                                          names=[v.split("variants/")[1]
-                                                 for v in variant_fields])
+        variant_fields = variant_fields[:4] + ["variants/Gene ID", "variants/AA Change"]
+        index = pd.MultiIndex.from_tuples(
+            split_variants, names=[v.split("variants/")[1] for v in variant_fields]
+        )
         # get alt counts
-        variant_counts = pd.DataFrame(np.array(split_calls)[:, 0],
-                                      columns=variants["samples"],
-                                      index=index).replace(-1, 0)
+        variant_counts = pd.DataFrame(
+            np.array(split_calls)[:, 0], columns=variants["samples"], index=index
+        ).replace(-1, 0)
         # get reference counts
-        reference_counts = pd.DataFrame(np.array(split_calls)[:, 1],
-                                        columns=variants["samples"],
-                                        index=index).replace(-1, 0)
+        reference_counts = pd.DataFrame(
+            np.array(split_calls)[:, 1], columns=variants["samples"], index=index
+        ).replace(-1, 0)
         # get coverage depth
-        coverage = pd.DataFrame(np.array(split_calls)[:, 2],
-                                columns=variants["samples"],
-                                index=index).replace(-1, 0)
+        coverage = pd.DataFrame(
+            np.array(split_calls)[:, 2], columns=variants["samples"], index=index
+        ).replace(-1, 0)
         # save count tables
-        variant_counts.T.to_csv(os.path.join(wdir, output_prefix
-                                             + "alternate_table.csv"))
-        reference_counts.T.to_csv(os.path.join(wdir, output_prefix
-                                               + "reference_table.csv"))
-        coverage.T.to_csv(os.path.join(wdir, output_prefix
-                                       + "coverage_table.csv"))
+        variant_counts.T.to_csv(
+            os.path.join(wdir, output_prefix + "alternate_table.csv")
+        )
+        reference_counts.T.to_csv(
+            os.path.join(wdir, output_prefix + "reference_table.csv")
+        )
+        coverage.T.to_csv(os.path.join(wdir, output_prefix + "coverage_table.csv"))
 
         # get genotypes
-        gt_calls = pd.DataFrame((np.array(split_calls)[:, 3]),
-                                columns=variants["samples"],
-                                index=index).replace(-2, -1)
-        gt_calls.T.to_csv(os.path.join(wdir, output_prefix
-                                       + "genotypes_table.csv"))
+        gt_calls = pd.DataFrame(
+            (np.array(split_calls)[:, 3]), columns=variants["samples"], index=index
+        ).replace(-2, -1)
+        gt_calls.T.to_csv(os.path.join(wdir, output_prefix + "genotypes_table.csv"))
 
 
-def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
-                  geneid_to_genename=None, target_aa_annotation=None,
-                  aggregate_aminoacids=False, target_nt_annotation=None,
-                  aggregate_nucleotides=False, decompose_options=[],
-                  annotated_vcf=False, aggregate_none=False, min_site_qual=-1,
-                  min_target_site_qual=-1, min_genotype_qual=None,
-                  output_prefix=""):
+def vcf_to_tables(
+    vcf_file,
+    settings=None,
+    settings_file=None,
+    annotate=True,
+    geneid_to_genename=None,
+    target_aa_annotation=None,
+    aggregate_aminoacids=False,
+    target_nt_annotation=None,
+    aggregate_nucleotides=False,
+    decompose_options=[],
+    annotated_vcf=False,
+    aggregate_none=False,
+    min_site_qual=-1,
+    min_target_site_qual=-1,
+    min_genotype_qual=None,
+    output_prefix="",
+):
     """Create various tables from a vcf file.
 
     Create various tables from a vcf file generated by the freebayes
@@ -6386,46 +7182,77 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
             vtype = "--gzvcf"
         else:
             vtype = "--vcf"
-        filt_res = subprocess.Popen(["vcftools", vtype, vcf_path,
-                                     "--minGQ", str(min_genotype_qual),
-                                     "--recode", "--recode-INFO-all",
-                                     "--stdout"],
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE)
+        filt_res = subprocess.Popen(
+            [
+                "vcftools",
+                vtype,
+                vcf_path,
+                "--minGQ",
+                str(min_genotype_qual),
+                "--recode",
+                "--recode-INFO-all",
+                "--stdout",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
         filt_vcf_path = os.path.join(
-            wdir, output_prefix + "variants.GQ."
-            + str(min_genotype_qual) + ".vcf.gz")
+            wdir, output_prefix + "variants.GQ." + str(min_genotype_qual) + ".vcf.gz"
+        )
         with open(filt_vcf_path, "wb") as outfile:
-            zip_res = subprocess.run(["bgzip", "-f"], stdin=filt_res.stdout,
-                                     stdout=outfile,
-                                     stderr=subprocess.PIPE)
+            zip_res = subprocess.run(
+                ["bgzip", "-f"],
+                stdin=filt_res.stdout,
+                stdout=outfile,
+                stderr=subprocess.PIPE,
+            )
         index_res = subprocess.run(
-            ["bcftools", "index", "-f", filt_vcf_path],
-            stderr=subprocess.PIPE)
+            ["bcftools", "index", "-f", filt_vcf_path], stderr=subprocess.PIPE
+        )
         if zip_res.returncode != 0:
-            print(("Compression of GQ filtered vcf failed due to "
-                   "error: {}. \n Genotypes will not be "
-                   "filtered.").format(zip_res.stderr))
+            print(
+                (
+                    "Compression of GQ filtered vcf failed due to "
+                    "error: {}. \n Genotypes will not be "
+                    "filtered."
+                ).format(zip_res.stderr)
+            )
         elif index_res.returncode != 0:
-            print(("Indexing GQ filtered vcf file failed "
-                   "due to error: {}. \n Genotypes will not "
-                   "be filtered.").format(index_res.stderr))
+            print(
+                (
+                    "Indexing GQ filtered vcf file failed "
+                    "due to error: {}. \n Genotypes will not "
+                    "be filtered."
+                ).format(index_res.stderr)
+            )
         else:
             vcf_path = filt_vcf_path
 
     split_vcf_path = os.path.join(wdir, output_prefix + "split." + vcf_file)
-    subprocess.run(["bcftools", "norm", "-f", genome_fasta, "-m-both",
-                    vcf_path, "-Oz", "-o", split_vcf_path], check=True,
-                   stderr=subprocess.PIPE)
-    subprocess.run(["bcftools", "index", "-f", split_vcf_path], check=True,
-                   stderr=subprocess.PIPE)
+    subprocess.run(
+        [
+            "bcftools",
+            "norm",
+            "-f",
+            genome_fasta,
+            "-m-both",
+            vcf_path,
+            "-Oz",
+            "-o",
+            split_vcf_path,
+        ],
+        check=True,
+        stderr=subprocess.PIPE,
+    )
+    subprocess.run(
+        ["bcftools", "index", "-f", split_vcf_path], check=True, stderr=subprocess.PIPE
+    )
 
     # Will protein level aggregation be performed on the variants?
     # This will only be done for simple missense variants but it is important
     # to annotate the vcf file before breaking down the haplotypes.
     if annotate:
-        annotated_vcf_path = os.path.join(wdir, output_prefix + "split.ann."
-                                          + vcf_file)
+        annotated_vcf_path = os.path.join(wdir, output_prefix + "split.ann." + vcf_file)
         res = annotate_vcf_file(settings, split_vcf_path, annotated_vcf_path)
         if res != 0:
             print("Annotating the vcf file failed.")
@@ -6434,16 +7261,21 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
         annotated_vcf_path = split_vcf_path
     if aggregate_aminoacids:
         if not (annotate or annotated_vcf):
-            print("annotate option must be set to true or an annotadet vcf "
-                  "file must be provided and annotated_vcf option must be "
-                  "set to true for amino acid level aggregation. \n"
-                  "Exiting!")
+            print(
+                "annotate option must be set to true or an annotadet vcf "
+                "file must be provided and annotated_vcf option must be "
+                "set to true for amino acid level aggregation. \n"
+                "Exiting!"
+            )
             return
         # check if a target annotation dict is provided.
         target_annotation_dict = {}
         if target_aa_annotation is not None:
-            taa = pd.read_table(target_aa_annotation).set_index(
-                ["gene_name", "aminoacid_change"]).to_dict(orient="index")
+            taa = (
+                pd.read_table(target_aa_annotation)
+                .set_index(["gene_name", "aminoacid_change"])
+                .to_dict(orient="index")
+            )
             for k in taa.keys():
                 target_annotation_dict[k] = taa[k]["mutation_name"]
         # check if a gene id to gene name file is provided
@@ -6455,9 +7287,12 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
                 gene_ids[g] = gids[g]["gene_name"]
 
         # load annotated vcf file
-        variants = allel.read_vcf(annotated_vcf_path, fields=["*"],
-                                  alt_number=1,
-                                  transformers=allel.ANNTransformer())
+        variants = allel.read_vcf(
+            annotated_vcf_path,
+            fields=["*"],
+            alt_number=1,
+            transformers=allel.ANNTransformer(),
+        )
         # allel import provides a variants dictionary with keys such as
         # variants/AD, variants/POS for variant level information
         # the values are arrays with each element corresponding to one variant.
@@ -6474,17 +7309,17 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
         # find missense variant locations in the data. We are going to split
         # multi amino acid changes for missense variants only for target
         # annotation and count aggregation.
-        missense = ["missense_variant" == variant for variant
-                    in variants["variants/ANN_Annotation"]]
+        missense = [
+            "missense_variant" == variant
+            for variant in variants["variants/ANN_Annotation"]
+        ]
         # spcecify fields of interest from the INFO fields
-        variant_fields = ["ANN_Gene_ID", "ANN_HGVS_p", "ANN_Annotation",
-                          "QUAL"]
+        variant_fields = ["ANN_Gene_ID", "ANN_HGVS_p", "ANN_Annotation", "QUAL"]
         variant_fields = ["variants/" + v for v in variant_fields]
         # specify fields of interest from individual level data
         # that is basically the count data for tables. AO: alt allele count,
         # RO ref count, DP: coverage.
-        call_data_fields = ['calldata/AO', 'calldata/RO',
-                            'calldata/DP', 'calldata/GT']
+        call_data_fields = ["calldata/AO", "calldata/RO", "calldata/DP", "calldata/GT"]
         variants["calldata/GT"] = variants["calldata/GT"].sum(axis=2)
         # zip variant level  information together, so we have a single value
         # for each variant
@@ -6529,15 +7364,14 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
                 # aa changes are in 3 letter format. Loop through each aa and
                 # split to single aa changes.
                 for j in range(0, len(reference), 3):
-                    new_pos = int(aa_pos + j/3)
+                    new_pos = int(aa_pos + j / 3)
                     # convert single amino acid names to 1 letter code.
-                    new_reference = reference[j:j+3]
-                    new_alternate = alternate[j:j+3]
+                    new_reference = reference[j : j + 3]
+                    new_alternate = alternate[j : j + 3]
                     new_change = new_reference + str(new_pos) + new_alternate
                     try:
                         # if this variant is in the targets, annotate it so.
-                        mut_name = target_annotation_dict[
-                            (gene_name, new_change)]
+                        mut_name = target_annotation_dict[(gene_name, new_change)]
                         targeted_mutation = "Yes"
                         # reset alt observation counts to 0 if quality is low
                         if site_qual < min_target_site_qual:
@@ -6545,56 +7379,71 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
                     except KeyError:
                         # remove low quality non-target alleles as well as
                         # synonymous changes
-                        if ((site_qual < min_site_qual)
-                                or (new_reference == new_alternate)):
+                        if (site_qual < min_site_qual) or (
+                            new_reference == new_alternate
+                        ):
                             continue
                         mut_name = gene_name + "-" + new_change
                         targeted_mutation = "No"
                     # add the split variant information split variants list
-                    split_variants.append(mv + (new_change, gene_name,
-                                                mut_name, targeted_mutation))
+                    split_variants.append(
+                        mv + (new_change, gene_name, mut_name, targeted_mutation)
+                    )
                     # add the individual level data to split calls list.
                     split_calls.append(call_data[i])
             else:
                 try:
                     # if this variant is in the targets, annotate it as such.
-                    mut_name = target_annotation_dict[
-                        (gene_name, aa_change)]
+                    mut_name = target_annotation_dict[(gene_name, aa_change)]
                     targeted_mutation = "Yes"
                     if site_qual < min_target_site_qual:
                         call_data[i][0][:] = 0
                 except KeyError:
                     # remove low qual or synonymous changes
-                    if ((site_qual < min_site_qual)
-                            or (mv[2] == "synonymous_variant")):
+                    if (site_qual < min_site_qual) or (mv[2] == "synonymous_variant"):
                         continue
                     mut_name = gene_name + "-" + aa_change
                     targeted_mutation = "No"
                 # add compound variant data to split variant data
-                split_variants.append(mv + (aa_change, gene_name,
-                                            mut_name, targeted_mutation))
+                split_variants.append(
+                    mv + (aa_change, gene_name, mut_name, targeted_mutation)
+                )
                 # add the individual level data to split calls list.
                 split_calls.append(call_data[i])
         # create a multiindex for the variant df that we'll create next
         index = pd.MultiIndex.from_tuples(
-            split_variants, names=["Gene ID", "Compound Change", "ExonicFunc",
-                                   "AA Change", "Gene", "Mutation Name",
-                                   "Targeted"])
+            split_variants,
+            names=[
+                "Gene ID",
+                "Compound Change",
+                "ExonicFunc",
+                "AA Change",
+                "Gene",
+                "Mutation Name",
+                "Targeted",
+            ],
+        )
         # get alt counts
-        variant_counts = pd.DataFrame(np.array(split_calls)[:, 0],
-                                      columns=variants["samples"],
-                                      index=index).replace(-1, 0)
+        variant_counts = pd.DataFrame(
+            np.array(split_calls)[:, 0], columns=variants["samples"], index=index
+        ).replace(-1, 0)
         # get reference counts
-        reference_counts = pd.DataFrame(np.array(split_calls)[:, 1],
-                                        columns=variants["samples"],
-                                        index=index).replace(-1, 0)
+        reference_counts = pd.DataFrame(
+            np.array(split_calls)[:, 1], columns=variants["samples"], index=index
+        ).replace(-1, 0)
         # get coverage depth
-        coverage = pd.DataFrame(np.array(split_calls)[:, 2],
-                                columns=variants["samples"],
-                                index=index).replace(-1, 0)
+        coverage = pd.DataFrame(
+            np.array(split_calls)[:, 2], columns=variants["samples"], index=index
+        ).replace(-1, 0)
         # combine counts for same changes
-        grouping_keys = ["Gene ID", "Gene", "Mutation Name", "ExonicFunc",
-                         "AA Change", "Targeted"]
+        grouping_keys = [
+            "Gene ID",
+            "Gene",
+            "Mutation Name",
+            "ExonicFunc",
+            "AA Change",
+            "Targeted",
+        ]
         # replace -1 (allel assigned NA values) values with 0
         # sum alt counts
         mutation_counts = variant_counts.groupby(grouping_keys).sum()
@@ -6614,9 +7463,9 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
         exceed_index = ref_difference.loc[ref_difference > 0].index
         mutation_refs.loc[:, exceed_index] = diff_count.loc[:, exceed_index]
         # get genotypes as called by the variant caller
-        gt_calls = pd.DataFrame((np.array(split_calls)[:, 3]),
-                                columns=variants["samples"],
-                                index=index)
+        gt_calls = pd.DataFrame(
+            (np.array(split_calls)[:, 3]), columns=variants["samples"], index=index
+        )
 
         def combine_gt(g):
             if 1 in g.values:
@@ -6635,19 +7484,29 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
 
         # for one pf mutation alt count will be replaced with ref count
         # because reference allele is drug resistant
-        dhps_key = ("PF3D7_0810800", "dhps", "dhps-Gly437Ala",
-                    "missense_variant", "Gly437Ala", "Yes")
-        dhps_new_key = ("PF3D7_0810800", "dhps", "dhps-Ala437Gly",
-                        "missense_variant", "Ala437Gly", "Yes")
+        dhps_key = (
+            "PF3D7_0810800",
+            "dhps",
+            "dhps-Gly437Ala",
+            "missense_variant",
+            "Gly437Ala",
+            "Yes",
+        )
+        dhps_new_key = (
+            "PF3D7_0810800",
+            "dhps",
+            "dhps-Ala437Gly",
+            "missense_variant",
+            "Ala437Gly",
+            "Yes",
+        )
         try:
-            mutation_counts.loc[dhps_new_key, :] = mutation_refs.loc[
-                dhps_key, :]
-            mutation_refs.loc[dhps_new_key, :] = mutation_counts.loc[
-                dhps_key, :]
-            mutation_coverage.loc[dhps_new_key, :] = mutation_coverage.loc[
-                dhps_key, :]
-            gt_calls.loc[dhps_new_key, :] = gt_calls.loc[
-                dhps_key, :].replace({2: 0, 0: 2})
+            mutation_counts.loc[dhps_new_key, :] = mutation_refs.loc[dhps_key, :]
+            mutation_refs.loc[dhps_new_key, :] = mutation_counts.loc[dhps_key, :]
+            mutation_coverage.loc[dhps_new_key, :] = mutation_coverage.loc[dhps_key, :]
+            gt_calls.loc[dhps_new_key, :] = gt_calls.loc[dhps_key, :].replace(
+                {2: 0, 0: 2}
+            )
             gt_calls.drop(dhps_key, inplace=True)
             mutation_counts.drop(dhps_key, inplace=True)
             mutation_refs.drop(dhps_key, inplace=True)
@@ -6660,21 +7519,22 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
             pass
 
         # save count tables
-        mutation_counts.T.to_csv(os.path.join(wdir, output_prefix
-                                              + "alternate_AA_table.csv"))
-        mutation_refs.T.to_csv(os.path.join(wdir, output_prefix
-                                            + "reference_AA_table.csv"))
-        mutation_coverage.T.to_csv(os.path.join(wdir, output_prefix
-                                                + "coverage_AA_table.csv"))
-        gt_calls.T.to_csv(os.path.join(wdir, output_prefix
-                                       + "genotypes_AA_table.csv"))
+        mutation_counts.T.to_csv(
+            os.path.join(wdir, output_prefix + "alternate_AA_table.csv")
+        )
+        mutation_refs.T.to_csv(
+            os.path.join(wdir, output_prefix + "reference_AA_table.csv")
+        )
+        mutation_coverage.T.to_csv(
+            os.path.join(wdir, output_prefix + "coverage_AA_table.csv")
+        )
+        gt_calls.T.to_csv(os.path.join(wdir, output_prefix + "genotypes_AA_table.csv"))
 
     if aggregate_nucleotides:
         # aggregating counts of nucleotides requires decomposing block
         # substitutions, at a minimum. If desired, complex variants involving
         # indels can be decomposed as well.
-        decomposed_vcf = os.path.join(wdir, output_prefix
-                                      + "decomposed." + vcf_file)
+        decomposed_vcf = os.path.join(wdir, output_prefix + "decomposed." + vcf_file)
         # prepare vt decompose command
         comm = ["vt", "decompose_blocksub"] + decompose_options
         comm.append(split_vcf_path)
@@ -6698,8 +7558,7 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
         # specify fields of interest from individual level data
         # that is basically the count data for tables. AO: alt allele count,
         # RO ref count, DP: coverage.
-        call_data_fields = ['calldata/AO', 'calldata/RO',
-                            'calldata/DP', 'calldata/GT']
+        call_data_fields = ["calldata/AO", "calldata/RO", "calldata/DP", "calldata/GT"]
         variants["calldata/GT"] = variants["calldata/GT"].sum(axis=2)
         # zip variant level  information together, so we have a single value
         # for each variant
@@ -6709,12 +7568,14 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
         # check if a target annotation dict is provided.
         target_annotation_dict = {}
         if target_nt_annotation is not None:
-            taa = pd.read_table(target_nt_annotation).set_index(
-                ["CHROM", "POS", "REF", "ALT"]).to_dict(orient="index")
+            taa = (
+                pd.read_table(target_nt_annotation)
+                .set_index(["CHROM", "POS", "REF", "ALT"])
+                .to_dict(orient="index")
+            )
             for k in taa.keys():
                 target_annotation_dict[k] = taa[k]["mutation_name"]
-        grouping_keys = ["CHROM", "POS", "REF", "ALT", "Mutation Name",
-                         "Targeted"]
+        grouping_keys = ["CHROM", "POS", "REF", "ALT", "Mutation Name", "Targeted"]
         split_variants = []
         split_calls = []
         for i in range(len(variant_data)):
@@ -6727,7 +7588,7 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
                     call_data[i][0][:] = 0
             except KeyError:
                 # remove low qual and nonvariant sites
-                if ((site_qual < min_site_qual) or (vd[2] == vd[3])):
+                if (site_qual < min_site_qual) or (vd[2] == vd[3]):
                     continue
                 t_anno = ":".join(map(str, vd))
                 targeted_mutation = "No"
@@ -6737,20 +7598,19 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
         # coverage.
         #############################
         # create a multiindex for the variant df that we'll create next
-        index = pd.MultiIndex.from_tuples(
-            split_variants, names=grouping_keys)
+        index = pd.MultiIndex.from_tuples(split_variants, names=grouping_keys)
         # get alt counts
-        variant_counts = pd.DataFrame(np.array(split_calls)[:, 0],
-                                      columns=variants["samples"],
-                                      index=index).replace(-1, 0)
+        variant_counts = pd.DataFrame(
+            np.array(split_calls)[:, 0], columns=variants["samples"], index=index
+        ).replace(-1, 0)
         # get reference counts
-        reference_counts = pd.DataFrame(np.array(split_calls)[:, 1],
-                                        columns=variants["samples"],
-                                        index=index).replace(-1, 0)
+        reference_counts = pd.DataFrame(
+            np.array(split_calls)[:, 1], columns=variants["samples"], index=index
+        ).replace(-1, 0)
         # get coverage depth
-        coverage = pd.DataFrame(np.array(split_calls)[:, 2],
-                                columns=variants["samples"],
-                                index=index).replace(-1, 0)
+        coverage = pd.DataFrame(
+            np.array(split_calls)[:, 2], columns=variants["samples"], index=index
+        ).replace(-1, 0)
         # combine counts for same changes
         # sum alt counts
         mutation_counts = variant_counts.groupby(grouping_keys).sum()
@@ -6759,16 +7619,19 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
         # take the max of coverage counts
         mutation_coverage = coverage.groupby(grouping_keys).max()
         # save count tables
-        mutation_counts.T.to_csv(os.path.join(wdir, output_prefix
-                                              + "alternate_AN_table.csv"))
-        mutation_refs.T.to_csv(os.path.join(wdir, output_prefix
-                                            + "reference_AN_table.csv"))
-        mutation_coverage.T.to_csv(os.path.join(wdir, output_prefix
-                                                + "coverage_AN_table.csv"))
+        mutation_counts.T.to_csv(
+            os.path.join(wdir, output_prefix + "alternate_AN_table.csv")
+        )
+        mutation_refs.T.to_csv(
+            os.path.join(wdir, output_prefix + "reference_AN_table.csv")
+        )
+        mutation_coverage.T.to_csv(
+            os.path.join(wdir, output_prefix + "coverage_AN_table.csv")
+        )
         # get genotypes
-        gt_calls = pd.DataFrame((np.array(split_calls)[:, 3]),
-                                columns=variants["samples"],
-                                index=index)
+        gt_calls = pd.DataFrame(
+            (np.array(split_calls)[:, 3]), columns=variants["samples"], index=index
+        )
 
         def combine_gt(g):
             if 1 in g.values:
@@ -6784,20 +7647,21 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
                 return -1
 
         gt_calls = gt_calls.groupby(grouping_keys).agg(combine_gt)
-        gt_calls.T.to_csv(os.path.join(wdir, output_prefix
-                                       + "genotypes_AN_table.csv"))
+        gt_calls.T.to_csv(os.path.join(wdir, output_prefix + "genotypes_AN_table.csv"))
 
     if aggregate_none:
         # if no aggregation will be done, load the vcf file
         if annotate or annotated_vcf:
             # if annotation was requested use the annotated vcf path
-            variants = allel.read_vcf(annotated_vcf_path, fields=["*"],
-                                      alt_number=1,
-                                      transformers=allel.ANNTransformer())
+            variants = allel.read_vcf(
+                annotated_vcf_path,
+                fields=["*"],
+                alt_number=1,
+                transformers=allel.ANNTransformer(),
+            )
         else:
             # if the file is not annotated, don't try to parse ANN field.
-            variants = allel.read_vcf(annotated_vcf_path, fields=["*"],
-                                      alt_number=1)
+            variants = allel.read_vcf(annotated_vcf_path, fields=["*"], alt_number=1)
         # Freebayes vcfs have AO and RO counts for alt and ref allele depths
         # but GATK has a combined AD depth. Create AO and RO from AD if
         # needed
@@ -6813,8 +7677,7 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
         # specify fields of interest from individual level data
         # that is basically the count data for tables. AO: alt allele count,
         # RO ref count, DP: coverage.
-        call_data_fields = ['calldata/AO', 'calldata/RO',
-                            'calldata/DP', 'calldata/GT']
+        call_data_fields = ["calldata/AO", "calldata/RO", "calldata/DP", "calldata/GT"]
         variants["calldata/GT"] = variants["calldata/GT"].sum(axis=2)
         # zip variant level  information together, so we have a single value
         # for each variant
@@ -6845,38 +7708,36 @@ def vcf_to_tables(vcf_file, settings=None, settings_file=None, annotate=True,
         # coverage.
         #############################
         # create a multiindex for the variant df that we'll create next
-        variant_fields = variant_fields[:4] + [
-            "variants/Gene ID", "variants/AA Change"]
-        index = pd.MultiIndex.from_tuples(split_variants,
-                                          names=[v.split("variants/")[1]
-                                                 for v in variant_fields])
+        variant_fields = variant_fields[:4] + ["variants/Gene ID", "variants/AA Change"]
+        index = pd.MultiIndex.from_tuples(
+            split_variants, names=[v.split("variants/")[1] for v in variant_fields]
+        )
         # get alt counts
-        variant_counts = pd.DataFrame(np.array(split_calls)[:, 0],
-                                      columns=variants["samples"],
-                                      index=index).replace(-1, 0)
+        variant_counts = pd.DataFrame(
+            np.array(split_calls)[:, 0], columns=variants["samples"], index=index
+        ).replace(-1, 0)
         # get reference counts
-        reference_counts = pd.DataFrame(np.array(split_calls)[:, 1],
-                                        columns=variants["samples"],
-                                        index=index).replace(-1, 0)
+        reference_counts = pd.DataFrame(
+            np.array(split_calls)[:, 1], columns=variants["samples"], index=index
+        ).replace(-1, 0)
         # get coverage depth
-        coverage = pd.DataFrame(np.array(split_calls)[:, 2],
-                                columns=variants["samples"],
-                                index=index).replace(-1, 0)
+        coverage = pd.DataFrame(
+            np.array(split_calls)[:, 2], columns=variants["samples"], index=index
+        ).replace(-1, 0)
         # save count tables
-        variant_counts.T.to_csv(os.path.join(wdir, output_prefix
-                                             + "alternate_table.csv"))
-        reference_counts.T.to_csv(os.path.join(wdir, output_prefix
-                                               + "reference_table.csv"))
-        coverage.T.to_csv(os.path.join(wdir, output_prefix
-                                       + "coverage_table.csv"))
+        variant_counts.T.to_csv(
+            os.path.join(wdir, output_prefix + "alternate_table.csv")
+        )
+        reference_counts.T.to_csv(
+            os.path.join(wdir, output_prefix + "reference_table.csv")
+        )
+        coverage.T.to_csv(os.path.join(wdir, output_prefix + "coverage_table.csv"))
 
         # get genotypes
-        gt_calls = pd.DataFrame((np.array(split_calls)[:, 3]),
-                                columns=variants["samples"],
-                                index=index).replace(-2, -1)
-        gt_calls.T.to_csv(os.path.join(wdir, output_prefix
-                                       + "genotypes_table.csv"))
-
+        gt_calls = pd.DataFrame(
+            (np.array(split_calls)[:, 3]), columns=variants["samples"], index=index
+        ).replace(-2, -1)
+        gt_calls.T.to_csv(os.path.join(wdir, output_prefix + "genotypes_table.csv"))
 
 
 def get_mutation_position(change):
@@ -6907,23 +7768,32 @@ def merge_contigs(settings, contig_info_dict, results):
             for contig in contig_info_dict[chrom]:
                 contig_name = contig_info_dict[chrom][contig]["contig_name"]
                 if contig_name in results:
-                    contigs_dir = contig_info_dict[chrom][contig][
-                        "contigs_dir"]
-                    contig_vcf_file = os.path.join(contigs_dir,
-                                                   contig_name + ".vcf")
-                    subprocess.call(["bgzip", "-f", contig_vcf_file],
-                                    cwd=contigs_dir)
-                    subprocess.call(["bcftools", "index", "-f",
-                                     contig_vcf_file + ".gz"],
-                                    cwd=contigs_dir)
+                    contigs_dir = contig_info_dict[chrom][contig]["contigs_dir"]
+                    contig_vcf_file = os.path.join(contigs_dir, contig_name + ".vcf")
+                    subprocess.call(["bgzip", "-f", contig_vcf_file], cwd=contigs_dir)
+                    subprocess.call(
+                        ["bcftools", "index", "-f", contig_vcf_file + ".gz"],
+                        cwd=contigs_dir,
+                    )
                     outf.write(contig_vcf_file + ".gz" + "\n")
-        subprocess.call(["bcftools", "concat", "-f", chrom_vcf_list, "-Oz",
-                         "-o", chrom_vcf_file])
+        subprocess.call(
+            ["bcftools", "concat", "-f", chrom_vcf_list, "-Oz", "-o", chrom_vcf_file]
+        )
         vcf_file_list.append(chrom_vcf_file)
 
         split_vcf_file = os.path.join(wdir, chrom + ".split.vcf.gz")
-        subprocess.call(["bcftools", "norm", "-m-both", "-N", "-Oz",
-                         chrom_vcf_file, "-o", split_vcf_file])
+        subprocess.call(
+            [
+                "bcftools",
+                "norm",
+                "-m-both",
+                "-N",
+                "-Oz",
+                chrom_vcf_file,
+                "-o",
+                split_vcf_file,
+            ]
+        )
         vcf_file_list.append(split_vcf_file)
 
         filt_vcf_file = os.path.join(wdir, chrom + ".split.filt.vcf.gz")
@@ -6943,23 +7813,56 @@ def merge_contigs(settings, contig_info_dict, results):
             "(INFO/NS >= " + minVariantSampleTotal + ")",
             "(INFO/QS[1] >= " + minVariantMeanQuality + ")",
             "(INFO/WSAF[1] >= " + minVariantMeanWsaf + ")",
-            "(INFO/MCF[1] >= " + minMipCountFraction + ")"]
+            "(INFO/MCF[1] >= " + minMipCountFraction + ")",
+        ]
 
         filter_expressions = " & ".join(filter_expressions)
         filter_expressions = filter_expressions + ') | (OT !=".")'
 
-        subprocess.call(["bcftools", "view", "-i", filter_expressions, "-Oz",
-                         split_vcf_file, "-o", filt_vcf_file])
+        subprocess.call(
+            [
+                "bcftools",
+                "view",
+                "-i",
+                filter_expressions,
+                "-Oz",
+                split_vcf_file,
+                "-o",
+                filt_vcf_file,
+            ]
+        )
         vcf_file_list.append(filt_vcf_file)
 
         merged_vcf_file = os.path.join(wdir, chrom + ".merged.filt.vcf.gz")
-        subprocess.call(["bcftools", "norm", "-m+any", "-N", "-Oz",
-                         filt_vcf_file, "-o", merged_vcf_file])
+        subprocess.call(
+            [
+                "bcftools",
+                "norm",
+                "-m+any",
+                "-N",
+                "-Oz",
+                filt_vcf_file,
+                "-o",
+                merged_vcf_file,
+            ]
+        )
         vcf_file_list.append(merged_vcf_file)
 
         norm_vcf_file = os.path.join(wdir, chrom + ".norm.vcf.gz")
-        subprocess.call(["bcftools", "norm", "-m-both", "-f", genome_fasta,
-                         "-cs", "-Oz", merged_vcf_file, "-o", norm_vcf_file])
+        subprocess.call(
+            [
+                "bcftools",
+                "norm",
+                "-m-both",
+                "-f",
+                genome_fasta,
+                "-cs",
+                "-Oz",
+                merged_vcf_file,
+                "-o",
+                norm_vcf_file,
+            ]
+        )
         vcf_file_list.append(norm_vcf_file)
 
         # annotate with snpEff
@@ -6970,14 +7873,20 @@ def merge_contigs(settings, contig_info_dict, results):
         except KeyError:
             annotate = False
         if annotate:
-            ann = subprocess.Popen(["java", "-Xmx10g", "-jar",
-                                    os.path.join(ann_db_dir, "snpEff.jar"),
-                                    ann_db, norm_vcf_file],
-                                   stdout=subprocess.PIPE)
+            ann = subprocess.Popen(
+                [
+                    "java",
+                    "-Xmx10g",
+                    "-jar",
+                    os.path.join(ann_db_dir, "snpEff.jar"),
+                    ann_db,
+                    norm_vcf_file,
+                ],
+                stdout=subprocess.PIPE,
+            )
             annotated_vcf_file = os.path.join(wdir, chrom + ".norm.ann.vcf.gz")
             with open(annotated_vcf_file, "wb") as avf:
-                subprocess.call(["bgzip"], stdin=ann.stdout,
-                                stdout=avf)
+                subprocess.call(["bgzip"], stdin=ann.stdout, stdout=avf)
 
             vcf_file_list.append(annotated_vcf_file)
         subprocess.call(["mv"] + vcf_file_list + [vcfdir])
@@ -6992,8 +7901,10 @@ def annotate_vcf_file(settings, vcf_file, annotated_vcf_file, options=[]):
         ann_db_dir = get_file_locations()[species]["snpeff_dir"]
         ann_db = get_file_locations()[species]["snpeff_db"]
     except KeyError:
-        print("snpeff_dir and snpeff_db must be specified in the settings "
-              "to carry out snpeff annotations.")
+        print(
+            "snpeff_dir and snpeff_db must be specified in the settings "
+            "to carry out snpeff annotations."
+        )
         return
     # run snpeff program on the vcf file. Snpeff outputs to stdout so we'll
     # redirect it to the annotated vcf file. If output file name provided
@@ -7002,32 +7913,40 @@ def annotate_vcf_file(settings, vcf_file, annotated_vcf_file, options=[]):
     if annotated_vcf_file.endswith(".gz"):
         annotated_vcf_file = annotated_vcf_file[:-3]
     with open(annotated_vcf_file, "wb") as avf:
-        comm = ["java", "-Xmx10g", "-jar",
-                os.path.join(ann_db_dir, "snpEff.jar"), ann_db, vcf_file]
+        comm = [
+            "java",
+            "-Xmx10g",
+            "-jar",
+            os.path.join(ann_db_dir, "snpEff.jar"),
+            ann_db,
+            vcf_file,
+        ]
         comm.extend(options)
         res = subprocess.run(comm, stdout=avf, stderr=subprocess.PIPE)
         if res.returncode != 0:
             print("Error  in snpEff call ", res.stderr)
             return res.returncode
     # most vcf operations require a bgzipped indexed file, so do those
-    res = subprocess.run(["bgzip", "-f", annotated_vcf_file],
-                         stderr=subprocess.PIPE)
+    res = subprocess.run(["bgzip", "-f", annotated_vcf_file], stderr=subprocess.PIPE)
     if res.returncode != 0:
         print("Error in compressing the annotated vcf file, ", res.stderr)
         return res.returncode
-    res = subprocess.run(["bcftools", "index", "-f",
-                          annotated_vcf_file + ".gz"], stderr=subprocess.PIPE)
+    res = subprocess.run(
+        ["bcftools", "index", "-f", annotated_vcf_file + ".gz"], stderr=subprocess.PIPE
+    )
     if res.returncode != 0:
         print("Error in indexing the annotated vcf file, ", res.stderr)
         return res.returncode
     return 0
 
+
 ###############################################################################
 # general use functions.
 ###############################################################################
 
+
 def parse_alignment_positions(alignment_file, contig_start, ref_key="ref"):
-    """ Parse a multiple sequence alignment file given in fasta format.
+    """Parse a multiple sequence alignment file given in fasta format.
     Using the genomic start position of the reference contig, create a
     genome to alignment and alignment to genome position maps.
     """
@@ -7037,18 +7956,19 @@ def parse_alignment_positions(alignment_file, contig_start, ref_key="ref"):
     insertion_count = 0
     for i in range(len(ref_seq)):
         if ref_seq[i] != "-":
-            alignment_to_genomic[i+1] = i + contig_start - insertion_count
+            alignment_to_genomic[i + 1] = i + contig_start - insertion_count
         else:
             insertion_count += 1
     genomic_to_alignment = {}
     for alignment_position in alignment_to_genomic:
-        genomic_to_alignment[alignment_to_genomic[
-            alignment_position]] = alignment_position
+        genomic_to_alignment[alignment_to_genomic[alignment_position]] = (
+            alignment_position
+        )
     return {"a2g": alignment_to_genomic, "g2a": genomic_to_alignment}
 
 
 def check_overlap(r1, r2, padding=0):
-    """ Check if two regions overlap. Regions are given as lists of chrom (str),
+    """Check if two regions overlap. Regions are given as lists of chrom (str),
     begin (int), end (int)."""
     # check chromosome equivalency
     o1 = r1[0] == r2[0]
@@ -7059,7 +7979,7 @@ def check_overlap(r1, r2, padding=0):
 
 
 def make_region(chromosome, begin, end):
-    """ Create region string from coordinates.
+    """Create region string from coordinates.
     takes 2 (1 for human 1-9) digit chromosome,
     begin and end positions (1 indexed)"""
     region = "chr" + str(chromosome) + ":" + str(begin) + "-" + str(end)
@@ -7067,7 +7987,7 @@ def make_region(chromosome, begin, end):
 
 
 def create_region(chromosome, begin, end):
-    """ Create region string from coordinates.
+    """Create region string from coordinates.
     chromosome string,
     begin and end positions (1 indexed)"""
     region = chromosome + ":" + str(begin) + "-" + str(end)
@@ -7075,7 +7995,7 @@ def create_region(chromosome, begin, end):
 
 
 def get_coordinates(region):
-    """ Define coordinates chr, start pos and end positions
+    """Define coordinates chr, start pos and end positions
     from region string chrX:start-end. Return coordinate list.
     """
     chromosome = region.split(":")[0]
@@ -7087,13 +8007,18 @@ def get_coordinates(region):
 
 
 def get_fasta(region, species="pf", offset=1, header="na"):
-    """ Take a region string (chrX:begin-end (1 indexed)),
+    """Take a region string (chrX:begin-end (1 indexed)),
     and species (human=hs, plasmodium= pf),Return fasta record.
     """
     if offset == 0:
         region_coordinates = get_coordinates(region)
-        region = (region_coordinates[0] + ":" + str(region_coordinates[1] + 1)
-                  + "-" + str(region_coordinates[2]))
+        region = (
+            region_coordinates[0]
+            + ":"
+            + str(region_coordinates[1] + 1)
+            + "-"
+            + str(region_coordinates[2])
+        )
     region = region.encode("utf-8")
     file_locations = get_file_locations()
     genome_fasta = file_locations[species]["fasta_genome"].encode("utf-8")
@@ -7105,7 +8030,7 @@ def get_fasta(region, species="pf", offset=1, header="na"):
 
 
 def get_fasta_list(regions, species):
-    """ Take a list of regions and return fasta sequences."""
+    """Take a list of regions and return fasta sequences."""
     if len(regions) == 0:
         return {}
     file_locations = get_file_locations()
@@ -7115,7 +8040,7 @@ def get_fasta_list(regions, species):
         for r in regions:
             outfile.write(r + "\n")
     fasta_dic = {}
-    command = ["samtools",  "faidx", "-r", region_file, genome_fasta]
+    command = ["samtools", "faidx", "-r", region_file, genome_fasta]
     out = subprocess.check_output(command).decode("UTF-8")
     fasta_list = out.split(">")[1:]
     for f in fasta_list:
@@ -7189,7 +8114,8 @@ def overlap(reg1, reg2):
     """
     try:
         intersect = set(range(reg1[0], reg1[1] + 1)).intersection(
-            set(range(reg2[0], reg2[1] + 1)))
+            set(range(reg2[0], reg2[1] + 1))
+        )
         intersect = sorted(intersect)
         return [intersect[0]] + [intersect[-1]]
     except IndexError:
@@ -7205,8 +8131,7 @@ def remove_overlap(reg1, reg2, spacer=0):
     try:
         if regions[0][1] - regions[1][0] >= spacer:
             coords = sorted(reg1 + reg2)
-            return[[coords[0], coords[1] - 1],
-                   [coords[2] + 1, coords[3]]]
+            return [[coords[0], coords[1] - 1], [coords[2] + 1, coords[3]]]
         else:
             return regions
     except IndexError:
@@ -7220,10 +8145,9 @@ def complete_overlap(reg1, reg2):
     """
     regions = sorted([sorted(reg1), sorted(reg2)])
     try:
-        return (((regions[0][0] == regions[1][0])
-                 and (regions[0][1] <= regions[1][1]))
-                or ((regions[0][0] < regions[1][0])
-                    and (regions[0][1] >= regions[1][1])))
+        return (
+            (regions[0][0] == regions[1][0]) and (regions[0][1] <= regions[1][1])
+        ) or ((regions[0][0] < regions[1][0]) and (regions[0][1] >= regions[1][1]))
     except IndexError:
         return False
 
@@ -7270,15 +8194,20 @@ def subtract_overlap(uncovered_regions, covered_regions, spacer=0):
             pass
     uncovered_remaining = sorted(uncovered_set.difference(covered_set))
     if len(uncovered_remaining) > 0:
-        uncovered = [[uncovered_remaining[i-1], uncovered_remaining[i]]
-                     for i in range(1, len(uncovered_remaining))
-                     if uncovered_remaining[i] - uncovered_remaining[i-1] > 1]
+        uncovered = [
+            [uncovered_remaining[i - 1], uncovered_remaining[i]]
+            for i in range(1, len(uncovered_remaining))
+            if uncovered_remaining[i] - uncovered_remaining[i - 1] > 1
+        ]
         unc = [uncovered_remaining[0]]
         for u in uncovered:
             unc.extend(u)
         unc.append(uncovered_remaining[-1])
-        return [[unc[i], unc[i+1]]for i in range(0, len(unc), 2)
-                if unc[i+1] - unc[i] > spacer]
+        return [
+            [unc[i], unc[i + 1]]
+            for i in range(0, len(unc), 2)
+            if unc[i + 1] - unc[i] > spacer
+        ]
     else:
         return []
 
@@ -7312,16 +8241,19 @@ def trim_overlap(region_list, low=0.1, high=0.9, spacer=0):
                         else:
                             overlapping_region = overlap(reg_i, reg_j)
                             if len(overlapping_region) > 0:
-                                reg_sizes = sorted([reg_i[1] - reg_i[0] + 1,
-                                                    reg_j[1] - reg_j[0] + 1])
-                                overlap_size = float(overlapping_region[1]
-                                                     - overlapping_region[0])
-                                overlap_ratio = overlap_size/reg_sizes[0]
+                                reg_sizes = sorted(
+                                    [reg_i[1] - reg_i[0] + 1, reg_j[1] - reg_j[0] + 1]
+                                )
+                                overlap_size = float(
+                                    overlapping_region[1] - overlapping_region[0]
+                                )
+                                overlap_ratio = overlap_size / reg_sizes[0]
                                 if overlap_ratio <= low:
                                     region_list[i] = "remove"
                                     region_list[j] = "remove"
-                                    region_list.extend(remove_overlap(
-                                        reg_i, reg_j, spacer))
+                                    region_list.extend(
+                                        remove_overlap(reg_i, reg_j, spacer)
+                                    )
                                     break_for = True
                                     do_trim = True
                                     break
@@ -7333,9 +8265,12 @@ def trim_overlap(region_list, low=0.1, high=0.9, spacer=0):
                                     do_trim = True
                                     break
                                 else:
-                                    print(overlap_ratio,
-                                          "is outside trim range for ",
-                                          reg_i, reg_j)
+                                    print(
+                                        overlap_ratio,
+                                        "is outside trim range for ",
+                                        reg_i,
+                                        reg_j,
+                                    )
 
     return region_list
 
@@ -7385,7 +8320,7 @@ def fasta_parser_verbatim(fasta):
 
 
 def fasta_to_sequence(fasta):
-    """ Convert a multiline fasta sequence to one line sequence"""
+    """Convert a multiline fasta sequence to one line sequence"""
     f = fasta.strip().split("\n")
     if len(f) > 0:
         return "".join(f[1:])
@@ -7398,7 +8333,7 @@ def get_sequence(region, species):
 
 
 def unmask_fasta(masked_fasta, unmasked_fasta):
-    """ Unmask lowercased masked fasta file, save """
+    """Unmask lowercased masked fasta file, save"""
     with open(masked_fasta) as infile, open(unmasked_fasta, "w") as outfile:
         for line in infile:
             if not line.startswith((">", "#")):
@@ -7409,7 +8344,7 @@ def unmask_fasta(masked_fasta, unmasked_fasta):
 
 
 def fasta_to_fastq(fasta_file, fastq_file):
-    """ Create a fastq file from fasta file with dummy quality scores."""
+    """Create a fastq file from fasta file with dummy quality scores."""
     fasta = fasta_parser(fasta_file)
     fastq_list = []
     for f in fasta:
@@ -7436,25 +8371,20 @@ def combine_sample_data(gr):
     result = {}
     result["barcode_count"] = gr["barcode_count"].sum()
     result["read_count"] = gr["read_count"].sum()
-    result["sequence_quality"] = gr.sort_values(
-        "barcode_count",
-        ascending=False
-    )["sequence_quality"].iloc[0]
+    result["sequence_quality"] = gr.sort_values("barcode_count", ascending=False)[
+        "sequence_quality"
+    ].iloc[0]
     result["mip_name"] = gr["mip_name"].iloc[0]
     result["gene_name"] = gr["gene_name"].iloc[0]
     return pd.Series(result)
 
 
-def combine_info_files(wdir,
-                       settings_file,
-                       info_files,
-                       sample_sheets,
-                       combined_file,
-                       sample_sets=None):
+def combine_info_files(
+    wdir, settings_file, info_files, sample_sheets, combined_file, sample_sets=None
+):
     """Combine MIPWrangler outputs from multiple runs."""
     settings = get_analysis_settings(os.path.join(wdir, settings_file))
-    colnames = dict(list(zip(settings["colNames"],
-                         settings["givenNames"])))
+    colnames = dict(list(zip(settings["colNames"], settings["givenNames"])))
     c_keys = list(colnames.keys())
     c_vals = [colnames[k] for k in c_keys]
     data = []
@@ -7470,18 +8400,20 @@ def combine_info_files(wdir,
         run_meta.append(current_run_meta)
     run_meta = pd.concat(run_meta, ignore_index=True)
     if sample_sets is not None:
-        sps = pd.DataFrame(sample_sets, columns=["sample_set",
-                                                 "probe_set"])
+        sps = pd.DataFrame(sample_sets, columns=["sample_set", "probe_set"])
     else:
-        sps = run_meta.groupby(
-            ["sample_set", "probe_set"]
-        ).first().reset_index()[["sample_set", "probe_set"]]
+        sps = (
+            run_meta.groupby(["sample_set", "probe_set"])
+            .first()
+            .reset_index()[["sample_set", "probe_set"]]
+        )
     run_meta = run_meta.merge(sps, how="inner")
     run_meta.rename(columns={"library_prep": "Library Prep"}, inplace=True)
-    run_meta_collapsed = run_meta.groupby(
-        ["sample_name", "sample_set", "replicate", "Library Prep"]
-    ).first().reset_index()[["sample_name", "sample_set",
-                             "replicate", "Library Prep"]]
+    run_meta_collapsed = (
+        run_meta.groupby(["sample_name", "sample_set", "replicate", "Library Prep"])
+        .first()
+        .reset_index()[["sample_name", "sample_set", "replicate", "Library Prep"]]
+    )
     # check if there are repeating sample_name, sample_set, replicate
     # combinations; which make up the sample ID. If there are, replicate
     # numbers will need to be re-assigned so that each library has a unique
@@ -7514,24 +8446,26 @@ def combine_info_files(wdir,
                 # be merged
                 if not (repeat_found or merge_replicates):
                     repeat_found
-                    print("Sample ID will change for a sample because there "
-                          "was another sample with the same ID. Please check "
-                          "the samples.tsv file to compare SID and Original "
-                          "SID fields.")
+                    print(
+                        "Sample ID will change for a sample because there "
+                        "was another sample with the same ID. Please check "
+                        "the samples.tsv file to compare SID and Original "
+                        "SID fields."
+                    )
             else:
                 replicates[i] = int(rep)
                 reps_used.add(rep)
         return pd.Series(replicates)
 
-    run_meta_collapsed["new_replicate"] = run_meta_collapsed.groupby(
-        ["sample_name", "sample_set"])["replicate"].transform(
-        assign_replicate).astype(str)
-    run_meta = run_meta.merge(run_meta_collapsed)
-    run_meta["Sample ID"] = run_meta[["sample_name",
-                                      "sample_set",
-                                      "new_replicate"]].apply(
-        lambda a: "-".join(a), axis=1
+    run_meta_collapsed["new_replicate"] = (
+        run_meta_collapsed.groupby(["sample_name", "sample_set"])["replicate"]
+        .transform(assign_replicate)
+        .astype(str)
     )
+    run_meta = run_meta.merge(run_meta_collapsed)
+    run_meta["Sample ID"] = run_meta[
+        ["sample_name", "sample_set", "new_replicate"]
+    ].apply(lambda a: "-".join(a), axis=1)
     # load the probe set dictionary to extract the
     # probes that we're interested in
     probe_sets_file = settings["mipSetsDictionary"]
@@ -7543,9 +8477,9 @@ def combine_info_files(wdir,
     for i in range(len(info_files)):
         i_file = info_files[i]
         current_run_meta = run_meta.loc[run_meta["sheet_order"] == i]
-        current_run_dict = current_run_meta.set_index(
-            "Original SID"
-        ).to_dict(orient="index")
+        current_run_dict = current_run_meta.set_index("Original SID").to_dict(
+            orient="index"
+        )
         line_number = 0
         try:
             gzip.open(i_file, "rb").readline()
@@ -7557,10 +8491,7 @@ def combine_info_files(wdir,
                 newline = line.decode("utf-8").strip().split("\t")
                 line_number += 1
                 if line_number == 1:
-                    col_indexes = [
-                        newline.index(ck)
-                        for ck in c_keys
-                    ]
+                    col_indexes = [newline.index(ck) for ck in c_keys]
                     for ci in col_indexes:
                         if colnames[newline[ci]] == "sample_name":
                             si_index = ci
@@ -7571,14 +8502,12 @@ def combine_info_files(wdir,
                     mip_fam_name = newline[mip_name_index]
                     if mip_fam_name in used_probes:
                         try:
-                            library = current_run_dict[
-                                ori_sample_id
-                            ]["Library Prep"]
-                            sample_id = current_run_dict[
-                                ori_sample_id
-                            ]["Sample ID"]
-                            d = ([newline[ci] if ci != si_index else sample_id
-                                  for ci in col_indexes] + [library])
+                            library = current_run_dict[ori_sample_id]["Library Prep"]
+                            sample_id = current_run_dict[ori_sample_id]["Sample ID"]
+                            d = [
+                                newline[ci] if ci != si_index else sample_id
+                                for ci in col_indexes
+                            ] + [library]
                             data.append(d)
                         except KeyError:
                             continue
@@ -7590,18 +8519,23 @@ def combine_info_files(wdir,
     if merge_replicates:
         info["original_sample_name"] = info["sample_name"]
         info["sample_name"] = info["sample_name"].apply(
-            lambda a: "-".join(a.split("-")[:-1]) + "-1")
+            lambda a: "-".join(a.split("-")[:-1]) + "-1"
+        )
         info["Library Prep"] = "merged"
-    info = info.groupby(
-        ["sample_name", "haplotype_sequence", "Library Prep"]
-    ).apply(combine_sample_data).reset_index()
+    info = (
+        info.groupby(["sample_name", "haplotype_sequence", "Library Prep"])
+        .apply(combine_sample_data)
+        .reset_index()
+    )
     m_groups = info.groupby("mip_name")
     h_list = []
     for m, g in m_groups:
-        md = pd.DataFrame(g.groupby(["mip_name",
-                                    "haplotype_sequence"]).size().sort_values(
-            ascending=False
-        ).reset_index()).reset_index()
+        md = pd.DataFrame(
+            g.groupby(["mip_name", "haplotype_sequence"])
+            .size()
+            .sort_values(ascending=False)
+            .reset_index()
+        ).reset_index()
         md["index"] = md["index"].astype(str)
         md["haplotype_ID"] = md["mip_name"] + "." + md["index"]
         h_list.append(md[["haplotype_sequence", "haplotype_ID"]])
@@ -7609,13 +8543,12 @@ def combine_info_files(wdir,
     info = info.merge(hap_ids)
     info.to_csv(os.path.join(wdir, combined_file), index=False, sep="\t")
     info.groupby(["gene_name", "mip_name", "haplotype_ID"])[
-        "haplotype_sequence"].first().reset_index().to_csv(
-            os.path.join(wdir, "unique_haplotypes.csv"), index=False)
+        "haplotype_sequence"
+    ].first().reset_index().to_csv(
+        os.path.join(wdir, "unique_haplotypes.csv"), index=False
+    )
     run_meta = run_meta.groupby("Sample ID").first().reset_index()
-    run_meta = run_meta.drop(["Sample ID",
-                              "sheet_order",
-                              "replicate"],
-                             axis=1).rename(
+    run_meta = run_meta.drop(["Sample ID", "sheet_order", "replicate"], axis=1).rename(
         columns={"new_replicate": "replicate"}
     )
     if merge_replicates:
@@ -7623,13 +8556,15 @@ def combine_info_files(wdir,
     run_meta.to_csv(os.path.join(wdir, "samples.tsv"), sep="\t", index=False)
 
 
-def process_info_file(wdir,
-                      settings_file,
-                      info_files,
-                      sample_sheets,
-                      combined_file,
-                      sample_set=None,
-                      probe_set=None):
+def process_info_file(
+    wdir,
+    settings_file,
+    info_files,
+    sample_sheets,
+    combined_file,
+    sample_set=None,
+    probe_set=None,
+):
     """
     Process MIPWrangler output file.
 
@@ -7639,8 +8574,7 @@ def process_info_file(wdir,
     """
     pd.options.mode.chained_assignment = None
     settings = get_analysis_settings(os.path.join(wdir, settings_file))
-    colnames = dict(list(zip(settings["colNames"],
-                         settings["givenNames"])))
+    colnames = dict(list(zip(settings["colNames"], settings["givenNames"])))
     c_keys = list(colnames.keys())
     c_vals = [colnames[k] for k in c_keys]
     data = []
@@ -7661,10 +8595,10 @@ def process_info_file(wdir,
     #         ["sample_set", "probe_set"]
     #     ).first().reset_index()[["sample_set", "probe_set"]]
     # run_meta = run_meta.merge(sps, how="inner")
-    run_meta['probe_set'] = run_meta['probe_set'].astype(str)+','
-    run_meta = run_meta[(run_meta['probe_set'].str.contains(probe_set+','))]
-    run_meta = run_meta[(run_meta['sample_set'].str.contains(sample_set))]
-    run_meta['probe_set'] = run_meta['probe_set'].str[:-1]
+    run_meta["probe_set"] = run_meta["probe_set"].astype(str) + ","
+    run_meta = run_meta[(run_meta["probe_set"].str.contains(probe_set + ","))]
+    run_meta = run_meta[(run_meta["sample_set"].str.contains(sample_set))]
+    run_meta["probe_set"] = run_meta["probe_set"].str[:-1]
 
     run_meta["Sample ID"] = run_meta["Original SID"]
     # load the probe set dictionary to extract the
@@ -7677,9 +8611,9 @@ def process_info_file(wdir,
             used_probes.update(json.load(infile)[psk])
     i_file = info_files[0]
     current_run_meta = run_meta
-    current_run_dict = current_run_meta.set_index(
-        "Original SID"
-    ).to_dict(orient="index")
+    current_run_dict = current_run_meta.set_index("Original SID").to_dict(
+        orient="index"
+    )
     line_number = 0
     try:
         gzip.open(i_file, "rb").readline()
@@ -7691,10 +8625,7 @@ def process_info_file(wdir,
             newline = line.decode("utf-8").strip().split("\t")
             line_number += 1
             if line_number == 1:
-                col_indexes = [
-                    newline.index(ck)
-                    for ck in c_keys
-                ]
+                col_indexes = [newline.index(ck) for ck in c_keys]
                 for ci in col_indexes:
                     if colnames[newline[ci]] == "sample_name":
                         si_index = ci
@@ -7705,14 +8636,12 @@ def process_info_file(wdir,
                 mip_fam_name = newline[mip_name_index]
                 if mip_fam_name in used_probes:
                     try:
-                        library = current_run_dict[
-                            ori_sample_id
-                        ]["Library Prep"]
-                        sample_id = current_run_dict[
-                            ori_sample_id
-                        ]["Sample ID"]
-                        d = ([newline[ci] if ci != si_index else sample_id
-                              for ci in col_indexes] + [library])
+                        library = current_run_dict[ori_sample_id]["Library Prep"]
+                        sample_id = current_run_dict[ori_sample_id]["Sample ID"]
+                        d = [
+                            newline[ci] if ci != si_index else sample_id
+                            for ci in col_indexes
+                        ] + [library]
                         data.append(d)
                     except KeyError:
                         continue
@@ -7721,16 +8650,19 @@ def process_info_file(wdir,
     info["read_count"] = info["read_count"].astype(int)
     info.to_csv(os.path.join(wdir, combined_file), index=False, sep="\t")
     info.groupby(["gene_name", "mip_name", "haplotype_ID"])[
-        "haplotype_sequence"].first().reset_index().to_csv(
-            os.path.join(wdir, "unique_haplotypes.csv"), index=False)
+        "haplotype_sequence"
+    ].first().reset_index().to_csv(
+        os.path.join(wdir, "unique_haplotypes.csv"), index=False
+    )
     run_meta = run_meta.groupby("Sample ID").first().reset_index()
     run_meta = run_meta.drop("Sample ID", axis=1)
     run_meta.to_csv(os.path.join(wdir, "samples.tsv"), sep="\t", index=False)
 
 
 def update_probe_sets(
-        mipset_table="/opt/project_resources/mip_ids/mipsets.csv",
-        mipset_json="/opt/project_resources/mip_ids/probe_sets.json"):
+    mipset_table="/opt/project_resources/mip_ids/mipsets.csv",
+    mipset_json="/opt/project_resources/mip_ids/probe_sets.json",
+):
     mipsets = pd.read_csv(mipset_table)
     mipset_list = mipsets.to_dict(orient="list")
     mipset_dict = {}
@@ -7751,24 +8683,33 @@ def generate_fastqs(wdir, mipster_files, min_bc_count, min_bc_frac):
     fastq_dir = os.path.join(wdir, "fastq")
     if not os.path.exists(fastq_dir):
         os.makedirs(fastq_dir)
-    mipster_dfs = pd.concat([pd.read_table(os.path.join(wdir, mfile),
-                                           usecols=[
-                                              "s_Sample",
-                                              'h_popUID',
-                                              "h_seq",
-                                              'c_qual',
-                                              'c_barcodeCnt',
-                                              "c_barcodeFrac"
-                                           ])
-                             for mfile in mipster_files],
-                            axis=0,
-                            ignore_index=True)
-    mipster = mipster_dfs.loc[
-        (mipster_dfs["c_barcodeCnt"] >= min_bc_count)
-        & (mipster_dfs["c_barcorac"] >= min_bc_frac)
-    ].groupby("s_Sample").apply(lambda x: pd.DataFrame.to_dict(
-        x, orient="index"
-    )).to_dict()
+    mipster_dfs = pd.concat(
+        [
+            pd.read_table(
+                os.path.join(wdir, mfile),
+                usecols=[
+                    "s_Sample",
+                    "h_popUID",
+                    "h_seq",
+                    "c_qual",
+                    "c_barcodeCnt",
+                    "c_barcodeFrac",
+                ],
+            )
+            for mfile in mipster_files
+        ],
+        axis=0,
+        ignore_index=True,
+    )
+    mipster = (
+        mipster_dfs.loc[
+            (mipster_dfs["c_barcodeCnt"] >= min_bc_count)
+            & (mipster_dfs["c_barcorac"] >= min_bc_frac)
+        ]
+        .groupby("s_Sample")
+        .apply(lambda x: pd.DataFrame.to_dict(x, orient="index"))
+        .to_dict()
+    )
     for sample in mipster:
         fastq_file = os.path.join(fastq_dir, sample + ".fq.gz")
         with gzip.open(fastq_file, "wb") as outfile:
@@ -7804,9 +8745,7 @@ def generate_processed_fastqs_worker(fastq_file, sample_mipster):
         outfile.write(("\n".join(outfile_list) + "\n").encode("UTF-8"))
 
 
-def generate_processed_fastqs(fastq_dir, mipster_file,
-                              min_bc_count=1,
-                              pro=8):
+def generate_processed_fastqs(fastq_dir, mipster_file, min_bc_count=1, pro=8):
     """
     Generate fastq files for each sample in processed MIPWrangler output file.
 
@@ -7814,31 +8753,42 @@ def generate_processed_fastqs(fastq_dir, mipster_file,
     """
     if not os.path.exists(fastq_dir):
         os.makedirs(fastq_dir)
-    mipster = pd.read_table(mipster_file,
-                            usecols=[
-                              "sample_name",
-                              'haplotype_ID',
-                              "haplotype_sequence",
-                              'sequence_quality',
-                              'barcode_count'
-                            ])
-    mipster = mipster.loc[mipster["barcode_count"] >= min_bc_count].groupby(
-        "sample_name"
-    ).apply(lambda x: pd.DataFrame.to_dict(x, orient="index")).to_dict()
+    mipster = pd.read_table(
+        mipster_file,
+        usecols=[
+            "sample_name",
+            "haplotype_ID",
+            "haplotype_sequence",
+            "sequence_quality",
+            "barcode_count",
+        ],
+    )
+    mipster = (
+        mipster.loc[mipster["barcode_count"] >= min_bc_count]
+        .groupby("sample_name")
+        .apply(lambda x: pd.DataFrame.to_dict(x, orient="index"))
+        .to_dict()
+    )
     p = Pool(pro)
     for sample in mipster:
         fastq_file = os.path.join(fastq_dir, sample + ".fq.gz")
         sample_mipster = mipster[sample]
-        p.apply_async(generate_processed_fastqs_worker, (fastq_file,
-                                                         sample_mipster))
+        p.apply_async(generate_processed_fastqs_worker, (fastq_file, sample_mipster))
     p.close()
     p.join()
     return
 
 
-def generate_mapped_fastqs(fastq_dir, mipster_file,
-                           mapped_haplotypes_file, species, min_bc_count=1,
-                           pro=8, pad_size=20, save=False):
+def generate_mapped_fastqs(
+    fastq_dir,
+    mipster_file,
+    mapped_haplotypes_file,
+    species,
+    min_bc_count=1,
+    pro=8,
+    pad_size=20,
+    save=False,
+):
     """
     Generate fastq files for each sample in a mapped MIPWrangler output file.
 
@@ -7847,14 +8797,16 @@ def generate_mapped_fastqs(fastq_dir, mipster_file,
     """
     if not os.path.exists(fastq_dir):
         os.makedirs(fastq_dir)
-    mipster = pd.read_table(mipster_file,
-                            usecols=[
-                              "sample_name",
-                              'haplotype_ID',
-                              "haplotype_sequence",
-                              'sequence_quality',
-                              'barcode_count'
-                            ])
+    mipster = pd.read_table(
+        mipster_file,
+        usecols=[
+            "sample_name",
+            "haplotype_ID",
+            "haplotype_sequence",
+            "sequence_quality",
+            "barcode_count",
+        ],
+    )
     mapped_haplotypes = pd.read_csv(mapped_haplotypes_file)
 
     def get_padded_haplotype_sequence(row, pad_size, species):
@@ -7877,66 +8829,78 @@ def generate_mapped_fastqs(fastq_dir, mipster_file,
             return left_pad + h_seq + right_pad
 
     if pad_size > 0:
-        mapped_haplotypes["padded_haplotype_sequence"] = (
-            mapped_haplotypes.apply(get_padded_haplotype_sequence,
-                                    args=(pad_size, species), axis=1))
+        mapped_haplotypes["padded_haplotype_sequence"] = mapped_haplotypes.apply(
+            get_padded_haplotype_sequence, args=(pad_size, species), axis=1
+        )
     else:
-        mapped_haplotypes["padded_haplotype_sequence"] = (
-            mapped_haplotypes["haplotype_sequence"])
-    mipster = mipster.merge(mapped_haplotypes[["haplotype_ID",
-                                               "padded_haplotype_sequence",
-                                               "mapped_copy_number"]])
+        mapped_haplotypes["padded_haplotype_sequence"] = mapped_haplotypes[
+            "haplotype_sequence"
+        ]
+    mipster = mipster.merge(
+        mapped_haplotypes[
+            ["haplotype_ID", "padded_haplotype_sequence", "mapped_copy_number"]
+        ]
+    )
     mipster["raw_haplotype_sequence"] = mipster["haplotype_sequence"]
     mipster["haplotype_sequence"] = mipster["padded_haplotype_sequence"]
     mipster["raw_sequence_quality"] = mipster["sequence_quality"]
     mipster["sequence_quality"] = (
-        pad_size * "!" + mipster["sequence_quality"] + pad_size * "!")
+        pad_size * "!" + mipster["sequence_quality"] + pad_size * "!"
+    )
     mipster["adjusted_barcode_count"] = (
-        mipster["barcode_count"] / mipster["mapped_copy_number"]).astype(int)
+        mipster["barcode_count"] / mipster["mapped_copy_number"]
+    ).astype(int)
     mipster["raw_barcode_count"] = mipster["barcode_count"]
     mipster["barcode_count"] = mipster["adjusted_barcode_count"]
-    mipster_dict = mipster.loc[mipster["barcode_count"]
-                               >= min_bc_count].groupby(
-        "sample_name").apply(lambda x: pd.DataFrame.to_dict(
-                             x, orient="index")).to_dict()
+    mipster_dict = (
+        mipster.loc[mipster["barcode_count"] >= min_bc_count]
+        .groupby("sample_name")
+        .apply(lambda x: pd.DataFrame.to_dict(x, orient="index"))
+        .to_dict()
+    )
     if save:
         mipster.to_csv(mipster_file + ".padded")
     p = Pool(pro)
     for sample in mipster_dict:
         fastq_file = os.path.join(fastq_dir, sample + ".fq.gz")
         sample_mipster = mipster_dict[sample]
-        p.apply_async(generate_processed_fastqs_worker, (fastq_file,
-                                                         sample_mipster))
+        p.apply_async(generate_processed_fastqs_worker, (fastq_file, sample_mipster))
     p.close()
     p.join()
     return
 
 
-def generate_unprocessed_fastqs(fastq_dir, mipster_file, min_bc_count=1,
-                                pro=8):
+def generate_unprocessed_fastqs(fastq_dir, mipster_file, min_bc_count=1, pro=8):
     """
     Generate fastq files for each sample. These files will have stitched and
     barcode corrected reads.
     """
     if not os.path.exists(fastq_dir):
         os.makedirs(fastq_dir)
-    mipster = pd.read_table(mipster_file, usecols=["s_Sample", 'h_popUID',
-                                                   "h_seq", 'c_qual',
-                                                   'c_barcodeCnt'])
-    mipster = mipster.rename(columns={"s_Sample": "sample_name",
-                                      "h_popUID": "haplotype_ID",
-                                      "h_seq": "haplotype_sequence",
-                                      "c_qual": "sequence_quality",
-                                      "c_barcodeCnt": "barcode_count"})
-    mipster = mipster.loc[mipster["barcode_count"] >= min_bc_count].groupby(
-        "sample_name"
-    ).apply(lambda x: pd.DataFrame.to_dict(x, orient="index")).to_dict()
+    mipster = pd.read_table(
+        mipster_file,
+        usecols=["s_Sample", "h_popUID", "h_seq", "c_qual", "c_barcodeCnt"],
+    )
+    mipster = mipster.rename(
+        columns={
+            "s_Sample": "sample_name",
+            "h_popUID": "haplotype_ID",
+            "h_seq": "haplotype_sequence",
+            "c_qual": "sequence_quality",
+            "c_barcodeCnt": "barcode_count",
+        }
+    )
+    mipster = (
+        mipster.loc[mipster["barcode_count"] >= min_bc_count]
+        .groupby("sample_name")
+        .apply(lambda x: pd.DataFrame.to_dict(x, orient="index"))
+        .to_dict()
+    )
     p = Pool(pro)
     for sample in mipster:
         fastq_file = os.path.join(fastq_dir, sample + ".fq.gz")
         sample_mipster = mipster[sample]
-        p.apply_async(generate_processed_fastqs_worker, (fastq_file,
-                                                         sample_mipster))
+        p.apply_async(generate_processed_fastqs_worker, (fastq_file, sample_mipster))
     p.close()
     p.join()
     return
@@ -7987,8 +8951,7 @@ def variation_to_geno(settings, var_file, output_prefix):
                 header = newline
                 sample_start_index = header.index("FORMAT") + 1
                 sample_ids = header[sample_start_index:]
-                sample_names = ["-".join(s.split("-")[:-2])
-                                for s in sample_ids]
+                sample_names = ["-".join(s.split("-")[:-2]) for s in sample_ids]
                 samples_used = []
                 ped_sample_info = []
                 geno_sample_info = []
@@ -8001,15 +8964,12 @@ def variation_to_geno(settings, var_file, output_prefix):
                             affected = "2"
                         elif affected == "control":
                             affected = "1"
-                        ped_sample_info.append(["0", sam_name, "0", "0", "0",
-                                                affected])
-                        geno_sample_info.append(["0", sam_name, sam_name,
-                                                 affected])
+                        ped_sample_info.append(["0", sam_name, "0", "0", "0", affected])
+                        geno_sample_info.append(["0", sam_name, sam_name, affected])
                         samples_used.append(s)
                     except KeyError:
                         continue
-                used_sample_mask = np.array([s in samples_used
-                                             for s in sample_ids])
+                used_sample_mask = np.array([s in samples_used for s in sample_ids])
             else:
                 chrom = newline[0]
                 pos = newline[1]
@@ -8021,15 +8981,13 @@ def variation_to_geno(settings, var_file, output_prefix):
                 if rsid == ".":
                     rsid = chrom[3:] + "-" + pos + "-" + ref + "-" + alt
                 map_snp_ids.append([chrom, rsid, "0", pos])
-                geno_snp_ids.append([chrom, rsid, pos, ref,
-                                     alt, gene_name, aa_change])
+                geno_snp_ids.append([chrom, rsid, pos, ref, alt, gene_name, aa_change])
                 try:
                     genes[gene_name].append(rsid)
                 except KeyError:
                     genes[gene_name] = [rsid]
                     ordered_genes.append(gene_name)
-                genotypes = np.array(newline[sample_start_index:])[
-                    used_sample_mask]
+                genotypes = np.array(newline[sample_start_index:])[used_sample_mask]
                 geno_bases_1 = []
                 geno_bases_2 = []
                 geno_numbers = []
@@ -8051,8 +9009,7 @@ def variation_to_geno(settings, var_file, output_prefix):
                         geno_bases_1.append("0")
                         geno_bases_2.append("0")
                         geno_numbers.append(".")
-                all_geno_bases.extend([geno_bases_1,
-                                       geno_bases_2])
+                all_geno_bases.extend([geno_bases_1, geno_bases_2])
                 all_geno_numbers.append(geno_numbers)
         all_geno_bases = list(zip(*all_geno_bases))
         all_geno_numbers = list(zip(*all_geno_numbers))
@@ -8060,16 +9017,16 @@ def variation_to_geno(settings, var_file, output_prefix):
             ped_sample_info[i].extend(all_geno_bases[i])
         for i in range(len(geno_sample_info)):
             geno_sample_info[i].extend(all_geno_numbers[i])
-    write_list(ped_sample_info,
-               os.path.join(wdir, output_prefix + ".ped"))
-    write_list(map_snp_ids,
-               os.path.join(wdir, output_prefix + ".map"))
+    write_list(ped_sample_info, os.path.join(wdir, output_prefix + ".ped"))
+    write_list(map_snp_ids, os.path.join(wdir, output_prefix + ".map"))
     header = ["FAMILY_ID", "INDIVIDUAL_ID", "SAMPLE_ID", "AFFECTION"]
     header.extend([s[1] for s in geno_snp_ids])
     geno_sample_info = [header] + geno_sample_info
     write_list(geno_sample_info, os.path.join(wdir, output_prefix + ".geno"))
-    write_list([["**", o] + genes[o] for o in ordered_genes],
-               os.path.join(wdir, output_prefix + ".hlist"))
+    write_list(
+        [["**", o] + genes[o] for o in ordered_genes],
+        os.path.join(wdir, output_prefix + ".hlist"),
+    )
     return
 
 
@@ -8078,31 +9035,32 @@ def absence_presence(col, min_val=1):
     Given a numerical dataframe column, convert to binary values for a minimum
     threshold. This should be used by pandas transform or apply.
     """
-    return pd.Series([0 if (c < min_val or np.isnan(c))
-                      else 1 for c in col.tolist()])
+    return pd.Series([0 if (c < min_val or np.isnan(c)) else 1 for c in col.tolist()])
 
 
-def plot_performance(barcode_counts,
-                     tick_label_size=8,
-                     cbar_label_size=5,
-                     dpi=300,
-                     barcode_threshold=1,
-                     absent_color="black",
-                     present_color="green",
-                     save=False,
-                     wdir=None,
-                     ytick_freq=None,
-                     xtick_freq=None,
-                     xtick_rotation=90,
-                     tick_genes=False,
-                     gene_name_index=None):
+def plot_performance(
+    barcode_counts,
+    tick_label_size=8,
+    cbar_label_size=5,
+    dpi=300,
+    barcode_threshold=1,
+    absent_color="black",
+    present_color="green",
+    save=False,
+    wdir=None,
+    ytick_freq=None,
+    xtick_freq=None,
+    xtick_rotation=90,
+    tick_genes=False,
+    gene_name_index=None,
+):
     """Plot presence/absence plot for a mip run."""
     if xtick_freq is None:
-        xtick_freq = barcode_counts.shape[1]//30
+        xtick_freq = barcode_counts.shape[1] // 30
         if xtick_freq == 0:
             xtick_freq = 1
     if ytick_freq is None:
-        ytick_freq = barcode_counts.shape[0]//30
+        ytick_freq = barcode_counts.shape[0] // 30
         if ytick_freq == 0:
             ytick_freq = 1
     fig, ax = plt.subplots()
@@ -8111,10 +9069,11 @@ def plot_performance(barcode_counts,
     norm = colors.BoundaryNorm(boundaries, cmap.N)
     heat = ax.pcolormesh(
         barcode_counts.applymap(
-            lambda a: np.nan if np.isnan(a)
-            else 0 if a < barcode_threshold
-            else 1
-        ), cmap=cmap, norm=norm)
+            lambda a: np.nan if np.isnan(a) else 0 if a < barcode_threshold else 1
+        ),
+        cmap=cmap,
+        norm=norm,
+    )
     sample_ids = list(barcode_counts.index)
     sample_locs = np.arange(1, len(sample_ids) + 1, ytick_freq) - 0.5
     ylabs = sample_ids[::ytick_freq]
@@ -8131,8 +9090,7 @@ def plot_performance(barcode_counts,
         ticklabel.set_fontsize(tick_label_size)
     ax.set_ylabel("Samples")
     ax.set_xlabel("Probes")
-    fig.suptitle("Performance",
-                 verticalalignment="bottom")
+    fig.suptitle("Performance", verticalalignment="bottom")
     fig.tight_layout()
     cbar = fig.colorbar(heat, ticks=[0, 1], shrink=0.2)
     cbar.ax.tick_params(labelsize=cbar_label_size)
@@ -8140,41 +9098,42 @@ def plot_performance(barcode_counts,
     fig.set_dpi(dpi)
     fig.tight_layout()
     if save:
-        fig.savefig(os.path.join(wdir, "performance.png"), dpi=dpi,
-                    bbox_inches='tight')
+        fig.savefig(os.path.join(wdir, "performance.png"), dpi=dpi, bbox_inches="tight")
         plt.close("all")
     else:
         return fig, ax
     return
 
 
-def plot_coverage(barcode_counts,
-                  tick_label_size=8,
-                  cbar_label_size=5,
-                  dpi=300,
-                  log=None,
-                  log_constant=1,
-                  linthresh=0.0001,
-                  save=False,
-                  wdir=None,
-                  ytick_freq=None,
-                  xtick_freq=None,
-                  xtick_rotation=90,
-                  tick_genes=False,
-                  gene_name_index=None,
-                  figure_title="Coverage",
-                  title_fontdict=None,
-                  ylabel="Samples",
-                  xlabel="Probes",
-                  fig_size=None,
-                  cbar_title=None):
+def plot_coverage(
+    barcode_counts,
+    tick_label_size=8,
+    cbar_label_size=5,
+    dpi=300,
+    log=None,
+    log_constant=1,
+    linthresh=0.0001,
+    save=False,
+    wdir=None,
+    ytick_freq=None,
+    xtick_freq=None,
+    xtick_rotation=90,
+    tick_genes=False,
+    gene_name_index=None,
+    figure_title="Coverage",
+    title_fontdict=None,
+    ylabel="Samples",
+    xlabel="Probes",
+    fig_size=None,
+    cbar_title=None,
+):
     """Plot UMI coverage per MIP per sample for a mip run."""
     if xtick_freq is None:
-        xtick_freq = barcode_counts.shape[1]//30
+        xtick_freq = barcode_counts.shape[1] // 30
         if xtick_freq == 0:
             xtick_freq = 1
     if ytick_freq is None:
-        ytick_freq = barcode_counts.shape[0]//30
+        ytick_freq = barcode_counts.shape[0] // 30
         if ytick_freq == 0:
             ytick_freq = 1
     fig, ax = plt.subplots()
@@ -8197,8 +9156,9 @@ def plot_coverage(barcode_counts,
     elif log == "symlog":
         if cbar_title is None:
             cbar_title = ""
-        heat = ax.pcolormesh(barcode_counts,
-                             norm=colors.SymLogNorm(linthresh=linthresh))
+        heat = ax.pcolormesh(
+            barcode_counts, norm=colors.SymLogNorm(linthresh=linthresh)
+        )
     else:
         print("log can only be None, 2, 10, 'log', {} provided.".format(log))
     sample_ids = list(barcode_counts.index)
@@ -8210,9 +9170,7 @@ def plot_coverage(barcode_counts,
         bc_cols = [c[gene_name_index] for c in bc_cols]
         xlabs = bc_cols[::xtick_freq]
         gene_locs = np.arange(1, len(bc_cols) + 1, xtick_freq) - 0.5
-        plt.xticks(gene_locs, xlabs,
-                   rotation=xtick_rotation,
-                   ha="right")
+        plt.xticks(gene_locs, xlabs, rotation=xtick_rotation, ha="right")
     for ticklabel in ax.get_xticklabels():
         ticklabel.set_fontsize(tick_label_size)
     for ticklabel in ax.get_yticklabels():
@@ -8222,17 +9180,13 @@ def plot_coverage(barcode_counts,
     ax.set_title(figure_title, fontdict=title_fontdict)
     cbar = fig.colorbar(heat, shrink=0.5)
     cbar.ax.tick_params(labelsize=cbar_label_size)
-    cbar.ax.set_ylabel(cbar_title,
-                       fontsize=cbar_label_size,
-                       rotation=90)
+    cbar.ax.set_ylabel(cbar_title, fontsize=cbar_label_size, rotation=90)
     fig.set_dpi(dpi)
     if fig_size is not None:
         fig.set_size_inches(fig_size)
     fig.tight_layout()
     if save:
-        fig.savefig(os.path.join(wdir, "coverage.png"),
-                    dpi=dpi,
-                    bbox_inches='tight')
+        fig.savefig(os.path.join(wdir, "coverage.png"), dpi=dpi, bbox_inches="tight")
         plt.close("all")
     else:
         return fig, ax
@@ -8270,8 +9224,9 @@ def add_known(group, used_targets):
 
 
 def find_ref_total(group):
-    nr = group.loc[~group["ExonicFunc"].isin(
-        ["synonymous_variant", "."]), "Barcode Count"].sum()
+    nr = group.loc[
+        ~group["ExonicFunc"].isin(["synonymous_variant", "."]), "Barcode Count"
+    ].sum()
     cov = group["POS Coverage"].max()
     return cov - nr
 
@@ -8303,12 +9258,17 @@ def get_aminotype(row, cutoff):
 
 
 def rename_noncoding(row):
-    return "-".join([row["Gene"],
-                     row["VKEY"]])
+    return "-".join([row["Gene"], row["VKEY"]])
 
 
-def call_microsats(settings, sim=None, freq_cutoff=0.005, min_bc_cutoff=0,
-                   use_filtered_mips=True, ref_genome="Pf3d7"):
+def call_microsats(
+    settings,
+    sim=None,
+    freq_cutoff=0.005,
+    min_bc_cutoff=0,
+    use_filtered_mips=True,
+    ref_genome="Pf3d7",
+):
     wdir = settings["workingDir"]
     with open(os.path.join(wdir, settings["perSampleResults"])) as infile:
         sample_results = json.load(infile)
@@ -8323,13 +9283,14 @@ def call_microsats(settings, sim=None, freq_cutoff=0.005, min_bc_cutoff=0,
         sam_freq = {}
         for g in sam_res:
             for m in sam_res[g]:
-                if use_filtered_mips and (ref_sim.loc[
-                        ref_sim["MIP"] == m,
-                        "Clean MS MIP"].values[0] is False):
+                if use_filtered_mips and (
+                    ref_sim.loc[ref_sim["MIP"] == m, "Clean MS MIP"].values[0] is False
+                ):
                     continue
                 for c in sam_res[g][m]:
-                    total_bcs = float(sam_res[g][m][c]["cumulative_data"][
-                        "barcode_count"])
+                    total_bcs = float(
+                        sam_res[g][m][c]["cumulative_data"]["barcode_count"]
+                    )
                     if total_bcs >= min_bc_cutoff:
                         filtered_data = sam_res[g][m][c]["filtered_data"]
                         ms_types = {}
@@ -8337,14 +9298,16 @@ def call_microsats(settings, sim=None, freq_cutoff=0.005, min_bc_cutoff=0,
                             bcc = hd["barcode_count"]
                             h = hd["haplotype_ID"]
                             h_len = len(hap_dict[m][h]["sequence"])
-                            ms_len = int(h_len - ref_sim.loc[ref_sim["MIP"]
-                                         == m, "MS size adjustment"])
+                            ms_len = int(
+                                h_len
+                                - ref_sim.loc[ref_sim["MIP"] == m, "MS size adjustment"]
+                            )
                             try:
                                 ms_types[ms_len] += bcc
                             except KeyError:
                                 ms_types[ms_len] = bcc
                         for ml in list(ms_types.keys()):
-                            if (ms_types[ml]/total_bcs) < freq_cutoff:
+                            if (ms_types[ml] / total_bcs) < freq_cutoff:
                                 ms_types.pop(ml)
                         try:
                             sam_freq[g][m][c] = ms_types
@@ -8360,27 +9323,54 @@ def call_microsats(settings, sim=None, freq_cutoff=0.005, min_bc_cutoff=0,
             for m in strain_freqs[s][g]:
                 for c in strain_freqs[s][g][m]:
                     for l in strain_freqs[s][g][m][c]:
-                        ms_calls.append([s, g, m, c, l, g + "-" + str(int(l)),
-                                        strain_freqs[s][g][m][c][l]])
+                        ms_calls.append(
+                            [
+                                s,
+                                g,
+                                m,
+                                c,
+                                l,
+                                g + "-" + str(int(l)),
+                                strain_freqs[s][g][m][c][l],
+                            ]
+                        )
     ms_call_df = pd.DataFrame(
-        ms_calls, columns=["Sample ID", "region", "MIP", "Copy", "length",
-                           "haplotype name", "count"]).drop("Copy", axis=1)
-    merged_calls = pd.DataFrame(ms_call_df.groupby(["Sample ID", "region",
-                                                    "haplotype name", "length",
-                                                    ])["count"].sum())
+        ms_calls,
+        columns=[
+            "Sample ID",
+            "region",
+            "MIP",
+            "Copy",
+            "length",
+            "haplotype name",
+            "count",
+        ],
+    ).drop("Copy", axis=1)
+    merged_calls = pd.DataFrame(
+        ms_call_df.groupby(
+            [
+                "Sample ID",
+                "region",
+                "haplotype name",
+                "length",
+            ]
+        )["count"].sum()
+    )
     merged_calls.reset_index(inplace=True)
-    merged_calls["frequency"] = merged_calls.groupby(
-        ["Sample ID", "region"])["count"].transform(lambda a: a/a.sum())
+    merged_calls["frequency"] = merged_calls.groupby(["Sample ID", "region"])[
+        "count"
+    ].transform(lambda a: a / a.sum())
     merged_calls.rename(columns={"length": "MS Length"}, inplace=True)
-    merged_calls = merged_calls.merge(sim.groupby(
-        ["region", "MS Length", "Unique Strain"], as_index=False).first()[
-        ["region", "MS Length", "Unique Strain"]], how="left")
-    return {"ms_calls": merged_calls,
-            "strain_freqs": strain_freqs}
+    merged_calls = merged_calls.merge(
+        sim.groupby(["region", "MS Length", "Unique Strain"], as_index=False).first()[
+            ["region", "MS Length", "Unique Strain"]
+        ],
+        how="left",
+    )
+    return {"ms_calls": merged_calls, "strain_freqs": strain_freqs}
 
 
-def get_copy_counts(count_table, average_copy_count=2,
-                    norm_percentiles=[0.4, 0.6]):
+def get_copy_counts(count_table, average_copy_count=2, norm_percentiles=[0.4, 0.6]):
     """
     Given a table of barcode counts with samples on rows
     and probes on columns, transform the table to return
@@ -8399,8 +9389,7 @@ def get_copy_counts(count_table, average_copy_count=2,
         Percentiles used for calculating average. [0.5, 0.5] would be median.
     """
     # Normalize samples (across columns)
-    s_norm = count_table.transform(
-        lambda a: a/a.sum(), axis=1)
+    s_norm = count_table.transform(lambda a: a / a.sum(), axis=1)
     # Normalize across samples. This achieves estimating
     # the copy number, assuming the average normalized
     # barcode value (at specified percentile) is the value
@@ -8408,7 +9397,8 @@ def get_copy_counts(count_table, average_copy_count=2,
     # default to something like median barcode count
     # corresponds to copy number 2.
     p_norm = s_norm.transform(
-        lambda a: average_copy_count * a/(a.quantile(norm_percentiles).mean()))
+        lambda a: average_copy_count * a / (a.quantile(norm_percentiles).mean())
+    )
     return p_norm
 
 
@@ -8422,23 +9412,25 @@ def get_copy_average(r, ac):
 def normalize_copies(a):
     if a.isnull().all():
         a = a.fillna(1)
-        return a/a.sum()
+        return a / a.sum()
     else:
         return a.fillna(0)
 
 
-def repool(wdir,
-           data_summary,
-           high_barcode_threshold,
-           target_coverage_count=None,
-           target_coverage_fraction=0.95,
-           target_coverage_key="targets_with_10_barcodes",
-           barcode_coverage_threshold=10,
-           barcode_count_threshold=100,
-           low_coverage_action="Repool",
-           assesment_key="targets_with_1_barcodes",
-           good_coverage_quantile=0.25,
-           output_file="repool.csv"):
+def repool(
+    wdir,
+    data_summary,
+    high_barcode_threshold,
+    target_coverage_count=None,
+    target_coverage_fraction=0.95,
+    target_coverage_key="targets_with_10_barcodes",
+    barcode_coverage_threshold=10,
+    barcode_count_threshold=100,
+    low_coverage_action="Repool",
+    assesment_key="targets_with_1_barcodes",
+    good_coverage_quantile=0.25,
+    output_file="repool.csv",
+):
     """
     Analyze run statistics and determine repooling/recapturing
     strategy for following runs.
@@ -8486,8 +9478,9 @@ def repool(wdir,
     output_file: str, repool.csv
     """
     if target_coverage_count is None:
-        target_coverage_count = (data_summary[target_coverage_key].max()
-                                 * target_coverage_fraction)
+        target_coverage_count = (
+            data_summary[target_coverage_key].max() * target_coverage_fraction
+        )
     # make a copy of data_summary so the original df stays the same
     data_summary = copy.deepcopy(data_summary)
     try:
@@ -8497,14 +9490,14 @@ def repool(wdir,
         data_summary["total_read_count"] = data_summary["Read Count"]
     # mark samples that reached the desired outcome
     data_summary.loc[
-        data_summary[target_coverage_key] >= target_coverage_count,
-        "Status"
+        data_summary[target_coverage_key] >= target_coverage_count, "Status"
     ] = "Complete"
     # mark samples with low coverage
     data_summary.loc[
         (data_summary["Status"].isnull())
         & (data_summary["total_barcode_count"] < barcode_count_threshold),
-        "Status"] = low_coverage_action
+        "Status",
+    ] = low_coverage_action
     # mark samples with too high barcode coverage
     # these samples will have been sequenced to a high depth but
     # low barcode numbers, so sequencing these more would not make sense.
@@ -8513,61 +9506,59 @@ def repool(wdir,
         data_summary["Barcode Coverage"]
     except KeyError:
         data_summary["Barcode Coverage"] = (
-            data_summary["total_read_count"]
-            / data_summary["total_barcode_count"]).fillna(0)
+            data_summary["total_read_count"] / data_summary["total_barcode_count"]
+        ).fillna(0)
     data_summary.loc[
         (data_summary["Status"].isnull())
         & (data_summary["Barcode Coverage"] >= barcode_coverage_threshold),
-        "Status"] = "Recapture"
+        "Status",
+    ] = "Recapture"
     # Zero barcode coverage is presumably due to poor sequencing
     # So low coverage action should be taken.
     data_summary.loc[
-        (data_summary["Status"].isnull())
-        & (data_summary["Barcode Coverage"] == 0),
-        "Status"
+        (data_summary["Status"].isnull()) & (data_summary["Barcode Coverage"] == 0),
+        "Status",
     ] = low_coverage_action
     # All remaining samples will be repooled
-    data_summary.loc[
-        (data_summary["Status"].isnull()),
-        "Status"
-    ] = "Repool"
+    data_summary.loc[(data_summary["Status"].isnull()), "Status"] = "Repool"
     data_summary["Library to Completion"] = (
-        (high_barcode_threshold - data_summary["total_barcode_count"])
-        / data_summary["total_barcode_count"])
+        high_barcode_threshold - data_summary["total_barcode_count"]
+    ) / data_summary["total_barcode_count"]
     # replace inf values with max
     lc_max = data_summary.loc[
-        data_summary["Library to Completion"] < np.inf,
-        "Library to Completion"].max()
+        data_summary["Library to Completion"] < np.inf, "Library to Completion"
+    ].max()
     data_summary.loc[
-        data_summary["Library to Completion"] == np.inf,
-        "Library to Completion"] = lc_max
+        data_summary["Library to Completion"] == np.inf, "Library to Completion"
+    ] = lc_max
     # Determine samples with good barcode counts but poor target coverage
     # These should be investigated to decide what is the reason behind it
     # and how to proceed.
     ##########################################
     # Determine the average barcode count per target covered
     # for all samples where there is targets covered
-    data_summary.loc[data_summary[target_coverage_key] > 0,
-                     "Barcodes Per Target Covered"] = (
-        data_summary.loc[data_summary[target_coverage_key] > 0,
-                         "total_barcode_count"]
-        / data_summary.loc[data_summary[target_coverage_key] > 0,
-                           target_coverage_key]
+    data_summary.loc[
+        data_summary[target_coverage_key] > 0, "Barcodes Per Target Covered"
+    ] = (
+        data_summary.loc[data_summary[target_coverage_key] > 0, "total_barcode_count"]
+        / data_summary.loc[data_summary[target_coverage_key] > 0, target_coverage_key]
     )
     # Get the lower quartile of barcodes per target for good data
     # This number will be used to determine if poor coverage samples
     # have high enough barcode coverage despite having poor target coverage.
     good_coverage_threshold = data_summary.loc[
-        data_summary["Status"] == "Complete",
-        "Barcodes Per Target Covered"].quantile(good_coverage_quantile)
+        data_summary["Status"] == "Complete", "Barcodes Per Target Covered"
+    ].quantile(good_coverage_quantile)
     # Determine samples where barcode coverage is high but target coverage
     # is low
     data_summary.loc[
         (data_summary["Barcodes Per Target Covered"] > good_coverage_threshold)
         & (data_summary[assesment_key] < target_coverage_count),
-        "Uneven Coverage"] = True
-    data_summary.loc[data_summary["Uneven Coverage"].isnull(),
-                     "Uneven Coverage"] = False
+        "Uneven Coverage",
+    ] = True
+    data_summary.loc[data_summary["Uneven Coverage"].isnull(), "Uneven Coverage"] = (
+        False
+    )
     try:
         data_summary.to_csv(os.path.join(wdir, output_file), index=False)
     except TypeError:
@@ -8575,25 +9566,39 @@ def repool(wdir,
         # was passed instead of wdir, for backwards compatibility
         # we'll catch that error and use wdir from the settings dict
         data_summary.to_csv(wdir["workingDir"] + output_file, index=False)
-    print(("Out of %d samples %d are completed,"
-           " %d will be recaptured and %d repooled" % (
-               data_summary.shape[0],
-               data_summary.loc[data_summary["Status"] == "Complete"].shape[0],
-               data_summary.loc[data_summary["Status"]
-                                == "Recapture"].shape[0],
-               data_summary.loc[data_summary["Status"] == "Repool"].shape[0])))
-    print(("%d samples showed uneven coverage, %d complete,"
-           " %d to be recaptured, %d repooled" % (
+    print(
+        (
+            "Out of %d samples %d are completed,"
+            " %d will be recaptured and %d repooled"
+            % (
+                data_summary.shape[0],
+                data_summary.loc[data_summary["Status"] == "Complete"].shape[0],
+                data_summary.loc[data_summary["Status"] == "Recapture"].shape[0],
+                data_summary.loc[data_summary["Status"] == "Repool"].shape[0],
+            )
+        )
+    )
+    print(
+        (
+            "%d samples showed uneven coverage, %d complete,"
+            " %d to be recaptured, %d repooled"
+            % (
                 data_summary.loc[data_summary["Uneven Coverage"]].shape[0],
-                data_summary.loc[data_summary["Uneven Coverage"] &
-                                 (data_summary["Status"]
-                                  == "Complete")].shape[0],
-                data_summary.loc[data_summary["Uneven Coverage"]
-                                 & (data_summary["Status"]
-                                 == "Recapture")].shape[0],
-                data_summary.loc[data_summary["Uneven Coverage"]
-                                 & (data_summary["Status"]
-                                 == "Repool")].shape[0])))
+                data_summary.loc[
+                    data_summary["Uneven Coverage"]
+                    & (data_summary["Status"] == "Complete")
+                ].shape[0],
+                data_summary.loc[
+                    data_summary["Uneven Coverage"]
+                    & (data_summary["Status"] == "Recapture")
+                ].shape[0],
+                data_summary.loc[
+                    data_summary["Uneven Coverage"]
+                    & (data_summary["Status"] == "Repool")
+                ].shape[0],
+            )
+        )
+    )
     return
 
 
@@ -8614,8 +9619,7 @@ def aa_to_coordinate(gene, species, aa_start, aa_end=None, alias=False):
             pass
     cds = get_cds(gene, species)
     if len(cds) == 0:
-        return [np.nan, np.nan, np.nan,
-                np.nan, np.nan, np.nan]
+        return [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan]
     ori = cds["orientation"]
     coord = cds["coordinates"]
     chrom = cds["chrom"]
@@ -8630,18 +9634,10 @@ def aa_to_coordinate(gene, species, aa_start, aa_end=None, alias=False):
     cds_start = coord[c_start]
     cds_end = coord[c_end]
     if ori == "+":
-        codon = get_sequence(
-            create_region(
-                chrom, cds_start, cds_end
-            ), species
-        )
+        codon = get_sequence(create_region(chrom, cds_start, cds_end), species)
     else:
         codon = reverse_complement(
-            get_sequence(
-                create_region(
-                    chrom, cds_start, cds_end
-                ), species
-            )
+            get_sequence(create_region(chrom, cds_start, cds_end), species)
         )
     aa = translate(codon)
     return [chrom, cds_start, cds_end, ori, codon, aa]
@@ -8660,9 +9656,18 @@ def merge_snps(settings):
     with open(unique_haplotype_file) as infile:
         haplotypes = json.load(infile)
     # create output information list to report all changes
-    outlist = [["HaplotypeID", "Copy", "New AA", "Reference AA",
-                "ReplacedCDNAchanges", "New Codon", "Reference Codon",
-                "ReplacedAaChanges"]]
+    outlist = [
+        [
+            "HaplotypeID",
+            "Copy",
+            "New AA",
+            "Reference AA",
+            "ReplacedCDNAchanges",
+            "New Codon",
+            "Reference Codon",
+            "ReplacedAaChanges",
+        ]
+    ]
     # go through each annotated haplotype and merge SNPs
     for m in haplotypes:
         for h in haplotypes[m]:
@@ -8671,8 +9676,7 @@ def merge_snps(settings):
                     # get sequence of the haplotype
                     hap_seq = haplotypes[m][h]["sequence"]
                     # get SNPs present in the haplotype
-                    diffs = haplotypes[m][h]["mapped_copies"][cp][
-                        "differences"]
+                    diffs = haplotypes[m][h]["mapped_copies"][cp]["differences"]
                     aa_changes = {}
                     multi_indels = []
                     for i in range(len(diffs)):
@@ -8693,8 +9697,7 @@ def merge_snps(settings):
                     # affecting single aminoacid
                     all_merges = []
                     for c in aa_changes:
-                        if (len(aa_changes[c]) > 1) and (
-                                 c not in multi_indels):
+                        if (len(aa_changes[c]) > 1) and (c not in multi_indels):
                             # break out of loop if indels found
                             mindel = False
                             indexes = aa_changes[c]
@@ -8782,8 +9785,9 @@ def merge_snps(settings):
                                 g_end = g_positions[-1] + codon_offset
                                 g_start = g_end - 2
                             # extract the reference codon sequence
-                            Ref = get_sequence(create_region(
-                                d["chrom"], g_start, g_end), species)
+                            Ref = get_sequence(
+                                create_region(d["chrom"], g_start, g_end), species
+                            )
                             if gene_ori:
                                 g_codon = Ref
                                 Alt = codon
@@ -8800,52 +9804,59 @@ def merge_snps(settings):
                                 ExonicFunc = "synonymous_variant"
                             else:
                                 ExonicFunc = "nonsynonymous_variant"
-                            merged_dict = {'annotation': {
-                                'AA Change': protein_change,
-                                "AA Change Position": str(c),
-                                "CDS Change": coding_change,
-                                "CDS Position": str(codon_pos),
-                                'Alt': Alt,
-                                'Chr': d["chrom"],
-                                'End': g_end,
-                                'ExonicFunc': ExonicFunc,
-                                'GeneID': d["annotation"]['GeneID'],
-                                'Ref': Ref,
-                                'Start': g_start,
-                                "SNV": "MNV"},
-                                           'begin': g_start,
-                                           'chrom': d["chrom"],
-                                           'end': g_end,
-                                           'hap_base': hap_codon,
-                                           'hap_index': [h_start_index,
-                                                         h_end_index - 1],
-                                           'ref_base': Ref,
-                                           'type': 'snp',
-                                           'vcf_normalized': ":".join(
-                                                [d["chrom"], str(g_start), ".",
-                                                 Ref, Alt]),
-                                           'vcf_raw': ":".join(
-                                              [d["chrom"], str(g_start), ".",
-                                               Ref, Alt]
-                                            ),
-                                           "gene_ori": gene_ori,
-                                           "ori": ori}
+                            merged_dict = {
+                                "annotation": {
+                                    "AA Change": protein_change,
+                                    "AA Change Position": str(c),
+                                    "CDS Change": coding_change,
+                                    "CDS Position": str(codon_pos),
+                                    "Alt": Alt,
+                                    "Chr": d["chrom"],
+                                    "End": g_end,
+                                    "ExonicFunc": ExonicFunc,
+                                    "GeneID": d["annotation"]["GeneID"],
+                                    "Ref": Ref,
+                                    "Start": g_start,
+                                    "SNV": "MNV",
+                                },
+                                "begin": g_start,
+                                "chrom": d["chrom"],
+                                "end": g_end,
+                                "hap_base": hap_codon,
+                                "hap_index": [h_start_index, h_end_index - 1],
+                                "ref_base": Ref,
+                                "type": "snp",
+                                "vcf_normalized": ":".join(
+                                    [d["chrom"], str(g_start), ".", Ref, Alt]
+                                ),
+                                "vcf_raw": ":".join(
+                                    [d["chrom"], str(g_start), ".", Ref, Alt]
+                                ),
+                                "gene_ori": gene_ori,
+                                "ori": ori,
+                            }
                             all_merges.append(merged_dict)
-                            outlist.append([h, c, merged_aa, aa_ref,
-                                           ",".join(changes_to_cdna),
-                                            codon, g_codon,
-                                            ",".join(changes_to_aa)])
+                            outlist.append(
+                                [
+                                    h,
+                                    c,
+                                    merged_aa,
+                                    aa_ref,
+                                    ",".join(changes_to_cdna),
+                                    codon,
+                                    g_codon,
+                                    ",".join(changes_to_aa),
+                                ]
+                            )
                     # Remove SNPs that were merged, add the merged SNP
                     for c in aa_changes:
-                        if ((len(aa_changes[c]) > 1)
-                                and (c not in multi_indels)):
+                        if (len(aa_changes[c]) > 1) and (c not in multi_indels):
                             indexes = aa_changes[c]
                             for i in indexes:
                                 diffs[i] = "remove"
                     diffs.extend(all_merges)
                     diffs = [d for d in diffs if d != "remove"]
-                    haplotypes[m][h]["mapped_copies"][cp][
-                        "differences"] = diffs
+                    haplotypes[m][h]["mapped_copies"][cp]["differences"] = diffs
     with open(unique_haplotype_file, "w") as outfile:
         json.dump(haplotypes, outfile, indent=1)
     # save the report
@@ -8867,19 +9878,23 @@ def load_processed_data(settings):
     # interpret multi index column names as integers but
     # it does so for multi index index names. begin and
     # end multi index columns should have names as int.
-    bc = pd.read_csv(os.path.join(wdir, "barcode_counts.csv"),
-                     header=[0, 1, 2, 3, 4, 5, 6], index_col=0)
+    bc = pd.read_csv(
+        os.path.join(wdir, "barcode_counts.csv"),
+        header=[0, 1, 2, 3, 4, 5, 6],
+        index_col=0,
+    )
     bc.T.to_csv(os.path.join(wdir, "barcode_counts.T.csv"))
-    bc = pd.read_csv(os.path.join(wdir, "barcode_counts.T.csv"),
-                     index_col=[0, 1, 2, 3, 4, 5, 6]).T
-    data_summary = pd.read_csv(os.path.join(wdir, "data_summary.csv"),
-                               index_col=None)
-    merged_meta = pd.read_csv(os.path.join(wdir, "meta_data.csv"),
-                              index_col=None)
+    bc = pd.read_csv(
+        os.path.join(wdir, "barcode_counts.T.csv"), index_col=[0, 1, 2, 3, 4, 5, 6]
+    ).T
+    data_summary = pd.read_csv(os.path.join(wdir, "data_summary.csv"), index_col=None)
+    merged_meta = pd.read_csv(os.path.join(wdir, "meta_data.csv"), index_col=None)
     bc.index.name = "Sample ID"
-    return {"Barcode Counts": bc,
-            "Data Summary": data_summary,
-            "Meta Data": merged_meta}
+    return {
+        "Barcode Counts": bc,
+        "Data Summary": data_summary,
+        "Meta Data": merged_meta,
+    }
 
 
 def vcf_to_df(vcf_file):
@@ -8961,8 +9976,7 @@ def vcf_to_df(vcf_file):
                         problem_alts.append(newline)
                         break
                     for i in range(len(alt_bases)):
-                        outlist = [chrom, pos, var_id, ref, alt_bases[i],
-                                   qual, filt]
+                        outlist = [chrom, pos, var_id, ref, alt_bases[i], qual, filt]
                         var_info = []
                         for col in info_cols:
                             try:
@@ -8996,8 +10010,15 @@ def vcf_to_df(vcf_file):
                         if ref_base == "":
                             ref_base = "-"
                             for i in range(2):
-                                outlist = [chrom, pos + i, var_id,
-                                           "-", alt_bases, qual, filt]
+                                outlist = [
+                                    chrom,
+                                    pos + i,
+                                    var_id,
+                                    "-",
+                                    alt_bases,
+                                    qual,
+                                    filt,
+                                ]
                                 var_info = []
                                 for col in info_cols:
                                     try:
@@ -9012,8 +10033,15 @@ def vcf_to_df(vcf_file):
                             # effected position (ATT-> A, A is not affected)
                             pos += 1
                             for i in range(len(ref_base)):
-                                outlist = [chrom, pos + i, var_id,
-                                           ref_base[i], "-", qual, filt]
+                                outlist = [
+                                    chrom,
+                                    pos + i,
+                                    var_id,
+                                    ref_base[i],
+                                    "-",
+                                    qual,
+                                    filt,
+                                ]
                                 var_info = []
                                 for col in info_cols:
                                     try:
@@ -9023,12 +10051,17 @@ def vcf_to_df(vcf_file):
                                 outlist = outlist + var_info
                                 outfile_list.append(outlist)
         var_df = pd.DataFrame(
-            outfile_list, columns=["CHROM", "POS", "ID", "REF", "ALT",
-                                   "QUAL", "FILTER"] + info_cols)
+            outfile_list,
+            columns=["CHROM", "POS", "ID", "REF", "ALT", "QUAL", "FILTER"] + info_cols,
+        )
     var_df = var_df.astype({"AN": int, "AC": int})
     if len(problem_alts) > 0:
-        print(("There are %d problematic alleles, see the output list for "
-               "details" % len(problem_alts)))
+        print(
+            (
+                "There are %d problematic alleles, see the output list for "
+                "details" % len(problem_alts)
+            )
+        )
     return var_df, problem_alts
 
 
@@ -9065,6 +10098,7 @@ def vcf_to_ucsc_table(collapsed, output_file):
     def get_count_strings(row):
         ref_count = row["AN"] - row["AC"]
         return str(ref_count) + "," + str(row["AC"]) + ","
+
     collapsed["AS"] = collapsed.apply(get_allele_strings, axis=1)
     collapsed["CS"] = collapsed.apply(get_count_strings, axis=1)
     collapsed["0-offset"] = collapsed["POS"] - 1
@@ -9079,16 +10113,12 @@ def vcf_to_ucsc_table(collapsed, output_file):
         tc_1.append(i)
     table = table[tc_1 + tc_2]
     table.to_csv(output_file, sep="\t", index=False, header=False)
-    subprocess.call(["bgzip", "-c", output_file], stdout=open(
-        output_file + ".gz", "w"))
-    subprocess.call(["tabix", "-0", "-s 2", "-b 3", "-e 3",
-                     output_file + ".gz"])
+    subprocess.call(["bgzip", "-c", output_file], stdout=open(output_file + ".gz", "w"))
+    subprocess.call(["tabix", "-0", "-s 2", "-b 3", "-e 3", output_file + ".gz"])
     return table
 
 
-def header_to_primer(bc_dict,
-                     header_string,
-                     platform):
+def header_to_primer(bc_dict, header_string, platform):
     """
     Convert a demultiplexed fastq header to forward and
     reverse primer numbers.
@@ -9147,21 +10177,18 @@ def check_stitching(stitch_file):
             for i in range(len(nl)):
                 il = nl[i]
                 if "Input files" in il:
-                    nil = nl[i+1].split(" ")
+                    nil = nl[i + 1].split(" ")
                     nil = [t for t in nil if t != ""]
                     sid = nil[-1].split("/")[1]
                     sti_sum.append(sid)
-                elif (("Total pairs" in il) or
-                      ("Combined pairs" in il)):
+                elif ("Total pairs" in il) or ("Combined pairs" in il):
                     nil = il.split(" ")
                     nil = [t for t in nil if t != ""]
                     sti_sum.append(int(nil[-1]))
     sti = []
     for i in range(0, len(sti_sum), 3):
-        sti.append(sti_sum[i:i+3])
-    sti = pd.DataFrame(sti, columns=["Sample ID",
-                                     "Total Reads",
-                                     "Combined Reads"])
+        sti.append(sti_sum[i : i + 3])
+    sti = pd.DataFrame(sti, columns=["Sample ID", "Total Reads", "Combined Reads"])
     return sti
 
 
@@ -9203,15 +10230,31 @@ def iupac_converter(iupac_code):
     Return a list of all possible bases corresponding to a given iupac
     nucleotide code.
     """
-    iupac_dict = {"A": "A", "C": "C", "G": "G", "T": "T", "R": "AG", "Y": "CT",
-                  "S": "GC", "W": "AT", "K": "GT", "M": "AC", "B": "CGT",
-                  "D": "AGT", "H": "ACT", "V": "ACG", "N": "ACGT"}
+    iupac_dict = {
+        "A": "A",
+        "C": "C",
+        "G": "G",
+        "T": "T",
+        "R": "AG",
+        "Y": "CT",
+        "S": "GC",
+        "W": "AT",
+        "K": "GT",
+        "M": "AC",
+        "B": "CGT",
+        "D": "AGT",
+        "H": "ACT",
+        "V": "ACG",
+        "N": "ACGT",
+    }
     try:
         return list(iupac_dict[iupac_code.upper()])
     except KeyError:
-        print(("Non-IUPAC nucleotide code {}. Code must be one of {}").format(
-            iupac_code, "".join(list(iupac_dict.keys()))
-            ))
+        print(
+            ("Non-IUPAC nucleotide code {}. Code must be one of {}").format(
+                iupac_code, "".join(list(iupac_dict.keys()))
+            )
+        )
         return []
 
 
@@ -9219,9 +10262,23 @@ def make_degenerate(base_set):
     """
     Return IUPAC code of degenerate nucleotide corresponding to given base set.
     """
-    iupac_dict = {"A": "A", "C": "C", "G": "G", "T": "T", "R": "AG", "Y": "CT",
-                  "S": "GC", "W": "AT", "K": "GT", "M": "AC", "B": "CGT",
-                  "D": "AGT", "H": "ACT", "V": "ACG", "N": "ACGT"}
+    iupac_dict = {
+        "A": "A",
+        "C": "C",
+        "G": "G",
+        "T": "T",
+        "R": "AG",
+        "Y": "CT",
+        "S": "GC",
+        "W": "AT",
+        "K": "GT",
+        "M": "AC",
+        "B": "CGT",
+        "D": "AGT",
+        "H": "ACT",
+        "V": "ACG",
+        "N": "ACGT",
+    }
     reverse_iupac = {frozenset(list(v)): k for k, v in iupac_dict.items()}
     try:
         base_set = frozenset(map(str.upper, frozenset(base_set)))
@@ -9236,11 +10293,20 @@ def iupac_fasta_converter(header, sequence, max_ns=10):
     Given a sequence (header and sequence itself) containing iupac characters,
     return a dictionary with all possible sequences converted to ATCG.
     """
-    iupac_dict = {"R": "AG", "Y": "CT", "S": "GC", "W": "AT", "K": "GT",
-                  "M": "AC", "B": "CGT", "D": "AGT", "H": "ACT", "V": "ACG",
-                  "N": "ACGT"}
-    iupac_dict = {k: list(iupac_dict[k])
-                  for k in list(iupac_dict.keys())}
+    iupac_dict = {
+        "R": "AG",
+        "Y": "CT",
+        "S": "GC",
+        "W": "AT",
+        "K": "GT",
+        "M": "AC",
+        "B": "CGT",
+        "D": "AGT",
+        "H": "ACT",
+        "V": "ACG",
+        "N": "ACGT",
+    }
+    iupac_dict = {k: list(iupac_dict[k]) for k in list(iupac_dict.keys())}
     if sequence.upper().count("N") >= max_ns:
         return {header: sequence}
     sequence = list(sequence.upper())
@@ -9257,12 +10323,12 @@ def iupac_fasta_converter(header, sequence, max_ns=10):
                 break
         else:
             result_list.append("".join(seq))
+
     iupac_recurse(sequence)
     if len(result_list) == 1:
         return {header: result_list[0]}
     else:
-        return {header + "-" + str(i): result_list[i]
-                for i in range(len(result_list))}
+        return {header + "-" + str(i): result_list[i] for i in range(len(result_list))}
 
 
 def save_fasta_dict(fasta_dict, fasta_file, linewidth=60):
@@ -9272,18 +10338,19 @@ def save_fasta_dict(fasta_dict, fasta_file, linewidth=60):
             outfile.write(">" + str(header) + "\n")
             fasta_seq = fasta_dict[header]
             for i in range(0, len(fasta_seq), linewidth):
-                outfile.write(fasta_seq[i: i + linewidth] + "\n")
+                outfile.write(fasta_seq[i : i + linewidth] + "\n")
 
 
 def chromosome_converter(chrom, from_malariagen):
-    """ Convert plasmodium chromosome names from standard (chr1, etc) to
+    """Convert plasmodium chromosome names from standard (chr1, etc) to
     malariagen names (Pf3d7...) and vice versa.
     """
     standard_names = ["chr" + str(i) for i in range(1, 15)]
     standard_names.extend(["chrM", "chrP"])
     malariagen_names = ["Pf3D7_0" + str(i) + "_v3" for i in range(1, 10)]
     malariagen_names = malariagen_names + [
-        "Pf3D7_" + str(i) + "_v3" for i in range(10, 15)]
+        "Pf3D7_" + str(i) + "_v3" for i in range(10, 15)
+    ]
     malariagen_names.extend(["Pf_M76611", "Pf3D7_API_v3"])
     if from_malariagen:
         return dict(zip(malariagen_names, standard_names))[chrom]
@@ -9292,10 +10359,9 @@ def chromosome_converter(chrom, from_malariagen):
 
 
 def write_list(alist, outfile_name):
-    """ Convert values of a list to strings and save to file."""
+    """Convert values of a list to strings and save to file."""
     with open(outfile_name, "w") as outfile:
-        outfile.write("\n".join(["\t".join(map(str, l))
-                                for l in alist]) + "\n")
+        outfile.write("\n".join(["\t".join(map(str, l)) for l in alist]) + "\n")
     return
 
 
@@ -9305,56 +10371,131 @@ def write_list(alist, outfile_name):
 
 
 def strip_fasta(sequence):
-    seq_list = sequence.split('\n')[1:]
+    seq_list = sequence.split("\n")[1:]
     seq_join = "".join(seq_list)
     return seq_join
 
 
 def calculate_gc(sequence, fasta=0):
     if fasta:
-        seq_list = sequence.split('\n')[1:]
+        seq_list = sequence.split("\n")[1:]
         seq_join = "".join(seq_list)
         seq = seq_join.lower()
 
     else:
         seq = sequence.lower()
-    gc_count = seq.count('g') + seq.count('c')
-    at_count = seq.count('a') + seq.count('t')
+    gc_count = seq.count("g") + seq.count("c")
+    at_count = seq.count("a") + seq.count("t")
     percent = int(gc_count * 100 / (gc_count + at_count))
     return percent
 
 
 def translate(sequence, three_letter=False):
     gencode = {
-        'ATA': 'I', 'ATC': 'I', 'ATT': 'I', 'ATG': 'M',
-        'ACA': 'T', 'ACC': 'T', 'ACG': 'T', 'ACT': 'T',
-        'AAC': 'N', 'AAT': 'N', 'AAA': 'K', 'AAG': 'K',
-        'AGC': 'S', 'AGT': 'S', 'AGA': 'R', 'AGG': 'R',
-        'CTA': 'L', 'CTC': 'L', 'CTG': 'L', 'CTT': 'L',
-        'CCA': 'P', 'CCC': 'P', 'CCG': 'P', 'CCT': 'P',
-        'CAC': 'H', 'CAT': 'H', 'CAA': 'Q', 'CAG': 'Q',
-        'CGA': 'R', 'CGC': 'R', 'CGG': 'R', 'CGT': 'R',
-        'GTA': 'V', 'GTC': 'V', 'GTG': 'V', 'GTT': 'V',
-        'GCA': 'A', 'GCC': 'A', 'GCG': 'A', 'GCT': 'A',
-        'GAC': 'D', 'GAT': 'D', 'GAA': 'E', 'GAG': 'E',
-        'GGA': 'G', 'GGC': 'G', 'GGG': 'G', 'GGT': 'G',
-        'TCA': 'S', 'TCC': 'S', 'TCG': 'S', 'TCT': 'S',
-        'TTC': 'F', 'TTT': 'F', 'TTA': 'L', 'TTG': 'L',
-        'TAC': 'Y', 'TAT': 'Y', 'TAA': '*', 'TAG': '*',
-        'TGC': 'C', 'TGT': 'C', 'TGA': '*', 'TGG': 'W'}
-    gencode3 = {'A': 'Ala', 'C': 'Cys', 'D': 'Asp', 'E': 'Glu', 'F': 'Phe',
-                'G': 'Gly', 'H': 'His', 'I': 'Ile', 'K': 'Lys', 'L': 'Leu',
-                'M': 'Met', 'N': 'Asn', 'P': 'Pro', 'Q': 'Gln', 'R': 'Arg',
-                'S': 'Ser', 'T': 'Thr', 'V': 'Val', 'W': 'Trp', 'Y': 'Tyr',
-                '*': '*'}
+        "ATA": "I",
+        "ATC": "I",
+        "ATT": "I",
+        "ATG": "M",
+        "ACA": "T",
+        "ACC": "T",
+        "ACG": "T",
+        "ACT": "T",
+        "AAC": "N",
+        "AAT": "N",
+        "AAA": "K",
+        "AAG": "K",
+        "AGC": "S",
+        "AGT": "S",
+        "AGA": "R",
+        "AGG": "R",
+        "CTA": "L",
+        "CTC": "L",
+        "CTG": "L",
+        "CTT": "L",
+        "CCA": "P",
+        "CCC": "P",
+        "CCG": "P",
+        "CCT": "P",
+        "CAC": "H",
+        "CAT": "H",
+        "CAA": "Q",
+        "CAG": "Q",
+        "CGA": "R",
+        "CGC": "R",
+        "CGG": "R",
+        "CGT": "R",
+        "GTA": "V",
+        "GTC": "V",
+        "GTG": "V",
+        "GTT": "V",
+        "GCA": "A",
+        "GCC": "A",
+        "GCG": "A",
+        "GCT": "A",
+        "GAC": "D",
+        "GAT": "D",
+        "GAA": "E",
+        "GAG": "E",
+        "GGA": "G",
+        "GGC": "G",
+        "GGG": "G",
+        "GGT": "G",
+        "TCA": "S",
+        "TCC": "S",
+        "TCG": "S",
+        "TCT": "S",
+        "TTC": "F",
+        "TTT": "F",
+        "TTA": "L",
+        "TTG": "L",
+        "TAC": "Y",
+        "TAT": "Y",
+        "TAA": "*",
+        "TAG": "*",
+        "TGC": "C",
+        "TGT": "C",
+        "TGA": "*",
+        "TGG": "W",
+    }
+    gencode3 = {
+        "A": "Ala",
+        "C": "Cys",
+        "D": "Asp",
+        "E": "Glu",
+        "F": "Phe",
+        "G": "Gly",
+        "H": "His",
+        "I": "Ile",
+        "K": "Lys",
+        "L": "Leu",
+        "M": "Met",
+        "N": "Asn",
+        "P": "Pro",
+        "Q": "Gln",
+        "R": "Arg",
+        "S": "Ser",
+        "T": "Thr",
+        "V": "Val",
+        "W": "Trp",
+        "Y": "Tyr",
+        "*": "*",
+    }
     seq = sequence.upper()
     # Return the translated protein from 'sequence' assuming +1 reading frame
     if not three_letter:
-        return ''.join([gencode.get(seq[3*i:3*i+3], 'X')
-                        for i in range(len(sequence)//3)])
+        return "".join(
+            [
+                gencode.get(seq[3 * i : 3 * i + 3], "X")
+                for i in range(len(sequence) // 3)
+            ]
+        )
     else:
-        return ''.join([gencode3.get(gencode.get(seq[3*i:3*i+3], 'X'), "X")
-                        for i in range(len(sequence)//3)])
+        return "".join(
+            [
+                gencode3.get(gencode.get(seq[3 * i : 3 * i + 3], "X"), "X")
+                for i in range(len(sequence) // 3)
+            ]
+        )
 
 
 def aa_converter(aa_name):
@@ -9362,18 +10503,43 @@ def aa_converter(aa_name):
     Output 3 letter and 1 letter amino acid codes for a given
     3 letter or 1 letter amino acid code.
     """
-    gencode3 = {'A': 'Ala', 'C': 'Cys', 'D': 'Asp', 'E': 'Glu', 'F': 'Phe',
-                'G': 'Gly', 'H': 'His', 'I': 'Ile', 'K': 'Lys', 'L': 'Leu',
-                'M': 'Met', 'N': 'Asn', 'P': 'Pro', 'Q': 'Gln', 'R': 'Arg',
-                'S': 'Ser', 'T': 'Thr', 'V': 'Val', 'W': 'Trp', 'Y': 'Tyr'}
+    gencode3 = {
+        "A": "Ala",
+        "C": "Cys",
+        "D": "Asp",
+        "E": "Glu",
+        "F": "Phe",
+        "G": "Gly",
+        "H": "His",
+        "I": "Ile",
+        "K": "Lys",
+        "L": "Leu",
+        "M": "Met",
+        "N": "Asn",
+        "P": "Pro",
+        "Q": "Gln",
+        "R": "Arg",
+        "S": "Ser",
+        "T": "Thr",
+        "V": "Val",
+        "W": "Trp",
+        "Y": "Tyr",
+    }
     for a in list(gencode3.keys()):
         gencode3[gencode3[a]] = a
     return gencode3[aa_name.capitalize()]
 
 
-def ntthal(s1, s2, Na=25, Mg=10, conc=0.4, print_command=False,
-           td_path="/opt/resources/primer3_settings/primer3_config/"):
-    """ Return the melting temperature of two oligos at given conditions,
+def ntthal(
+    s1,
+    s2,
+    Na=25,
+    Mg=10,
+    conc=0.4,
+    print_command=False,
+    td_path="/opt/resources/primer3_settings/primer3_config/",
+):
+    """Return the melting temperature of two oligos at given conditions,
     using ntthal from primer3 software.
 
     Parameters
@@ -9385,18 +10551,31 @@ def ntthal(s1, s2, Na=25, Mg=10, conc=0.4, print_command=False,
     conc : float, concentration of the more concentrated oligo in nM
     td_path : str, path to thermodynamic alignment parameters.
     """
-    cmnd = ["ntthal", "-path", td_path, "-mv", str(Na), "-dv", str(Mg),
-            "-d", str(conc), "-s1", s1, "-s2", s2, "-r"]
+    cmnd = [
+        "ntthal",
+        "-path",
+        td_path,
+        "-mv",
+        str(Na),
+        "-dv",
+        str(Mg),
+        "-d",
+        str(conc),
+        "-s1",
+        s1,
+        "-s2",
+        s2,
+        "-r",
+    ]
     if print_command:
-        return(" ".join(cmnd))
+        return " ".join(cmnd)
     else:
         ntt_res = subprocess.check_output(cmnd)
         return float(ntt_res.decode("UTF-8").strip())
 
 
-def oligoTM(s, Na=25, Mg=10, conc=0.4,
-            thermodynamic_parameters=1, salt_correction=2):
-    """ Return the melting temperature an oligo at given conditions,
+def oligoTM(s, Na=25, Mg=10, conc=0.4, thermodynamic_parameters=1, salt_correction=2):
+    """Return the melting temperature an oligo at given conditions,
     using oligotm from primer3 software.
 
     Parameters
@@ -9423,132 +10602,187 @@ def oligoTM(s, Na=25, Mg=10, conc=0.4,
 
     """
     ntt_res = subprocess.check_output(
-        ["oligotm", "-mv", str(Na), "-dv", str(Mg),
-         "-d", str(conc), "-tp", str(thermodynamic_parameters),
-         "-sc", str(salt_correction), s])
+        [
+            "oligotm",
+            "-mv",
+            str(Na),
+            "-dv",
+            str(Mg),
+            "-d",
+            str(conc),
+            "-tp",
+            str(thermodynamic_parameters),
+            "-sc",
+            str(salt_correction),
+            s,
+        ]
+    )
     return float(ntt_res.decode("UTF-8").strip())
 
 
 def tm_calculator(sequence, conc, Na, Mg, dNTP_conc=0):
     from math import log
     from math import sqrt
-    monovalent_conc = Na/1000
-    divalent_conc = Mg/1000
+
+    monovalent_conc = Na / 1000
+    divalent_conc = Mg / 1000
     oligo_conc = conc * pow(10, -9)
     parameters = {}
-    parameters['AA'] = (-7900, -22.2, -1.0)
-    parameters['AT'] = (-7200, -20.4, -0.88)
-    parameters['AC'] = (-8400, -22.4, -1.44)
-    parameters['AG'] = (-7800, -21.0, -1.28)
+    parameters["AA"] = (-7900, -22.2, -1.0)
+    parameters["AT"] = (-7200, -20.4, -0.88)
+    parameters["AC"] = (-8400, -22.4, -1.44)
+    parameters["AG"] = (-7800, -21.0, -1.28)
 
-    parameters['TA'] = (-7200, -21.3, -0.58)
-    parameters['TT'] = (-7900, -22.2, -1.0)
-    parameters['TC'] = (-8200, -22.2, -1.3)
-    parameters['TG'] = (-8500, -22.7, -1.45)
+    parameters["TA"] = (-7200, -21.3, -0.58)
+    parameters["TT"] = (-7900, -22.2, -1.0)
+    parameters["TC"] = (-8200, -22.2, -1.3)
+    parameters["TG"] = (-8500, -22.7, -1.45)
 
-    parameters['CA'] = (-8500, -22.7, -1.45)
-    parameters['CT'] = (-7800, -21.0, -1.28)
-    parameters['CC'] = (-8000, -19.9, -1.84)
-    parameters['CG'] = (-10600, -27.2, -2.17)
+    parameters["CA"] = (-8500, -22.7, -1.45)
+    parameters["CT"] = (-7800, -21.0, -1.28)
+    parameters["CC"] = (-8000, -19.9, -1.84)
+    parameters["CG"] = (-10600, -27.2, -2.17)
 
-    parameters['GA'] = (-8200, -22.2, -1.3)
-    parameters['GT'] = (-8400, -22.4, -1.44)
-    parameters['GC'] = (-9800, -24.4, -2.24)
-    parameters['GG'] = (-8000, -19.9, -1.84)
+    parameters["GA"] = (-8200, -22.2, -1.3)
+    parameters["GT"] = (-8400, -22.4, -1.44)
+    parameters["GC"] = (-9800, -24.4, -2.24)
+    parameters["GG"] = (-8000, -19.9, -1.84)
     params = parameters
     # Normalize divalent_conc (Mg) for dNTP_conc
     K_a = 30000
-    D = ((K_a * dNTP_conc - K_a * divalent_conc + 1) ** 2
-         + 4 * K_a * divalent_conc)
-    divalent_conc = (- (K_a * dNTP_conc - K_a * divalent_conc + 1)
-                     + sqrt(D)) / (2 * K_a)
+    D = (K_a * dNTP_conc - K_a * divalent_conc + 1) ** 2 + 4 * K_a * divalent_conc
+    divalent_conc = (-(K_a * dNTP_conc - K_a * divalent_conc + 1) + sqrt(D)) / (2 * K_a)
 
     # Define a, d, g coefficients used in salt adjustment
-    a_con = 3.92 * (
-        0.843 - 0.352 * sqrt(monovalent_conc) * log(monovalent_conc)
-    )
+    a_con = 3.92 * (0.843 - 0.352 * sqrt(monovalent_conc) * log(monovalent_conc))
     d_con = 1.42 * (
-        1.279 - 4.03 * pow(10, -3) * log(monovalent_conc)
-        - 8.03 * pow(10, -3) * ((log(monovalent_conc))**2)
+        1.279
+        - 4.03 * pow(10, -3) * log(monovalent_conc)
+        - 8.03 * pow(10, -3) * ((log(monovalent_conc)) ** 2)
     )
     g_con = 8.31 * (
-        0.486 - 0.258 * log(monovalent_conc)
-        + 5.25 * pow(10, -3) * ((log(monovalent_conc))**3)
+        0.486
+        - 0.258 * log(monovalent_conc)
+        + 5.25 * pow(10, -3) * ((log(monovalent_conc)) ** 3)
     )
     dHsum = 0
     dSsum = 0
     sequence = sequence.upper()
     # define duplex initiation values for T and G terminal nucleotides
-    if sequence[-1] == 'G' or sequence[-1] == 'C':
+    if sequence[-1] == "G" or sequence[-1] == "C":
         dHiTer = 100
         dSiTer = -2.8
-    elif sequence[-1] == 'A' or sequence[-1] == 'T':
+    elif sequence[-1] == "A" or sequence[-1] == "T":
         dHiTer = 2300
         dSiTer = 4.1
-    if sequence[0] == 'G' or sequence[0] == 'C':
+    if sequence[0] == "G" or sequence[0] == "C":
         dHiIn = 100
         dSiIn = -2.8
-    elif sequence[0] == 'A' or sequence[0] == 'T':
+    elif sequence[0] == "A" or sequence[0] == "T":
         dHiIn = 2300
         dSiIn = 4.1
     dHi = dHiTer + dHiIn
     dSi = dSiTer + dSiIn
 
     R = 1.987  # ideal gas constant
-    for i in range(len(sequence)-1):
-        dinuc = sequence[i:(i+2)]
+    for i in range(len(sequence) - 1):
+        dinuc = sequence[i : (i + 2)]
         dinuc_params = params[dinuc]
         dH = dinuc_params[0]
         dS = dinuc_params[1]
         dHsum += dH
         dSsum += dS
     # Tm w/o salt adjustment
-    Tm = (dHsum + dHi)/float(dSsum + dSi + (R*log(oligo_conc)))
+    Tm = (dHsum + dHi) / float(dSsum + dSi + (R * log(oligo_conc)))
 
     # Salt adjustment
-    GC_frac = calculate_gc(sequence)/100
+    GC_frac = calculate_gc(sequence) / 100
     seq_length = len(sequence)
-    if sqrt(divalent_conc)/monovalent_conc < 0.22:
-        Tm = (Tm /
-              (pow(10, -5) * Tm * ((4.29 * GC_frac - 3.95)
-                                   * log(monovalent_conc)
-                                   + 0.94 * (log(monovalent_conc)**2))
-               + 1)
-              )
+    if sqrt(divalent_conc) / monovalent_conc < 0.22:
+        Tm = Tm / (
+            pow(10, -5)
+            * Tm
+            * (
+                (4.29 * GC_frac - 3.95) * log(monovalent_conc)
+                + 0.94 * (log(monovalent_conc) ** 2)
+            )
+            + 1
+        )
 
-    elif sqrt(divalent_conc)/monovalent_conc <= 6:
-        Tm = (Tm /
-              (Tm * (a_con
-                     - 0.911 * log(divalent_conc)
-                     + GC_frac * (6.26 + d_con * log(divalent_conc))
-                     + (1 / float(2 * (seq_length - 1))) *
-                     (-48.2 + 52.5 * log(divalent_conc) + g_con *
-                      (log(divalent_conc)) ** 2))
-               * pow(10, -5) + 1))
-    elif sqrt(divalent_conc)/monovalent_conc > 6:
+    elif sqrt(divalent_conc) / monovalent_conc <= 6:
+        Tm = Tm / (
+            Tm
+            * (
+                a_con
+                - 0.911 * log(divalent_conc)
+                + GC_frac * (6.26 + d_con * log(divalent_conc))
+                + (1 / float(2 * (seq_length - 1)))
+                * (
+                    -48.2
+                    + 52.5 * log(divalent_conc)
+                    + g_con * (log(divalent_conc)) ** 2
+                )
+            )
+            * pow(10, -5)
+            + 1
+        )
+    elif sqrt(divalent_conc) / monovalent_conc > 6:
         a_con = 3.92
         d_con = 1.42
         g_con = 8.31
-        Tm = (Tm /
-              (Tm * (a_con
-                     - 0.911 * log(divalent_conc)
-                     + GC_frac * (6.26 + d_con * log(divalent_conc))
-                     + (1 / (2 * float(seq_length - 1))) *
-                     (-48.2 + 52.5 * log(divalent_conc) + g_con *
-                      (log(divalent_conc)) ** 2))
-               * pow(10, -5) + 1))
+        Tm = Tm / (
+            Tm
+            * (
+                a_con
+                - 0.911 * log(divalent_conc)
+                + GC_frac * (6.26 + d_con * log(divalent_conc))
+                + (1 / (2 * float(seq_length - 1)))
+                * (
+                    -48.2
+                    + 52.5 * log(divalent_conc)
+                    + g_con * (log(divalent_conc)) ** 2
+                )
+            )
+            * pow(10, -5)
+            + 1
+        )
     return Tm - 273.15
 
 
 def reverse_complement(sequence):
-    """ Return reverse complement of a sequence. """
+    """Return reverse complement of a sequence."""
     complement_bases = {
-        'g': 'c', 'c': 'g', 'a': 't', 't': 'a', 'n': 'n',
-        'G': 'C', 'C': 'G', 'A': 'T', 'T': 'A', 'N': 'N', "-": "-",
-        "R": "Y", "Y": "R", "S": "W", "W": "S", "K": "M", "M": "K",
-        "B": "V", "V": "B", "D":  "H", "H":  "D",
-        "r": "y", "y": "r", "s": "w", "w": "s", "k": "m", "m": "k",
-        "b": "v", "v": "b", "d":  "h", "h":  "d"
+        "g": "c",
+        "c": "g",
+        "a": "t",
+        "t": "a",
+        "n": "n",
+        "G": "C",
+        "C": "G",
+        "A": "T",
+        "T": "A",
+        "N": "N",
+        "-": "-",
+        "R": "Y",
+        "Y": "R",
+        "S": "W",
+        "W": "S",
+        "K": "M",
+        "M": "K",
+        "B": "V",
+        "V": "B",
+        "D": "H",
+        "H": "D",
+        "r": "y",
+        "y": "r",
+        "s": "w",
+        "w": "s",
+        "k": "m",
+        "m": "k",
+        "b": "v",
+        "v": "b",
+        "d": "h",
+        "h": "d",
     }
 
     bases = list(sequence)
@@ -9564,7 +10798,7 @@ def reverse_complement(sequence):
 
 
 def get_file_locations():
-    """ All static files such as fasta genomes, snp files, etc. must be listed
+    """All static files such as fasta genomes, snp files, etc. must be listed
     in a file in the working directory. File name is file_locations.
     It is a tab separated text file. First tab has 2 letter species name, or
     "all" for general files used for all species. Second tab is the file name
@@ -9583,15 +10817,16 @@ def get_file_locations():
 
 
 def id_generator(N):
-    """ Generate a random string of length N consisting of uppercase letters
+    """Generate a random string of length N consisting of uppercase letters
     and digits. Used for generating names for temporary files, etc.
     """
-    return ''.join(random.SystemRandom().choice(
-        string.ascii_uppercase + string.digits) for _ in range(N))
+    return "".join(
+        random.SystemRandom().choice(string.ascii_uppercase + string.digits)
+        for _ in range(N)
+    )
 
 
-def alphanumerize(text, allowed_chars=["-"], replacement_char="-",
-                  verbose=False):
+def alphanumerize(text, allowed_chars=["-"], replacement_char="-", verbose=False):
     """Replace special characters, spaces etc in a text.
 
     Replace characters which are not alphanumeric or in the allowed characters
