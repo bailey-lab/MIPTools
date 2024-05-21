@@ -11,7 +11,7 @@ rule all:
 	input:
 		setup_finished=output+'/setup_finished.txt',
 #		good_samples=output+'/successfully_extracted_samples.txt',
-		output_configfile=output+'/snakemake_params/wrangler_by_sample.yaml'
+		output_configfile = output+'/snakemake_params/wrangler_by_sample.yaml'
 
 rule copy_files:
 	input:
@@ -22,7 +22,7 @@ rule copy_files:
 	output:
 		setup_snakefile=output+'/snakemake_params/setup_run.smk',
 		finish_snakefile=output+'/snakemake_params/finish_run.smk',
-		output_configfile=output+'/snakemake_params/wrangler_by_sample.yaml',
+		output_configfile = output+'/snakemake_params/wrangler_by_sample.yaml',
 		out_scripts=directory(output+'/snakemake_params/scripts')
 	shell:
 		'''
