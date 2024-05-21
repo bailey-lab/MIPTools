@@ -31,26 +31,14 @@ species: pf #abbreviated name of the species you're analyzing. Needs to match a
 #value found in first column of file_locations.tsv (from species_resources
 #directory). In the tutorial dataset, this is 'pf'
 
-#the probe sets here need to be an exact match for the values in your sample
-#sheet - the first value is the value you'd like to pull from the sample_set
-#column of the sample sheet, and the second value is the value you'd like to
-#pull from the probe_set column of the sample sheet. E.g. to pull all samples
-#that have 'JJJ' listed in the sample_set column and 'DR1,VAR4' in the
-#'probe_set' column, you would use [['JJJ', 'DR1,VAR4']]. You can also pull
-#multiple combinations if the samples you're interested in have multiple
-#sample_set column values or multiple probe_set column values, e.g.
-#[['JJJ','DR1,VAR4'], ['JJJ', 'DR1']] would pull samples that match 'JJJ' 
-#sample_set and 'DR1,VAR4' probe_set, but also samples that match 'JJJ'
-#sample_set and 'DR1' probe_set 
+#because a sample sheet can contain many samples from different projects and
+#different users, sample_set is used to label the samples that are 'yours'
+#E.g. to pull all samples that have 'JJJ' listed in the sample_set column,
+#you would use JJJ
 sample_set: JJJ
 
 #The actual probe set you'd like to analyze. This needs to match the probeset
-#you provided in your project_resources folder. The setting above is for
-#selecting samples based on the value present in the probe_set column of the
-#sample sheet (which may include multiple comma delimited probe sets for each
-#sample) whereas the one below is for selecting the single probe set you'd like
-#to analyze in this pipeline. Needs to include the square brackets and quotes
-#e.g. ['DR1']
+#you provided in your project_resources folder.
 probe_set: DR1
 
 #number of processors to use for the less resource-intensive parts
