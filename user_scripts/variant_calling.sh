@@ -29,30 +29,31 @@ function parse_yaml {
    }'
 }
 
-eval $(parse_yaml variant_calling.yaml)
+eval $(parse_yaml config.yaml)
 
 ############################
 # setup the run
 ##########################
 
 # create output directory if it doesn't exist
-mkdir -p $output_directory
+mkdir -p $variant_calling_folder
 
 #replace leading and trailing whitespace in variables (If I learn more unix I'll wrap this in a function or add to the yaml parser above):
 project_resources="$(echo -e "${project_resources}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
 species_resources="$(echo -e "${species_resources}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
-wrangler_directory="$(echo -e "${wrangler_directory}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
-output_directory="$(echo -e "${output_directory}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+wrangled_folder="$(echo -e "${wrangled_folder}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+variant_calling_folder="$(echo -e "${variant_calling_folder}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
 
 # define singularity bindings and snakemake arguments to be used each time snakemake is called
 singularity_bindings="-B $project_resources:/opt/project_resources
  -B $species_resources:/opt/species_resources
- -B $wrangler_directory:/opt/data
- -B $output_directory:/opt/analysis
+ -B $wrangled_folder:/opt/data
+ -B $variant_calling_folder:/opt/analysis
+ -B /d/MIPTools/snakemake:/opt/snakemake
  -H $newhome"
  
-snakemake_args="--cores $processor_number --keep-going --rerun-incomplete --use-conda --latency-wait 60"
-freebayes_args="--cores $freebayes_threads --keep-going --rerun-incomplete --use-conda --latency-wait 60"
+snakemake_args="--cores $general_cpu_count --keep-going --rerun-incomplete --use-conda --latency-wait 60"
+freebayes_args="--cores $freebayes_cpu_count --keep-going --rerun-incomplete --use-conda --latency-wait 60"
 
 ##########################################
 # optional: unlock a crashed snakemake run
@@ -60,13 +61,13 @@ freebayes_args="--cores $freebayes_threads --keep-going --rerun-incomplete --use
 
 unlock() {
    echo "unlocking"
-   singularity exec $singularity_bindings $sif_file snakemake \
+   singularity exec $singularity_bindings $miptools_sif snakemake \
    -s /opt/snakemake/02_check_run_stats.smk --unlock 
 
-   singularity exec $singularity_bindings $sif_file snakemake \
+   singularity exec $singularity_bindings $miptools_sif snakemake \
    -s /opt/snakemake/03_generate_contigs.smk --unlock
 
-   singularity exec $singularity_bindings $sif_file snakemake \
+   singularity exec $singularity_bindings $miptools_sif snakemake \
    -s /opt/snakemake/04_run_freebayes.smk --unlock
 }
 
@@ -83,21 +84,21 @@ while getopts "u" opt; do
 #################################
 singularity exec \
  $singularity_bindings \
- $sif_file snakemake -s /opt/snakemake/02_check_run_stats.smk $snakemake_args
+ $miptools_sif snakemake -s /opt/snakemake/02_check_run_stats.smk $snakemake_args
   
 ###############################
 # Step 2: Generate Contigs
 ##############################
 singularity exec \
   $singularity_bindings \
-  $sif_file snakemake -s /opt/snakemake/03_generate_contigs.smk $snakemake_args
+  $miptools_sif snakemake -s /opt/snakemake/03_generate_contigs.smk $snakemake_args
 
 ###############################  
 # Step 3: Run Freebayes
 ###############################
 singularity exec \
-  $singularity_bindings \
-  $sif_file snakemake -s /opt/snakemake/04_run_freebayes.smk $freebayes_args
+   $singularity_bindings \
+   $miptools_sif snakemake -s /opt/snakemake/04_run_freebayes.smk $freebayes_args
 
 #################################
 # confirm the ulimit settings #
