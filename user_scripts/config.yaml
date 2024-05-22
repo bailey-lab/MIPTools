@@ -27,8 +27,8 @@ miptools_sif: /d/resources/MIPTools_sample_groups.sif
 # More intensive processes may use all available memory if there are too many of them running at once.
 # Freebayes is a particularly intensive process so it's probably helpful to leave it lower than the 
 # general count
-general_cpu_count: 16 # most processes are less memory intensive and can be run with more threads
-freebayes_cpu_count: 8 # more intensive process may run out of memory if this is set too high
+general_cpu_count: 16
+freebayes_cpu_count: 8
 
 species: pf #abbreviated name of the species you're analyzing. Needs to match a
 #value found in first column of file_locations.tsv (from species_resources
@@ -155,4 +155,4 @@ decompose_options: []
 aggregate_none: true
 annotated_vcf: false
 output_prefix: ''
-min_site_qual: 
+min_site_qual: 1

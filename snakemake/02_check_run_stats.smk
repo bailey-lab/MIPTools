@@ -1,4 +1,4 @@
-configfile: "variant_calling.yaml"
+configfile: "config.yaml"
 
 
 output_folder = "/opt/analysis"
@@ -23,11 +23,11 @@ rule copy_params:
     """
     input:
         snakefile="/opt/snakemake/02_check_run_stats.smk",
-        configfile="variant_calling.yaml",
+        configfile="config.yaml",
         scripts="/opt/snakemake/scripts",
     output:
         snakefile=log_folder + "/02_check_run_stats.smk",
-        configfile=log_folder + "/variant_calling.yaml",
+        configfile=log_folder + "/config.yaml",
         scripts=directory(log_folder + "/scripts"),
     resources:
         log_dir=log_folder,
@@ -46,11 +46,11 @@ rule modify_ozkan_settings:
     """
     params:
         template_settings="/opt/resources/templates/analysis_settings_templates/settings.txt",
-        processor_number=config["processor_number"],
+        processor_number=config["general_cpu_count"],
         bwa_extra=config["bwa_extra"],
         species=config["species"],
         probe_set=config["probe_set"].strip(),
-        freebayes_threads=config["freebayes_threads"],
+        freebayes_threads=config["freebayes_cpu_count"],
         min_haplotype_barcodes=config["min_haplotype_barcodes"],
         min_haplotype_samples=config["min_haplotype_samples"],
         min_haplotype_sample_fraction=config["min_haplotype_sample_fraction"],
@@ -80,7 +80,6 @@ rule parse_info_file:
         sample_sheets="/opt/data/sample_sheet.tsv",
         sample_set=config["sample_set"].strip(),
         probe_set=config["probe_set"].strip(),
-        # sample_groups=config['sample_groups']
     resources:
         log_dir=log_folder,
     script:

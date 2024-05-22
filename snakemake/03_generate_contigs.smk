@@ -1,11 +1,11 @@
-configfile: "variant_calling.yaml"
+configfile: "config.yaml"
 
 
 output_folder = "/opt/analysis"
 log_folder = "/opt/analysis/run_settings"
 import subprocess
 
-subprocess.call(f"mkdir {log_folder}", shell=True)
+subprocess.call(f"mkdir -p {log_folder}", shell=True)
 
 if config["target_aa_annotation"]:
     targeting = config["target_aa_annotation"]

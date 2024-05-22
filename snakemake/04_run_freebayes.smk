@@ -1,7 +1,6 @@
-configfile: "variant_calling.yaml"
+configfile: "config.yaml"
 
 
-# singularity: config['sif_file']
 output_folder = "/opt/analysis"
 
 import yaml
@@ -16,6 +15,7 @@ rule all:
         ref_table=output_folder + "/reference_table.csv",
         cov_table=output_folder + "/coverage_table.csv",
         alt_table=output_folder + "/alternate_table.csv",
+
 
 
 rule run_freebayes:
@@ -81,5 +81,6 @@ rule generate_tables:
         annotated_vcf=config["annotated_vcf"],
         aggregate_none=config["aggregate_none"],
         output_prefix=config["output_prefix"],
+        min_site_qual=config["min_site_qual"]
     script:
         "scripts/generate_tables.py"
