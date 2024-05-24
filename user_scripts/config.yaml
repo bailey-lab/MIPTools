@@ -1,11 +1,11 @@
 # path folder where the wrangler output should be.  if this doesn't exist yet
 # it will be created during the wrangler_by_sample step
 # e.g. /foo/bar/test_data_wrangled
-wrangled_folder: /d/MIPTools_output/test_data_wrangled
+wrangler_folder: /d/MIPTools_output/test_data_wrangled
 
 # name of the primary table to use from the wrangling step. Can usually be left
 # at default of allInfo.tsv.gz
-wrangled_file: allInfo.tsv.gz
+wrangler_file: allInfo.tsv.gz
 
 # path to the sample sheet
 # e.g. /foo/bar/test-data/test_data/sample_list.tsv

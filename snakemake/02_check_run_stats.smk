@@ -23,7 +23,7 @@ rule copy_params:
     """
     input:
         snakefile="/opt/snakemake/02_check_run_stats.smk",
-        configfile="config.yaml",
+        configfile="/opt/config/config.yaml",
         scripts="/opt/snakemake/scripts",
     output:
         snakefile=log_folder + "/02_check_run_stats.smk",
@@ -76,7 +76,7 @@ rule parse_info_file:
     params:
         wdir="/opt/analysis",
         settings_file="settings.txt",
-        info_files=["/opt/data/" + config["wrangled_file"]],
+        info_files=["/opt/data/" + config["wrangler_file"]],
         sample_sheets="/opt/data/sample_sheet.tsv",
         sample_set=config["sample_set"].strip(),
         probe_set=config["probe_set"].strip(),

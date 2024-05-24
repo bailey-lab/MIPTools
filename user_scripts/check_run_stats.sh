@@ -1,18 +1,7 @@
-########################################################
-# README
-# this file uses variant_calling.yaml for its parameters
-#########################################################
-
-
 #################################################
 # set the ulimit high (necessary for big datasets)
 #################################################
 ulimit -n $(ulimit -Hn)
-
-#################################################
-# set the home directory as the current working directory
-#################################################
-cwd=$(pwd -P)
 
 ###################################
 # import variables from yaml function
@@ -32,10 +21,10 @@ mkdir -p $(yml 'variant_calling_folder')
 singularity_bindings="
  -B $(yml 'project_resources'):/opt/project_resources
  -B $(yml 'species_resources'):/opt/species_resources
- -B $(yml 'wrangled_folder'):/opt/data
+ -B $(yml 'wrangler_folder'):/opt/data
  -B $(yml 'variant_calling_folder'):/opt/analysis
  -B /d/MIPTools/snakemake:/opt/snakemake
- -B $cwd:/opt/config"
+ -B $(pwd -P):/opt/config"
  
 snakemake_args="--cores $(yml 'general_cpu_count') --keep-going --rerun-incomplete --use-conda --latency-wait 60"
 

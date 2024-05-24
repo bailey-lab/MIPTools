@@ -6636,12 +6636,14 @@ def vcf_to_tables_fb(
 
             # get individual level data
             genotype_quals = call_data[i][4]
-            ao_count = call_data[i][0]
-            alt_quals = call_data[i][5]
-            average_alt_quals = alt_quals / ao_count
+            with np.errstate(invalid='ignore'):
+                ao_count = call_data[i][0]
+                alt_quals = call_data[i][5]
+                average_alt_quals = alt_quals / ao_count
             ro_count = call_data[i][1]
             ref_quals = call_data[i][6]
-            average_ref_quals = ref_quals / ro_count
+            with np.errstate(invalid='ignore'):
+                average_ref_quals = ref_quals / ro_count
             gq_mask = genotype_quals < min_genotype_qual
             qa_mask = alt_quals < min_alt_qual
             qr_mask = ref_quals < min_ref_qual
@@ -6856,10 +6858,11 @@ def vcf_to_tables_fb(
             genotype_quals = call_data[i][4]
             ao_count = call_data[i][0]
             alt_quals = call_data[i][5]
-            average_alt_quals = alt_quals / ao_count
-            ro_count = call_data[i][1]
-            ref_quals = call_data[i][6]
-            average_ref_quals = ref_quals / ro_count
+            with np.errstate(invalid='ignore'):
+                average_alt_quals = alt_quals / ao_count
+                ro_count = call_data[i][1]
+                ref_quals = call_data[i][6]
+                average_ref_quals = ref_quals / ro_count
             gq_mask = genotype_quals < min_genotype_qual
             qa_mask = alt_quals < min_alt_qual
             qr_mask = ref_quals < min_ref_qual
@@ -7000,10 +7003,11 @@ def vcf_to_tables_fb(
             genotype_quals = call_data[i][4]
             ao_count = call_data[i][0]
             alt_quals = call_data[i][5]
-            average_alt_quals = alt_quals / ao_count
-            ro_count = call_data[i][1]
-            ref_quals = call_data[i][6]
-            average_ref_quals = ref_quals / ro_count
+            with np.errstate(invalid='ignore'):
+                average_alt_quals = alt_quals / ao_count
+                ro_count = call_data[i][1]
+                ref_quals = call_data[i][6]
+                average_ref_quals = ref_quals / ro_count
             gq_mask = genotype_quals < min_genotype_qual
             qa_mask = alt_quals < min_alt_qual
             qr_mask = ref_quals < min_ref_qual
