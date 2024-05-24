@@ -1,38 +1,42 @@
-# folder where the wrangler output should be.  This is an output for the wrangler_by_sample step and
-# an input for the variant_calling and check_run_stats steps
-wrangled_folder: test_data_wrangled
+# path folder where the wrangler output should be.  if this doesn't exist yet
+# it will be created during the wrangler_by_sample step
+# e.g. /foo/bar/test_data_wrangled
+wrangled_folder: /d/MIPTools_output/test_data_wrangled
 
 # name of the primary table to use from the wrangling step. Can usually be left
 # at default of allInfo.tsv.gz
 wrangled_file: allInfo.tsv.gz
 
-# where you would like the output to go. Can be an absolute or relative path.
-# Doesn't need to exist yet. Don't include a '/' at the end of the folder name
-variant_calling_folder: test_data_variant
-
-#location of sample sheet
+# path to the sample sheet
+# e.g. /foo/bar/test-data/test_data/sample_list.tsv
 input_sample_sheet: /d/resources/miptools_test-data/test_data/sample_list.tsv
 
-#location of input fastq file
+# path to the directory of fastq files
+# e.g. /foo/bar/test-data/test_data/fastq
 fastq_dir: /d/resources/miptools_test-data/test_data/fastq
 
-#location of project resources (make the end agnostic of '/')
+# path to the project resources and species resources directories
+# e.g. /foo/bar/test-data/DR1_project_resources
 project_resources: /d/resources/miptools_test-data/DR1_project_resources
 species_resources: /d/resources/miptools_test-data/pf_species_resources
 
-#location of sif file to use
+# path to the sif file you want to use
+# e.g. /foo/bar/miptools.sif
 miptools_sif: /d/resources/MIPTools_sample_groups.sif
 
-# How many CPUs to use in parallel.  If a job crashes it may be because this is set too high.
-# More intensive processes may use all available memory if there are too many of them running at once.
-# Freebayes is a particularly intensive process so it's probably helpful to leave it lower than the 
-# general count
+# path to folder where the variant_calling output should go
+# e.g. /foo/bar/test_data_vc
+variant_calling_folder: "/d/MIPTools_output/test_data_variant"
+# If too many CPUs are used in parallel a memory intensive process may cause a crash
+# freebayes is a particuarly memory intensive process so it is separate
+# e.g. general_cpu_count: 16 and freebayes_cp_count: 8
 general_cpu_count: 16
 freebayes_cpu_count: 8
 
-species: pf #abbreviated name of the species you're analyzing. Needs to match a
-#value found in first column of file_locations.tsv (from species_resources
-#directory). In the tutorial dataset, this is 'pf'
+# abbreviated name of the species of interest.  Must match a value found
+# in the first column of file_locations.tsv (from species_resources directory)
+# e.g. pf
+species: pf
 
 #only rows from the sample_set column of the sample sheet that are an exact
 #match to the sample set listed below will be analyzed. If the samples you want
