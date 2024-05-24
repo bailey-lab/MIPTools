@@ -6,29 +6,47 @@ ulimit -n $(ulimit -Hn)
 ###################################
 # import variables from yaml function
 ################################
-yml () {
-   echo $(eval ./yq .$1 < config.yaml) 
+yml (){
+   local prefix=$2
+   local s='[[:space:]]*' w='[a-zA-Z0-9_]*' fs=$(echo @|tr @ '\034')
+   sed -ne "s|^\($s\):|\1|" \
+        -e "s|^\($s\)\($w\)$s:$s[\"']\(.*\)[\"']$s\$|\1$fs\2$fs\3|p" \
+        -e "s|^\($s\)\($w\)$s:$s\(.*\)$s\$|\1$fs\2$fs\3|p"  $1 |
+   awk -F$fs '{
+      indent = length($1)/2;
+      vname[indent] = $2;
+      for (i in vname) {if (i > indent) {delete vname[i]}}
+      if (length($3) > 0) {
+         vn=""; for (i=0; i<indent; i++) {vn=(vn)(vname[i])("_")}
+         printf("%s%s%s=\"%s\"\n", "'$prefix'",vn, $2, $3);
+      }
+   }'
 }
+
+rmwt () {
+   no_hash=$(echo -e $1 | sed -e 's/\#.*$//')
+   echo -e $no_hash | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'
+}
+
+eval $(yml config.yaml)
 
 ############################
 # setup the run
 ##########################
 
 # create output directory if it doesn't exist
-mkdir -p $(yml 'variant_calling_folder')
+mkdir -p $(rmwt $variant_calling_folder)
 
 # define singularity bindings and snakemake arguments to be used each time snakemake is called
 singularity_bindings="
- -B $(yml 'project_resources'):/opt/project_resources
- -B $(yml 'species_resources'):/opt/species_resources
- -B $(yml 'wrangler_folder'):/opt/data
- -B $(yml 'variant_calling_folder'):/opt/analysis
- -B /d/MIPTools/snakemake/:/opt/snakemake
- -B /d/MIPTools/src:/opt/src
+ -B $(rmwt $project_resources):/opt/project_resources
+ -B $(rmwt $species_resources):/opt/species_resources
+ -B $(rmwt $wrangler_folder):/opt/data
+ -B $(rmwt $variant_calling_folder):/opt/analysis
  -B $(pwd -P):/opt/config"
  
-snakemake_args="--cores $(yml 'general_cpu_count') --keep-going --rerun-incomplete --use-conda --latency-wait 60"
-freebayes_args="--cores $(yml 'freebayes_cpu_count') --keep-going --rerun-incomplete --use-conda --latency-wait 60"
+snakemake_args="--cores $(rmwt $general_cpu_count) --keep-going --rerun-incomplete --use-conda --latency-wait 60"
+freebayes_args="--cores $(rmwt $freebayes_cpu_count) --keep-going --rerun-incomplete --use-conda --latency-wait 60"
 
 ##########################################
 # optional: unlock a crashed snakemake run
@@ -38,17 +56,17 @@ unlock() {
    echo "unlocking"
    singularity exec \
    $singularity_bindings \
-   $(yml 'miptools_sif') \
+   $(rmwt $miptools_sif) \
    snakemake -s /opt/snakemake/02_check_run_stats.smk --unlock 
 
    singularity exec \
    $singularity_bindings \
-   $(yml 'miptools_sif') \
+   $(rmwt $miptools_sif) \
    snakemake -s /opt/snakemake/03_generate_contigs.smk --unlock
 
    singularity exec \
    $singularity_bindings \
-   $(yml 'miptools_sif') \
+   $(rmwt $miptools_sif) \
    snakemake -s /opt/snakemake/04_run_freebayes.smk --unlock
 }
 
@@ -65,7 +83,7 @@ while getopts "u" opt; do
 #################################
 singularity exec \
  $singularity_bindings \
- $(yml 'miptools_sif') \
+ $(rmwt $miptools_sif) \
  snakemake -s /opt/snakemake/02_check_run_stats.smk \
  $snakemake_args
   
@@ -74,7 +92,7 @@ singularity exec \
 ##############################
 singularity exec \
   $singularity_bindings \
-  $(yml 'miptools_sif') \
+  $(rmwt $miptools_sif) \
   snakemake -s /opt/snakemake/03_generate_contigs.smk \
   $snakemake_args
 
@@ -83,7 +101,7 @@ singularity exec \
 ###############################
 singularity exec \
    $singularity_bindings \
-   $(yml 'miptools_sif') \
+   $(rmwt $miptools_sif) \
    snakemake -s /opt/snakemake/04_run_freebayes.smk \
    $freebayes_args
 
