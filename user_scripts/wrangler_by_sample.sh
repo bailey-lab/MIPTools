@@ -3,11 +3,6 @@
 #################################################
 ulimit -n $(ulimit -Hn)
 
-#################################################
-# set the home directory as the current working directory
-#################################################
-cwd=$(pwd -P)
-
 ###################################
 # import variables from yaml function
 ################################
@@ -20,16 +15,16 @@ yml () {
 ##########################
 
 # create output directory if it doesn't exist
-mkdir -p $(yml 'wrangled_folder')
+mkdir -p $(yml 'wrangler_folder')
 
 # define singularity bindings and snakemake arguments to be used each time snakemake is called
 singularity_bindings="
  -B $(yml 'project_resources'):/opt/project_resources
- -B $(yml 'wrangled_folder'):/opt/analysis
+ -B $(yml 'wrangler_folder'):/opt/analysis
  -B $(dirname $(yml 'input_sample_sheet')):/opt/input_sample_sheet_directory
  -B $(yml 'fastq_dir'):/opt/data
  -B /d/MIPTools/snakemake:/opt/snakemake
- -B $cwd:/opt/config"
+ -B $(pwd -P):/opt/config"
  
 snakemake_args="--cores $(yml 'general_cpu_count') --keep-going --rerun-incomplete --latency-wait 60"
 

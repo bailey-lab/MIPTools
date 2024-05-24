@@ -19,7 +19,7 @@ rule copy_files:
     input:
         setup_snakefile="/opt/snakemake/wrangler_by_sample_setup.smk",
         finish_snakefile="/opt/snakemake/wrangler_by_sample_finish.smk",
-        input_configfile="config.yaml",
+        input_configfile="/opt/config/config.yaml",
         in_scripts="/opt/snakemake/scripts",
     output:
         setup_snakefile=output_folder + "/snakemake_params/setup_run.smk",
