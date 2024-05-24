@@ -1,4 +1,4 @@
-configfile: "config.yaml"
+configfile: "/opt/config/config.yaml"
 
 
 output_folder = "/opt/analysis"

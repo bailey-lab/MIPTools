@@ -12,3 +12,5 @@ docs/.DS_store
 docs/_build
 local_files
 bcl2fastq2-v2-20-0-linux-x86-64.zip
+.cache/
+.snakemake/
