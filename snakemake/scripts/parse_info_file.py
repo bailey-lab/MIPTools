@@ -25,6 +25,6 @@ else:
 	mip.process_info_file(
 		wdir, settings_file, info_files, sample_sheets,
 	    settings["mipsterFile"], 
-	    sample_set=sample_set,
-	    probe_set=probe_set
+	    sample_set,
+	    probe_set
 	    )

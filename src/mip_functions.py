@@ -8601,7 +8601,9 @@ def process_info_file(
     # run_meta = run_meta.merge(sps, how="inner")
     run_meta["probe_set"] = run_meta["probe_set"].astype(str) + ","
     run_meta = run_meta[(run_meta["probe_set"].str.contains(probe_set + ","))]
-    run_meta = run_meta[(run_meta["sample_set"].str.contains(sample_set))]
+    run_meta = run_meta[(run_meta["sample_set"].str.contains(
+        sample_set.replace(',','|').replace(' ','')
+        ))]
     run_meta["probe_set"] = run_meta["probe_set"].str[:-1]
 
     run_meta["Sample ID"] = run_meta["Original SID"]
