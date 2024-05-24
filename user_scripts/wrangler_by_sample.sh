@@ -6,28 +6,47 @@ ulimit -n $(ulimit -Hn)
 ###################################
 # import variables from yaml function
 ################################
-yml () {
-   echo $(eval ./yq .$1 < config.yaml) 
+yml (){
+   local prefix=$2
+   local s='[[:space:]]*' w='[a-zA-Z0-9_]*' fs=$(echo @|tr @ '\034')
+   sed -ne "s|^\($s\):|\1|" \
+        -e "s|^\($s\)\($w\)$s:$s[\"']\(.*\)[\"']$s\$|\1$fs\2$fs\3|p" \
+        -e "s|^\($s\)\($w\)$s:$s\(.*\)$s\$|\1$fs\2$fs\3|p"  $1 |
+   awk -F$fs '{
+      indent = length($1)/2;
+      vname[indent] = $2;
+      for (i in vname) {if (i > indent) {delete vname[i]}}
+      if (length($3) > 0) {
+         vn=""; for (i=0; i<indent; i++) {vn=(vn)(vname[i])("_")}
+         printf("%s%s%s=\"%s\"\n", "'$prefix'",vn, $2, $3);
+      }
+   }'
 }
+
+rmwt () {
+   no_hash=$(echo -e $1 | sed -e 's/\#.*$//')
+   echo -e $no_hash | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'
+}
+
+eval $(yml config.yaml)
+
 
 ############################
 # setup the run
 ##########################
 
 # create output directory if it doesn't exist
-mkdir -p $(yml 'wrangler_folder')
+mkdir -p $(rmwt $wrangler_folder)
 
 # define singularity bindings and snakemake arguments to be used each time snakemake is called
 singularity_bindings="
- -B $(yml 'project_resources'):/opt/project_resources
- -B $(yml 'wrangler_folder'):/opt/analysis
- -B $(dirname $(yml 'input_sample_sheet')):/opt/input_sample_sheet_directory
- -B $(yml 'fastq_dir'):/opt/data
- -B /d/MIPTools/snakemake:/opt/snakemake
- -B /d/MIPTools/src:/opt/src
+ -B $(rmwt $project_resources):/opt/project_resources
+ -B $(rmwt $wrangler_folder):/opt/analysis
+ -B $(dirname $(rmwt $input_sample_sheet)):/opt/input_sample_sheet_directory
+ -B $(rmwt $fastq_dir):/opt/data
  -B $(pwd -P):/opt/config"
  
-snakemake_args="--cores $(yml 'general_cpu_count') --keep-going --rerun-incomplete --latency-wait 60"
+snakemake_args="--cores $(rmwt $general_cpu_count) --keep-going --rerun-incomplete --latency-wait 60"
 
 ##########################################
 # optional: unlock a crashed snakemake run
@@ -37,13 +56,13 @@ unlock() {
    echo "unlocking"
    singularity exec \
    $singularity_bindings \
-   $(yml 'miptools_sif') \
+   $(rmwt $miptools_sif) \
    snakemake -s /opt/snakemake/wrangler_by_sample_setup.smk \
    --unlock 
 
    singularity exec \
    $singularity_bindings \
-   $(yml 'miptools_sif') \
+   $(rmwt $miptools_sif) \
    snakemake -s /opt/snakemake/wrangler_by_sample_finish.smk \
    --unlock
 }
@@ -61,7 +80,7 @@ while getopts "u" opt; do
 #################################
 singularity exec \
  $singularity_bindings \
- $(yml 'miptools_sif') \
+ $(rmwt $miptools_sif) \
  snakemake -s /opt/snakemake/wrangler_by_sample_setup.smk \
  $snakemake_args
 
@@ -70,7 +89,7 @@ singularity exec \
 #################################
 singularity exec \
  $singularity_bindings \
- $(yml 'miptools_sif') \
+ $(rmwt $miptools_sif) \
  snakemake -s /opt/snakemake/wrangler_by_sample_finish.smk \
  $snakemake_args
 
