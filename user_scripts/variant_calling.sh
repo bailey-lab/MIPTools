@@ -43,7 +43,8 @@ singularity_bindings="
  -B $(rmwt $species_resources):/opt/species_resources
  -B $(rmwt $wrangler_folder):/opt/data
  -B $(rmwt $variant_calling_folder):/opt/analysis
- -B $(pwd -P):/opt/config"
+ -B $(readlink -f config.yaml | xargs dirname):/opt/config"
+ # -B $(pwd -P):/opt/config"
  
 snakemake_args="--cores $(rmwt $general_cpu_count) --keep-going --rerun-incomplete --use-conda --latency-wait 60"
 freebayes_args="--cores $(rmwt $freebayes_cpu_count) --keep-going --rerun-incomplete --use-conda --latency-wait 60"

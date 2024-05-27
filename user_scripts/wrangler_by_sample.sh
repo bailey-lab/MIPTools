@@ -44,7 +44,8 @@ singularity_bindings="
  -B $(rmwt $wrangler_folder):/opt/analysis
  -B $(dirname $(rmwt $input_sample_sheet)):/opt/input_sample_sheet_directory
  -B $(rmwt $fastq_dir):/opt/data
- -B $(pwd -P):/opt/config"
+ -B $(readlink -f config.yaml | xargs dirname):/opt/config"
+ # -B $(pwd -P):/opt/config"
  
 snakemake_args="--cores $(rmwt $general_cpu_count) --keep-going --rerun-incomplete --latency-wait 60"
 
