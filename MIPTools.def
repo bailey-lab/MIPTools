@@ -61,8 +61,7 @@ From: amd64/ubuntu:20.04
     alien \
     unzip \
     tree \
-    pandoc \
-    pip
+    pandoc
 
     # set environment locale
     echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
@@ -78,24 +77,15 @@ From: amd64/ubuntu:20.04
     alien bcl2fastq2*.rpm || true
     dpkg -i bcl2fastq2*.deb || true
 
-    # install conda and python via Miniconda3
-    PYTHON_VERSION=3.8
-    PYTHON_VERSION=$(echo ${PYTHON_VERSION} | sed 's/[^0-9]//g' | head -c2)
-    MINICONDA_VERSION=4.8.3
-    MINICONDA_MD5=d63adf39f2c220950a063e0529d4ff74
-    CONDA_DIR=/opt/conda
-    export PATH=${CONDA_DIR}/bin:${PATH}
-    cd /tmp && \
-        wget --quiet "https://repo.anaconda.com/miniconda/Miniconda3-py${PYTHON_VERSION}_${MINICONDA_VERSION}-Linux-x86_64.sh" && \
-        echo "${MINICONDA_MD5} *Miniconda3-py${PYTHON_VERSION}_${MINICONDA_VERSION}-Linux-x86_64.sh" | md5sum -c - && \
-        /bin/bash Miniconda3-py${PYTHON_VERSION}_${MINICONDA_VERSION}-Linux-x86_64.sh -bfp ${CONDA_DIR} && \
-        rm Miniconda3-py${PYTHON_VERSION}_${MINICONDA_VERSION}-Linux-x86_64.sh && \
-        ${CONDA_DIR}/bin/conda config --system --set show_channel_urls true && \
-        conda clean --all --force-pkgs-dirs --yes
-
-    # Install mamba
-    # Note that the mamba installation will update conda to the latest version
-    conda install mamba --channel conda-forge --quiet
+   # install miniforge
+    export PATH=/opt/conda/bin:/opt/conda/envs/MIP/bin:${PATH}
+    cd /tmp
+    wget -O Miniforge3.sh "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
+    bash Miniforge3.sh -bfp "/opt/conda"
+    rm Miniforge3.sh
+    conda config --system --set show_channel_urls true
+    mamba install --quiet sl
+    conda clean --all --force-pkgs-dirs --yes
 
     # Install mamba packages using an environment file.
     # If the versioned file exists, use it as a template to ensure version
@@ -103,15 +93,18 @@ From: amd64/ubuntu:20.04
     # Note that instead of creating a new environment, we update the base
     # environment, which is activated by default.
     if [ -f "/opt/environment_versioned.yml" ]; then
-        mamba env update --prefix ${CONDA_DIR} --file /opt/environment_versioned.yml --quiet
+        mamba env update --prefix /opt/conda --file /opt/environment_versioned.yml --quiet
     else
         # Update environment and save information to a file
-        mamba env update --prefix ${CONDA_DIR} --file /opt/environment.yml
-        mamba env export --prefix ${CONDA_DIR} > /opt/environment_versioned.yml
+        mamba env update --prefix /opt/conda --file /opt/environment.yml
+        mamba env export --prefix /opt/conda > /opt/environment_versioned.yml
     fi
 
     # Clean mamba installs
     mamba clean --all --yes
+
+    # Install snakemake
+    mamba install bioconda::snakemake
 
     # install vt variant tool set
     cd /opt/programs
@@ -159,11 +152,6 @@ From: amd64/ubuntu:20.04
     BS_PATH="https://launch.basespace.illumina.com/CLI/${BS_VERSION}/amd64-linux/bs"
     wget $BS_PATH -O /opt/bin/bs
     
-    # install snakemake
-    pip install snakemake
-    # use an older version of pulp (newest pulp not supported on current pip
-    #snakemake, shouldn't be needed once pip supports snakemake 7.32)
-    pip install pulp==2.7
     # Remove programs to reduce image size. These programs have been installed
     # and the binaries moved to /opt/bin
     cd /opt/programs
