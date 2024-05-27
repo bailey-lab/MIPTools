@@ -2,8 +2,6 @@ name: base
 channels:
   - conda-forge
   - bioconda
-  - r
-  - nodefaults
 dependencies:
   - basemap-data-hires
   - bcftools

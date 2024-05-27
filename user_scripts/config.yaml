@@ -1,7 +1,7 @@
-# path folder where the wrangler output should be.  if this doesn't exist yet
-# it will be created during the wrangler_by_sample step
-# e.g. /foo/bar/test_data_wrangled
-wrangler_folder: /d/MIPTools_output/test_data_wrangled
+#####################################################
+##                     Inputs                      ##
+#####################################################
+# these files are resources to be fed into miptools
 
 # path to the sample sheet
 # e.g. /foo/bar/test-data/test_data/sample_list.tsv
@@ -14,24 +14,40 @@ species_resources: /d/resources/miptools_test-data/pf_species_resources
 
 # path to the sif file you want to use
 # e.g. /foo/bar/miptools.sif
-miptools_sif: /d/resources/MIPTools_sample_groups.sif
+miptools_sif: /home/charlie/MIP.sif
 
 # path to the directory of fastq files
 # e.g. /foo/bar/test-data/test_data/fastq
 fastq_dir: /d/resources/miptools_test-data/test_data/fastq
 
+################################################################
+##                        Intermediate                        ##
+################################################################
+# these files are created by the wrangler_by_sample script and then used
+# in the variant_calling and check_run_stats scripts
+
+# path folder where the wrangler output should be.  if this doesn't exist yet
+# it will be created during the wrangler_by_sample step
+# e.g. /foo/bar/test_data_wrangled
+wrangler_folder: /d/MIPTools_output/test_data_wrangled
+
 # name of the primary table to use from the wrangling step. Can usually be left
 # at default of allInfo.tsv.gz
 wrangler_file: allInfo.tsv.gz
 
+
+####################################################################
+##                      Variant Calling Outputs                   ##
+####################################################################
+# these files are created by the variant_calling and check_run_stats scripts
+
 # path to folder where the variant_calling output should go
 # e.g. /foo/bar/test_data_vc
-variant_calling_folder: "/d/MIPTools_output/test_data_variant"
-# If too many CPUs are used in parallel a memory intensive process may cause a crash
-# freebayes is a particuarly memory intensive process so it is separate
-# e.g. general_cpu_count: 16 and freebayes_cp_count: 8
-general_cpu_count: 16
-freebayes_cpu_count: 8
+variant_calling_folder: /d/MIPTools_output/test_data_variant
+
+####################################################################
+##                        Options and Settings                    ##
+####################################################################
 
 # abbreviated name of the species of interest.  Must match a value found
 # in the first column of file_locations.tsv (from species_resources directory)
@@ -50,6 +66,14 @@ sample_set: JJJ
 #analyzed.
 probe_set: DR1
 
+
+####################################################################
+##                  Advanced Options and Settings                 ##
+####################################################################
+# In many cases the settings below can be left at their default values, but
+# should be examined and edited in detail if needed
+
+#wrangler by sample options
 #if you have a very large number of samples that won't run all the way from
 #start to finish in one pass, or if you'd like to troubleshoot this pipeline,
 #you can have it generate an intermediate output other than the final step.
@@ -61,6 +85,13 @@ probe_set: DR1
 #5 (haplotype clustering for each mip)
 #6 (final output table)
 output_choice: 6
+
+# cpu count
+# If too many CPUs are used in parallel a memory intensive process may cause a crash
+# freebayes is a particuarly memory intensive process so it is separate
+# e.g. general_cpu_count: 16 and freebayes_cp_count: 8
+general_cpu_count: 16
+freebayes_cpu_count: 8
 
 #memory_mb_per_step applies only when submitting on a slurm cluster. Since in
 #our experience slurm submissions slow down analysis, you can leave this at its
