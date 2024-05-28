@@ -104,7 +104,7 @@ From: amd64/ubuntu:20.04
     mamba clean --all --yes
 
     # Install snakemake
-    mamba install bioconda::snakemake
+    mamba install --quiet bioconda::snakemake
 
     # install vt variant tool set
     cd /opt/programs
