@@ -28,7 +28,7 @@ rmwt () {
    echo -e $no_hash | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'
 }
 
-newhome = $(pwd -P)
+newhome=$(pwd -P)
 cd $newhome
 
 eval $(yml config.yaml)
