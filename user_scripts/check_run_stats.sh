@@ -28,6 +28,9 @@ rmwt () {
    echo -e $no_hash | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'
 }
 
+newhome = $(pwd -P)
+cd $newhome
+
 eval $(yml config.yaml)
 
 ############################
@@ -43,7 +46,8 @@ singularity_bindings="
  -B $(rmwt $species_resources):/opt/species_resources
  -B $(rmwt $wrangler_folder):/opt/data
  -B $(rmwt $variant_calling_folder):/opt/analysis
- -B $(readlink -f config.yaml | xargs dirname):/opt/config"
+ -B $newhome:/opt/config"
+#  -B $(readlink -f config.yaml | xargs dirname):/opt/config"
  # -B $(pwd -P):/opt/config"
  
 snakemake_args="--cores $(rmwt $general_cpu_count) --keep-going --rerun-incomplete --use-conda --latency-wait 60"
