@@ -1,5 +1,5 @@
 #####################################################
-##                     Inputs                      ##
+##        parameters shared by multiple steps      ##
 #####################################################
 # these files are resources to be fed into miptools
 
@@ -7,10 +7,9 @@
 # e.g. /foo/bar/test-data/test_data/sample_list.tsv
 input_sample_sheet: /d/resources/miptools_test-data/test_data/sample_list.tsv
 
-# path to the project resources and species resources directories
+# path to the project resources
 # e.g. /foo/bar/test-data/DR1_project_resources
 project_resources: /d/resources/miptools_test-data/DR1_project_resources
-species_resources: /d/resources/miptools_test-data/pf_species_resources
 
 # path to the sif file you want to use
 # e.g. /foo/bar/miptools.sif
@@ -20,39 +19,15 @@ miptools_sif: /home/charlie/MIP.sif
 # e.g. /foo/bar/test-data/test_data/fastq
 fastq_dir: /d/resources/miptools_test-data/test_data/fastq
 
-################################################################
-##                        Intermediate                        ##
-################################################################
-# these files are created by the wrangler_by_sample script and then used
-# in the variant_calling and check_run_stats scripts
-
-# path folder where the wrangler output should be.  if this doesn't exist yet
-# it will be created during the wrangler_by_sample step
+# folder where the wrangler output will go. This is also the folder where the
+#variant calling step will look for wrangled data as input. This folder will be
+#created during the wrangler step
 # e.g. /foo/bar/test_data_wrangled
 wrangler_folder: /d/MIPTools_output/test_data_wrangled
 
 # name of the primary table to use from the wrangling step. Can usually be left
 # at default of allInfo.tsv.gz
 wrangler_file: allInfo.tsv.gz
-
-
-####################################################################
-##                      Variant Calling Outputs                   ##
-####################################################################
-# these files are created by the variant_calling and check_run_stats scripts
-
-# path to folder where the variant_calling output should go
-# e.g. /foo/bar/test_data_vc
-variant_calling_folder: /d/MIPTools_output/test_data_variant
-
-####################################################################
-##                        Options and Settings                    ##
-####################################################################
-
-# abbreviated name of the species of interest.  Must match a value found
-# in the first column of file_locations.tsv (from species_resources directory)
-# e.g. pf
-species: pf
 
 #only rows from the sample_set column of the sample sheet that are an exact
 #match to the sample set listed below will be analyzed. If the samples you want
@@ -65,6 +40,29 @@ sample_set: JJJ
 #listed here (after splitting the probe_set column with commas) will be
 #analyzed.
 probe_set: DR1
+
+# cpu count: If too many CPUs are used in parallel a memory intensive process
+#may cause acrash
+general_cpu_count: 16
+
+
+################################################################
+##                variant calling parameters                  ##
+################################################################
+# these files are created by the wrangler_by_sample script and then used
+# in the variant_calling and check_run_stats scripts
+
+# path to folder where the variant_calling output should go
+# e.g. /foo/bar/test_data_vc
+variant_calling_folder: /d/MIPTools_output/test_data_variant
+
+#path to the species_resources folder which has an indexed copy of the genome
+species_resources: /d/resources/miptools_test-data/pf_species_resources
+
+# abbreviated name of the species of interest.  Must match a value found
+# in the first column of file_locations.tsv (from species_resources directory)
+# e.g. pf
+species: pf
 
 
 ####################################################################
@@ -86,16 +84,14 @@ probe_set: DR1
 #6 (final output table)
 output_choice: 6
 
-# cpu count
-# If too many CPUs are used in parallel a memory intensive process may cause a crash
-# freebayes is a particuarly memory intensive process so it is separate
+# freebayes is a particuarly memory intensive process of variant calling so you
+#can set this very low if variant calling is failing
 # e.g. general_cpu_count: 16 and freebayes_cp_count: 8
-general_cpu_count: 16
 freebayes_cpu_count: 8
 
 #memory_mb_per_step applies only when submitting on a slurm cluster. Since in
 #our experience slurm submissions slow down analysis, you can leave this at its
-#default value.
+#default value (it has no effect).
 memory_mb_per_step: 20000
 
 #number of umis to include for each mip/sample combo. This keeps massively over-
@@ -155,8 +151,10 @@ assessment_key: targets_with_1_barcodes
 good_coverage_quantile: 0.25
 
 
-#This block is for variant calling with for freebayes. These are the settings
-#that we've found work best for Plasmodium falciparum.
+#This block is for variant calling with freebayes. These are the settings that
+#we've found work best for Plasmodium falciparum. If you're using a different
+#genome, you may want to alter these settings (see the Jupyter notebook for
+#more info)
 freebayes_settings: ["--pooled-continuous", "--min-alternate-fraction", "0.01",
   "--min-alternate-count", "2", "--haplotype-length", "3",
   "--min-alternate-total", "10", "--use-best-n-alleles", "70",
