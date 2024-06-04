@@ -96,28 +96,28 @@ illumina paired end reads, and demultiplexed.
 | https://baileylab.brown.edu/MIPTools/download/miptools_dev.sif
 | This includes all executable programs needed for analysis
 
+Editing Settings
+----------------
+| For convenience, settings can be passed in to all steps via a single shared yaml file. Later in the tutorial, we'll show some more advanced usage options available for troubleshooting and passing more customizable inputs. For now, you can obtain an example simple settings file with this command:
+| :code:`wget https://github.com/bailey-lab/MIPTools/raw/master/user_scripts/config.yaml`
+| After downloading, open the file for editing with a text editor and make sure to **follow the instructions in this file**, editing it to contain the correct paths to the files you downloaded above (including project resources, species resources, sample sheet, and sif files), as well as the locations where you'd like the output to be sent.
+
+| Make sure to edit the settings for all steps that you intend to run before running them. If you open the config file, you should see which settings (in the config.yaml file downloaded above) pertain to each of the steps below.
+
 Wrangling
 ---------
-| For convenience, settings can be passed in to the wrangler via a yaml file. Later in the tutorial, we'll show some more advanced usage options available for troubleshooting and passing more customizable inputs. For now, you can obtain an example simple settings file for wrangling with this command:
-| :code:`wget https://github.com/bailey-lab/MIPTools/raw/master/user_scripts/wrangler_by_sample.yaml`
-| After downloading, open the file for editing with a text editor and make sure to **follow the instructions in this file**, editing it to contain the correct path to the project resources, species resources, sample sheet, and sif files you downloaded above, as well as the location where you'd like the output to be sent.
-
-| We've also provided a bash script for converting the yaml settings into instructions for the wrangler. You can obtain the bash script for wrangling with this command (put it in the same folder as the settings yaml file):
+| We've provided a bash script for converting the yaml settings into instructions for the wrangler. You can obtain the bash script for wrangling with this command (put it in the same folder as the settings yaml file):
 | :code:`wget https://github.com/bailey-lab/MIPTools/raw/master/user_scripts/wrangler_by_sample.sh`
 
-| After changing directory to a folder that can run your data, you can execute the wrangler script with:
+| After editing the config.yaml file, you can execute the wrangler script with:
 | :code:`bash wrangler_by_sample.sh`
 
 Checking run stats
 ------------------
-| After wrangling is finished, you can obtain a settings file for checking run stats with this command:
-| :code:`wget https://github.com/bailey-lab/MIPTools/raw/master/user_scripts/variant_calling.yaml`
-| **Make sure to follow the instructions in this file.**
-
 | You can obtain the script for checking run stats here (put it in the same folder as the settings file):
 | :code:`wget https://github.com/bailey-lab/MIPTools/raw/master/user_scripts/check_run_stats.sh`
 
-| And you can execute it like this:
+| After editing the relevant config.yaml file sections, you can execute the check_run_stats script with:
 | :code:`bash check_run_stats.sh`
 
 Variant Calling
@@ -127,7 +127,7 @@ Variant calling uses the same settings file as check_run_stats.
 | You can obtain the script for variant calling here (put it in the same folder as the settings file):
 | :code:`wget https://github.com/bailey-lab/MIPTools/raw/master/user_scripts/variant_calling.sh`
 
-| And you can execute it like this:
+| After editing the relevant config.yaml file sections, you can execute the variant_calling script with:
 | :code:`bash variant_calling.sh`
 
 Resource Requirements
