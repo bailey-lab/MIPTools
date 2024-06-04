@@ -3,6 +3,13 @@
 #################################################
 ulimit -n $(ulimit -Hn)
 
+##############################################################
+# set the home directory as the absolute (non-softlinked)
+#current working directory and change directory to this folder
+##############################################################
+newhome=$(pwd -P)
+cd $newhome
+
 ###################################
 # import variables from yaml function
 ################################
@@ -28,9 +35,6 @@ rmwt () {
    echo -e $no_hash | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'
 }
 
-newhome=$(pwd -P)
-cd $newhome
-
 eval $(yml config.yaml)
 
 ############################
@@ -47,8 +51,6 @@ singularity_bindings="
  -B $(rmwt $wrangler_folder):/opt/data
  -B $(rmwt $variant_calling_folder):/opt/analysis
  -B $newhome:/opt/config"
-#  -B $(readlink -f config.yaml | xargs dirname):/opt/config"
- # -B $(pwd -P):/opt/config"
  
 snakemake_args="--cores $(rmwt $general_cpu_count) --keep-going --rerun-incomplete --use-conda --latency-wait 60"
 

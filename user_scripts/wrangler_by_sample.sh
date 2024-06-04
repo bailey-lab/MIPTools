@@ -3,9 +3,16 @@
 #################################################
 ulimit -n $(ulimit -Hn)
 
+##############################################################
+# set the home directory as the absolute (non-softlinked)
+#current working directory and change directory to this folder
+##############################################################
+newhome=$(pwd -P)
+cd $newhome
+
 ###################################
 # import variables from yaml function
-################################
+###################################
 yml (){
    local prefix=$2
    local s='[[:space:]]*' w='[a-zA-Z0-9_]*' fs=$(echo @|tr @ '\034')
@@ -44,7 +51,7 @@ singularity_bindings="
  -B $(rmwt $wrangler_folder):/opt/analysis
  -B $(dirname $(rmwt $input_sample_sheet)):/opt/input_sample_sheet_directory
  -B $(rmwt $fastq_dir):/opt/data
- -B $(readlink -f config.yaml | xargs dirname):/opt/config"
+ -B $newhome:/opt/config"
  # -B $(pwd -P):/opt/config"
  
 snakemake_args="--cores $(rmwt $general_cpu_count) --keep-going --rerun-incomplete --latency-wait 60"
