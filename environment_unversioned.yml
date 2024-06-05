@@ -29,7 +29,7 @@ dependencies:
   - primer3
   - primer3-py
   - pysam
-  - python=3.9
+  - python
   - r-base
   - r-devtools
   - r-dplyr
