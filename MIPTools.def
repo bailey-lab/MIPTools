@@ -78,13 +78,12 @@ From: amd64/ubuntu:20.04
     dpkg -i bcl2fastq2*.deb || true
 
    # install miniforge
-    export PATH=/opt/conda/bin:/opt/conda/envs/MIP/bin:${PATH}
+    export PATH=/opt/conda/bin:/opt/conda/environment/bin:${PATH}
     cd /tmp
     wget -O Miniforge3.sh "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
     bash Miniforge3.sh -bfp "/opt/conda"
     rm Miniforge3.sh
     conda config --system --set show_channel_urls true
-    mamba install --quiet sl
     conda clean --all --force-pkgs-dirs --yes
 
     # Install mamba packages using an environment file.
@@ -93,18 +92,15 @@ From: amd64/ubuntu:20.04
     # Note that instead of creating a new environment, we update the base
     # environment, which is activated by default.
     if [ -f "/opt/environment_versioned.yml" ]; then
-        mamba env update --prefix /opt/conda --file /opt/environment_versioned.yml --quiet
+        mamba env create -y --prefix /opt/conda/environment --file /opt/environment_versioned.yml
     else
         # Update environment and save information to a file
-        mamba env update --prefix /opt/conda --file /opt/environment.yml
-        mamba env export --prefix /opt/conda > /opt/environment_versioned.yml
+        mamba env create -y --prefix /opt/conda/environment --file /opt/environment_unversioned.yml
+        mamba env export --prefix /opt/conda/environment > /opt/environment_versioned.yml
     fi
 
     # Clean mamba installs
     mamba clean --all --yes
-
-    # Install snakemake
-    mamba install --quiet bioconda::snakemake
 
     # install vt variant tool set
     cd /opt/programs
@@ -185,7 +181,7 @@ From: amd64/ubuntu:20.04
 ##                     Environment Section                     ##
 #################################################################
 %environment
-    path=/opt/bin:/opt/conda/bin:
+    path=/opt/bin:/opt/conda/environment/bin:/opt/conda/bin:
     path=$path/opt/programs/MIPWrangler/bin:
     path=$path/opt/programs/elucidator/bin:
     path=$path$PATH

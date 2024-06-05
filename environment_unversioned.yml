@@ -1,4 +1,3 @@
-name: base
 channels:
   - conda-forge
   - bioconda
@@ -9,7 +8,7 @@ dependencies:
   - biopython
   - bowtie2
   - bwa
-  - freebayes
+  - freebayes=1.3.6
   - gatk4
   - htslib
   - lastz
@@ -17,6 +16,7 @@ dependencies:
   - matplotlib-venn
   - nbconvert=7.6.0
   - notebook
+  - nnn
   - numpy
   - openpyxl
   - pandas=1.2.3
@@ -50,8 +50,9 @@ dependencies:
   - seaborn
   - seqtk=1.3
   - simplegeneric
+  - sl
+  - snakemake
   - tblib
   - texlive-core
   - vcftools
   - xlrd
-prefix: /opt/conda
