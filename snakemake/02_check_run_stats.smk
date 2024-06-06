@@ -12,7 +12,7 @@ rule all:
 	input:
 		snakefile=log_folder + "/02_check_run_stats.smk",
 		repool_csv=output_folder + "/repool.csv",
-		barcode_counts=output_folder + "/barcode_counts.csv",
+		UMI_counts=output_folder + "/UMI_counts.csv",
 		output_graph=output_folder + "/umi_heatmap.html",
 
 
@@ -106,7 +106,7 @@ rule map_haplotypes:
 		mapped_haps=output_folder + "/mapped_haplotypes.csv",
 		offtarget_haps=output_folder + "/offtarget_haplotypes.csv",
 		metadata=output_folder + "/run_meta.csv",
-		barcode_counts=output_folder + "/barcode_counts.csv",
+		UMI_counts=output_folder + "/UMI_counts.csv",
 		haplotype_counts=output_folder + "/haplotype_counts.csv",
 		sample_summary=output_folder + "/sample_summary.csv",
 	# resources below are currently not utilized - haven't figured out a way to
@@ -120,12 +120,12 @@ rule map_haplotypes:
 		"scripts/map_haplotypes.py"
 
 
-rule graph_barcodes:
+rule graph_UMIs:
 	"""
-	graphs the barcodes that worked and the barcodes that failed
+	graphs the UMIs that worked and the UMIs that failed
 	"""
 	input:
-		barcode_counts=output_folder + "/barcode_counts.csv",
+		UMI_counts=output_folder + "/UMI_counts.csv",
 	params:
 		wdir="/opt/analysis",
 	output:
@@ -133,7 +133,7 @@ rule graph_barcodes:
 	resources:
 		log_dir=log_folder,
 	script:
-		"scripts/graph_barcodes.py"
+		"scripts/graph_UMIs.py"
 
 
 rule make_repool_table:
@@ -144,13 +144,13 @@ rule make_repool_table:
 	input:
 		output_folder + "/run_meta.csv",
 	params:
-		high_barcode_threshold=config["high_barcode_threshold"],
+		high_UMI_threshold=config["high_UMI_threshold"],
 		low_coverage_action=config["low_coverage_action"],
 		target_coverage_count=config["target_coverage_count"],
 		target_coverage_fraction=config["target_coverage_fraction"],
 		target_coverage_key=config["target_coverage_key"],
-		barcode_coverage_threshold=config["barcode_coverage_threshold"],
-		barcode_count_threshold=config["barcode_count_threshold"],
+		UMI_coverage_threshold=config["UMI_coverage_threshold"],
+		UMI_count_threshold=config["UMI_count_threshold"],
 		assessment_key=config["assessment_key"],
 		good_coverage_quantile=config["good_coverage_quantile"],
 		repool_csv="/opt/analysis/repool.csv",

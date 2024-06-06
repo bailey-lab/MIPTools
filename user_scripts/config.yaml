@@ -83,7 +83,7 @@ species: pf
 #Input should be a number. By default, this should be set to 6. Options are:
 #1 (extraction of reads for each sample)
 #2 (UMI correction for each sample)
-#3 (correction for samples that had the wrong sample barcodes assigned)
+#3 (correction for samples that had the wrong sample UMIs assigned)
 #4 (haplotype clustering for each sample)
 #5 (haplotype clustering for each mip)
 #6 (final output table)
@@ -130,29 +130,29 @@ min_haplotype_sample_fraction: 0.0001
 #or recapture, and for determining whether each sample should be repooled or
 #recaptured. Current settings indicate that if 95% of the mips in a sample
 #(target_coverage_fraction=0.95) hit 10 UMIs per sample (target_coverage_key
-#=targets_with_10_barcodes) then this sample doesn't need to be repooled or
-#recaptured. Samples that get 10,000 UMIs or more in total (high_barcode_
+#=targets_with_≥10_UMIs) then this sample doesn't need to be repooled or
+#recaptured. Samples that get 10,000 UMIs or more in total (high_UMI_
 #threshold=10000) also don't need to be resequenced or repooled. If a sample has
-#more than 10 reads per UMI on average (barcode_coverage_threshold=10) then it
+#more than 10 reads per UMI on average (UMI_coverage_threshold=10) then it
 #should probably be recaptured with more MIPs, because the same small number of
 #UMIs are being sequenced again and again. If the total number of UMIs for a
-#sample is below 100 (barcode_count_threshold=100) then recommend recapturing
+#sample is below 100 (UMI_count_threshold=100) then recommend recapturing
 #(low_coverage_action=Recapture). Samples that have more than the 25th
 #percentile of the coverage (of at least 1 UMI per sample (assessment_key=
-#'targets_with_1_barcodes')) seen for completed samples (good_coverage_quantile=
+#'targets_with_≥1_UMIs')) seen for completed samples (good_coverage_quantile=
 #0.25) and yet still aren't complete are marked as 'uneven coverage'. These
 #settings only impact the advice that the repool.csv spreadsheet will give you
 #and can probably be mostly left alone, except that the best choice for high_
-#barcode_threshold will be strongly impacted by the number of MIPs in your project
+#UMI_threshold will be strongly impacted by the number of MIPs in your project
 #design.
-high_barcode_threshold: 10000
+high_UMI_threshold: 10000
 low_coverage_action: Recapture
 target_coverage_count: null
 target_coverage_fraction: 0.95
-target_coverage_key: targets_with_10_barcodes
-barcode_coverage_threshold: 10
-barcode_count_threshold: 100
-assessment_key: targets_with_1_barcodes
+target_coverage_key: targets_with_≥10_UMIs
+UMI_coverage_threshold: 10
+UMI_count_threshold: 100
+assessment_key: targets_with_≥1_UMIs
 good_coverage_quantile: 0.25
 
 
