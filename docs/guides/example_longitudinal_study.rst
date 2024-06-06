@@ -25,18 +25,18 @@ The data for this file can be obtained here:
 
 This data is organized into x main folders:
 	- **pf_species_resources:** This folder includes an indexed copy of the
-	Pf3D7 falciparum genome, gene annotations, common SNPs, and a directory of
-	key files.
+	  Pf3D7 falciparum genome, gene annotations, common SNPs, and a directory of
+	  key files.
 
 	- **k13_DHPS_project_resources:** This is a special project resources
-	folder that includes MIPs for K13 and DHPS only.
+	  folder that includes MIPs for K13 and DHPS only.
 
 	- **metadata_files:** These include 2016_metadata.tsv, 2019_metadata.tsv,
-	and 2022_metadata.tsv, with collection site information for each sample.
+	  and 2022_metadata.tsv, with collection site information for each sample.
 
 	- **fastq_files:** These are the raw paired end sequencing reads associated
-	with each sample.
+	  with each sample.
 
 	- **sample_sheets:** This folder contains sample sheets for each year,
-	including 2016_sample_sheet.tsv, 2019_sample_sheet.tsv, and
-	2022_sample_sheet.tsv
+	  including 2016_sample_sheet.tsv, 2019_sample_sheet.tsv, and
+	  2022_sample_sheet.tsv
