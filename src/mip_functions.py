@@ -4927,12 +4927,12 @@ def map_haplotypes(settings):
     ##########################################################
     # Add the statistics for each haplotype to the data
     # such as how many samples had a given haplotype
-    # and how many barcodes supported a given haplotype
+    # and how many UMIs supported a given haplotype
     # Filter the haplotypes for those criteria to
     # remove possible noise and infrequent haplotypes
     ##########################################################
     # Haplotype Filters from the settings file
-    haplotype_min_barcode_filter = int(settings["minHaplotypeBarcodes"])
+    haplotype_min_UMI_filter = int(settings["minHaplotypeBarcodes"])
     haplotype_min_sample_filter = int(settings["minHaplotypeSamples"])
     haplotype_min_sample_fraction_filter = float(settings["minHaplotypeSampleFraction"])
     # Gather per haplotype data across samples
@@ -4940,7 +4940,7 @@ def map_haplotypes(settings):
         raw_results.groupby("haplotype_ID")["barcode_count"]
         .sum()
         .reset_index()
-        .rename(columns={"barcode_count": "Haplotype Barcodes"})
+        .rename(columns={"barcode_count": "Haplotype UMIs"})
     )
     hap_sample_counts = (
         raw_results.groupby("haplotype_ID")["sample_name"]
@@ -4960,7 +4960,7 @@ def map_haplotypes(settings):
             hap_counts["Haplotype Sample Fraction"]
             >= haplotype_min_sample_fraction_filter
         )
-        & (hap_counts["Haplotype Barcodes"] >= haplotype_min_barcode_filter)
+        & (hap_counts["Haplotype UMIs"] >= haplotype_min_UMI_filter)
     ]
     print(
         (
@@ -4970,7 +4970,7 @@ def map_haplotypes(settings):
         ).format(
             initial_hap_count,
             initial_hap_count - len(hap_counts),
-            haplotype_min_barcode_filter,
+            haplotype_min_UMI_filter,
             haplotype_min_sample_filter,
             haplotype_min_sample_fraction_filter,
         )
@@ -5209,10 +5209,10 @@ def get_haplotype_counts(settings):
     ##########################################################
     # Process 3: load the MIPWrangler output which has
     # per sample per haplotype information, such as
-    # haplotype sequence quality, barcode counts etc.
+    # haplotype sequence quality, UMI counts etc.
     # Create a suitable dataframe that can be merged
     # with variant data to get the same information for each
-    # variant (variant barcode count, variant quality, etc.)
+    # variant (variant UMI count, variant quality, etc.)
     ##########################################################
     ##########################################################
     # get the MIPWrangler Output
@@ -5225,7 +5225,7 @@ def get_haplotype_counts(settings):
             "sample_name": "Sample ID",
             "mip_name": "MIP",
             "gene_name": "Gene",
-            "barcode_count": "Barcode Count",
+            "barcode_count": "UMI Count",
             "read_count": "Read Count",
         },
         inplace=True,
@@ -5236,13 +5236,13 @@ def get_haplotype_counts(settings):
     # Try to estimate the distribution of data that is mapping
     # to multiple places in the genome.
     # This is done in 4 steps.
-    # 1) Get uniquely mapping haplotypes and barcode counts
+    # 1) Get uniquely mapping haplotypes and UMI counts
     unique_df = mapped_results.loc[mapped_results["mapped_copy_number"] == 1]
     unique_table = pd.pivot_table(
         unique_df,
         index="Sample ID",
         columns=["Gene", "MIP", "Copy", "Chrom"],
-        values=["Barcode Count"],
+        values=["UMI Count"],
         aggfunc=np.sum,
     )
     # 2) Estimate the copy number of each paralog gene
@@ -5252,7 +5252,7 @@ def get_haplotype_counts(settings):
     # and the normalization percentile is what percentile is used for
     # normalizing data. For example, for human genes ACC is 2 and
     # if the percentiles are given as 0.4, 0.6: we would calculate the
-    # take the 40th and 60th percentile of them barcode counts for each probe
+    # take the 40th and 60th percentile of them UMI counts for each probe
     # across the samples and assume that the average of 40th and 60 pctl values
     # to represent the average copy count of 2. Then caluculate this value
     # for each probe and each sample.
@@ -5263,14 +5263,14 @@ def get_haplotype_counts(settings):
         average_copy_count = 2
         norm_percentiles = [0.4, 0.6]
     unique_df.loc[:, "Copy Average"] = average_copy_count
-    # Adjusted barcode count will represent the estimated barcode count
+    # Adjusted UMI count will represent the estimated UMI count
     # for multimapping haplotypes. For example, if hap1 is mapping to 2
-    # places in the genome and its barcode count for a sample containing this
+    # places in the genome and its UMI count for a sample containing this
     # haplotype is 100. If we determined the copy numbers of the two mapping
-    # regions to be 1 and 1, the adjusted barcode count for each region
+    # regions to be 1 and 1, the adjusted UMI count for each region
     # would be 50. We'll set this value for uniquely mapping haplotypes
-    # to the Barcode Count, as they are not multi mapping.
-    unique_df.loc[:, "Adjusted Barcode Count"] = unique_df["Barcode Count"]
+    # to the UMI Count, as they are not multi mapping.
+    unique_df.loc[:, "Adjusted UMI Count"] = unique_df["UMI Count"]
     unique_df.loc[:, "Adjusted Read Count"] = unique_df["Read Count"]
     unique_table.fillna(0, inplace=True)
     # calculate the copy counts using the get_copy_counts function.
@@ -5303,8 +5303,8 @@ def get_haplotype_counts(settings):
         )
         multi_df.loc[null_index, "copy_sum"] = average_copy_count
         multi_df["Copy Average"].fillna(0, inplace=True)
-        multi_df["Adjusted Barcode Count"] = (
-            multi_df["Barcode Count"] * multi_df["Copy Average"] / multi_df["copy_sum"]
+        multi_df["Adjusted UMI Count"] = (
+            multi_df["UMI Count"] * multi_df["Copy Average"] / multi_df["copy_sum"]
         )
         multi_df["Adjusted Read Count"] = (
             multi_df["Read Count"] * multi_df["Copy Average"] / multi_df["copy_sum"]
@@ -5314,21 +5314,21 @@ def get_haplotype_counts(settings):
     combined_df = pd.concat([unique_df, multi_df], ignore_index=True, sort=True)
     combined_df.rename(
         columns={
-            "Barcode Count": "Raw Barcode Count",
-            "Adjusted Barcode Count": "Barcode Count",
+            "UMI Count": "Raw UMI Count",
+            "Adjusted UMI Count": "UMI Count",
             "Read Count": "Raw Read Count",
             "Adjusted Read Count": "Read Count",
         },
         inplace=True,
     )
-    # print total read and barcode counts
+    # print total read and UMI counts
     print(
         (
-            "Total number of reads and barcodes were {0[0]} and {0[1]}."
-            " On target number of reads and barcodes were {1[0]} and {1[1]}."
+            "Total number of reads and UMIs were {0[0]} and {0[1]}."
+            " On target number of reads and UMIs were {1[0]} and {1[1]}."
         ).format(
-            raw_results[["Read Count", "Barcode Count"]].sum(),
-            combined_df[["Read Count", "Barcode Count"]].sum().astype(int),
+            raw_results[["Read Count", "UMI Count"]].sum(),
+            combined_df[["Read Count", "UMI Count"]].sum().astype(int),
         )
     )
     combined_df.to_csv(os.path.join(wdir, "haplotype_counts.csv"), index=False)
@@ -5357,50 +5357,50 @@ def get_haplotype_counts(settings):
 
     # merge the count data with probe data. Fill missing values with 0.
     combined_df = call_df.merge(combined_df, how="left").fillna(0)
-    # Create pivot table of combined barcode counts
-    # This is a per MIP per sample barcode count table
+    # Create pivot table of combined UMI counts
+    # This is a per MIP per sample UMI count table
     # of the samples with sequencing data
-    barcode_counts = pd.pivot_table(
+    UMI_counts = pd.pivot_table(
         combined_df,
         index="Sample ID",
         columns=["MIP", "Copy"],
-        values=["Barcode Count"],
+        values=["UMI Count"],
         aggfunc=np.sum,
     )
     # Sample name for probes without data would be NA and replaced to 0
     # remove that if it exists
     try:
-        barcode_counts.drop(0, inplace=True)
+        UMI_counts.drop(0, inplace=True)
     except KeyError:
         pass
-    print("There are {} samples with sequence data".format(barcode_counts.shape[0]))
+    print("There are {} samples with sequence data".format(UMI_counts.shape[0]))
     # After pivot table is created, the column names have an extra
-    # row with the name "Barcode Count". Remove that from column names.
-    bc_cols = barcode_counts.columns
+    # row with the name "UMI Count". Remove that from column names.
+    bc_cols = UMI_counts.columns
     bc_cols = [bc[1:] for bc in bc_cols]
-    # barcode count data is only available for samples with data
+    # UMI count data is only available for samples with data
     # so if a sample has not produced any data, it will be missing
     # these samples should be added with 0 values for each probe
     print("run meta is", run_meta)
-    all_barcode_counts = pd.merge(
+    all_UMI_counts = pd.merge(
         run_meta[["Sample ID", "replicate"]].set_index("Sample ID"),
-        barcode_counts,
+        UMI_counts,
         left_index=True,
         right_index=True,
         how="left",
     )
-    all_barcode_counts.drop("replicate", axis=1, inplace=True)
+    all_UMI_counts.drop("replicate", axis=1, inplace=True)
     # fix column names
-    all_barcode_counts.columns = pd.MultiIndex.from_tuples(
+    all_UMI_counts.columns = pd.MultiIndex.from_tuples(
         bc_cols, names=["MIP", "Copy"]
     )
-    all_barcode_counts.fillna(0, inplace=True)
-    print("There are {} total samples.".format(all_barcode_counts.shape[0]))
-    all_barcode_counts.to_csv(os.path.join(wdir, "barcode_counts.csv"))
+    all_UMI_counts.fillna(0, inplace=True)
+    print("There are {} total samples.".format(all_UMI_counts.shape[0]))
+    all_UMI_counts.to_csv(os.path.join(wdir, "UMI_counts.csv"))
     # Create an overview statistics file for samples including
-    # total read count, barcode count, and how well they cover each MIP.
+    # total read count, UMI count, and how well they cover each MIP.
     sample_counts = combined_df.groupby("Sample ID")[
-        ["Read Count", "Barcode Count"]
+        ["Read Count", "UMI Count"]
     ].sum()
     # Find samples without any data and print the number
     no_data = run_meta.loc[~run_meta["Sample ID"].isin(sample_counts.index)]
@@ -5422,16 +5422,16 @@ def get_haplotype_counts(settings):
     sample_counts.drop("replicate", axis=1, inplace=True)
     target_cov = pd.concat(
         [
-            (all_barcode_counts >= 1).sum(axis=1),
-            (all_barcode_counts >= 5).sum(axis=1),
-            (all_barcode_counts >= 10).sum(axis=1),
+            (all_UMI_counts >= 1).sum(axis=1),
+            (all_UMI_counts >= 5).sum(axis=1),
+            (all_UMI_counts >= 10).sum(axis=1),
         ],
         axis=1,
     ).rename(
         columns={
-            0: "targets_with_1_barcodes",
-            1: "targets_with_5_barcodes",
-            2: "targets_with_10_barcodes",
+            0: "targets_with_≥1_UMIs",
+            1: "targets_with_≥5_UMIs",
+            2: "targets_with_≥10_UMIs",
         }
     )
     sample_counts = sample_counts.merge(
@@ -8653,6 +8653,7 @@ def process_info_file(
                         continue
     info = pd.DataFrame(data, columns=c_vals + ["Library Prep"])
     info["barcode_count"] = info["barcode_count"].astype(int)
+    # info.drop(["barcode_count"])
     info["read_count"] = info["read_count"].astype(int)
     info.to_csv(os.path.join(wdir, combined_file), index=False, sep="\t")
     info.groupby(["gene_name", "mip_name", "haplotype_ID"])[
@@ -9045,11 +9046,11 @@ def absence_presence(col, min_val=1):
 
 
 def plot_performance(
-    barcode_counts,
+    UMI_counts,
     tick_label_size=8,
     cbar_label_size=5,
     dpi=300,
-    barcode_threshold=1,
+    UMI_threshold=1,
     absent_color="black",
     present_color="green",
     save=False,
@@ -9062,11 +9063,11 @@ def plot_performance(
 ):
     """Plot presence/absence plot for a mip run."""
     if xtick_freq is None:
-        xtick_freq = barcode_counts.shape[1] // 30
+        xtick_freq = UMI_counts.shape[1] // 30
         if xtick_freq == 0:
             xtick_freq = 1
     if ytick_freq is None:
-        ytick_freq = barcode_counts.shape[0] // 30
+        ytick_freq = UMI_counts.shape[0] // 30
         if ytick_freq == 0:
             ytick_freq = 1
     fig, ax = plt.subplots()
@@ -9074,18 +9075,18 @@ def plot_performance(
     boundaries = [-0.5, 0.5, 1.5]
     norm = colors.BoundaryNorm(boundaries, cmap.N)
     heat = ax.pcolormesh(
-        barcode_counts.applymap(
-            lambda a: np.nan if np.isnan(a) else 0 if a < barcode_threshold else 1
+        UMI_counts.applymap(
+            lambda a: np.nan if np.isnan(a) else 0 if a < UMI_threshold else 1
         ),
         cmap=cmap,
         norm=norm,
     )
-    sample_ids = list(barcode_counts.index)
+    sample_ids = list(UMI_counts.index)
     sample_locs = np.arange(1, len(sample_ids) + 1, ytick_freq) - 0.5
     ylabs = sample_ids[::ytick_freq]
     plt.yticks(sample_locs, ylabs)
     if tick_genes:
-        bc_cols = barcode_counts.columns.tolist()
+        bc_cols = UMI_counts.columns.tolist()
         bc_cols = [c[gene_name_index] for c in bc_cols]
         xlabs = bc_cols[::xtick_freq]
         gene_locs = np.arange(1, len(bc_cols) + 1, xtick_freq) - 0.5
@@ -9426,14 +9427,14 @@ def normalize_copies(a):
 def repool(
     wdir,
     data_summary,
-    high_barcode_threshold,
+    high_UMI_threshold,
     target_coverage_count=None,
     target_coverage_fraction=0.95,
-    target_coverage_key="targets_with_10_barcodes",
-    barcode_coverage_threshold=10,
-    barcode_count_threshold=100,
+    target_coverage_key="targets_with_≥10_UMIs",
+    UMI_coverage_threshold=10,
+    UMI_count_threshold=100,
     low_coverage_action="Repool",
-    assesment_key="targets_with_1_barcodes",
+    assesment_key="targets_with_≥1_UMIs",
     good_coverage_quantile=0.25,
     output_file="repool.csv",
 ):
@@ -9447,16 +9448,16 @@ def repool(
         Path to working directory, used only for saving the results.
     data_summary : Pandas DataFrame
         Dataframe containing all count information per sample per target.
-    high_barcode_threshold: int/ other number
-        Targeted barcode number to determine how much more of a
+    high_UMI_threshold: int/ other number
+        Targeted UMI number to determine how much more of a
         sample should be repooled. Should be set to the number where
         majority of samples show good target coverage.
-    barcode_coverage_threshold : int / other number, 10
-        Average reads per barcode per sample to consider the sample
+    UMI_coverage_threshold : int / other number, 10
+        Average reads per UMI per sample to consider the sample
         saturated and remove from pooling. If sample is not deemed
         complete it will be set to be recaptured.
-    barcode_count_threshold : int / other number
-        Minimum number of barcodes per sample to determine if a sample
+    UMI_count_threshold : int / other number
+        Minimum number of UMIs per sample to determine if a sample
         has very low coverage. Those samples' status will be set
         to the action (recapture or repool) defined by
         low_coverage_action parameter.
@@ -9467,19 +9468,19 @@ def repool(
         of possible targets will be used.
     target_coverage_fraction : float, 0.95
         See target_coverage_count.
-    target_coverage_key : str, "targets_with_10_barcodes"
+    target_coverage_key : str, "targets_with_≥10_UMIs"
         Dataframe column name to use for assessing target coverage.
-        By default a target that is covered with >10 barcodes will
+        By default a target that is covered with >10 UMIs will
         be considered covered.
-    assesment_key : str, "targets_with_1_barcodes"
+    assesment_key : str, "targets_with_≥1_UMIs"
         Dataframe key to use for determining uneven coverage across targets
-        which happens when barcode number per sample is high but number of
+        which happens when UMI number per sample is high but number of
         targets covered is low. By default any target with sequence is
         considered covered.
     good_coverage_quantile : float, 0.25
-        Quantile of barcodes for "completed samples". This is used to determine
-        if a sample has good enough barcode numbers, then test if it has enough
-        targets covered, or the majority of barcodes cover only a small number
+        Quantile of UMIs for "completed samples". This is used to determine
+        if a sample has good enough UMI numbers, then test if it has enough
+        targets covered, or the majority of UMIs cover only a small number
         of targets (uneven coverage).
     output_file: str, repool.csv
     """
@@ -9490,9 +9491,9 @@ def repool(
     # make a copy of data_summary so the original df stays the same
     data_summary = copy.deepcopy(data_summary)
     try:
-        data_summary["total_barcode_count"]
+        data_summary["total_UMI_count"]
     except KeyError:
-        data_summary["total_barcode_count"] = data_summary["Barcode Count"]
+        data_summary["total_UMI_count"] = data_summary["UMI Count"]
         data_summary["total_read_count"] = data_summary["Read Count"]
     # mark samples that reached the desired outcome
     data_summary.loc[
@@ -9501,35 +9502,35 @@ def repool(
     # mark samples with low coverage
     data_summary.loc[
         (data_summary["Status"].isnull())
-        & (data_summary["total_barcode_count"] < barcode_count_threshold),
+        & (data_summary["total_UMI_count"] < UMI_count_threshold),
         "Status",
     ] = low_coverage_action
-    # mark samples with too high barcode coverage
+    # mark samples with too high UMI coverage
     # these samples will have been sequenced to a high depth but
-    # low barcode numbers, so sequencing these more would not make sense.
+    # low UMI numbers, so sequencing these more would not make sense.
     # They will be re-captured if more data is needed.
     try:
-        data_summary["Barcode Coverage"]
+        data_summary["UMI Coverage"]
     except KeyError:
-        data_summary["Barcode Coverage"] = (
-            data_summary["total_read_count"] / data_summary["total_barcode_count"]
+        data_summary["UMI Coverage"] = (
+            data_summary["total_read_count"] / data_summary["total_UMI_count"]
         ).fillna(0)
     data_summary.loc[
         (data_summary["Status"].isnull())
-        & (data_summary["Barcode Coverage"] >= barcode_coverage_threshold),
+        & (data_summary["UMI Coverage"] >= UMI_coverage_threshold),
         "Status",
     ] = "Recapture"
-    # Zero barcode coverage is presumably due to poor sequencing
+    # Zero UMI coverage is presumably due to poor sequencing
     # So low coverage action should be taken.
     data_summary.loc[
-        (data_summary["Status"].isnull()) & (data_summary["Barcode Coverage"] == 0),
+        (data_summary["Status"].isnull()) & (data_summary["UMI Coverage"] == 0),
         "Status",
     ] = low_coverage_action
     # All remaining samples will be repooled
     data_summary.loc[(data_summary["Status"].isnull()), "Status"] = "Repool"
     data_summary["Library to Completion"] = (
-        high_barcode_threshold - data_summary["total_barcode_count"]
-    ) / data_summary["total_barcode_count"]
+        high_UMI_threshold - data_summary["total_UMI_count"]
+    ) / data_summary["total_UMI_count"]
     # replace inf values with max
     lc_max = data_summary.loc[
         data_summary["Library to Completion"] < np.inf, "Library to Completion"
@@ -9537,28 +9538,28 @@ def repool(
     data_summary.loc[
         data_summary["Library to Completion"] == np.inf, "Library to Completion"
     ] = lc_max
-    # Determine samples with good barcode counts but poor target coverage
+    # Determine samples with good UMI counts but poor target coverage
     # These should be investigated to decide what is the reason behind it
     # and how to proceed.
     ##########################################
-    # Determine the average barcode count per target covered
+    # Determine the average UMI count per target covered
     # for all samples where there is targets covered
     data_summary.loc[
-        data_summary[target_coverage_key] > 0, "Barcodes Per Target Covered"
+        data_summary[target_coverage_key] > 0, "UMIs Per Target Covered"
     ] = (
-        data_summary.loc[data_summary[target_coverage_key] > 0, "total_barcode_count"]
+        data_summary.loc[data_summary[target_coverage_key] > 0, "total_UMI_count"]
         / data_summary.loc[data_summary[target_coverage_key] > 0, target_coverage_key]
     )
-    # Get the lower quartile of barcodes per target for good data
+    # Get the lower quartile of UMIs per target for good data
     # This number will be used to determine if poor coverage samples
-    # have high enough barcode coverage despite having poor target coverage.
+    # have high enough UMI coverage despite having poor target coverage.
     good_coverage_threshold = data_summary.loc[
-        data_summary["Status"] == "Complete", "Barcodes Per Target Covered"
+        data_summary["Status"] == "Complete", "UMIs Per Target Covered"
     ].quantile(good_coverage_quantile)
-    # Determine samples where barcode coverage is high but target coverage
+    # Determine samples where UMI coverage is high but target coverage
     # is low
     data_summary.loc[
-        (data_summary["Barcodes Per Target Covered"] > good_coverage_threshold)
+        (data_summary["UMIs Per Target Covered"] > good_coverage_threshold)
         & (data_summary[assesment_key] < target_coverage_count),
         "Uneven Coverage",
     ] = True
