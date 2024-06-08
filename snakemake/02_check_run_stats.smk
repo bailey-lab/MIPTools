@@ -126,10 +126,12 @@ rule graph_UMIs:
 	"""
 	input:
 		UMI_counts=output_folder + "/UMI_counts.csv",
+		sample_summary_csv=output_folder + "/sample_summary.csv"
 	params:
 		wdir="/opt/analysis",
 	output:
 		output_graph=output_folder + "/umi_heatmap.html",
+		umi_vs_probe_graph = output_folder + "/umi_count_vs_probe_coverage.html"
 	resources:
 		log_dir=log_folder,
 	script:
