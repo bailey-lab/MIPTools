@@ -6468,7 +6468,8 @@ def vcf_to_tables_fb(
     # to annotate the vcf file before breaking down the haplotypes.
     if annotate:
         annotated_vcf_path = os.path.join(wdir, output_prefix + "split.ann." + vcf_file)
-        res = annotate_vcf_file(settings, split_vcf_path, annotated_vcf_path)
+        snp_summary_path = os.path.join(wdir, output_prefix + "snpEff_summary.html")
+        res = annotate_vcf_file(settings, split_vcf_path, annotated_vcf_path, options = ["-stats", snp_summary_path])
         if res != 0:
             print("Annotating the vcf file failed.")
             return

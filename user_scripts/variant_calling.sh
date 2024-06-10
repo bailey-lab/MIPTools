@@ -118,9 +118,3 @@ singularity exec \
 ################################
 echo 'ulimit is' 
 ulimit -n
-
-#####################################################
-# remove two unnecessary files that were generated #
-#####################################################
-rm -f snpEff_summary.html
-rm -f snpEff_genes.txt
