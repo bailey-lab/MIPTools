@@ -130,7 +130,7 @@ min_haplotype_sample_fraction: 0.0001
 #or recapture, and for determining whether each sample should be repooled or
 #recaptured. Current settings indicate that if 95% of the mips in a sample
 #(target_coverage_fraction=0.95) hit 10 UMIs per sample (target_coverage_key
-#=targets_with_≥10_UMIs) then this sample doesn't need to be repooled or
+#=targets_with_>=10_UMIs) then this sample doesn't need to be repooled or
 #recaptured. Samples that get 10,000 UMIs or more in total (high_UMI_
 #threshold=10000) also don't need to be resequenced or repooled. If a sample has
 #more than 10 reads per UMI on average (UMI_coverage_threshold=10) then it
@@ -139,7 +139,7 @@ min_haplotype_sample_fraction: 0.0001
 #sample is below 100 (UMI_count_threshold=100) then recommend recapturing
 #(low_coverage_action=Recapture). Samples that have more than the 25th
 #percentile of the coverage (of at least 1 UMI per sample (assessment_key=
-#'targets_with_≥1_UMIs')) seen for completed samples (good_coverage_quantile=
+#'targets_with_>=1_UMIs')) seen for completed samples (good_coverage_quantile=
 #0.25) and yet still aren't complete are marked as 'uneven coverage'. These
 #settings only impact the advice that the repool.csv spreadsheet will give you
 #and can probably be mostly left alone, except that the best choice for high_
@@ -149,10 +149,10 @@ high_UMI_threshold: 10000
 low_coverage_action: Recapture
 target_coverage_count: null
 target_coverage_fraction: 0.95
-target_coverage_key: targets_with_≥10_UMIs
+target_coverage_key: targets_with_>=10_UMIs
 UMI_coverage_threshold: 10
 UMI_count_threshold: 100
-assessment_key: targets_with_≥1_UMIs
+assessment_key: targets_with_>=1_UMIs
 good_coverage_quantile: 0.25
 
 

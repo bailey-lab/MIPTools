@@ -5429,9 +5429,9 @@ def get_haplotype_counts(settings):
         axis=1,
     ).rename(
         columns={
-            0: "targets_with_≥1_UMIs",
-            1: "targets_with_≥5_UMIs",
-            2: "targets_with_≥10_UMIs",
+            0: "targets_with_>=1_UMIs",
+            1: "targets_with_>=5_UMIs",
+            2: "targets_with_>=10_UMIs",
         }
     )
     sample_counts = sample_counts.merge(
@@ -9431,11 +9431,11 @@ def repool(
     high_UMI_threshold,
     target_coverage_count=None,
     target_coverage_fraction=0.95,
-    target_coverage_key="targets_with_≥10_UMIs",
+    target_coverage_key="targets_with_>=10_UMIs",
     UMI_coverage_threshold=10,
     UMI_count_threshold=100,
     low_coverage_action="Repool",
-    assesment_key="targets_with_≥1_UMIs",
+    assesment_key="targets_with_>=1_UMIs",
     good_coverage_quantile=0.25,
     output_file="repool.csv",
 ):
@@ -9469,11 +9469,11 @@ def repool(
         of possible targets will be used.
     target_coverage_fraction : float, 0.95
         See target_coverage_count.
-    target_coverage_key : str, "targets_with_≥10_UMIs"
+    target_coverage_key : str, "targets_with_>=10_UMIs"
         Dataframe column name to use for assessing target coverage.
         By default a target that is covered with >10 UMIs will
         be considered covered.
-    assesment_key : str, "targets_with_≥1_UMIs"
+    assesment_key : str, "targets_with_>=1_UMIs"
         Dataframe key to use for determining uneven coverage across targets
         which happens when UMI number per sample is high but number of
         targets covered is low. By default any target with sequence is

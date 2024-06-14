@@ -38,7 +38,7 @@ def plot_umi_vs_probe(sample_summary_csv, umi_vs_probe_graph):
 	sample_summary = pd.read_csv(sample_summary_csv)
 	fig = px.scatter(sample_summary, 
         x="UMI Count",
-        y="targets_with_≥10_UMIs", 
+        y="targets_with_>=10_UMIs", 
         hover_name="Sample ID",
         title="UMI Count vs. Probe Coverage",
         hover_data="Read Count"
