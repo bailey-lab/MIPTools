@@ -34,7 +34,8 @@ final_dict = {
 		output_folder + "/analysis/populationClustering/{target}/analysis/log.txt",
 		target=all_targets,
 	),
-	6: output_folder + "/allInfo.tsv.gz",
+	6: output_folder + "/extractInfoSummary.tsv.gz",
+
 }
 output_choice = config["output_choice"]
 final_out = final_dict[output_choice]
@@ -193,3 +194,29 @@ rule output_final_table:
 		final_table=output_folder + "/allInfo.tsv.gz",
 	script:
 		"scripts/output_final_table.py"
+
+rule concatenate_summary_files:
+	input:
+		rules.output_final_table.output,
+	output:
+		extract_info_summary = output_folder + "/extractInfoSummary.tsv.gz",
+		extract_info_by_target = output_folder + "/extractInfoByTarget.tsv.gz",
+		stitch_info_by_target = output_folder + "/stitchInfoByTarget.tsv.gz",
+
+	shell:
+		"""
+		find {output_folder} -name 'extractInfoSummary.txt' \
+			| xargs cat \
+			| sed '1!{{/indeterminate/d}}' \
+			| pigz > {output.extract_info_summary}
+
+		find {output_folder} -name 'extractInfoByTarget.txt' \
+			| xargs cat \
+			| sed '1!{{/mipFamily/d}}' \
+			| pigz > {output.extract_info_by_target}
+
+		find {output_folder} -name 'stitchInfoByTarget.txt' \
+			| xargs cat \
+			| sed '1!{{/mipFamily/d}}' \
+			| pigz > {output.stitch_info_by_target}	
+		"""
