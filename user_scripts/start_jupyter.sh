@@ -12,6 +12,3 @@ singularity run \
   -B $wrangler_folder:/opt/data \
   -B $variant_output:/opt/analysis \
   --app jupyter $sif_file
-
-  # -B /home/charlie/Dropbox/projects/MIPTools/base_resources:/opt/resources \
-  # -B /home/charlie/Dropbox/projects/MIPTools/src:/opt/src \
