@@ -54,7 +54,7 @@ From: amd64/ubuntu:22.04
     nano \
     openjdk-11-jdk \
     openssh-client \
-    pandoc
+    pandoc \
     perl-tk \
     pigz \
     rsync \
