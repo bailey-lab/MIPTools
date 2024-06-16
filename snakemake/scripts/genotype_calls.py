@@ -13,6 +13,14 @@ prevalences_inp=snakemake.output.prevalences_inp
 import sys
 sys.path.append("/opt/src")
 import PCA
+import pandas as pd
+import os
+wdir = "/opt/analysis/"
+
+mutation_counts=pd.read_csv(mutation_counts, header=list(range(6)), index_col=0)
+mutation_coverage=pd.read_csv(mutation_coverage, header=list(range(6)), index_col=0)
+
+print('counts are', mutation_counts, 'cov is', mutation_coverage, 'min count is', min_count, 'min_cov is', min_coverage, 'min freq is', min_freq)
 
 gt_calls = PCA.call_genotypes(mutation_counts, mutation_coverage,
                               min_count, min_coverage, min_freq)
