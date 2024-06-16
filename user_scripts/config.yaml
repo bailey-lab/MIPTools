@@ -69,6 +69,19 @@ species_resources: /nfs/jbailey5/baileyweb/asimkin/miptools/miptools_tutorial/te
 # e.g. pf
 species: pf
 
+######################################################
+##       prevalence calling parameters              ##
+######################################################
+# these steps are used to filter for 'real' mutations whose UMI counts pass
+#some thresholds and call prevalences on these mutations
+
+min_count: 2
+min_coverage: 10
+min_freq: 0
+num_samples_wsaf: 2
+min_wsaf: 0.5
+num_samples_umi: 2
+min_umi: 3
 
 ####################################################################
 ##                  Advanced Options and Settings                 ##
