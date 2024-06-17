@@ -25,10 +25,17 @@ rule genotype_calls:
 		filtered_alt=output_folder+"/filtered_alternate_AA_table.csv",
 		wsaf=output_folder+"/within_sample_allele_frequencies.csv",
 		filtered_gen=output_folder+"/filtered_genotypes_table.csv",
-		prevalences_inp=output_folder+"/prevalences_input_table.csv"
+		prevalences_inp=output_folder+"/prevalences_input_table.csv",
+		final_filtered_gen=output_folder+'/final_filtered_genotypes.csv',
+		filtered_prev_inp=output_folder+'/final_filtered_prevalences_input_table.csv'
+
 	params:
 		min_count=config['min_count'],
 		min_coverage=config['min_coverage'],
-		min_freq=config['min_freq']
+		min_freq=config['min_freq'],
+		num_samples_wsaf=config['num_samples_wsaf'],
+		min_wsaf=config['min_wsaf'],
+		num_samples_umi=config['num_samples_umi'],
+		min_umi=config['min_umi']
 	script:
 		"scripts/genotype_calls.py"
