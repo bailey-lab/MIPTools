@@ -24,8 +24,6 @@ import PCA
 import pandas as pd
 import os
 
-print('counts are', mutation_counts, 'cov is', mutation_coverage, 'min count is', min_count, 'min_cov is', min_coverage, 'min freq is', min_freq)
-
 mutation_counts=pd.read_csv(mutation_counts, header=list(range(6)), index_col=0)
 mutation_coverage=pd.read_csv(mutation_coverage, header=list(range(6)), index_col=0)
 
@@ -63,7 +61,7 @@ targ = freq.columns.get_level_values("Targeted") == "Yes"
 
 variant_mask = targ | (wsaf_filter & umi_filter)
 print((f"{variant_mask.sum()} variants will remain in the final call set.\n"
-       f"{targ.sum()} variants were targeted and will be kept, and"
+       f"{targ.sum()} variants were targeted and will be kept, and "
        f"{(wsaf_filter & umi_filter).sum()} will be removed by the combined UMI"
        "and WSAF filters."))
 
