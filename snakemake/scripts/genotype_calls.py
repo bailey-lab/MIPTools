@@ -16,35 +16,40 @@ prevalences_inp=snakemake.output.prevalences_inp
 final_filtered_gen=snakemake.output.final_filtered_gen
 filtered_prev_inp=snakemake.output.filtered_prev_inp
 
+
+
 import sys
 sys.path.append("/opt/src")
 import PCA
 import pandas as pd
 import os
-wdir = "/opt/analysis/"
+
+print('counts are', mutation_counts, 'cov is', mutation_coverage, 'min count is', min_count, 'min_cov is', min_coverage, 'min freq is', min_freq)
 
 mutation_counts=pd.read_csv(mutation_counts, header=list(range(6)), index_col=0)
 mutation_coverage=pd.read_csv(mutation_coverage, header=list(range(6)), index_col=0)
 
-print('counts are', mutation_counts, 'cov is', mutation_coverage, 'min count is', min_count, 'min_cov is', min_coverage, 'min freq is', min_freq)
 
 gt_calls = PCA.call_genotypes(mutation_counts, mutation_coverage,
                               min_count, min_coverage, min_freq)
 
 filtered_mutation_counts = gt_calls["filtered_mutation_counts"]
-filtered_mutation_counts.to_csv(os.path.join(wdir, filtered_alt))
+filtered_mutation_counts.to_csv(filtered_alt)
+filtered_mutation_counts.head()
 
 filtered_mutation_coverage = gt_calls["filtered_mutation_coverage"]
-filtered_mutation_coverage.to_csv(os.path.join(wdir, filtered_cov))
+filtered_mutation_coverage.to_csv(filtered_cov)
 
 freq = gt_calls["wsaf"]
-freq.to_csv(os.path.join(wdir, wsaf))
+freq.to_csv(wsaf)
+
+print('freq is', freq)
 
 genotypes = gt_calls["genotypes"]
-genotypes.to_csv(os.path.join(wdir, filtered_gen))
+genotypes.to_csv(filtered_gen)
 
 prevalences = gt_calls["prevalences"]
-prevalences.to_csv(os.path.join(wdir, prevalences_inp))
+prevalences.to_csv(prevalences_inp)
 
 wsaf_filter = ((freq > min_wsaf).sum()) >= num_samples_wsaf
 print((f"{wsaf_filter.sum()} of {freq.shape[1]} variants will remain after the "
@@ -63,7 +68,7 @@ print((f"{variant_mask.sum()} variants will remain in the final call set.\n"
        "and WSAF filters."))
 
 filtered_genotypes = genotypes.loc[:, variant_mask]
-filtered_genotypes.to_csv(os.path.join(wdir, final_filtered_gen))
+filtered_genotypes.to_csv(final_filtered_gen)
 
 filtered_prevalences = prevalences.loc[:, variant_mask]
-filtered_prevalences.to_csv(os.path.join(wdir, filtered_prev_inp))
+filtered_prevalences.to_csv(filtered_prev_inp)
