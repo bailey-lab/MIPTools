@@ -135,11 +135,11 @@ From: amd64/ubuntu:22.04
     cd MIPWrangler
     ./install.sh $CPU_COUNT
 
-    # install elucidator
-    cd /opt/programs
-    git clone --branch develop https://github.com/nickjhathaway/elucidator.git
-    cd elucidator
-    ./install.sh $CPU_COUNT
+    # # install elucidator
+    # cd /opt/programs
+    # git clone --branch develop https://github.com/nickjhathaway/elucidator.git
+    # cd elucidator
+    # ./install.sh $CPU_COUNT
 
     # install parasight
     cd /opt/programs
