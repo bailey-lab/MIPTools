@@ -30,9 +30,9 @@ and mdr1. The breakdown of these 220 samples is as follows:
 - 16 samples from Amolatar from 2022
 
 The example dataset can be obtained here:
-(Download link not built yet)
+https://baileylab.brown.edu/MIPTools/download/test_data_new_tutorial.tar.gz
 
-This data is organized into five main folders:
+This data is organized into four main folders:
 	- **pf_species_resources:** This folder includes an indexed copy of the
 	  Pf3D7 falciparum genome, gene annotations, common SNPs, and a directory of
 	  key files.
@@ -50,9 +50,30 @@ This data is organized into five main folders:
 	  forward and one reverse) associated with each sample, you should see 440
 	  fastq files in this folder.
 
-	- **sample_sheets:** This folder contains sample sheets for each year,
-	  including 2016_sample_sheet.tsv, 2019_sample_sheet.tsv, and
-	  2022_sample_sheet.tsv
+There is also a sample sheet (cherrypicked_sample_sheet.tsv) that has
+information about which samples are associated with each 'experiment'. In this
+case the data is separated into three experiments (known as sample_sets):
+- PRX-00 (2016 dataset)
+- PRX-04 (2019 dataset)
+- PRX-07 (2022 dataset)
+
+Editing Settings
+================
+| For convenience, settings can be passed in to all steps via a single shared
+| yaml file. Later in the tutorial, we'll show some more advanced usage options
+| available for troubleshooting and passing more customizable inputs. For now,
+| you can obtain an example simple settings file with this command:
+| :code:`wget https://github.com/bailey-lab/MIPTools/raw/master/user_scripts/config.yaml`
+| After downloading, open the file for editing with a text editor and make sure
+| to **follow the instructions in this file**, editing it to contain the
+| correct paths to the files you downloaded above (including project resources,
+| species resources, sample sheet, and sif files), as well as the locations
+| where you'd like the output to be sent.
+
+| Make sure to edit the settings for all steps that you intend to run before
+| running them. If you open the config file, you should see which settings (in
+| the config.yaml file downloaded above) pertain to each of the steps below.
+
 
 Wrangling
 =========
@@ -63,7 +84,14 @@ single representative consensus sequence. This step also reports the number of
 unique molecular identifiers (UMIs) associated with every haplotype for every
 MIP for every sample.
 
-| We've provided a bash script for converting the yaml settings into instructions for the wrangler. You can obtain the bash script for wrangling with this command (put it in the same folder as the settings yaml file):
+For this tutorial, you'll need to wrangle three sample_sets: The 2016 dataset
+(PRX-00), the 2019 dataset (PRX-04), and the 2022 dataset (PRX-07). This
+pipeline can analyze multiple sample sets at once, so you'll be inputting
+PRX-00,PRX-04,PRX-07 in the sample_set variable of config.yaml.
+
+| We've provided a bash script for converting the yaml settings into
+| instructions for the wrangler. You can obtain the bash script for wrangling
+| with this command (put it in the same folder as the settings yaml file):
 | :code:`wget https://github.com/bailey-lab/MIPTools/raw/master/user_scripts/wrangler_by_sample.sh`
 
 | After editing the config.yaml file, you can execute the wrangler script with:
@@ -72,7 +100,7 @@ MIP for every sample.
 Interpreting the wrangler output
 --------------------------------
 
-When the wrangler is finished, you should open the folder labeled  
+
 
 Checking Run Statistics
 =======================
@@ -83,6 +111,9 @@ Checking Run Statistics
 | After editing the relevant config.yaml file sections, you can execute the check_run_stats script with:
 | :code:`bash check_run_stats.sh`
 
+Interpreting the run statistics
+-------------------------------
+
 
 Variant Calling
 ===============
@@ -92,5 +123,11 @@ Variant Calling
 | After editing the relevant config.yaml file sections, you can execute the variant_calling script with:
 | :code:`bash variant_calling.sh`
 
+Interpreting the variant calling
+--------------------------------
+
 prevalence Calling
 ==================
+
+Interpreting the prevalence calling
+-----------------------------------
