@@ -5,7 +5,7 @@ import os
 arms_file=snakemake.input.arms_file
 input_fastq_folder=snakemake.input.fastq_folder
 input_sample_sheet=snakemake.input.sample_sheet
-desired_sample_set=snakemake.params.sample_set.split(',')
+desired_sample_set=snakemake.params.sample_set.replace(' ','').split(',')
 desired_sample_set=set([sample_set.upper() for sample_set in desired_sample_set])
 desired_probe_sets=snakemake.params.probe_sets.replace(' ', '').strip().split(',')
 mip_arms=snakemake.output.mip_arms
