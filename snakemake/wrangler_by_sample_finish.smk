@@ -205,18 +205,24 @@ rule concatenate_summary_files:
 
 	shell:
 		"""
-		find {output_folder} -name 'extractInfoSummary.txt' \
+		sed -r '1d;s/(\s+)?\S+//1' /opt/analysis/analysis/resources/allMipsSamplesNames.tab.txt |
+			awk '$2=$1' |
+			sed "s/ /\//g;s/$/_mipExtraction\/extractInfoSummary.txt/g;s/^/\/opt\/analysis\/analysis\//g" \
 			| xargs cat \
-			| sed '1!{{/indeterminate/d}}' \
+			| sed '1!{{/Sample/d}}' \
 			| pigz > {output.extract_info_summary}
-
-		find {output_folder} -name 'extractInfoByTarget.txt' \
+		
+		sed -r '1d;s/(\s+)?\S+//1' /opt/analysis/analysis/resources/allMipsSamplesNames.tab.txt |
+			awk '$2=$1' |
+			sed "s/ /\//g;s/$/_mipExtraction\/extractInfoByTarget.txt/g;s/^/\/opt\/analysis\/analysis\//g" \
 			| xargs cat \
-			| sed '1!{{/mipFamily/d}}' \
+			| sed '1!{{/Sample/d}}' \
 			| pigz > {output.extract_info_by_target}
-
-		find {output_folder} -name 'stitchInfoByTarget.txt' \
+		
+		sed -r '1d;s/(\s+)?\S+//1' /opt/analysis/analysis/resources/allMipsSamplesNames.tab.txt |
+			awk '$2=$1' |
+			sed "s/ /\//g;s/$/_mipExtraction\/stitchInfoByTarget.txt/g;s/^/\/opt\/analysis\/analysis\//g" \
 			| xargs cat \
-			| sed '1!{{/mipFamily/d}}' \
-			| pigz > {output.stitch_info_by_target}	
+			| sed '1!{{/Sample/d}}' \
+			| pigz > {output.stitch_info_by_target}
 		"""
