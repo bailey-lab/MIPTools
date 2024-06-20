@@ -205,21 +205,21 @@ rule concatenate_summary_files:
 
 	shell:
 		"""
-		sed -r '1d;s/(\s+)?\S+//1' /opt/analysis/analysis/resources/allMipsSamplesNames.tab.txt |
+		sed -r '1d;s/(\s+)?\S+//2' /opt/analysis/analysis/resources/sampleInputFiles.tab.txt |
 			awk '$2=$1' |
 			sed "s/ /\//g;s/$/_mipExtraction\/extractInfoSummary.txt/g;s/^/\/opt\/analysis\/analysis\//g" \
 			| xargs cat \
 			| sed '1!{{/Sample/d}}' \
 			| pigz > {output.extract_info_summary}
 		
-		sed -r '1d;s/(\s+)?\S+//1' /opt/analysis/analysis/resources/allMipsSamplesNames.tab.txt |
+		sed -r '1d;s/(\s+)?\S+//2' /opt/analysis/analysis/resources/sampleInputFiles.tab.txt |
 			awk '$2=$1' |
 			sed "s/ /\//g;s/$/_mipExtraction\/extractInfoByTarget.txt/g;s/^/\/opt\/analysis\/analysis\//g" \
 			| xargs cat \
 			| sed '1!{{/Sample/d}}' \
 			| pigz > {output.extract_info_by_target}
 		
-		sed -r '1d;s/(\s+)?\S+//1' /opt/analysis/analysis/resources/allMipsSamplesNames.tab.txt |
+		sed -r '1d;s/(\s+)?\S+//2' /opt/analysis/analysis/resources/sampleInputFiles.tab.txt |
 			awk '$2=$1' |
 			sed "s/ /\//g;s/$/_mipExtraction\/stitchInfoByTarget.txt/g;s/^/\/opt\/analysis\/analysis\//g" \
 			| xargs cat \
