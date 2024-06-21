@@ -15,38 +15,42 @@ def calculate_prevalences(metadata_file, prevalences_input_table, UMI_suffix, mu
 		base, top = 0, 0
 		for line_number, line in enumerate(open(prevalences_input_table, 'r')):
 			if "Mutation Name" in line:
-				mutation_dict = dict(enumerate(line.strip().split(',')[1:]))
-				# need to print an error message if two mutations have the same name
+				mutations_list = line.strip().split(',')[1:]
+				for mutation in mutations_list:
+					if mutations_list.count(mutation) > 1:
+						print(f"error: {mutation} appears in the prevalences_input_table more than once")
+				mutation_dict = dict(enumerate(mutations_list))
 			if line_number >= 6:
 				line = line.strip().split(',')
 				sample = line[0]
+				sample_tallies = line[1:]
 				if sample in site_dict:
 					site = site_dict[sample]
 					if site not in count_dict:
 						count_dict[site] = {}
-					for tally_number, tally in enumerate(line[1:]):
-						# mutation_name = tally_number
+					for column_number, tally in enumerate(sample_tallies):
+						# mutation_name = column_number
 						if tally == '':
-							if tally_number not in count_dict[site]:
-								count_dict[site][tally_number] = [0, 0]
-							if tally_number not in count_dict['overall']:
-								count_dict['overall'][tally_number] = [0, 0]
+							if column_number not in count_dict[site]:
+								count_dict[site][column_number] = [0, 0]
+							if column_number not in count_dict['overall']:
+								count_dict['overall'][column_number] = [0, 0]
 						if tally == '0.0':
-							if tally_number not in count_dict[site]:
-								count_dict[site][tally_number] = [0, 1]
-							count_dict[site][tally_number][1] += 1
-							if tally_number not in count_dict['overall']:
-								count_dict['overall'][tally_number] = [0, 1]
-							count_dict['overall'][tally_number][1] += 1
+							if column_number not in count_dict[site]:
+								count_dict[site][column_number] = [0, 0]
+							count_dict[site][column_number][1] += 1
+							if column_number not in count_dict['overall']:
+								count_dict['overall'][column_number] = [0, 0]
+							count_dict['overall'][column_number][1] += 1
 						if tally == '1.0':
-							if tally_number not in count_dict[site]:
-								count_dict[site][tally_number] = [1, 1]
-							count_dict[site][tally_number][1] += 1
-							count_dict[site][tally_number][0] += 1
-							if tally_number not in count_dict['overall']:
-								count_dict['overall'][tally_number] = [1, 1]
-							count_dict['overall'][tally_number][1] += 1
-							count_dict['overall'][tally_number][0] += 1
+							if column_number not in count_dict[site]:
+								count_dict[site][column_number] = [0, 0]
+							count_dict[site][column_number][1] += 1
+							count_dict[site][column_number][0] += 1
+							if column_number not in count_dict['overall']:
+								count_dict['overall'][column_number] = [0, 0]
+							count_dict['overall'][column_number][1] += 1
+							count_dict['overall'][column_number][0] += 1
 		return count_dict, mutation_dict
 
 	def create_output_file(count_dict, mutations, output_summary_table):
@@ -83,5 +87,4 @@ def calculate_prevalences(metadata_file, prevalences_input_table, UMI_suffix, mu
 	site_dict = create_site_dict(metadata_file, UMI_suffix)
 	count_dict, mutation_dict = get_counts(prevalences_input_table, site_dict)
 	create_output_file(count_dict, mutations, output_summary_table)
-# print(count_dict)
-
+	# print(count_dict)
