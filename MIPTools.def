@@ -57,6 +57,7 @@ From: amd64/ubuntu:22.04
     pandoc \
     perl-tk \
     pigz \
+    pip \
     rsync \
     software-properties-common \
     sudo \
@@ -64,7 +65,7 @@ From: amd64/ubuntu:22.04
     unzip \
     wget \
     wl-clipboard \
-    xclip \
+    xclip
 
     # set environment locale
     echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
@@ -104,6 +105,10 @@ From: amd64/ubuntu:22.04
 
     # Clean mamba installs
     mamba clean --all --yes
+
+    # enable bash kernel in jupyter
+    pip install bash_kernel
+    python -m bash_kernel.install
 
     # install vt variant tool set
     cd /opt/programs
