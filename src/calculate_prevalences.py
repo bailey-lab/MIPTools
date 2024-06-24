@@ -1,8 +1,12 @@
 def calculate_prevalences(metadata_file, prevalences_input_table, UMI_suffix, mutations, output_summary_table):
 	def create_site_dict(metadata_file, UMI_suffix):
+		'''
+		Takes a metadata csv of format Sites,Sampleid 
+		and creates a dictionary {Sampleid+UMI_suffix:Site}
+		'''
 		site_dict = {}
-		for line in open (metadata_file):
-			if 'Sites' not in line:
+		for line_number, line in enumerate(open(metadata_file)):
+			if line_number > 0: #discard header
 				line = line.strip().split(',')
 				sample = line[1]+UMI_suffix
 				site = line[0]
@@ -10,6 +14,10 @@ def calculate_prevalences(metadata_file, prevalences_input_table, UMI_suffix, mu
 		return site_dict
 
 	def get_counts(prevalences_input_table, site_dict):
+		'''
+		Creates a dictionary of format {site:{column_number:[alt_count, cov_count]}}
+		column_number is used instead of mutation_name because occasionally a mutation_name appears twice in the input_table
+		'''
 		count_dict = {}
 		count_dict['overall'] = {}
 		base, top = 0, 0
