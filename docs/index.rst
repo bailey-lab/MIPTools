@@ -58,6 +58,12 @@ A typical pipeline might look something like this:
   guides/hpcc
 
 .. toctree::
+  :caption: Advanced Info
+  :maxdepth: 1
+
+  advanced_info/interpreting_tutorial_outputs
+
+.. toctree::
   :caption: Man Pages
   :maxdepth: 1
 
