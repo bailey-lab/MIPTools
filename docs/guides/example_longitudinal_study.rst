@@ -73,10 +73,11 @@ input_data. This folder is organized into four main folders:
   fastq files in this folder.
 
 The input_data folder also contains a sample sheet called
-cherrypicked_sample_sheet.tsv) that has information about which samples are
+cherrypicked_sample_sheet.tsv that has information about which samples are
 associated with a given project (because sometimes multiple projects are
 sequenced at the same time on a sequencer). These are known as sample_sets.
 For this dataset, there are three sample_set designations:
+
 - PRX-00 (2016 dataset)
 - PRX-04 (2019 dataset)
 - PRX-07 (2022 dataset)
@@ -131,6 +132,11 @@ user which samples and mips succeeded and which may need to be run again.
 | While in the folder tutorial_dataset, you can execute the check_run_stats
  command with:
 | :code:`bash check_run_stats.sh`
+
+| Alternatively, you can run this jupyter script:
+| :code:`bash start_jupyter.sh`
+Click the 'Analysis' folder, and click the 'check_run_stats.ipynb' file. Follow
+the instructions in the notebook.
 
 
 
@@ -208,8 +214,14 @@ reference genome and the number of UMIs that were associated with the mutant in
 each sample.
 
 | After editing the relevant config.yaml file sections you can execute the
-variant_calling script (while in the tutorial_dataset folder) with:
+ variant_calling script (while in the tutorial_dataset folder) with:
 | :code:`bash variant_calling.sh`
+
+| Alternatively, you can run this jupyter script:
+| :code:`bash start_jupyter.sh`
+Click the 'Analysis' folder, and click the 'variant_calling.ipynb' file. Follow
+the instructions in the notebook.
+
 
 Interpreting the variant calling
 --------------------------------
@@ -228,6 +240,7 @@ output files that are useful to examine:
 - **AA tables files**: This tutorial dataset examines drug resistance mutations.
   The files below describe the number of UMI counts associated with each
   mutation. Every column is a different mutation, and every row is a sample.
+
   - *coverage_AA_table.csv* - The number of total UMIs associated with the
     region of the genome covered by the mutation in a sample.
   - *reference_AA_table.csv* - The number of UMIs associated with the reference
@@ -262,7 +275,7 @@ For this step, you'll need to open a Jupyter notebook. If you change directory
 to the tutorial_dataset folder, you can launch the jupyter notebook with this
 command:
 
-| :code:`bash get_prevalences.sh`
+| :code:`bash start_jupyter.sh`
 
 After launching the jupyter notebook, leave the terminal window open. If you're
 running the Jupyter notebook on a remote server, you may need to use port
@@ -271,7 +284,4 @@ the top of the Jupyter notebook output screen, and needs to be executed on your
 local computer. After executing this, you can click one of the links on the
 running Jupyter notebook screen. The link will open on your web-browser. Click
 on the 'analysis' folder link, and then click the link labeled
-'prevalence_plotting.'
-
-Interpreting the prevalence calling
------------------------------------
+'prevalence_plotting.' Follow the instructions in the notebook.
