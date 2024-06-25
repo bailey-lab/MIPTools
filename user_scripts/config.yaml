@@ -30,7 +30,7 @@ sample_set: PRX-00,PRX-04,PRX-07
 
 # path to the directory of fastq files
 # e.g. /path/to/test-data/test_data/fastq
-fastq_dir: input_data/fastq
+fastq_dir: input_data/fastq_files
 
 # folder where the wrangler output will go. This is also the folder where the
 #variant calling step will look for wrangled data as input. This folder will be
