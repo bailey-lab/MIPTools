@@ -148,45 +148,72 @@ examine:
   labels. By hovering over a box on the heatmap, you can see how many UMIs are
   associated with each sample and each MIP.
   
-  - If you look for bright rows in this dataset, you can see that the sample
-    KO-07-001-PRX-07-1 performed extremely well across almost all MIPs, with
-    UMI counts >2^12 for almost all MIPs, while if you look for dim rows, you
-    might notice that the sample AM-07-89-PRX-07-1 performed very poorly with
-    UMI counts <2^4.
+  - If you look for bright rows in this dataset, you can see that some samples,
+    such as KO-07-001-PRX-07-1, performed extremely well across almost all MIPs,
+    with UMI counts >2^12 for almost all MIPs, while if you look for dim rows,
+    you might notice that other samples, such as AM-07-89-PRX-07-1, performed
+    very poorly with UMI counts <2^4 for almost all MIPs.
   - Similarly, if you look for bright columns in this dataset, you might notice
-    that most MIPs perform extremely well, while a few perform more poorly
-    (e.g. crt_S0_Sub0_mip9).
-    the MIP almost all MIPs,  
+    that most MIPs perform relatively well, while a few have very dim columns
+    and perform poorly across all samples (e.g. crt_S0_Sub0_mip9).
+
 - **umi_count_vs_probe_coverage.html**: This file is also meant to be
   downloaded and opened with a web browser. The x-axis represents total UMIs
   for a sample, while the y-axis represents number of MIPs having at least 10
-  UMIs within that sample. By hovering over individual points, you can see
-  which samples have a large number of MIPs that have more than 10 UMIs
-  (indicating that they are well-sampled) and which do not. A 'good' dataset
-  will show a few points along the y-axis line near x=10*UMI_count. Since
-  we have 121 MIPs, our vertical line should occur at x=1,210). The vast
-  majority of points should form a horizontal line with a y-value near the
-  number of MIPs (121 in our case). For the tutorial dataset, MIPs are not
-  performing very well - most samples appear along the vertical
-  line, and the vertical line extends well-past x=1,210, indicating that even
-  as UMIs increase, this is not enough to saturate most MIPs. The line doesn't
-  become horizontal until x=50,000, indicating that 50,000 UMIs are needed to
-  start having good UMI coverage for all MIPs. Hardly any samples form a
-  horizontal line along the y=121 line. The best performing samples retrieve
-  118 MIPs (out of 121), so there is no sample that recovered all 121 MIPs.
-  Many of these samples should be redone (either resequenced or re-captured).
-- **  
-  
+  UMIs within that sample. By hovering over individual points, you can see which
+  samples have a large number of MIPs that have more than 10 UMIs (indicating
+  that they are well-sampled) and which do not. A 'good' dataset will show a few
+  points along the y-axis line near x=10*UMI_count. Since we have 121 MIPs, our
+  vertical line should occur at x=1,210). In a 'good' dataset, almost all
+  samples would have 10 UMIs for almost all MIPs, and the vast majority of
+  points should form a horizontal line with a y-value near the number of MIPs
+  (121 in our case). For the tutorial dataset, MIPs are not performing very well
+  - most samples appear along the vertical line, and the vertical line extends
+  well-past x=1,210, indicating uneven coverage. Even as UMIs increase well past
+  the theoretical minimum, this is not enough to saturate most MIPs with 10
+  UMIs. The line doesn't become horizontal until x=50,000, indicating that
+  50,000 UMIs are needed to start having good UMI coverage for nearly all MIPs.
+  Hardly any samples approach the y=121 line. The best performing samples
+  retrieve 118 MIPs (out of 121), so there is no sample that recovered all 121
+  MIPs. Many of these samples should be redone (either repooled or re-captured).
+- **repool.csv**: This file gives recommendations regarding which samples are
+  "Complete" (if at least 95% of MIPs have at least 10 UMIs), which should be
+  "Repooled" (if the sample is not "Complete" and the number of reads is
+  similar to the number of UMIs) and which should be "Recaptured" (if the
+  sample is not "Complete" and the number of reads is much higher than the
+  number of UMIs). Thresholds for these recommendations are based on the repool
+  spreadsheet settings from the config.yaml file. In the tutorial dataset, 21
+  of the samples are "Complete", 53 of the samples are "Recapture" and 146 of
+  the samples are "Repool". Out of 8,904,984 reads, 6,119,806 reads, or 68.7%,
+  came from the 21 "Complete" samples. The "Complete" samples monopolized the
+  sequencing reads, and used 68.7% of the reads despite making up only 17.2% of
+  the samples. The "Recapture" samples have plenty of sequencing reads for each
+  UMI, but they all come from only a few UMIs. By repeating the MIP capture
+  reactions for these samples, hopefully more UMIs will be recovered. After
+  repeating the MIP capture reactions on the "Recapture" samples, by
+  re-sequencing a pool of the 199 samples that are not "Complete", 68.7% of the
+  reads should be freed up to give more sequencing depth to the remaining
+  samples. This process can be repeated until almost all samples are "Complete".
+  Reads from earlier runs can be pooled with reads from later runs so that reads
+  from samples that are not "Complete" are not wasted.
+
 Variant Calling
 ===============
-| You can obtain the script for variant calling here (put it in the same folder as the settings file):
-| :code:`wget https://github.com/bailey-lab/MIPTools/raw/master/user_scripts/variant_calling.sh`
 
-| After editing the relevant config.yaml file sections, you can execute the variant_calling script with:
+This step takes haplotypes (from the Wrangling step) and maps them to the
+reference genome (in this case 3D7). This step uses an annotation file and a
+list of mutations of interest to name all of the mutations that were seen in the
+dataset, as well as count the number of UMIs that were associated with the
+reference genome and the number of UMIs that were associated with the mutant in
+each sample.
+
+| After editing the relevant config.yaml file sections, you can execute the
+variant_calling script with:
 | :code:`bash variant_calling.sh`
 
 Interpreting the variant calling
 --------------------------------
+
 
 prevalence Calling
 ==================
