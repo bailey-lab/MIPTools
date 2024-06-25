@@ -1,7 +1,7 @@
 sif_file=miptools_dev.sif
 project_resources=input_data/DR23K_project_resources
 species_resources=input_data/pf_species_resources
-prevalence_metadata=input_data/metadata_files/PRX-00_metadata.csv
+prevalence_metadata=input_data/metadata_files
 wrangler_folder=wrangled_data
 variant_output=stats_and_variant_calling
 
