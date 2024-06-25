@@ -34,7 +34,8 @@ final_dict = {
 		output_folder + "/analysis/populationClustering/{target}/analysis/log.txt",
 		target=all_targets,
 	),
-	6: output_folder + "/allInfo.tsv.gz",
+	6: output_folder + "/extractInfoSummary.tsv.gz",
+
 }
 output_choice = config["output_choice"]
 final_out = final_dict[output_choice]
@@ -193,3 +194,35 @@ rule output_final_table:
 		final_table=output_folder + "/allInfo.tsv.gz",
 	script:
 		"scripts/output_final_table.py"
+
+rule concatenate_summary_files:
+	input:
+		rules.output_final_table.output,
+	output:
+		extract_info_summary = output_folder + "/extractInfoSummary.tsv.gz",
+		extract_info_by_target = output_folder + "/extractInfoByTarget.tsv.gz",
+		stitch_info_by_target = output_folder + "/stitchInfoByTarget.tsv.gz",
+
+	shell:
+		"""
+		sed -r '1d;s/(\s+)?\S+//2' /opt/analysis/analysis/resources/sampleInputFiles.tab.txt |
+			awk '$2=$1' |
+			sed "s/ /\//g;s/$/_mipExtraction\/extractInfoSummary.txt/g;s/^/\/opt\/analysis\/analysis\//g" \
+			| xargs cat \
+			| sed '1!{{/Sample/d}}' \
+			| pigz > {output.extract_info_summary}
+		
+		sed -r '1d;s/(\s+)?\S+//2' /opt/analysis/analysis/resources/sampleInputFiles.tab.txt |
+			awk '$2=$1' |
+			sed "s/ /\//g;s/$/_mipExtraction\/extractInfoByTarget.txt/g;s/^/\/opt\/analysis\/analysis\//g" \
+			| xargs cat \
+			| sed '1!{{/Sample/d}}' \
+			| pigz > {output.extract_info_by_target}
+		
+		sed -r '1d;s/(\s+)?\S+//2' /opt/analysis/analysis/resources/sampleInputFiles.tab.txt |
+			awk '$2=$1' |
+			sed "s/ /\//g;s/$/_mipExtraction\/stitchInfoByTarget.txt/g;s/^/\/opt\/analysis\/analysis\//g" \
+			| xargs cat \
+			| sed '1!{{/Sample/d}}' \
+			| pigz > {output.stitch_info_by_target}
+		"""

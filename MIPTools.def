@@ -26,42 +26,46 @@ From: amd64/ubuntu:22.04
     apt-get update \
     && apt-get -yq dist-upgrade \
     && apt-get install -yq --no-install-recommends \
-    wget \
+    alien \
+    autoconf \
+    automake \
+    build-essential \
     bzip2 \
     ca-certificates \
-    sudo \
-    locales \
-    fonts-liberation \
-    fonts-dejavu \
-    git \
-    build-essential \
-    gcc-10 \
-    g++-10 \
-    openssh-client \
-    nano \
-    libtbb-dev \
-    libz-dev \
-    libxrender1 \
     cmake \
-    automake \
-    autoconf \
-    rsync \
-    pigz \
-    perl-tk \
+    fonts-dejavu \
+    fonts-liberation \
+    g++-10 \
+    gcc-10 \
+    ghostscript \
+    git \
     less \
-    software-properties-common \
+    libbz2-dev \
+    libcurl4-gnutls-dev \
+    liblzma-dev \
+    libssl-dev \
+    libtbb-dev \
     libxext6 \
     libxrender1 \
-    ghostscript \
+    libxrender1 \
+    libz-dev \
+    locales \
+    micro \
+    nano \
     openjdk-11-jdk \
-    liblzma-dev \
-    libbz2-dev \
-    libssl-dev \
-    libcurl4-gnutls-dev \
-    alien \
-    unzip \
+    openssh-client \
+    pandoc \
+    perl-tk \
+    pigz \
+    pip \
+    rsync \
+    software-properties-common \
+    sudo \
     tree \
-    pandoc
+    unzip \
+    wget \
+    wl-clipboard \
+    xclip
 
     # set environment locale
     echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
@@ -102,6 +106,10 @@ From: amd64/ubuntu:22.04
     # Clean mamba installs
     mamba clean --all --yes
 
+    # enable bash kernel in jupyter
+    pip install bash_kernel
+    python -m bash_kernel.install
+
     # install vt variant tool set
     cd /opt/programs
     git clone --branch 0.577 https://github.com/atks/vt.git
@@ -132,11 +140,11 @@ From: amd64/ubuntu:22.04
     cd MIPWrangler
     ./install.sh $CPU_COUNT
 
-    # install elucidator
-    cd /opt/programs
-    git clone --branch develop https://github.com/nickjhathaway/elucidator.git
-    cd elucidator
-    ./install.sh $CPU_COUNT
+    # # install elucidator
+    # cd /opt/programs
+    # git clone --branch develop https://github.com/nickjhathaway/elucidator.git
+    # cd elucidator
+    # ./install.sh $CPU_COUNT
 
     # install parasight
     cd /opt/programs
