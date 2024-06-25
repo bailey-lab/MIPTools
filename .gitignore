@@ -10,7 +10,9 @@ base_resources/.ipynb_checkpoints/
 !docs/**
 docs/.DS_store
 docs/_build
-local_files
+user_scripts/input_data/
+user_scripts/wrangled_data/
+user_scripts/stats_and_variant_calling/
 bcl2fastq2-v2-20-0-linux-x86-64.zip
 .cache/
 .snakemake/
