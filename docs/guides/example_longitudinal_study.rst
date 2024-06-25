@@ -130,16 +130,16 @@ user which samples and mips succeeded and which may need to be run again.
 
 | While in the folder tutorial_dataset, you can execute the check_run_stats
  command with:
-| :code:`bash wrangler_by_sample.sh`
+| :code:`bash check_run_stats.sh`
 
 
 
 Interpreting the run statistics
 -------------------------------
 In the pre-configured settings, output of the check_run_stats step will go to a
-folder called 'variant.' This is controlled by the variant_calling_folder
-variable in the config.yaml file. There are a few key output files that are
-useful to examine:
+folder called 'stats_and_variant_calling.' This is controlled by the
+variant_calling_folder variable in the config.yaml file. There are a few key
+output files that are useful to examine:
 
 - **umi_heatmap.html**: This file can be downloaded and opened with a web
   browser. It includes The names of all samples (y-axis) and the names of all
@@ -207,16 +207,16 @@ dataset, as well as count the number of UMIs that were associated with the
 reference genome and the number of UMIs that were associated with the mutant in
 each sample.
 
-| After editing the relevant config.yaml file sections, you can execute the
-variant_calling script with:
+| After editing the relevant config.yaml file sections you can execute the
+variant_calling script (while in the tutorial_dataset folder) with:
 | :code:`bash variant_calling.sh`
 
 Interpreting the variant calling
 --------------------------------
 In the pre-configured settings, output of the check_run_stats step will go to a
-folder called 'variant.' This is controlled by the variant_calling_folder
-variable in the config.yaml file. There are a few key output files that are
-useful to examine:
+folder called 'stats_and_variant_calling.' This is controlled by the
+variant_calling_folder variable in the config.yaml file. There are a few key
+output files that are useful to examine:
 
 - **variants.vcf.gz**: Each row of this file is a genomic position. Each column
   is an individual sample. For the rows that have mutations, the codes
@@ -258,6 +258,20 @@ prevalence calling for individual regions and individual years.
 
 prevalence Calling
 ==================
+For this step, you'll need to open a Jupyter notebook. If you change directory
+to the tutorial_dataset folder, you can launch the jupyter notebook with this
+command:
+
+| :code:`bash get_prevalences.sh`
+
+After launching the jupyter notebook, leave the terminal window open. If you're
+running the Jupyter notebook on a remote server, you may need to use port
+forwarding to view the output Jupyter notebook. The command for this is shown at
+the top of the Jupyter notebook output screen, and needs to be executed on your
+local computer. After executing this, you can click one of the links on the
+running Jupyter notebook screen. The link will open on your web-browser. Click
+on the 'analysis' folder link, and then click the link labeled
+'prevalence_plotting.'
 
 Interpreting the prevalence calling
 -----------------------------------
