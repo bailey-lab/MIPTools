@@ -38,10 +38,6 @@ fastq_dir: input_data/fastq_files
 # e.g. /path/to/test_data_wrangled
 wrangler_folder: wrangled_data
 
-# name of the primary table to use from the wrangling step. Can usually be left
-# at default of allInfo.tsv.gz
-wrangler_file: allInfo.tsv.gz
-
 # cpu count: Choose a number lower than the number of processors available on
 #your machine. The higher the number, the faster the job will complete, but
 #also the higher the chance that you may run out of memory (RAM), causing your
@@ -56,6 +52,10 @@ general_cpu_count: 16
 ################################################################
 # these parameters and paths are used in the variant_calling and
 #check_run_stats scripts
+
+# name of the primary table to use from the wrangling step. Can usually be left
+# at default of allInfo.tsv.gz
+wrangler_file: allInfo.tsv.gz
 
 # path to folder where the variant_calling output should go. This is also where
 #statistics on the run will go if you're running check_run_stats.
