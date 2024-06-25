@@ -137,8 +137,9 @@ user which samples and mips succeeded and which may need to be run again.
 Interpreting the run statistics
 -------------------------------
 In the pre-configured settings, output of the check_run_stats step will go to a
-folder called 'variant.' There are a few key output files that are useful to
-examine:
+folder called 'variant.' This is controlled by the variant_calling_folder
+variable in the config.yaml file. There are a few key output files that are
+useful to examine:
 
 - **umi_heatmap.html**: This file can be downloaded and opened with a web
   browser. It includes The names of all samples (y-axis) and the names of all
@@ -199,7 +200,6 @@ examine:
 
 Variant Calling
 ===============
-
 This step takes haplotypes (from the Wrangling step) and maps them to the
 reference genome (in this case 3D7). This step uses an annotation file and a
 list of mutations of interest to name all of the mutations that were seen in the
@@ -213,7 +213,48 @@ variant_calling script with:
 
 Interpreting the variant calling
 --------------------------------
+In the pre-configured settings, output of the check_run_stats step will go to a
+folder called 'variant.' This is controlled by the variant_calling_folder
+variable in the config.yaml file. There are a few key output files that are
+useful to examine:
 
+- **variants.vcf.gz**: Each row of this file is a genomic position. Each column
+  is an individual sample. For the rows that have mutations, the codes
+  (described in the header) show various statistics for each mutation, such as
+  number of UMIs supporting the mutation, number of UMIs that covered the
+  region, and the confidence of the variant caller (in this case Freebayes) that
+  the mutation is real. This file can be used by many downstream applications
+  (such as Identity by Descent) that expect VCF files as inputs.
+- **AA tables files**: This tutorial dataset examines drug resistance mutations.
+  The files below describe the number of UMI counts associated with each
+  mutation. Every column is a different mutation, and every row is a sample.
+  - *coverage_AA_table.csv* - The number of total UMIs associated with the
+    region of the genome covered by the mutation in a sample.
+  - *reference_AA_table.csv* - The number of UMIs associated with the reference
+    allele in a sample.
+  - *alternate_AA_table.csv* - The number of UMIs associated with the mutated
+    allele in a sample.
+
+The within sample allele frequency of a mutation is obtained by dividing the
+alternate UMI count in a sample be the coverage UMI count of the sample, and the
+prevalence of a mutation is obtained by counting the number of samples that meet
+some minimum coverage UMI count and that have an alternate UMI count greater
+than some minimum level. By setting a minimum UMI coverage of three and a
+minimum UMI alternate count of one, we can see how many samples meet these
+criteria. As two examples:
+
+- The crt-Asn75Glu mutation (column BG) has 183 samples that have values of at
+  least 3 in the coverage_AA_table, and 11 of these samples have values of at
+  least 1 in the alternate_AA_table. The overall prevalence of the crt-Asn75Glu
+  mutation at these coverage and alternate thresholds is 11/183 or 6%.
+- The dhfr-ts-Cys59Arg mutation (column D) has 199 samples that have values of at
+  least 3 in the coverage_AA_table, and 193 of these samples have values of at
+  least 1 in the alternate_AA_table. The overall prevalence of the
+  dhfr-ts-Cys59Arg mutation at these coverage and alternate thresholds is
+  193/197, or 97%
+
+In the next section, we'll use metadata files to perform a more detailed
+prevalence calling for individual regions and individual years.
 
 prevalence Calling
 ==================
