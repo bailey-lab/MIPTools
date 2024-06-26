@@ -134,7 +134,8 @@ user which samples and mips succeeded and which may need to be run again.
  command with:
 | :code:`bash check_run_stats.sh`
 
-| Alternatively, you can run this jupyter script:
+| Alternatively, you can create a folder in the tutorial_dataset folder called
+"stats_and_variant_calling" and then run this jupyter script:
 | :code:`bash start_jupyter.sh`
 Click the "analysis" folder, and click the 'check_run_stats.ipynb' file. Follow
 the instructions in the notebook.
@@ -218,16 +219,17 @@ each sample.
  variant_calling script (while in the tutorial_dataset folder) with:
 | :code:`bash variant_calling.sh`
 
-| Alternatively, you can run this jupyter script:
+| Alternatively, you can create a folder in the tutorial_dataset folder called
+"stats_and_variant_calling" and then run this jupyter script:
 | :code:`bash start_jupyter.sh`
-Click the "analysis" folder, and click the 'variant_calling.ipynb' file. Follow
+Click the "analysis" folder, and click the "variant_calling.ipynb" file. Follow
 the instructions in the notebook.
 
 
 Interpreting the variant calling
 --------------------------------
 In the pre-configured settings, output of the check_run_stats step will go to a
-folder called 'stats_and_variant_calling.' This is controlled by the
+folder called "stats_and_variant_calling." This is controlled by the
 variant_calling_folder variable in the config.yaml file. There are a few key
 output files that are useful to examine:
 
@@ -285,4 +287,4 @@ the top of the Jupyter notebook output screen, and needs to be executed on your
 local computer. After executing this, you can click one of the links on the
 running Jupyter notebook screen. The link will open on your web-browser. Click
 on the "analysis" folder link, and then click the link labeled
-'prevalence_plotting.' Follow the instructions in the notebook.
+"prevalence_plotting." Follow the instructions in the notebook.
