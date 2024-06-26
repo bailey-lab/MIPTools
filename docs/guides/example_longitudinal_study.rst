@@ -110,11 +110,12 @@ PCR amplification).
 Interpreting the wrangler output
 --------------------------------
 In the pre-configured settings, output of the wrangling step will go to a
-folder called "wrangled_data." If you'd like to see the 'raw' outputs of the
-wrangler, the main output file is called allInfo.tsv.gz and it can be unzipped
-for reading in tabular format. Each row gives UMI counts, genetic sequence, and
-statistics associated with a single haplotype associated with a particular MIP
-of a particular sample.
+folder called "wrangled_data." This is controlled by the wrangler_folder
+variable in the config.yaml file.  If you'd like to see the 'raw' outputs of
+the wrangler, the main output file is called allInfo.tsv.gz and it can be
+unzipped for reading in tabular format. Each row gives UMI counts, genetic
+sequence, and statistics associated with a single haplotype associated with a
+particular MIP of a particular sample.
 
 Later steps will parse this table into graphical formats that will be easier to
 interpret.
