@@ -111,7 +111,7 @@ Interpreting the wrangler output
 --------------------------------
 In the pre-configured settings, output of the wrangling step will go to a
 folder called "wrangled_data." This is controlled by the wrangler_folder
-variable in the config.yaml file.  If you'd like to see the 'raw' outputs of
+variable in the config.yaml file.  If you'd like to see the "raw" outputs of
 the wrangler, the main output file is called allInfo.tsv.gz and it can be
 unzipped for reading in tabular format. Each row gives UMI counts, genetic
 sequence, and statistics associated with a single haplotype associated with a
@@ -137,7 +137,7 @@ user which samples and mips succeeded and which may need to be run again.
 | Alternatively, you can create a folder in the tutorial_dataset folder called
 "stats_and_variant_calling" and then run this jupyter script:
 | :code:`bash start_jupyter.sh`
-Click the "analysis" folder, and click the 'check_run_stats.ipynb' file. Follow
+Click the "analysis" folder, and click the "check_run_stats.ipynb" file. Follow
 the instructions in the notebook.
 
 
@@ -145,7 +145,7 @@ the instructions in the notebook.
 Interpreting the run statistics
 -------------------------------
 In the pre-configured settings, output of the check_run_stats step will go to a
-folder called 'stats_and_variant_calling.' This is controlled by the
+folder called "stats_and_variant_calling." This is controlled by the
 variant_calling_folder variable in the config.yaml file. There are a few key
 output files that are useful to examine:
 
@@ -171,20 +171,21 @@ output files that are useful to examine:
   for a sample, while the y-axis represents number of MIPs having at least 10
   UMIs within that sample. By hovering over individual points, you can see which
   samples have a large number of MIPs that have more than 10 UMIs (indicating
-  that they are well-sampled) and which do not. A 'good' dataset will show a few
-  points along the y-axis line near x=10*UMI_count. Since we have 121 MIPs, our
-  vertical line should occur at x=1,210). In a 'good' dataset, almost all
-  samples would have 10 UMIs for almost all MIPs, and the vast majority of
-  points should form a horizontal line with a y-value near the number of MIPs
-  (121 in our case). For the tutorial dataset, MIPs are not performing very well
-  - most samples appear along the vertical line, and the vertical line extends
-  well-past x=1,210, indicating uneven coverage. Even as UMIs increase well past
-  the theoretical minimum, this is not enough to saturate most MIPs with 10
-  UMIs. The line doesn't become horizontal until x=50,000, indicating that
-  50,000 UMIs are needed to start having good UMI coverage for nearly all MIPs.
-  Hardly any samples approach the y=121 line. The best performing samples
-  retrieve 118 MIPs (out of 121), so there is no sample that recovered all 121
-  MIPs. Many of these samples should be redone (either repooled or re-captured).
+  that they are well-sampled) and which do not. A "good" dataset will show a few
+  points forming a vertical line along the y-axis line near x=10*UMI_count.
+  Since we have 121 MIPs, our vertical line should occur at x=1,210). In a
+  "good" dataset, almost all samples would have 10 UMIs for almost all MIPs, and
+  the vast majority of points should form a horizontal line with a y-value near
+  the number of MIPs (121 in our case). For the tutorial dataset, MIPs are not
+  performing very well - most samples appear along the vertical line, and the
+  vertical line extends well past x=1,210, indicating uneven coverage. Even as
+  UMIs increase well past the theoretical minimum, this is not enough to
+  saturate most MIPs with 10 UMIs. The line doesn't become horizontal until
+  x=50,000, indicating that 50,000 UMIs are needed to start having good UMI
+  coverage for nearly all MIPs. Hardly any samples approach the y=121 line. The
+  best performing samples retrieve 118 MIPs (out of 121), so there is no sample
+  that recovered all 121 MIPs. Many of these samples should be redone (either
+  repooled or re-captured).
 - **repool.csv**: This file gives recommendations regarding which samples are
   "Complete" (if at least 95% of MIPs have at least 10 UMIs), which should be
   "Repooled" (if the sample is not "Complete" and the number of reads is
