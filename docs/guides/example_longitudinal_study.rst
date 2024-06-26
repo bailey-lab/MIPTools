@@ -136,7 +136,7 @@ user which samples and mips succeeded and which may need to be run again.
 
 | Alternatively, you can run this jupyter script:
 | :code:`bash start_jupyter.sh`
-Click the 'Analysis' folder, and click the 'check_run_stats.ipynb' file. Follow
+Click the "analysis" folder, and click the 'check_run_stats.ipynb' file. Follow
 the instructions in the notebook.
 
 
@@ -220,7 +220,7 @@ each sample.
 
 | Alternatively, you can run this jupyter script:
 | :code:`bash start_jupyter.sh`
-Click the 'Analysis' folder, and click the 'variant_calling.ipynb' file. Follow
+Click the "analysis" folder, and click the 'variant_calling.ipynb' file. Follow
 the instructions in the notebook.
 
 
@@ -284,5 +284,5 @@ forwarding to view the output Jupyter notebook. The command for this is shown at
 the top of the Jupyter notebook output screen, and needs to be executed on your
 local computer. After executing this, you can click one of the links on the
 running Jupyter notebook screen. The link will open on your web-browser. Click
-on the 'analysis' folder link, and then click the link labeled
+on the "analysis" folder link, and then click the link labeled
 'prevalence_plotting.' Follow the instructions in the notebook.
