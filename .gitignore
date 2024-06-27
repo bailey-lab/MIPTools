@@ -6,7 +6,7 @@
 miptools/
 build_logs/
 __pycache__
-base_resources/.ipynb_checkpoints/
+.ipynb_checkpoints/
 !docs/**
 docs/.DS_store
 docs/_build
