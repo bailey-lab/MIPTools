@@ -1,14 +1,59 @@
-sif_file=miptools_dev.sif
-project_resources=input_data/DR23K_project_resources
-species_resources=input_data/pf_species_resources
-prevalence_metadata=input_data/metadata_files
-wrangler_folder=wrangled_data
-variant_output=stats_and_variant_calling
+#################################################
+# set the ulimit high (necessary for big datasets)
+#################################################
+ulimit -n $(ulimit -Hn)
+
+##############################################################
+# set the home directory as the absolute (non-softlinked)
+#current working directory and change directory to this folder
+##############################################################
+newhome=$(pwd -P)
+cd $newhome
+
+###################################
+# import variables from yaml function
+################################
+yml (){
+   local prefix=$2
+   local s='[[:space:]]*' w='[a-zA-Z0-9_]*' fs=$(echo @|tr @ '\034')
+   sed -ne "s|^\($s\):|\1|" \
+        -e "s|^\($s\)\($w\)$s:$s[\"']\(.*\)[\"']$s\$|\1$fs\2$fs\3|p" \
+        -e "s|^\($s\)\($w\)$s:$s\(.*\)$s\$|\1$fs\2$fs\3|p"  $1 |
+   awk -F$fs '{
+      indent = length($1)/2;
+      vname[indent] = $2;
+      for (i in vname) {if (i > indent) {delete vname[i]}}
+      if (length($3) > 0) {
+         vn=""; for (i=0; i<indent; i++) {vn=(vn)(vname[i])("_")}
+         printf("%s%s%s=\"%s\"\n", "'$prefix'",vn, $2, $3);
+      }
+   }'
+}
+
+rmwt () {
+   no_hash=$(echo -e $1 | sed -e 's/\#.*$//')
+   echo -e $no_hash | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'
+}
+
+eval $(yml config.yaml)
+
+############################
+# setup the run
+##########################
+
+# create output directory if it doesn't exist
+mkdir -p $(rmwt $variant_calling_folder)
+mkdir -p $(rmwt $wrangler_folder)
+
+# define singularity bindings and snakemake arguments to be used each time snakemake is called
+singularity_bindings="
+ -B $(rmwt $project_resources):/opt/project_resources
+ -B $(rmwt $species_resources):/opt/species_resources
+ -B $(rmwt $wrangler_folder):/opt/data
+ -B $(rmwt $variant_calling_folder):/opt/analysis
+ -B $(rmwt $prevalence_metadata):/opt/prevalence_metadata
+ -B $newhome:/opt/config"
 
 singularity run \
-  -B $project_resources:/opt/project_resources \
-  -B $species_resources:/opt/species_resources \
-  -B $wrangler_folder:/opt/data \
-  -B $variant_output:/opt/analysis \
-  -B $prevalence_metadata:/opt/prevalence_metadata \
-  --app jupyter $sif_file
+  $singularity_bindings \
+  --app jupyter $(rmwt $miptools_sif)
