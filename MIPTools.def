@@ -94,12 +94,11 @@ From: amd64/ubuntu:22.04
     # Install mamba packages using an environment file.
     # If the versioned file exists, use it as a template to ensure version
     # numbers are fixed. Otherwise, install packages with the latest versions.
-    # Note that instead of creating a new environment, we update the base
-    # environment, which is activated by default.
-    if [ -f "/opt/programs/environment.tar.gz" ]; then
+   
+    if [ -f "/def_files/environment.tar.gz" ]; then
         mkdir /opt/conda/environment
-        tar -xzf /opt/programs/environment.tar.gz -C /opt/conda/environment
-        rm /opt/programs/environment.tar.gz
+        tar -xzf /def_files/environment.tar.gz -C /opt/conda/environment
+        rm /def_files/environment.tar.gz
         conda-unpack
     else
         if [ -f "/opt/environment_versioned.yml" ]; then
@@ -135,8 +134,8 @@ From: amd64/ubuntu:22.04
     /opt/conda/environment/bin/python -m bash_kernel.install
 
     # install vt variant tool set
-    if [ -f "/opt/bin/vt" ]; then
-        echo "using local vt"
+    if [ -f "/def_files/vt" ]; then
+        mv /def_files/vt /opt/bin/vt
     else
         cd /opt/programs
         git clone --branch 0.577 https://github.com/atks/vt.git
@@ -149,8 +148,8 @@ From: amd64/ubuntu:22.04
 
 
     # install MIPWrangler
-    if [ -f "/opt/programs/MIPWrangler/configure.py" ]; then
-        echo "using local MIPWrangler"
+    if [ -d "/def_files/MIPWrangler" ]; then
+        mv /def_files/MIPWrangler /opt/programs/MIPWrangler
     else
         cd /opt/programs
         git clone --branch develop https://github.com/bailey-lab/MIPWrangler.git
@@ -165,8 +164,8 @@ From: amd64/ubuntu:22.04
     # ./install.sh $CPU_COUNT
 
     # install parasight
-    if [ -f "/opt/bin/parasight.pl" ]; then
-        echo "using local parasight"
+    if [ -f "/def_files/parasight.pl" ]; then
+        mv /def_files/parasight.pl /opt/bin/parasight.pl
     else
         cd /opt/programs
         git clone --branch v7.6 https://github.com/bailey-lab/parasight.git
@@ -175,8 +174,8 @@ From: amd64/ubuntu:22.04
     fi
 
     # install basespace cli
-    if [ -f "/opt/bin/bs" ]; then
-        echo "using local basespace cli"
+    if [ -f "/def_files/bs" ]; then
+        mv /def_files/bs /opt/bin/bs
     else
         BS_VERSION=1.5.1
         BS_PATH="https://launch.basespace.illumina.com/CLI/${BS_VERSION}/amd64-linux/bs"
@@ -206,6 +205,7 @@ From: amd64/ubuntu:22.04
     src /opt
     snakemake /opt
     base_resources/ /opt/resources
+    def_files/ /
 
 #################################################################
 ##                     Environment Section                     ##

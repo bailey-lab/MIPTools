@@ -37,8 +37,8 @@ dependencies:
   - biopython=1.83=py39hd1e30aa_0
   - bleach=6.1.0=pyhd8ed1ab_0
   - bokeh=2.4.3=pyhd8ed1ab_3
-  - boto3=1.34.135=pyhd8ed1ab_0
-  - botocore=1.34.135=pyge38_1234567_0
+  - boto3=1.34.136=pyhd8ed1ab_0
+  - botocore=1.34.136=pyge38_1234567_0
   - bowtie2=2.5.4=he20e202_1
   - brotli=1.1.0=hd590300_1
   - brotli-bin=1.1.0=hd590300_1
@@ -70,7 +70,7 @@ dependencies:
   - connection_pool=0.0.3=pyhd3deb0d_0
   - contourpy=1.2.1=py39h7633fee_0
   - cryptography=42.0.8=py39h8169da8_0
-  - curl=8.8.0=he654da7_0
+  - curl=8.8.0=he654da7_1
   - cycler=0.12.1=pyhd8ed1ab_0
   - cytoolz=0.12.3=py39hd1e30aa_0
   - dask=2023.2.0=pyhd8ed1ab_0
@@ -203,7 +203,7 @@ dependencies:
   - libclang13=18.1.7=default_h087397f_0
   - libcrc32c=1.1.2=h9c3ff4c_0
   - libcups=2.3.3=h4637d8d_4
-  - libcurl=8.8.0=hca28451_0
+  - libcurl=8.8.0=hca28451_1
   - libdeflate=1.20=hd590300_0
   - libedit=3.1.20191231=he28a2e2_2
   - libev=4.33=hd590300_2
