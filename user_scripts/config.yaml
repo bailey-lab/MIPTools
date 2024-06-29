@@ -84,6 +84,9 @@ min_wsaf: 0.5
 num_samples_umi: 2
 min_umi: 3
 
+###### prevalence metadata directory ######
+prevalence_metadata: input_data/metadata_files
+
 ####################################################################
 ##                  Advanced Options and Settings                 ##
 ####################################################################

@@ -3,11 +3,13 @@ channels:
   - bioconda
 dependencies:
   - basemap-data-hires
+  - bash_kernel
   - bcftools
   - bioconductor-dnacopy
   - biopython
   - bowtie2
   - bwa
+  - conda-pack
   - freebayes=1.3.6
   - gatk4
   - htslib

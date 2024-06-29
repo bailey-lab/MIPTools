@@ -6,7 +6,7 @@
 miptools/
 build_logs/
 __pycache__
-base_resources/.ipynb_checkpoints/
+.ipynb_checkpoints/
 !docs/**
 docs/.DS_store
 docs/_build
@@ -14,5 +14,6 @@ user_scripts/input_data/
 user_scripts/wrangled_data/
 user_scripts/stats_and_variant_calling/
 bcl2fastq2-v2-20-0-linux-x86-64.zip
+def_files/
 .cache/
 .snakemake/
