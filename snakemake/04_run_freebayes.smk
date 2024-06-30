@@ -60,10 +60,21 @@ rule concatenate_and_fix_vcf_headers:
 	script:
 		"scripts/concatenate_headers.py"
 
+rule compress_vcf:
+	'''
+	compresses vcf file to be mutations only to avoid memory issues in next step
+	'''
+	input:
+		original_vcf = output_folder + "/variants.vcf.gz"
+	output:
+		mutations_only_variants = output_folder + "/variants_mutations_only.vcf.gz",
+	shell:
+		"unpigz -c {input.original_vcf} | sed '/<\*>/d' | pigz > {output.mutations_only_variants}"
+
 
 rule generate_tables:
 	input:
-		variants=output_folder + "/variants.vcf.gz",
+		variants = output_folder + "/variants_mutations_only.vcf.gz",
 	output:
 		ref_table=output_folder + "/reference_table.csv",
 		cov_table=output_folder + "/coverage_table.csv",
