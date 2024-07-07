@@ -269,8 +269,8 @@ From: amd64/ubuntu:22.04
         echo "    -B \${resource_dir}:/opt/resources \\"
         echo "    -B \${project_resources}:/opt/project_resources \\"
         echo "    -B \${species_resources}:/opt/species_resources \\"
-        echo "    -B \${wrangler_dir}:/opt/data \\"
-        echo "    -B \${variant_dir}:/opt/analysis \\"
+        echo "    -B \${wrangler_dir}:/opt/user/wrangled_data \\"
+        echo "    -B \${variant_dir}:/opt/user/stats_and_variant_calling \\"
         echo "    --app jupyter <container>"
     }
 
@@ -287,7 +287,9 @@ From: amd64/ubuntu:22.04
     done
 
     # Save templates
-    rsync /opt/resources/*.ipynb /opt/analysis --ignore-existing \
+    rsync /opt/resources/jupyter_notebooks/* /opt/user/stats_and_variant_calling --ignore-existing \
+        --ignore-missing-args
+    rsync /opt/resources/jupyter_notebooks/supplemental_jupyter_notebooks/* /opt/user/stats_and_variant_calling/supplemental_jupyter_notebooks --ignore-existing \
         --ignore-missing-args
 
     # Inform the user how to access the notebook
@@ -297,14 +299,18 @@ From: amd64/ubuntu:22.04
     "${server_user}\n"
 
     # Setup juptyr notebook settings
-    jupyter labextension enable --level=user plotlywidget/extension
-    jupyter labextension enable --level=user toc2/main
-    jupyter labextension enable --level=user codefolding/main
-    jupyter labextension enable --level=user highlighter/highlighter
-    jupyter labextension enable --level=user keyboard_shortcut_editor/main
-    jupyter labextension enable --level=user spellchecker/main
+    jupyter labextension enable plotlywidget/extension --level=user
+    jupyter labextension enable toc2/main --level=user
+    jupyter labextension enable codefolding/main --level=user
+    jupyter labextension enable highlighter/highlighter --level=user
+    jupyter labextension enable keyboard_shortcut_editor/main --level=user
+    jupyter labextension enable spellchecker/main --level=user
 
     # Run notebook
+    silent() {
+        jupyter notebook --notebook-dir=${nb_dir} --ip=${server_ip} \
+            --port=${nb_port} --no-browser >/dev/null 2>&1 &    
+    }
     jupyter notebook --notebook-dir=${nb_dir} --ip=${server_ip} \
             --port=${nb_port} --no-browser
 
@@ -692,3 +698,10 @@ From: amd64/ubuntu:22.04
 
     # Run python script
     python /opt/src/demux_qc.py -p ${platform}
+
+#############################################################
+###                Setup App                              ###
+# copies run scripts and config files into the current directory
+#############################################################
+%apprun setup
+    rsync /opt/resources/user_scripts_and_config/* ./ --ignore-existing --ignore-missing-args
