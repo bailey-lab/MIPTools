@@ -48,5 +48,5 @@ def plot_umi_vs_probe(sample_summary_csv, umi_vs_probe_graph):
 
 
 graphing_list, x_values, y_values=make_graphing_list(wdir+'/UMI_counts.csv')
-plot_heatmap(graphing_list, x_values, y_values, 'mips', 'samples', 'log2 of umi_counts+1', '/opt/analysis/umi_heatmap.html')
+plot_heatmap(graphing_list, x_values, y_values, 'mips', 'samples', 'log2 of umi_counts+1', wdir + '/umi_heatmap.html')
 plot_umi_vs_probe(sample_summary_csv, umi_vs_probe_graph)

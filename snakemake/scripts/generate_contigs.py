@@ -10,15 +10,15 @@ options=snakemake.params['freebayes_settings']
 targets_file=snakemake.params.targets_file
 
 settings = mip.get_analysis_settings(wdir+'/'+settings_file)
-freebayes_command_dict_yaml = open('/opt/analysis/freebayes_command_dict.yaml','w')
-contig_vcf_gz_paths_yaml = open('/opt/analysis/contig_vcf_gz_paths.yaml','w')
+freebayes_command_dict_yaml = open(wdir + '/freebayes_command_dict.yaml','w')
+contig_vcf_gz_paths_yaml = open(wdir + '/contig_vcf_gz_paths.yaml','w')
 
 verbose=True
-fastq_dir="/opt/analysis/padded_fastqs"
-bam_dir="/opt/analysis/padded_bams"
-vcf_file="/opt/analysis/variants.vcf.gz"
-errors_file="/opt/analysis/freebayes_errors.txt"
-warnings_file="/opt/analysis/freebayes_warnings.txt"
+fastq_dir=wdir + "/padded_fastqs"
+bam_dir=wdir + "/padded_bams"
+vcf_file=wdir + "/variants.vcf.gz"
+errors_file=wdir + "/freebayes_errors.txt"
+warnings_file=wdir + "/freebayes_warnings.txt"
 
 #what is the purpose of the variable 'r'? I don't think it ever gets used again.
 r = mip.freebayes_call(settings=settings, options=options, align=True,

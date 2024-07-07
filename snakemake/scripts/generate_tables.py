@@ -6,7 +6,7 @@ wdir=snakemake.params['wdir']
 settings_file=snakemake.params['settings_file']
 settings = mip.get_analysis_settings(wdir+'/'+settings_file)
 
-vcf_file="/opt/analysis/variants.vcf.gz"
+vcf_file=wdir + "/variants.vcf.gz"
 geneid_to_genename=snakemake.params.geneid_to_genename
 target_aa_annotation=snakemake.params.target_aa_annotation
 aggregate_nucleotides=snakemake.params.aggregate_nucleotides

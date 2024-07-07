@@ -1,7 +1,8 @@
 configfile: "/opt/config/config.yaml"
 
 
-output_folder = "/opt/analysis"
+output_folder = "/opt/user/wrangled_data"
+base_resources = "/opt/resources"
 
 all_samples, all_targets = [], []
 
@@ -48,7 +49,7 @@ rule all:
 
 rule extract_by_arm:
 	params:
-		output_dir="/opt/analysis/analysis",
+		output_dir = output_folder + "/analysis",
 	resources:
 		time_min=240,
 	output:
@@ -68,7 +69,7 @@ if config["downsample_umi_count"] < 2**32:
 				sample=all_samples,
 			),
 		params:
-			output_dir="/opt/analysis/analysis",
+			output_dir=output_folder + "/analysis",
 			downsample_seed=config["downsample_seed"],
 			downsample_amount=config["downsample_umi_count"],
 		resources:
@@ -93,7 +94,7 @@ else:
 				sample=all_samples,
 			),
 		params:
-			output_dir="/opt/analysis/analysis",
+			output_dir=output_folder + "/analysis",
 			downsample_seed=config["downsample_seed"],
 		resources:
 			mem_mb=config["memory_mb_per_step"],
@@ -117,7 +118,7 @@ rule correct_for_same_barcode_contam:
 			sample=all_samples,
 		),
 	params:
-		output_dir="/opt/analysis/analysis",
+		output_dir=output_folder + "/analysis",
 	resources:
 		mem_mb=40000,
 		time_min=1440,
@@ -138,7 +139,7 @@ rule mip_clustering:
 		corrected_barcode_marker=output_folder
 		+ "/analysis/logs/mipCorrectForContamWithSameBarcodes_run1.json",
 	params:
-		output_dir="/opt/analysis/analysis",
+		output_dir=output_folder + "/analysis",
 	resources:
 		mem_mb=config["memory_mb_per_step"],
 		time_min=60,
@@ -147,7 +148,7 @@ rule mip_clustering:
 		+ "/clustering_status/{sample}_mip_clustering_finished.txt",
 	shell:
 		"""
-		MIPWrangler mipClustering --masterDir {params.output_dir} --overWriteDirs --par /opt/resources/clustering_pars/illumina_collapseHomoploymers.pars.txt --countEndGaps --sample {wildcards.sample}
+		MIPWrangler mipClustering --masterDir {params.output_dir} --overWriteDirs --par {base_resources}/clustering_pars/illumina_collapseHomoploymers.pars.txt --countEndGaps --sample {wildcards.sample}
 		touch {output.mip_clustering}
 		"""
 
@@ -159,7 +160,7 @@ rule pop_cluster_target:
 			sample=all_samples,
 		),
 	params:
-		output_dir="/opt/analysis/analysis",
+		output_dir=output_folder + "/analysis",
 	resources:
 		mem_mb=config["memory_mb_per_step"],
 		time_min=60,
@@ -205,23 +206,23 @@ rule concatenate_summary_files:
 
 	shell:
 		"""
-		sed -r '1d;s/(\s+)?\S+//2' /opt/analysis/analysis/resources/sampleInputFiles.tab.txt |
+		sed -r '1d;s/(\s+)?\S+//2' {output_folder}/analysis/resources/sampleInputFiles.tab.txt |
 			awk '$2=$1' |
-			sed "s/ /\//g;s/$/_mipExtraction\/extractInfoSummary.txt/g;s/^/\/opt\/analysis\/analysis\//g" \
+			sed "s/ /\//g;s/$/_mipExtraction\/extractInfoSummary.txt/g;s/^/\/opt\/user\/wrangled_data\/analysis\//g" \
 			| xargs cat \
 			| sed '1!{{/Sample/d}}' \
 			| pigz > {output.extract_info_summary}
 		
-		sed -r '1d;s/(\s+)?\S+//2' /opt/analysis/analysis/resources/sampleInputFiles.tab.txt |
+		sed -r '1d;s/(\s+)?\S+//2' {output_folder}/analysis/resources/sampleInputFiles.tab.txt |
 			awk '$2=$1' |
-			sed "s/ /\//g;s/$/_mipExtraction\/extractInfoByTarget.txt/g;s/^/\/opt\/analysis\/analysis\//g" \
+			sed "s/ /\//g;s/$/_mipExtraction\/extractInfoByTarget.txt/g;s/^/\/opt\/user\/wrangled_data\/analysis\//g" \
 			| xargs cat \
 			| sed '1!{{/Sample/d}}' \
 			| pigz > {output.extract_info_by_target}
 		
-		sed -r '1d;s/(\s+)?\S+//2' /opt/analysis/analysis/resources/sampleInputFiles.tab.txt |
+		sed -r '1d;s/(\s+)?\S+//2' {output_folder}/analysis/resources/sampleInputFiles.tab.txt |
 			awk '$2=$1' |
-			sed "s/ /\//g;s/$/_mipExtraction\/stitchInfoByTarget.txt/g;s/^/\/opt\/analysis\/analysis\//g" \
+			sed "s/ /\//g;s/$/_mipExtraction\/stitchInfoByTarget.txt/g;s/^/\/opt\/user\/wrangled_data\/analysis\//g" \
 			| xargs cat \
 			| sed '1!{{/Sample/d}}' \
 			| pigz > {output.stitch_info_by_target}

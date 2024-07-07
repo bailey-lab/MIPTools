@@ -4,7 +4,7 @@ import subprocess
 import mip_functions as mip
 import pandas as pd
 
-wdir='/opt/analysis/'
+wdir=snakemake.params.wdir
 
 high_UMI_threshold=snakemake.params.high_UMI_threshold
 low_coverage_action=snakemake.params.low_coverage_action
@@ -17,8 +17,8 @@ assessment_key=snakemake.params.assessment_key
 good_coverage_quantile=snakemake.params.good_coverage_quantile
 repool_csv=snakemake.params.repool_csv
 
-sample_summary = pd.read_csv(wdir+'sample_summary.csv')
-meta = pd.read_csv(wdir+'run_meta.csv')
+sample_summary = pd.read_csv(wdir+'/sample_summary.csv')
+meta = pd.read_csv(wdir+'/run_meta.csv')
 data_summary = pd.merge(sample_summary, meta)
 
 mip.repool(wdir, data_summary, high_UMI_threshold, 

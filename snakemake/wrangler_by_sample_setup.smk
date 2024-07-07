@@ -1,7 +1,10 @@
 configfile: "/opt/config/config.yaml"
 
 
-output_folder = "/opt/analysis"
+output_folder = "/opt/user/wrangled_data"
+fastq_folder = "/opt/fastq_dir"
+snakemake_folder = "/opt/snakemake"
+project_resources_dir = "/opt/project_resources"
 
 
 rule all:
@@ -17,10 +20,10 @@ rule all:
 
 rule copy_files:
 	input:
-		setup_snakefile="/opt/snakemake/wrangler_by_sample_setup.smk",
-		finish_snakefile="/opt/snakemake/wrangler_by_sample_finish.smk",
+		setup_snakefile=snakemake_folder + "/wrangler_by_sample_setup.smk",
+		finish_snakefile=snakemake_folder + "/wrangler_by_sample_finish.smk",
 		input_configfile="/opt/config/config.yaml",
-		in_scripts="/opt/snakemake/scripts",
+		in_scripts=snakemake_folder + "/scripts",
 	output:
 		setup_snakefile=output_folder + "/snakemake_params/setup_run.smk",
 		finish_snakefile=output_folder + "/snakemake_params/finish_run.smk",
@@ -46,10 +49,10 @@ rule generate_mip_files:
 	and names of all samples (with no pairing between columns of any given row).
 	"""
 	input:
-		arms_file="/opt/project_resources/mip_ids/mip_arms.txt",
+		arms_file=project_resources_dir + "/mip_ids/mip_arms.txt",
 		sample_sheet="/opt/input_sample_sheet_directory/"
 		+ config["input_sample_sheet"].split("/")[-1],
-		fastq_folder="/opt/data",
+		fastq_folder=fastq_folder,
 	params:
 		sample_set=config["sample_set"],
 		probe_sets=config["probe_set"],
@@ -66,19 +69,19 @@ rule setup:
 		mip_arms=output_folder + "/mip_ids/mipArms.txt",
 		sample_file=output_folder + "/mip_ids/allMipsSamplesNames.tab.txt",
 	params:
-		output_dir="/opt/analysis/analysis",
-		project_resources="/opt/project_resources",
-		fastq_dir="/opt/data",
+		output_dir = output_folder + "/analysis",
+		project_resources = project_resources_dir,
+		fastq_dir=fastq_folder,
 	output:
 		setup_finished=output_folder + "/setup_finished.txt",
 	threads: config["general_cpu_count"]
 	shell:
 		"""
 		MIPWrangler mipSetup \
-		  --mipArmsFilename /opt/analysis/mip_ids/mipArms.txt \
-		  --mipSampleFile /opt/analysis/mip_ids/allMipsSamplesNames.tab.txt \
+		  --mipArmsFilename {output_folder}/mip_ids/mipArms.txt \
+		  --mipSampleFile {output_folder}/mip_ids/allMipsSamplesNames.tab.txt \
 		  --numThreads {threads} \
 		  --masterDir {params.output_dir} \
-		  --dir /opt/data --mipServerNumber 1
+		  --dir {fastq_folder} --mipServerNumber 1
 		touch {output.setup_finished}
 		"""

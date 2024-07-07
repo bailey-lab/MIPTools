@@ -5914,7 +5914,7 @@ def vcf_reheader(vcf_file, fixed_vcf_file, wdir="/opt/analysis/"):
 def concatenate_headers(
     settings=None, wdir="/opt/analysis", freebayes_settings=None, vcf_paths=None
 ):
-    vcf_file = "/opt/analysis/variants.vcf.gz"
+    vcf_file = wdir + "/variants.vcf.gz"
     # concatanate contig vcfs. The number of contigs may be high, so we'll
     # write the vcf paths to a file and bcftools will read from that file
     cvcf_paths_file = os.path.join(wdir, "contig_vcfs", "vcf_file_list.txt")
@@ -5984,6 +5984,7 @@ def gatk_file_prep(
     """
     # get the analysis settings
     # check if both settings and the settings file are None:
+    wdir = os.path.dirname(fastq_dir)
     if (settings is None) and (settings_file is None):
         print("settings or settings file must be provided for freebayes_call.")
         return
@@ -6042,7 +6043,7 @@ def gatk_file_prep(
             "haplotype_sequence",
             "mapped_copy_number",
         ]
-        mutant_haplotypes = "/opt/analysis/mutant_haplotypes.csv"
+        mutant_haplotypes = wdir + "/mutant_haplotypes.csv"
         targets[haplotype_fields].to_csv(mutant_haplotypes, index=False)
 
         # create a hypothetical sample that has all mutations and a
@@ -6060,7 +6061,7 @@ def gatk_file_prep(
             "sequence_quality",
             "barcode_count",
         ]
-        mutant_data_file = "/opt/analysis/mutant_data.tsv"
+        mutant_data_file = wdir + "/mutant_data.tsv"
         targets[data_fields].to_csv(mutant_data_file, index=False, sep="\t")
         # create a fastq file for the "control_mutant" sample
         padding = 100
@@ -6087,7 +6088,7 @@ def gatk_file_prep(
     )
 
     # create an  intervals file to be used in gatk call
-    intervals_bed = "/opt/analysis/intervals.bed"
+    intervals_bed = wdir + "/intervals.bed"
     call_file = settings["callInfoDictionary"]
     with open(call_file) as infile:
         call_dict = json.load(infile)
@@ -6108,7 +6109,7 @@ def gatk_file_prep(
     probe_info[["chrom", "bed_start", "bed_end"]].to_csv(
         intervals_bed, index=False, header=(None), sep="\t"
     )
-    intervals_list = "/opt/analysis/intervals.list"
+    intervals_list = wdir + "/intervals.list"
     genome_dict = get_file_locations()[settings["species"]]["genome_dict"]
     interval_call = gatk(
         [
@@ -6140,8 +6141,9 @@ def gatk_haplotype_caller(
     settings,
     errors_file="/opt/analysis/gatk_haplotype_caller_output.txt",
 ):
+    wdir = os.path.dirname(bam_dir)
     genome_fasta = get_file_locations()[settings["species"]]["fasta_genome"]
-    intervals_list = "/opt/analysis/intervals.list"
+    intervals_list = wdir + "/intervals.list"
     haplotype_caller_opts = [
         "HaplotypeCaller",
         "-R",
@@ -6207,6 +6209,7 @@ def genotype_gvcfs(
     keep_control_mutant=False,
     errors_file="/opt/analysis/gatk_genotype_gvcfs_output.txt",
 ):
+    wdir = os.path.dirname(bam_dir)
     if sample_map is None:
         # scan the bam directory and get file paths. Assign an output name
         # for each file (gvcf output)
@@ -6221,8 +6224,8 @@ def genotype_gvcfs(
             for f in bam_files:
                 sample_name = ".".join(os.path.basename(f[0]).split(".")[:-2])
                 outfile.write(sample_name + "\t" + f[1] + "\n")
-    intervals_list = "/opt/analysis/intervals.list"
-    gdb_path = os.path.join("/opt/analysis/", gdb)
+    intervals_list = wdir + "/intervals.list"
+    gdb_path = os.path.join(wdir + "/", gdb)
     gdb_import = [
         "--java-options",
         "-Xmx32G",
@@ -6254,7 +6257,7 @@ def genotype_gvcfs(
     if keep_control_mutant:
         temp_vcf_file = vcf_file
     else:
-        temp_vcf_file = "/opt/analysis/temp.vcf.gz"
+        temp_vcf_file = wdir + "/temp.vcf.gz"
     genotype_gvcfs = [
         "GenotypeGVCFs",
         "-R",
