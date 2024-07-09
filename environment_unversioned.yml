@@ -22,7 +22,7 @@ dependencies:
   - nnn
   - numpy
   - openpyxl
-  - pandas=1.2.3
+  - pandas
   - parallel
   - pip
   - pip:

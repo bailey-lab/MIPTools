@@ -88,7 +88,6 @@ From: amd64/ubuntu:22.04
     bash Miniforge3.sh -bfp "/opt/conda"
     rm Miniforge3.sh
     conda config --system --set show_channel_urls true
-    # conda clean --all --force-pkgs-dirs --yes
     conda clean -t --yes
 
     # Install mamba packages using an environment file.
