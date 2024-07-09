@@ -43,7 +43,6 @@ def plot_umi_vs_probe(sample_summary_csv, umi_vs_probe_graph):
         title="UMI Count vs. Probe Coverage",
         hover_data="Read Count"
 	)
-	fig.show()
 	fig.write_html(umi_vs_probe_graph)
 
 

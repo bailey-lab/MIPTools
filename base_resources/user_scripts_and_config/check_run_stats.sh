@@ -51,9 +51,6 @@ singularity_bindings="
  -B $(rmwt $species_resources):/opt/species_resources
  -B $(rmwt $wrangler_folder):/opt/user/wrangled_data
  -B $(rmwt $variant_calling_folder):/opt/user/stats_and_variant_calling
- -B /home/charlie/data/MIPTools/snakemake:/opt/snakemake
- -B /home/charlie/data/MIPTools/base_resources:/opt/resources
- -B /home/charlie/data/MIPTools/src:/opt/src
  -B $newhome:/opt/config"
  
 snakemake_args="--cores $(rmwt $general_cpu_count) --keep-going --rerun-incomplete --use-conda --latency-wait 60"

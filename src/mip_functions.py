@@ -5381,7 +5381,7 @@ def get_haplotype_counts(settings):
     # UMI count data is only available for samples with data
     # so if a sample has not produced any data, it will be missing
     # these samples should be added with 0 values for each probe
-    print("run meta is", run_meta)
+    UMI_counts.columns = UMI_counts.columns.to_flat_index() #flatten the MultiIndex in preparation for merge
     all_UMI_counts = pd.merge(
         run_meta[["Sample ID", "replicate"]].set_index("Sample ID"),
         UMI_counts,

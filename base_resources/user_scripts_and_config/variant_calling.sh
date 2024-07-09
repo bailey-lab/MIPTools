@@ -51,7 +51,6 @@ singularity_bindings="
  -B $(rmwt $species_resources):/opt/species_resources
  -B $(rmwt $wrangler_folder):/opt/user/wrangled_data
  -B $(rmwt $variant_calling_folder):/opt/user/stats_and_variant_calling
- -B /home/charlie/data/MIPTools/snakemake:/opt/snakemake
  -B $newhome:/opt/config"
  # -B $(pwd -P):/opt/config"
  
