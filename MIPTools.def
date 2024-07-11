@@ -22,6 +22,9 @@ From: amd64/ubuntu:22.04
         LANGUAGE=en_US.UTF-8 \
         LC_ALL=en_US.UTF-8
 
+    # add conda env to path
+    export PATH=/opt/conda/bin:/opt/conda/environment/bin:${PATH}
+
     # install system packages
     apt-get update \
     && apt-get -yq dist-upgrade \
@@ -67,6 +70,14 @@ From: amd64/ubuntu:22.04
     wl-clipboard \
     xclip
 
+    # install miniforge
+    cd /tmp
+    wget -O Miniforge3.sh "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
+    bash Miniforge3.sh -bfp "/opt/conda"
+    rm Miniforge3.sh
+    conda config --system --set show_channel_urls true
+    conda clean -t --yes
+
     # set environment locale
     echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
     echo "LANG=en_US.UTF-8" > /etc/locale.conf
@@ -75,21 +86,12 @@ From: amd64/ubuntu:22.04
     locale-gen en_US.UTF-8
     update-locale LANG=en_US.UTF-8
 
+
     # install bcl2fastq, if the file is there
     cd /opt/programs
     unzip bcl2fastq2*.zip || true
     alien bcl2fastq2*.rpm || true
     dpkg -i bcl2fastq2*.deb || true
-
-   # install miniforge
-    export PATH=/opt/conda/bin:/opt/conda/environment/bin:${PATH}
-    cd /tmp
-    wget -O Miniforge3.sh "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
-    bash Miniforge3.sh -bfp "/opt/conda"
-    rm Miniforge3.sh
-    conda config --system --set show_channel_urls true
-    # conda clean --all --force-pkgs-dirs --yes
-    conda clean -t --yes
 
     # Install mamba packages using an environment file.
     # If the versioned file exists, use it as a template to ensure version
@@ -269,8 +271,8 @@ From: amd64/ubuntu:22.04
         echo "    -B \${resource_dir}:/opt/resources \\"
         echo "    -B \${project_resources}:/opt/project_resources \\"
         echo "    -B \${species_resources}:/opt/species_resources \\"
-        echo "    -B \${wrangler_dir}:/opt/data \\"
-        echo "    -B \${variant_dir}:/opt/analysis \\"
+        echo "    -B \${wrangler_dir}:/opt/user/wrangled_data \\"
+        echo "    -B \${variant_dir}:/opt/user/stats_and_variant_calling \\"
         echo "    --app jupyter <container>"
     }
 
@@ -287,7 +289,9 @@ From: amd64/ubuntu:22.04
     done
 
     # Save templates
-    rsync /opt/resources/*.ipynb /opt/analysis --ignore-existing \
+    rsync /opt/resources/jupyter_notebooks/* /opt/user/stats_and_variant_calling --ignore-existing \
+        --ignore-missing-args
+    rsync /opt/resources/jupyter_notebooks/supplemental_jupyter_notebooks/* /opt/user/stats_and_variant_calling/supplemental_jupyter_notebooks --ignore-existing \
         --ignore-missing-args
 
     # Inform the user how to access the notebook
@@ -297,14 +301,18 @@ From: amd64/ubuntu:22.04
     "${server_user}\n"
 
     # Setup juptyr notebook settings
-    jupyter labextension enable --level=user plotlywidget/extension
-    jupyter labextension enable --level=user toc2/main
-    jupyter labextension enable --level=user codefolding/main
-    jupyter labextension enable --level=user highlighter/highlighter
-    jupyter labextension enable --level=user keyboard_shortcut_editor/main
-    jupyter labextension enable --level=user spellchecker/main
+    jupyter labextension enable plotlywidget/extension --level=user
+    jupyter labextension enable toc2/main --level=user
+    jupyter labextension enable codefolding/main --level=user
+    jupyter labextension enable highlighter/highlighter --level=user
+    jupyter labextension enable keyboard_shortcut_editor/main --level=user
+    jupyter labextension enable spellchecker/main --level=user
 
     # Run notebook
+    silent() {
+        jupyter notebook --notebook-dir=${nb_dir} --ip=${server_ip} \
+            --port=${nb_port} --no-browser >/dev/null 2>&1 &    
+    }
     jupyter notebook --notebook-dir=${nb_dir} --ip=${server_ip} \
             --port=${nb_port} --no-browser
 
@@ -692,3 +700,10 @@ From: amd64/ubuntu:22.04
 
     # Run python script
     python /opt/src/demux_qc.py -p ${platform}
+
+#############################################################
+###                Setup App                              ###
+# copies run scripts and config files into the current directory
+#############################################################
+%apprun setup
+    rsync /opt/resources/user_scripts_and_config/* ./ --ignore-existing --ignore-missing-args

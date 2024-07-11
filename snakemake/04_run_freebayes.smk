@@ -1,7 +1,7 @@
 configfile: "/opt/config/config.yaml"
 
 
-output_folder = "/opt/analysis"
+output_folder = "/opt/user/stats_and_variant_calling"
 
 import yaml
 import subprocess
@@ -25,7 +25,7 @@ rule run_freebayes:
 	output:
 		contig_vcf=output_folder + "/contig_vcfs/{contig}.vcf.gz",
 	params:
-		wdir="/opt/analysis",
+		wdir=output_folder,
 		freebayes_command_dict=freebayes_command_dict,
 	# resources below are currently not utilized - haven't figured out a way to
 	# get singularity profile, slurm profile, and high ulimits all at once.
@@ -48,7 +48,7 @@ rule concatenate_and_fix_vcf_headers:
 		variants=output_folder + "/variants.vcf.gz",
 	params:
 		freebayes_settings=config["freebayes_settings"],
-		wdir="/opt/analysis",
+		wdir=output_folder,
 		settings_file="settings.txt",
 	# resources below are currently not utilized - haven't figured out a way to
 	# get singularity profile, slurm profile, and high ulimits all at once.
@@ -60,16 +60,27 @@ rule concatenate_and_fix_vcf_headers:
 	script:
 		"scripts/concatenate_headers.py"
 
+rule compress_vcf:
+	'''
+	compresses vcf file to be mutations only to avoid memory issues in next step
+	'''
+	input:
+		original_vcf = output_folder + "/variants.vcf.gz"
+	output:
+		mutations_only_variants = output_folder + "/variants_mutations_only.vcf.gz",
+	shell:
+		"unpigz -c {input.original_vcf} | sed '/<\*>/d' | pigz > {output.mutations_only_variants}"
+
 
 rule generate_tables:
 	input:
-		variants=output_folder + "/variants.vcf.gz",
+		variants = output_folder + "/variants_mutations_only.vcf.gz",
 	output:
 		ref_table=output_folder + "/reference_table.csv",
 		cov_table=output_folder + "/coverage_table.csv",
 		alt_table=output_folder + "/alternate_table.csv",
 	params:
-		wdir="/opt/analysis",
+		wdir=output_folder,
 		settings_file="settings.txt",
 		geneid_to_genename=config["geneid_to_genename"],
 		target_aa_annotation=config["target_aa_annotation"],

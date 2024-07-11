@@ -1,6 +1,6 @@
 configfile: "/opt/config/config.yaml"
 
-output_folder = "/opt/analysis"
+output_folder = "/opt/user/stats_and_variant_calling"
 
 import yaml
 import subprocess

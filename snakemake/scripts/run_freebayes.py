@@ -1,5 +1,6 @@
 import subprocess
 sys.path.append("/opt/src")
+wdir = snakemake.params.wdir
 #import mip_functions_freebayes_call_edit as mip
 
 freebayes_command_dict = snakemake.params.freebayes_command_dict
@@ -11,5 +12,5 @@ command = freebayes_command_dict[vcf_file]
 
 freebayes_status=subprocess.run(command,shell=True)
 if freebayes_status.returncode==0:
-	subprocess.call(f"bgzip -f /opt/analysis/contig_vcfs/{vcf_file}.vcf",shell=True)
-	subprocess.call(f"bcftools index -f /opt/analysis/contig_vcfs/{vcf_file}.vcf.gz",shell=True)
+	subprocess.call(f"bgzip -f {wdir}/contig_vcfs/{vcf_file}.vcf",shell=True)
+	subprocess.call(f"bcftools index -f {wdir}/contig_vcfs/{vcf_file}.vcf.gz",shell=True)

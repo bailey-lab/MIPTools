@@ -1,8 +1,8 @@
 configfile: "/opt/config/config.yaml"
 
 
-output_folder = "/opt/analysis"
-log_folder = "/opt/analysis/run_settings"
+output_folder = "/opt/user/stats_and_variant_calling"
+log_folder = "/opt/user/stats_and_variant_calling/run_settings"
 import subprocess
 
 subprocess.call(f"mkdir -p {log_folder}", shell=True)
@@ -74,7 +74,7 @@ rule generate_contigs:
 	params:
 		targets_file=targeting,
 		freebayes_settings=config["freebayes_settings"],
-		wdir="/opt/analysis",
+		wdir=output_folder,
 		settings_file="settings.txt",
 	# resources below are currently not utilized - haven't figured out a way to
 	# get singularity profile, slurm profile, and high ulimits all at once.

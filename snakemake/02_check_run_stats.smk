@@ -1,8 +1,11 @@
 configfile: "/opt/config/config.yaml"
 
 
-output_folder = "/opt/analysis"
+output_folder = "/opt/user/stats_and_variant_calling"
 log_folder = output_folder + "/run_settings"
+base_resources = "/opt/resources"
+snakemake_directory = "/opt/snakemake"
+wrangler_folder = "/opt/user/wrangled_data"
 import subprocess
 
 subprocess.call(f"mkdir -p {log_folder}", shell=True)
@@ -22,9 +25,9 @@ rule copy_params:
 	folder
 	"""
 	input:
-		snakefile="/opt/snakemake/02_check_run_stats.smk",
+		snakefile=snakemake_directory + "/02_check_run_stats.smk",
 		configfile="/opt/config/config.yaml",
-		scripts="/opt/snakemake/scripts",
+		scripts=snakemake_directory + "/scripts",
 	output:
 		snakefile=log_folder + "/02_check_run_stats.smk",
 		configfile=log_folder + "/config.yaml",
@@ -45,7 +48,7 @@ rule modify_ozkan_settings:
 	output folder alongside the data for later reference.
 	"""
 	params:
-		template_settings="/opt/resources/templates/analysis_settings_templates/settings.txt",
+		template_settings=base_resources + "/templates/analysis_settings_templates/settings.txt",
 		processor_number=config["general_cpu_count"],
 		bwa_extra=config["bwa_extra"],
 		species=config["species"],
@@ -54,7 +57,7 @@ rule modify_ozkan_settings:
 		min_haplotype_barcodes=config["min_haplotype_barcodes"],
 		min_haplotype_samples=config["min_haplotype_samples"],
 		min_haplotype_sample_fraction=config["min_haplotype_sample_fraction"],
-		wdir="/opt/analysis",
+		wdir=output_folder,
 	output:
 		user_settings=output_folder + "/settings.txt",
 	resources:
@@ -74,10 +77,10 @@ rule parse_info_file:
 		samples=output_folder + "/samples.tsv",
 		unique_haplotypes=output_folder + "/unique_haplotypes.csv",
 	params:
-		wdir="/opt/analysis",
+		wdir=output_folder,
 		settings_file="settings.txt",
-		info_files=["/opt/data/" + config["wrangler_file"]],
-		sample_sheets="/opt/data/sample_sheet.tsv",
+		info_files=[wrangler_folder + '/' + config["wrangler_file"]],
+		sample_sheets=wrangler_folder + "/sample_sheet.tsv",
 		sample_set=config["sample_set"].strip(),
 		probe_set=config["probe_set"].strip(),
 	resources:
@@ -96,7 +99,7 @@ rule map_haplotypes:
 		samples=output_folder + "/samples.tsv",
 		unique_haplotypes=output_folder + "/unique_haplotypes.csv",
 	params:
-		wdir="/opt/analysis",
+		wdir=output_folder,
 		settings_file="settings.txt",
 	output:
 		fastq_haps=output_folder + "/haplotypes.fq",
@@ -128,7 +131,7 @@ rule graph_UMIs:
 		UMI_counts=output_folder + "/UMI_counts.csv",
 		sample_summary_csv=output_folder + "/sample_summary.csv"
 	params:
-		wdir="/opt/analysis",
+		wdir=output_folder,
 	output:
 		output_graph=output_folder + "/umi_heatmap.html",
 		umi_vs_probe_graph = output_folder + "/umi_count_vs_probe_coverage.html"
@@ -155,7 +158,8 @@ rule make_repool_table:
 		UMI_count_threshold=config["UMI_count_threshold"],
 		assessment_key=config["assessment_key"],
 		good_coverage_quantile=config["good_coverage_quantile"],
-		repool_csv="/opt/analysis/repool.csv",
+		repool_csv= output_folder + "/repool.csv",
+		wdir = output_folder,
 	resources:
 		log_dir=log_folder,
 	output:

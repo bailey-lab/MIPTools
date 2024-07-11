@@ -6,12 +6,13 @@ import yaml
 sys.path.append("/opt/src")
 import mip_functions as mip
 
-contig_vcf_gz_paths_yaml = open("/opt/analysis/contig_vcf_gz_paths.yaml",'r')
+wdir = snakemake.params.wdir
+
+contig_vcf_gz_paths_yaml = open(wdir + "/contig_vcf_gz_paths.yaml",'r')
 contig_vcf_gz_paths = yaml.safe_load(contig_vcf_gz_paths_yaml)
 
-vcf_file="/opt/analysis/variants.vcf.gz"
+vcf_file=wdir + "/variants.vcf.gz"
 
-wdir=snakemake.params['wdir']
 settings_file=snakemake.params['settings_file']
 options=snakemake.params['freebayes_settings']
 settings = mip.get_analysis_settings(wdir+'/'+settings_file)
@@ -35,6 +36,6 @@ if "--gvcf" in options:
     subprocess.run(["bcftools", "index", "-f", vcf_file], check=True)
     print('did a reheader')
 
-with open('/opt/analysis/freebayes_reheader_check.txt','w') as file:
+with open(wdir + '/freebayes_reheader_check.txt','w') as file:
     file.write('reheader done')
 
