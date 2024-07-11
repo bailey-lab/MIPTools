@@ -22,6 +22,9 @@ From: amd64/ubuntu:22.04
         LANGUAGE=en_US.UTF-8 \
         LC_ALL=en_US.UTF-8
 
+    # add conda env to path
+    export PATH=/opt/conda/bin:/opt/conda/environment/bin:${PATH}
+
     # install system packages
     apt-get update \
     && apt-get -yq dist-upgrade \
@@ -67,6 +70,14 @@ From: amd64/ubuntu:22.04
     wl-clipboard \
     xclip
 
+    # install miniforge
+    cd /tmp
+    wget -O Miniforge3.sh "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
+    bash Miniforge3.sh -bfp "/opt/conda"
+    rm Miniforge3.sh
+    conda config --system --set show_channel_urls true
+    conda clean -t --yes
+
     # set environment locale
     echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
     echo "LANG=en_US.UTF-8" > /etc/locale.conf
@@ -75,20 +86,12 @@ From: amd64/ubuntu:22.04
     locale-gen en_US.UTF-8
     update-locale LANG=en_US.UTF-8
 
+
     # install bcl2fastq, if the file is there
     cd /opt/programs
     unzip bcl2fastq2*.zip || true
     alien bcl2fastq2*.rpm || true
     dpkg -i bcl2fastq2*.deb || true
-
-   # install miniforge
-    export PATH=/opt/conda/bin:/opt/conda/environment/bin:${PATH}
-    cd /tmp
-    wget -O Miniforge3.sh "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
-    bash Miniforge3.sh -bfp "/opt/conda"
-    rm Miniforge3.sh
-    conda config --system --set show_channel_urls true
-    conda clean -t --yes
 
     # Install mamba packages using an environment file.
     # If the versioned file exists, use it as a template to ensure version
