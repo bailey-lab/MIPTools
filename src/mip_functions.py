@@ -5243,7 +5243,7 @@ def get_haplotype_counts(settings):
         index="Sample ID",
         columns=["Gene", "MIP", "Copy", "Chrom"],
         values=["UMI Count"],
-        aggfunc=np.sum,
+        aggfunc="sum",
     )
     # 2) Estimate the copy number of each paralog gene
     # for each sample from the uniquely mapping data
@@ -5365,7 +5365,7 @@ def get_haplotype_counts(settings):
         index="Sample ID",
         columns=["MIP", "Copy"],
         values=["UMI Count"],
-        aggfunc=np.sum,
+        aggfunc="sum",
     )
     # Sample name for probes without data would be NA and replaced to 0
     # remove that if it exists
@@ -5644,7 +5644,7 @@ def freebayes_call(
         contigs = contigs.merge(
             targets[["contig_name", "contains_targets"]].drop_duplicates(), how="left"
         )
-        contigs["contains_targets"].fillna(False, inplace=True)
+        contigs.fillna({"contains_targets": False}, inplace=True)
         # create a targets.vcf file for freebayes
         targets_vcf = os.path.join(wdir, "targets.vcf")
         with open(targets_vcf, "w") as outfile:
@@ -10087,7 +10087,7 @@ def collapse_vcf_df(filt_df):
         if col not in ["AC", "AN", "CHROM", "POS"]:
             agg[col] = "first"
         elif col == "AC":
-            agg[col] = np.sum
+            agg[col] = "sum"
         elif col == "AN":
             agg[col] = np.max
     collapsed = filt_df.groupby(["CHROM", "POS"]).agg(agg).reset_index()
