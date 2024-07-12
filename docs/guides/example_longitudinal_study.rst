@@ -46,6 +46,24 @@ genes (Kelch13, dhps, dhfr, crt, mdr1, PM2, and PM3). The breakdown of these
 For this tutorial to work without modifying any of the settings, you'll need to
 move the sif file into the tutorial_dataset folder.
 
+| To obtain a copy of the config files used for this tutorial, cd into the
+ tutorial_dataset folder and execute this command:
+| :code:`singularity run --app setup miptools_dev.sif`
+ (remember that a prerequisite for this tutorial is an installed copy of
+ singularity on your computer).
+
+| In general, when you analyze any dataset, you should cd into a folder and run
+ the
+| :code:`singularity run --app setup /path/to/your/downloaded/miptools_dev.sif`
+ step to download all config files. Unlike in the tutorial, you'll then need to
+ modify the config.yaml file to point to your input files and parameters. If the
+ computer you're on is a remote computer, you can edit the config.yaml file
+ using the text editor "micro" using this command:
+| :code:`./micro config.yaml` 
+| micro offers mouse support (so you can click a field of text to start editing
+ it) and allows you to copy with ctrl-C, paste with ctrl-V, save with ctrl-S,
+ and quit with ctrl-Q.
+
 Understanding the input data
 ----------------------------
 If you cd to the tutorial_dataset folder, you'll see a subfolder called
@@ -135,10 +153,10 @@ user which samples and mips succeeded and which may need to be run again.
 | :code:`bash check_run_stats.sh`
 
 | Alternatively, you can create a folder in the tutorial_dataset folder called
-"stats_and_variant_calling" and then run this jupyter script:
+ "stats_and_variant_calling" and then run this jupyter script:
 | :code:`bash start_jupyter.sh`
-Click the "analysis" folder, and click the "check_run_stats.ipynb" file. Follow
-the instructions in the notebook.
+ Click the "analysis" folder, and click the "check_run_stats.ipynb" file. Follow
+ the instructions in the notebook.
 
 
 
@@ -221,10 +239,10 @@ each sample.
 | :code:`bash variant_calling.sh`
 
 | Alternatively, you can create a folder in the tutorial_dataset folder called
-"stats_and_variant_calling" and then run this jupyter script:
+ "stats_and_variant_calling" and then run this jupyter script:
 | :code:`bash start_jupyter.sh`
-Click the "analysis" folder, and click the "variant_calling.ipynb" file. Follow
-the instructions in the notebook.
+ Click the "analysis" folder, and click the "variant_calling.ipynb" file. Follow
+ the instructions in the notebook.
 
 
 Interpreting the variant calling
