@@ -2685,13 +2685,13 @@ def bwa(
         com.append(genome_file)
         com.append(os.path.join(input_dir, fastq_file))
         with open(os.path.join(output_dir, output_file), "w") as outfile:
-            subprocess.check_call(com, stdout=outfile)
+            subprocess.check_call(com, stdout=outfile, stderr = open('bwa1.txt','a'))
     else:
         com = ["bwa"]
         com.extend(options)
         com.append(genome_file)
         com.append(os.path.join(input_dir, fastq_file))
-        sam = subprocess.Popen(com, stdout=subprocess.PIPE)
+        sam = subprocess.Popen(com, stdout=subprocess.PIPE, stderr=open('sam_subprocess.txt','a'))
         bam_com = ["samtools", "view", "-b"]
         bam = subprocess.Popen(bam_com, stdin=sam.stdout, stdout=subprocess.PIPE)
         bam_file = os.path.join(output_dir, output_file)
@@ -5280,8 +5280,11 @@ def get_haplotype_counts(settings):
     # 3) Estimate the copy number of each "Gene"
     # from the average copy count of uniquely mapping
     # data for all MIPs within the gene.
-    cc = copy_counts.groupby(level=["Gene", "Copy"], axis=1).sum()
-    gc = copy_counts.groupby(level=["Gene"], axis=1).sum()
+    copy_counts.to_csv('copy_counts.csv')
+    # cc = copy_counts.groupby(level=["Gene", "Copy"], axis=1).sum()
+    cc = copy_counts.T.groupby(level=["Gene", "Copy"]).sum().T
+    # gc = copy_counts.groupby(level=["Gene"], axis=1).sum()
+    gc = copy_counts.T.groupby(level=["Gene"]).sum().T
     ac = cc.div(gc, level="Gene")
     # 4) Distribute multi mapping data proportional to
     # Paralog's copy number determined from the
@@ -5322,10 +5325,12 @@ def get_haplotype_counts(settings):
         inplace=True,
     )
     # print total read and UMI counts
+    total_reads_and_umis = raw_results[["Read Count", "UMI Count"]].sum()
+    on_target_reads_and_umis = combined_df[["Read Count", "UMI Count"]].sum().astype(int)
     print(
         (
-            "Total number of reads and UMIs were {0[0]} and {0[1]}."
-            " On target number of reads and UMIs were {1[0]} and {1[1]}."
+            "Total number of reads and UMIs were {0.iloc[0]} and {0.iloc[1]}."
+            " On target number of reads and UMIs were {1.iloc[0]} and {1.iloc[1]}."
         ).format(
             raw_results[["Read Count", "UMI Count"]].sum(),
             combined_df[["Read Count", "UMI Count"]].sum().astype(int),
@@ -5644,7 +5649,10 @@ def freebayes_call(
         contigs = contigs.merge(
             targets[["contig_name", "contains_targets"]].drop_duplicates(), how="left"
         )
-        contigs.fillna({"contains_targets": False}, inplace=True)
+        # contigs.fillna({"contains_targets": False}, inplace=True)
+        with pd.option_context("future.no_silent_downcasting", True):
+            contigs["contains_targets"] = contigs["contains_targets"].fillna(False).infer_objects(copy=False)
+        contigs.to_csv('contigs_new.csv')
         # create a targets.vcf file for freebayes
         targets_vcf = os.path.join(wdir, "targets.vcf")
         with open(targets_vcf, "w") as outfile:
