@@ -69,7 +69,7 @@ rule compress_vcf:
 	output:
 		mutations_only_variants = output_folder + "/variants_mutations_only.vcf.gz",
 	shell:
-		"unpigz -c {input.original_vcf} | sed '/<\*>/d' | pigz > {output.mutations_only_variants}"
+		"unpigz -c {input.original_vcf} | sed '/<\\*>/d' | pigz > {output.mutations_only_variants}"
 
 
 rule generate_tables:

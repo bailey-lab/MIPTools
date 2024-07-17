@@ -703,8 +703,8 @@ From: amd64/ubuntu:22.04
     python /opt/src/demux_qc.py -p ${platform}
 
 #############################################################
-###                Setup App                              ###
+###                Setup Runscript                              ###
 # copies run scripts and config files into the current directory
 #############################################################
-%apprun setup
-    rsync /opt/resources/user_scripts_and_config/* ./ --ignore-existing --ignore-missing-args
+%runscript
+    rsync /opt/resources/user_scripts_and_config/* /opt/config/ --ignore-existing --ignore-missing-args

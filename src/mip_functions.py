@@ -2685,13 +2685,13 @@ def bwa(
         com.append(genome_file)
         com.append(os.path.join(input_dir, fastq_file))
         with open(os.path.join(output_dir, output_file), "w") as outfile:
-            subprocess.check_call(com, stdout=outfile)
+            subprocess.check_call(com, stdout=outfile, stderr = open('bwa1.txt','a'))
     else:
         com = ["bwa"]
         com.extend(options)
         com.append(genome_file)
         com.append(os.path.join(input_dir, fastq_file))
-        sam = subprocess.Popen(com, stdout=subprocess.PIPE)
+        sam = subprocess.Popen(com, stdout=subprocess.PIPE, stderr=open('sam_subprocess.txt','a'))
         bam_com = ["samtools", "view", "-b"]
         bam = subprocess.Popen(bam_com, stdin=sam.stdout, stdout=subprocess.PIPE)
         bam_file = os.path.join(output_dir, output_file)
@@ -5243,7 +5243,7 @@ def get_haplotype_counts(settings):
         index="Sample ID",
         columns=["Gene", "MIP", "Copy", "Chrom"],
         values=["UMI Count"],
-        aggfunc=np.sum,
+        aggfunc="sum",
     )
     # 2) Estimate the copy number of each paralog gene
     # for each sample from the uniquely mapping data
@@ -5280,8 +5280,11 @@ def get_haplotype_counts(settings):
     # 3) Estimate the copy number of each "Gene"
     # from the average copy count of uniquely mapping
     # data for all MIPs within the gene.
-    cc = copy_counts.groupby(level=["Gene", "Copy"], axis=1).sum()
-    gc = copy_counts.groupby(level=["Gene"], axis=1).sum()
+    copy_counts.to_csv('copy_counts.csv')
+    # cc = copy_counts.groupby(level=["Gene", "Copy"], axis=1).sum()
+    cc = copy_counts.T.groupby(level=["Gene", "Copy"]).sum().T
+    # gc = copy_counts.groupby(level=["Gene"], axis=1).sum()
+    gc = copy_counts.T.groupby(level=["Gene"]).sum().T
     ac = cc.div(gc, level="Gene")
     # 4) Distribute multi mapping data proportional to
     # Paralog's copy number determined from the
@@ -5322,10 +5325,12 @@ def get_haplotype_counts(settings):
         inplace=True,
     )
     # print total read and UMI counts
+    total_reads_and_umis = raw_results[["Read Count", "UMI Count"]].sum()
+    on_target_reads_and_umis = combined_df[["Read Count", "UMI Count"]].sum().astype(int)
     print(
         (
-            "Total number of reads and UMIs were {0[0]} and {0[1]}."
-            " On target number of reads and UMIs were {1[0]} and {1[1]}."
+            "Total number of reads and UMIs were {0.iloc[0]} and {0.iloc[1]}."
+            " On target number of reads and UMIs were {1.iloc[0]} and {1.iloc[1]}."
         ).format(
             raw_results[["Read Count", "UMI Count"]].sum(),
             combined_df[["Read Count", "UMI Count"]].sum().astype(int),
@@ -5365,7 +5370,7 @@ def get_haplotype_counts(settings):
         index="Sample ID",
         columns=["MIP", "Copy"],
         values=["UMI Count"],
-        aggfunc=np.sum,
+        aggfunc="sum",
     )
     # Sample name for probes without data would be NA and replaced to 0
     # remove that if it exists
@@ -5381,7 +5386,7 @@ def get_haplotype_counts(settings):
     # UMI count data is only available for samples with data
     # so if a sample has not produced any data, it will be missing
     # these samples should be added with 0 values for each probe
-    print("run meta is", run_meta)
+    UMI_counts.columns = UMI_counts.columns.to_flat_index() #flatten the MultiIndex in preparation for merge
     all_UMI_counts = pd.merge(
         run_meta[["Sample ID", "replicate"]].set_index("Sample ID"),
         UMI_counts,
@@ -5644,7 +5649,10 @@ def freebayes_call(
         contigs = contigs.merge(
             targets[["contig_name", "contains_targets"]].drop_duplicates(), how="left"
         )
-        contigs["contains_targets"].fillna(False, inplace=True)
+        # contigs.fillna({"contains_targets": False}, inplace=True)
+        with pd.option_context("future.no_silent_downcasting", True):
+            contigs["contains_targets"] = contigs["contains_targets"].fillna(False).infer_objects(copy=False)
+        contigs.to_csv('contigs_new.csv')
         # create a targets.vcf file for freebayes
         targets_vcf = os.path.join(wdir, "targets.vcf")
         with open(targets_vcf, "w") as outfile:
@@ -10087,7 +10095,7 @@ def collapse_vcf_df(filt_df):
         if col not in ["AC", "AN", "CHROM", "POS"]:
             agg[col] = "first"
         elif col == "AC":
-            agg[col] = np.sum
+            agg[col] = "sum"
         elif col == "AN":
             agg[col] = np.max
     collapsed = filt_df.groupby(["CHROM", "POS"]).agg(agg).reset_index()
