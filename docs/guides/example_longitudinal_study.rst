@@ -48,13 +48,13 @@ move the sif file into the tutorial_dataset folder.
 
 | To obtain a copy of the config files used for this tutorial, cd into the
  tutorial_dataset folder and execute this command:
-| :code:`singularity run --app setup miptools_dev.sif`
+| :code:`singularity run -B $(pwd -P):/opt/config miptools_dev.sif`
  (remember that a prerequisite for this tutorial is an installed copy of
  singularity on your computer).
 
 | In general, when you analyze any dataset, you should cd into a folder and run
  the
-| :code:`singularity run --app setup /path/to/your/downloaded/miptools_dev.sif`
+| :code:`singularity run -B $(pwd -P):/opt/config /path/to/your/downloaded/miptools_dev.sif`
  step to download all config files. Unlike in the tutorial, you'll then need to
  modify the config.yaml file to point to your input files and parameters. If the
  computer you're on is a remote computer, you can edit the config.yaml file
