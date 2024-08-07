@@ -104,7 +104,7 @@ editing it to contain the correct paths to your files (including project
 resources, species resources, sample sheet, and sif files), as well as the
 locations where you'd like the output to be sent.
 
-|If the computer you're on is a remote computer, you can edit the config.yaml
+| If the computer you're on is a remote computer, you can edit the config.yaml
  file using the text editor "micro" using this command:
 | :code:`./micro config.yaml` 
 | micro offers mouse support (so you can click a field of text to start editing

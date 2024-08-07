@@ -152,10 +152,11 @@ user which samples and mips succeeded and which may need to be run again.
  command with:
 | :code:`bash check_run_stats.sh`
 
-| Alternatively, you can create a folder in the tutorial_dataset folder called
- "stats_and_variant_calling" and then run this jupyter script:
+| Alternatively, you can run this jupyter script:
 | :code:`bash start_jupyter.sh`
- Click the "analysis" folder, and click the "check_run_stats.ipynb" file. Follow
+ There should be a folder with a name that matches the "variant_calling_folder"
+ variable from the config.yaml file (e.g. stats_and_variant_calling). Click
+ this folder, and click the "check_run_stats.ipynb" file. Follow
  the instructions in the notebook.
 
 
@@ -238,11 +239,19 @@ each sample.
  variant_calling script (while in the tutorial_dataset folder) with:
 | :code:`bash variant_calling.sh`
 
+| Alternatively, you can run this jupyter script:
+| :code:`bash start_jupyter.sh`
+ There should be a folder with a name that matches the "variant_calling_folder"
+ variable from the config.yaml file (e.g. stats_and_variant_calling). Click
+ this folder, and click the "variant_calling.ipynb" file. Follow
+ the instructions in the notebook.
+
+
 | Alternatively, you can create a folder in the tutorial_dataset folder called
  "stats_and_variant_calling" and then run this jupyter script:
 | :code:`bash start_jupyter.sh`
- Click the "analysis" folder, and click the "variant_calling.ipynb" file. Follow
- the instructions in the notebook.
+ Click the "analysis" folder, and click the "analysis-template-with-qual.ipynb"
+ file. Follow the instructions in the notebook.
 
 
 Interpreting the variant calling
