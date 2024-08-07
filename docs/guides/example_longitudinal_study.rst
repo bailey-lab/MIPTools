@@ -247,13 +247,6 @@ each sample.
  the instructions in the notebook.
 
 
-| Alternatively, you can create a folder in the tutorial_dataset folder called
- "stats_and_variant_calling" and then run this jupyter script:
-| :code:`bash start_jupyter.sh`
- Click the "analysis" folder, and click the "analysis-template-with-qual.ipynb"
- file. Follow the instructions in the notebook.
-
-
 Interpreting the variant calling
 --------------------------------
 In the pre-configured settings, output of the check_run_stats step will go to a
@@ -313,6 +306,8 @@ running the Jupyter notebook on a remote server, you may need to use port
 forwarding to view the output Jupyter notebook. The command for this is shown at
 the top of the Jupyter notebook output screen, and needs to be executed on your
 local computer. After executing this, you can click one of the links on the
-running Jupyter notebook screen. The link will open on your web-browser. Click
-on the "analysis" folder link, and then click the link labeled
-"prevalence_plotting." Follow the instructions in the notebook.
+running Jupyter notebook screen. The link will open on your web-browser. There
+should be a folder with a name that matches the "variant_calling_folder"
+variable from the config.yaml file (e.g. stats_and_variant_calling). Click this
+folder, and click the the link labeled "prevalence_plotting.ipynb." Follow the
+instructions in the notebook.
