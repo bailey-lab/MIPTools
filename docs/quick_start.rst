@@ -19,7 +19,7 @@ MIPTools supports several computational steps, including:
 	- stat-checking: This is for figuring out which samples and which targeted
 	  regions (aka MIPs) performed well and which did not. There are several
 	  graphical outputs and comma separated files produced at this stage. Among
-	  the most important are **barcode_counts.csv** (how many times each targeted
+	  the most important are **UMI_counts.csv** (how many times each targeted
 	  region of the genome was seen in each sample) and **repool.csv** (which MIPs
 	  need to be re-sequenced or repooled in each sample). **umi_heatmap.html** is
 	  also useful for visualizing the performance of each MIP in each sample
@@ -79,11 +79,42 @@ A few directories are required for most operations.
 		- A few redundant json and csv files for easy access to MIP information. Our goal
 		  is to remove these in the future.
 
-Analyzing the Data
-==================
-Now that we know what steps will be performed and how files are organized, we
-can look at a hypothetical dataset. The tutorial dataset contains 56 samples
-sequenced with 57 targeted genomic regions corresponding to known drug
+Setting up your environment
+===========================
+Now that you know what steps will be performed and how files are organized, you
+can set up your computer for analysis. This analysis can be done on any linux
+computer that has singularity installed.
+
+| You can obtain a copy of our latest sif file from here:
+| https://baileylab.brown.edu/MIPTools/download/miptools_dev.sif
+| This includes all executable programs needed for analysis
+
+
+| In general, when you analyze any dataset, you should cd into a folder where
+you'd like your analysis to go and run this command to download all relevant
+scripts (plus a little text editor):
+| :code:`singularity run -B $(pwd -P):/opt/config /path/to/your/downloaded/miptools_dev.sif`
+
+Editing Settings
+----------------
+For convenience, settings can be passed in to all steps via a single shared
+yaml file, called config.yaml. After downloading, open the file for editing
+with a text editor and make sure to **follow the instructions in this file**,
+editing it to contain the correct paths to your files (including project
+resources, species resources, sample sheet, and sif files), as well as the
+locations where you'd like the output to be sent.
+
+|If the computer you're on is a remote computer, you can edit the config.yaml
+ file using the text editor "micro" using this command:
+| :code:`./micro config.yaml` 
+| micro offers mouse support (so you can click a field of text to start editing
+ it) and allows you to copy with ctrl-C, paste with ctrl-V, save with ctrl-S,
+ and quit with ctrl-Q.
+
+Analyzing an example dataset
+----------------------------
+To assist you, we've created a hypothetical dataset. This dataset contains 56
+samples sequenced with 57 targeted genomic regions corresponding to known drug
 resistance mutations of the P. falciparum genome. It assumes that MIPs have
 already been designed, and that these MIPs have been used to target our regions
 of interest, and that samples have already been pooled together, sequenced with
@@ -98,43 +129,32 @@ reads as output.
 | The downloaded tutorial dataset can be extracted with this command:
 | :code:`tar -xvzf tutorial_dataset.tar.gz`
 
-
-| You can obtain a copy of our latest sif file from here:
-| https://baileylab.brown.edu/MIPTools/download/miptools_dev.sif
-| This includes all executable programs needed for analysis
-
-Editing Settings
-----------------
-| For convenience, settings can be passed in to all steps via a single shared yaml file. Later in the tutorial, we'll show some more advanced usage options available for troubleshooting and passing more customizable inputs. For now, you can obtain an example simple settings file with this command:
-| :code:`wget https://github.com/bailey-lab/MIPTools/raw/master/user_scripts/config.yaml`
-| After downloading, open the file for editing with a text editor and make sure to **follow the instructions in this file**, editing it to contain the correct paths to the files you downloaded above (including project resources, species resources, sample sheet, and sif files), as well as the locations where you'd like the output to be sent.
-
-| Make sure to edit the settings for all steps that you intend to run before running them. If you open the config file, you should see which settings (in the config.yaml file downloaded above) pertain to each of the steps below.
-
 Wrangling
 ---------
-| We've provided a bash script for converting the yaml settings into instructions for the wrangler. You can obtain the bash script for wrangling with this command (put it in the same folder as the settings yaml file):
-| :code:`wget https://github.com/bailey-lab/MIPTools/raw/master/user_scripts/wrangler_by_sample.sh`
+See the "background" section above for what wrangling is and what output files
+it produces.
 
-| After editing the config.yaml file, you can execute the wrangler script with:
+| After editing the config.yaml file using the instructions in the yaml, you can
+ execute the wrangler script with:
 | :code:`bash wrangler_by_sample.sh`
 
 Checking run stats
 ------------------
-| You can obtain the script for checking run stats here (put it in the same folder as the settings file):
-| :code:`wget https://github.com/bailey-lab/MIPTools/raw/master/user_scripts/check_run_stats.sh`
+See the "background" section above for what check_run_stats is and what output
+files it produces.
 
-| After editing the relevant config.yaml file sections, you can execute the check_run_stats script with:
+| After editing the config.yaml file using the instructions in the yaml, you can
+ execute the check_run_stats script with:
 | :code:`bash check_run_stats.sh`
+
 
 Variant Calling
 ---------------
-Variant calling uses the same settings file as check_run_stats.
+See the "background" section above for what variant calling is and what output
+files it produces.
 
-| You can obtain the script for variant calling here (put it in the same folder as the settings file):
-| :code:`wget https://github.com/bailey-lab/MIPTools/raw/master/user_scripts/variant_calling.sh`
-
-| After editing the relevant config.yaml file sections, you can execute the variant_calling script with:
+| After editing the config.yaml file using the instructions in the file, you
+can execute the variant_calling script with:
 | :code:`bash variant_calling.sh`
 
 Resource Requirements
