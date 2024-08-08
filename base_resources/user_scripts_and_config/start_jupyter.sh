@@ -47,13 +47,22 @@ mkdir -p $(rmwt $variant_calling_folder)
 mkdir -p $(rmwt $wrangler_folder)
 
 # define singularity bindings and snakemake arguments to be used each time snakemake is called
-singularity_bindings="
- -B $(rmwt $project_resources):/opt/project_resources
- -B $(rmwt $species_resources):/opt/species_resources
- -B $(rmwt $wrangler_folder):/opt/user/wrangled_data
- -B $(rmwt $variant_calling_folder):/opt/user/stats_and_variant_calling
- -B $(rmwt $prevalence_metadata):/opt/user/prevalence_metadata
- -B $newhome:/opt/config"
+if [ -z "$prevalence_metadata" ]; then # don't include prevalence data if user has left it blank
+   singularity_bindings="
+    -B $(rmwt $project_resources):/opt/project_resources
+    -B $(rmwt $species_resources):/opt/species_resources
+    -B $(rmwt $wrangler_folder):/opt/user/wrangled_data
+    -B $(rmwt $variant_calling_folder):/opt/user/stats_and_variant_calling
+    -B $newhome:/opt/config"
+else
+   singularity_bindings="
+    -B $(rmwt $project_resources):/opt/project_resources
+    -B $(rmwt $species_resources):/opt/species_resources
+    -B $(rmwt $wrangler_folder):/opt/user/wrangled_data
+    -B $(rmwt $variant_calling_folder):/opt/user/stats_and_variant_calling
+    -B $(rmwt $prevalence_metadata):/opt/user/prevalence_metadata
+    -B $newhome:/opt/config"
+fi
 
 singularity run \
   $singularity_bindings \

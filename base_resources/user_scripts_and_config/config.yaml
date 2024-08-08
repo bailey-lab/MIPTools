@@ -85,7 +85,8 @@ num_samples_umi: 2
 min_umi: 3
 
 ###### prevalence metadata directory ######
-prevalence_metadata: input_data/metadata_files
+# leave blank if you don't have any metadata files
+prevalence_metadata: 
 
 ####################################################################
 ##                  Advanced Options and Settings                 ##
