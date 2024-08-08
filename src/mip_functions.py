@@ -5280,7 +5280,7 @@ def get_haplotype_counts(settings):
     # 3) Estimate the copy number of each "Gene"
     # from the average copy count of uniquely mapping
     # data for all MIPs within the gene.
-    copy_counts.to_csv('copy_counts.csv')
+    # copy_counts.to_csv('copy_counts.csv')
     # cc = copy_counts.groupby(level=["Gene", "Copy"], axis=1).sum()
     cc = copy_counts.T.groupby(level=["Gene", "Copy"]).sum().T
     # gc = copy_counts.groupby(level=["Gene"], axis=1).sum()
@@ -5652,7 +5652,7 @@ def freebayes_call(
         # contigs.fillna({"contains_targets": False}, inplace=True)
         with pd.option_context("future.no_silent_downcasting", True):
             contigs["contains_targets"] = contigs["contains_targets"].fillna(False).infer_objects(copy=False)
-        contigs.to_csv('contigs_new.csv')
+        # contigs.to_csv('contigs_new.csv')
         # create a targets.vcf file for freebayes
         targets_vcf = os.path.join(wdir, "targets.vcf")
         with open(targets_vcf, "w") as outfile:
