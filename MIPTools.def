@@ -239,7 +239,8 @@ From: amd64/ubuntu:22.04
 
     # Port forwarding setup
     nb_port=$(shuf -i 8000-9999 -n 1)
-    server_ip=$(hostname -i)
+    # server_ip=$(hostname -i)
+    server_ip=$(hostname -I | awk '{print $1}')
     server_user=$(whoami)@$(hostname -f)
     nb_dir=/opt
 
