@@ -205,7 +205,7 @@ rule concatenate_summary_files:
 		stitch_info_by_target = output_folder + "/stitchInfoByTarget.tsv.gz",
 
 	shell:
-		"""
+		r"""
 		sed -r '1d;s/(\s+)?\S+//2' {output_folder}/analysis/resources/sampleInputFiles.tab.txt |
 			awk '$2=$1' |
 			sed "s/ /\//g;s/$/_mipExtraction\/extractInfoSummary.txt/g;s/^/\/opt\/user\/wrangled_data\/analysis\//g" \
