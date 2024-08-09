@@ -2,55 +2,72 @@
 An example longitudinal study
 =============================
 
-.. note:: 
-	
-	This guide is currently under active development and should not be used by
+FIX
+   *try to keep to basic rst markdown and figure out why rst is not properly working*
+
+.. DANGER:: This guide is currently under active development and should not be used by
 	new users of this software until it has been finished and validated. This
 	tutorial assumes that you have access to a linux computer that has a copy
 	of singularity installed on it, and that you have basic familiarity with
 	running commands in a terminal and editing plain text files.
 
-
-This dataset consists of cherrypicked samples from the Conrad et al. article
+This dataset is a subset of  samples, sites and years from the Conrad et al. 
 "Evolution of Partial Resistance to Artemisinins in Malaria Parasites in
 Uganda." This article was published in 2023 in the New England Journal of
-Medicine with PMID 37611122.
+Medicine, PMID 37611122.  
 
-Although the original study consists of thousands of samples from sixteen
-districts of Uganda across seven years, we needed a much smaller dataset for
-this tutorial, that would be easy to download, analyze, and interpret. We
-therefore chose three years (2016, 2019, and 2022) from four districts (Agago,
-Amolatar, Kole, and Kabale), using only the informative reads from 220 samples
-chosen to yield prevalences that reproduce the main findings of the original
-study. We also chose to include only MIPs covering essential drug resistance
-genes (Kelch13, dhps, dhfr, crt, mdr1, PM2, and PM3). The breakdown of these
-220 samples is as follows:
+FIX
+  *Add link to the paper or PMID above*
 
-- 20 samples from each of the four districts in 2016
-- 17 samples from Agago in 2019
-- 13 samples from Amolatar in 2019
-- 14 samples from Kabale in 2019
-- 20 samples from Kole in 2019
-- 20 samples from Agago, Kabale, and Kole in 2022
-- 16 samples from Amolatar in 2022
+	NOTE ADDTIONAL DETAILS: The original study consists of thousands of samples from sixteen
+	districts of Uganda across seven years.  For illustration purposes we have chosen a smaller
+	amount of data: three years (2016, 2019, and 2022) and four districts (Agago,
+	Amolatar, Kole, and Kabale), a total of 220 samples and a limited set of drug resistance MIPs 
+	for key genes 	(Kelch13, dhps, dhfr, crt, mdr1, PM2, and PM3)	
+ 	(euvallvent of MIP set DR23K)   although DR2 panel was originally used)  
+	
+	The breakdown of samples is: 
 
-| The tutorial dataset can be downloaded from here:
-| https://baileylab.brown.edu/MIPTools/download/tutorial_dataset.tar.gz
-| The dataset can be extracted with this command:
-| :code:`tar -xvzf tutorial_dataset.tar.gz`
+	- 20 samples from each of the four districts in 2016
+	- 17 samples from Agago in 2019
+	- 13 samples from Amolatar in 2019
+	- 14 samples from Kabale in 2019
+	- 20 samples from Kole in 2019
+	- 20 samples from Agago, Kabale, and Kole in 2022
+	- 16 samples from Amolatar in 2022
+
+| The tutorial dataset can be downloaded from here: https://baileylab.brown.edu/MIPTools/download/tutorial_dataset.tar.gz
+
+FIX 
+  *Coed blocks throughout   double colon should be the proper use -- try in sphinx/read teh docs -- code blocks specific is not working properly.  *
+
+FIX 
+  *tutorail dataset to download into folder/directory called ugandatutorial  with tutorial_dataset folder and preconfigured ugandaconfig file there... *
+
+The dataset can be extracted with this command ::
+	tar -xvzf tutorial_dataset.tar.gz
 
 | You can obtain a copy of our latest sif file from here:
 | https://baileylab.brown.edu/MIPTools/download/miptools_dev.sif
 | This includes all executable programs needed for analysis
 
+FIX 
+  *add a wget command for linux/uinix users for the key downlaods*
+
 For this tutorial to work without modifying any of the settings, you'll need to
 move the sif file into the tutorial_dataset folder.
+
+FIX
+   *Make this an app command for universal consistency   extact config_templates? otherwise it is just magic*
 
 | To obtain a copy of the config files used for this tutorial, cd into the
  tutorial_dataset folder and execute this command:
 | :code:`singularity run -B $(pwd -P):/opt/config miptools_dev.sif`
  (remember that a prerequisite for this tutorial is an installed copy of
  singularity on your computer).
+
+
+FIX  Make below  a NOTE  
 
 | In general, when you analyze any dataset, you should cd into a folder and run
  the
