@@ -2,7 +2,7 @@
 An example longitudinal study
 =============================
 
-FIX
+**FIX**
    *try to keep to basic rst markdown and figure out why rst is not properly working*
 
 .. DANGER:: This guide is currently under active development and should not be used by
@@ -11,79 +11,59 @@ FIX
 	of singularity installed on it, and that you have basic familiarity with
 	running commands in a terminal and editing plain text files.
 
-This dataset is a subset of  samples, sites and years from the Conrad et al. 
-"Evolution of Partial Resistance to Artemisinins in Malaria Parasites in
-Uganda." This article was published in 2023 in the New England Journal of
-Medicine, PMID 37611122.  
-
+TOC 
+==========================
 FIX
-  *Add link to the paper or PMID above*
+  *Add a table of contents*
 
-	NOTE ADDTIONAL DETAILS: The original study consists of thousands of samples from sixteen
-	districts of Uganda across seven years.  For illustration purposes we have chosen a smaller
-	amount of data: three years (2016, 2019, and 2022) and four districts (Agago,
-	Amolatar, Kole, and Kabale), a total of 220 samples and a limited set of drug resistance MIPs 
-	for key genes 	(Kelch13, dhps, dhfr, crt, mdr1, PM2, and PM3)	
- 	(euvallvent of MIP set DR23K)   although DR2 panel was originally used)  
-	
-	The breakdown of samples is: 
 
-	- 20 samples from each of the four districts in 2016
-	- 17 samples from Agago in 2019
-	- 13 samples from Amolatar in 2019
-	- 14 samples from Kabale in 2019
-	- 20 samples from Kole in 2019
-	- 20 samples from Agago, Kabale, and Kole in 2022
-	- 16 samples from Amolatar in 2022
+Overview
+============================
+**FIX Give a big picture overveiw here (JAB)**
 
-| The tutorial dataset can be downloaded from here: https://baileylab.brown.edu/MIPTools/download/tutorial_dataset.tar.gz
+This tutorial starts with demultiplexed fastq reads that you would get coming off the sequencer.  
+These will be processed in analyzed in the following steps
 
-FIX 
-  *Coed blocks throughout   double colon should be the proper use -- try in sphinx/read teh docs -- code blocks specific is not working properly.  *
+* MIP wrangling: taking the sequence reads and generate the microhaplotypes and UMI counts
+* Examination of statistics related to the wrangler (microhaplotype) results
+* MIP variant calling:  determining the nucleotide and protein variatns within the MIP microhaplotypes 
+* Analysis of the varants...  
 
-FIX 
-  *tutorail dataset to download into folder/directory called ugandatutorial  with tutorial_dataset folder and preconfigured ugandaconfig file there... *
+We suggest you read the general overview of MIP tools here before proceeding (** add a link to general overview **)
+
+
+
+
+Downloading Need Files 
+==============================
+The tutorial dataset can be downloaded from here: https://baileylab.brown.edu/MIPTools/download/tutorial_dataset.tar.gz
+
+**FIX  Code blocks throughout   double colon should be the proper use -- try in sphinx/read teh docs -- code blocks specific is not working properly.  **
+
+** FIX tutorail dataset to download into folder/directory called ugandatutorial  with tutorial_dataset folder and preconfigured ugandaconfig file there... **
 
 The dataset can be extracted with this command ::
-	tar -xvzf tutorial_dataset.tar.gz
+
+   wget https://baileylab.brown.edu/MIPTools/download/tutorial_dataset.tar.gz
+   tar -xvzf tutorial_dataset.tar.gz
 
 | You can obtain a copy of our latest sif file from here:
 | https://baileylab.brown.edu/MIPTools/download/miptools_dev.sif
-| This includes all executable programs needed for analysis
 
-FIX 
-  *add a wget command for linux/uinix users for the key downlaods*
+To download the sif while in the tutorial folder::
 
-For this tutorial to work without modifying any of the settings, you'll need to
-move the sif file into the tutorial_dataset folder.
+  wget https://baileylab.brown.edu/MIPTools/download/miptools_dev.sif 
 
-FIX
-   *Make this an app command for universal consistency   extact config_templates? otherwise it is just magic*
-
-| To obtain a copy of the config files used for this tutorial, cd into the
- tutorial_dataset folder and execute this command:
-| :code:`singularity run -B $(pwd -P):/opt/config miptools_dev.sif`
- (remember that a prerequisite for this tutorial is an installed copy of
- singularity on your computer).
+For the tutorial to work without modifying commands move the sif into the tutorial folder
 
 
-FIX  Make below  a NOTE  
+| The directory should contain now contain:
+| :code:`uganda_config.yaml       tutorial_dataset  miptools_dev.sif`
 
-| In general, when you analyze any dataset, you should cd into a folder and run
- the
-| :code:`singularity run -B $(pwd -P):/opt/config /path/to/your/downloaded/miptools_dev.sif`
- step to download all config files. Unlike in the tutorial, you'll then need to
- modify the config.yaml file to point to your input files and parameters. If the
- computer you're on is a remote computer, you can edit the config.yaml file
- using the text editor "micro" using this command:
-| :code:`./micro config.yaml` 
-| micro offers mouse support (so you can click a field of text to start editing
- it) and allows you to copy with ctrl-C, paste with ctrl-V, save with ctrl-S,
- and quit with ctrl-Q.
-
-Understanding the input data
-----------------------------
-If you cd to the tutorial_dataset folder, you'll see a subfolder called
+Understanding the input files and data  
+====================================
+**FIX (JAB) this might make sense to move up next to dataset explaination ** 
+If you cd to the tutorial_dataset folder (**fix?  call directories**), you'll see a subfolder called
 input_data. This folder is organized into four main folders:
 
 - **pf_species_resources:** This folder includes an indexed copy of the
@@ -108,25 +88,75 @@ input_data. This folder is organized into four main folders:
   fastq files in this folder.
 
 The input_data folder also contains a sample sheet called
-cherrypicked_sample_sheet.tsv that has information about which samples are
+cherrypicked_sample_sheet.tsv (**call uganda_subset_sampple.shet.stv instead ???**) that has information about which samples are
 associated with a given project (because sometimes multiple projects are
 sequenced at the same time on a sequencer). These are known as sample_sets.
-For this dataset, there are three sample_set designations:
+For this tutorial, three different original sample sets are combined:
 
 - PRX-00 (2016 dataset)
 - PRX-04 (2019 dataset)
 - PRX-07 (2022 dataset)
 
-Editing Settings
-================
-For convenience, settings can be passed in to all steps via a single shared
-yaml file, called config.yaml. We've edited these settings to run with this
-tutorial dataset, but we highly recommend opening this file for editing with a
-text editor and reading the comments thoroughly - this file specifies inputs
-and outputs and controls all aspects of the behavior of the program.
+
+Running MIPTools
+========================
+
+Copying scripts and configuration templates 
+-----------------------------
+*While MIPTools can be run command by command directly with apptainer/singularity,  
+we have generated shell scripts for convience that can easily be run using yaml configureation files*
+
+Thus,the settings can be passed in to all MIPtool steps via a single shared
+yaml file, called config.yaml. (**FIX maybe miptools_config.yaml).
+We will walk through the process of generating yaml and setting proper parameters.
+
+To copy shell scripts and miptools_config.yaml to the working directory::
+
+  singularity run -B $(pwd -P):/opt/config  miptools_dev.sif
+
+NOTE: 
+	 In general, when you analyze any dataset, you should cd into a folder and run
+	 the
+	 :code:`singularity run -B $(pwd -P):/opt/config /path/to/your/downloaded/miptools_dev.sif`
+	 step to download all config files. Unlike in the tutorial, you'll then need to
+	 modify the config.yaml file to point to your input files and parameters. If the
+	 computer you're on is a remote computer, you can edit the config.yaml file
+	 using the text editor "micro" using this command:
+	 :code:`./micro config.yaml` 
+	 micro offers mouse support (so you can click a field of text to start editing
+	 it) and allows you to copy with ctrl-C, paste with ctrl-V, save with ctrl-S,
+	 and quit with ctrl-Q.
+
+  singularity run -B $(pwd -P):/opt/config /path/to/your/downloaded/miptools_dev.sif
+
+Configuring the miptools_config.yaml
+----------------------------
+
+We will now configure the yaml config file: 
+
+	Note: you can use the preocnfigured **uganda_miptools_config.yaml** if you prefer in the tutorial folder and 
+	We've edited these settings to run with this
+	tutorial dataset, but we highly recommend opening this file for editing with a
+	text editor and reading the comments thoroughly - this file specifies inputs
+	and outputs and controls all aspects of the behavior of the program.
+
+
+| In general, when you analyze any dataset, you should cd into a folder and run
+ the
+| :code:`singularity run -B $(pwd -P):/opt/config /path/to/your/downloaded/miptools_dev.sif`
+ step to download all config files. Unlike in the tutorial, you'll then need to
+ modify the config.yaml file to point to your input files and parameters. If the
+ computer you're on is a remote computer, you can edit the config.yaml file
+ using the text editor "micro" using this command:
+| :code:`./micro config.yaml` 
+| micro offers mouse support (so you can click a field of text to start editing
+ it) and allows you to copy with ctrl-C, paste with ctrl-V, save with ctrl-S,
+ and quit with ctrl-Q.
+
+
 
 Wrangling
-=========
+-------------------------
 This step converts raw reads into error-corrected haplotypes, and collapses
 multiple reads that are duplicates of the same original sampled molecule into a
 single representative consensus sequence. Consensus sequences that are
@@ -159,11 +189,13 @@ If you'd like to learn more about how to directly interpret the wrangler
 output, you can check out the
 :ref:`advanced_wrangler_interpretation` page.
 
-Checking Run Statistics
+Checking Run Statistics  (**Name should change to checking wrangler stats**)
 =======================
 
-This step converts the wrangler output data into graphs and tables that tell a
-user which samples and mips succeeded and which may need to be run again.
+This step provides a summary of the wrangler results (MIP microhaplotype). 
+Statistics like the coverage (number of UMIs) is useful for determining which 
+samples have enough sequencing coverage and which may need to be repooled and sequenced 
+again (or recaptured) if no MIP sequences for a sample occured. 
 
 | While in the folder tutorial_dataset, you can execute the check_run_stats
  command with:
@@ -175,8 +207,6 @@ user which samples and mips succeeded and which may need to be run again.
  variable from the config.yaml file (e.g. stats_and_variant_calling). Click
  this folder, and click the "check_run_stats.ipynb" file. Follow
  the instructions in the notebook.
-
-
 
 Interpreting the run statistics
 -------------------------------
