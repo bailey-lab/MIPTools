@@ -1,116 +1,152 @@
 =============================
 An example longitudinal study
 =============================
+**FIX  Code blocks throughout   double colon should be the proper use -- try in sphinx/read teh docs -- code blocks specific is not working properly.  **
 
-.. note:: 
-	
-	This guide is currently under active development and should not be used by
+**FIX  try to keep to basic rst markdown and figure out why rst is not properly working**
+
+.. DANGER:: This guide is currently under active development and should not be used by
 	new users of this software until it has been finished and validated. This
 	tutorial assumes that you have access to a linux computer that has a copy
 	of singularity installed on it, and that you have basic familiarity with
 	running commands in a terminal and editing plain text files.
 
+TOC 
+==========================
+**FIX Add a table of contents**
 
-This dataset consists of cherrypicked samples from the Conrad et al. article
-"Evolution of Partial Resistance to Artemisinins in Malaria Parasites in
-Uganda." This article was published in 2023 in the New England Journal of
-Medicine with PMID 37611122.
+Overview
+============================
+**FIX Give a big picture overveiw here (JAB)**
 
-Although the original study consists of thousands of samples from sixteen
-districts of Uganda across seven years, we needed a much smaller dataset for
-this tutorial, that would be easy to download, analyze, and interpret. We
-therefore chose three years (2016, 2019, and 2022) from four districts (Agago,
-Amolatar, Kole, and Kabale), using only the informative reads from 220 samples
-chosen to yield prevalences that reproduce the main findings of the original
-study. We also chose to include only MIPs covering essential drug resistance
-genes (Kelch13, dhps, dhfr, crt, mdr1, PM2, and PM3). The breakdown of these
-220 samples is as follows:
+This tutorial starts with demultiplexed fastq reads from Illumina that you would get after tehy come off the sequencer.  
+These will be processed in analyzed in the following steps
 
-- 20 samples from each of the four districts in 2016
-- 17 samples from Agago in 2019
-- 13 samples from Amolatar in 2019
-- 14 samples from Kabale in 2019
-- 20 samples from Kole in 2019
-- 20 samples from Agago, Kabale, and Kole in 2022
-- 16 samples from Amolatar in 2022
+* MIP wrangling: taking the fastq sequence reads and generate the microhaplotypes and UMI counts (denoising)
+* check_wranger_stats: Examination of statistics related to the wrangler (microhaplotype) results
+* MIP variant calling:  determining the nucleotide and protein variatns within the MIP microhaplotypes 
+* Analysis of the varants...  
 
-| The tutorial dataset can be downloaded from here:
-| https://baileylab.brown.edu/MIPTools/download/tutorial_dataset.tar.gz
-| The dataset can be extracted with this command:
-| :code:`tar -xvzf tutorial_dataset.tar.gz`
+We suggest you read the general overview of MIP tools here before proceeding **FIX (JAB)add a link to general overview**
+
+Downloading Need Files 
+==============================
+The tutorial dataset can be downloaded from here: https://baileylab.brown.edu/MIPTools/download/tutorial_dataset.tar.gz
+
+** FIX tutorail dataset to download into folder/directory called ugandatutorial  with tutorial_dataset folder and preconfigured ugandaconfig file there... **
+
+The dataset can be extracted with this command ::
+
+   wget https://baileylab.brown.edu/MIPTools/download/tutorial_dataset.tar.gz
+   tar -xvzf tutorial_dataset.tar.gz
 
 | You can obtain a copy of our latest sif file from here:
 | https://baileylab.brown.edu/MIPTools/download/miptools_dev.sif
-| This includes all executable programs needed for analysis
 
-For this tutorial to work without modifying any of the settings, you'll need to
-move the sif file into the tutorial_dataset folder.
+To download the sif while in the tutorial folder::
 
-| To obtain a copy of the config files used for this tutorial, cd into the
- tutorial_dataset folder and execute this command:
-| :code:`singularity run -B $(pwd -P):/opt/config miptools_dev.sif`
- (remember that a prerequisite for this tutorial is an installed copy of
- singularity on your computer).
+  wget https://baileylab.brown.edu/MIPTools/download/miptools_dev.sif 
 
-| In general, when you analyze any dataset, you should cd into a folder and run
- the
-| :code:`singularity run -B $(pwd -P):/opt/config /path/to/your/downloaded/miptools_dev.sif`
- step to download all config files. Unlike in the tutorial, you'll then need to
- modify the config.yaml file to point to your input files and parameters. If the
- computer you're on is a remote computer, you can edit the config.yaml file
- using the text editor "micro" using this command:
-| :code:`./micro config.yaml` 
-| micro offers mouse support (so you can click a field of text to start editing
- it) and allows you to copy with ctrl-C, paste with ctrl-V, save with ctrl-S,
- and quit with ctrl-Q.
+For the tutorial to work without modifying commands move the sif into the tutorial folder
 
-Understanding the input data
-----------------------------
-If you cd to the tutorial_dataset folder, you'll see a subfolder called
-input_data. This folder is organized into four main folders:
+| The directory should contain now contain:
+| :code:`uganda_config.yaml      input_data   miptools_dev.sif`  
 
+**FIX** I would call input_data_and_resources or sequence_and_resources**
+
+Understanding the input data and resources  
+====================================
+**FIX (JAB) this might make sense to move up next to dataset explaination ** 
+
+If you cd to the tutorial_dataset folder (**fix?  call directories**), you'll see a subfolder called
+input_data. This folder is organized into four main folders:  **
+- **fastq_files:** These are the raw paired end sequencing reads associated
+  with each sample. Because there are 440 files for 220 samples (one file
+  forward and one reverse).
+- **metadata_files:** These include 2016_metadata.tsv, 2019_metadata.tsv,
+  and 2022_metadata.tsv, with collection site information for each sample.
+  These also include a geojson file, which we will use later for mapping
+  mutation prevalences.  **FIX (JAB) geojson is in metadata???**
 - **pf_species_resources:** This folder includes an indexed copy of the
   Pf3D7 falciparum genome, gene annotations, common SNPs, and a directory of
   key files.
-- **DR23K_project_resources:** Contains information about the mip panel (in
+- **DR23K_project_resources:** Contains information about the mip panel targets (in
   this case a panel called DR23K). Bound internally to :code:`/opt/project_resources`.
   Includes:
-    
   - A targets.tsv file with the genomic coordinates of any protein-coding
     mutations that are of particular interest.
   - A geneid_to_genename.tsv file that converts gene IDs (from  into common gene names.
   - A mip_ids folder that contains the mip arms of MIPs that target regions of the
     genome that are of interest.
-- **metadata_files:** These include 2016_metadata.tsv, 2019_metadata.tsv,
-  and 2022_metadata.tsv, with collection site information for each sample.
-  These also include a geojson file, which we will use later for mapping
-  mutation prevalences.
-- **fastq_files:** These are the raw paired end sequencing reads associated
-  with each sample. Because there are 220 samples and two read files (one
-  forward and one reverse) associated with each sample, you should see 440
-  fastq files in this folder.
 
 The input_data folder also contains a sample sheet called
-cherrypicked_sample_sheet.tsv that has information about which samples are
+cherrypicked_sample_sheet.tsv (**call uganda_subset_sampple.shet.stv instead ???**) that has information about which samples are
 associated with a given project (because sometimes multiple projects are
 sequenced at the same time on a sequencer). These are known as sample_sets.
-For this dataset, there are three sample_set designations:
+For this tutorial, three different original sample sets are combined:
 
 - PRX-00 (2016 dataset)
 - PRX-04 (2019 dataset)
 - PRX-07 (2022 dataset)
 
-Editing Settings
-================
-For convenience, settings can be passed in to all steps via a single shared
-yaml file, called config.yaml. We've edited these settings to run with this
-tutorial dataset, but we highly recommend opening this file for editing with a
-text editor and reading the comments thoroughly - this file specifies inputs
-and outputs and controls all aspects of the behavior of the program.
 
-Wrangling
-=========
-This step converts raw reads into error-corrected haplotypes, and collapses
+Running MIPTools Pipeline
+============================
+
+Copying scripts and configuration templates 
+------------------------------
+
+*While MIPTools can be run command by command directly with apptainer/singularity,  
+we have generated shell scripts for convience that can easily be run using yaml configureation files*
+
+Thus,the settings can be passed in to all MIPtool steps via a single shared
+yaml file, called config.yaml. (**FIX maybe miptools_config.yaml).
+We will walk through the process of generating yaml and setting proper parameters.
+
+To copy shell scripts and miptools_config.yaml to the working directory::
+
+  singularity run -B $(pwd -P):/opt/config  miptools_dev.sif
+
+NOTE: 
+	 In general, when you analyze any dataset, you should cd into a folder and run
+	 the
+	 :code:`singularity run -B $(pwd -P):/opt/config /path/to/your/downloaded/miptools_dev.sif`
+	 step to download all config files. Unlike in the tutorial, you'll then need to
+	 modify the config.yaml file to point to your input files and parameters. If the
+	 computer you're on is a remote computer, you can edit the config.yaml file
+	 using the text editor "micro" using this command:
+	 :code:`./micro config.yaml` 
+	 micro offers mouse support (so you can click a field of text to start editing
+	 it) and allows you to copy with ctrl-C, paste with ctrl-V, save with ctrl-S,
+	 and quit with ctrl-Q.
+
+  singularity run -B $(pwd -P):/opt/config /path/to/your/downloaded/miptools_dev.sif
+
+Configuring the miptools_config.yaml
+----------------------------
+
+We will now configure the yaml config file: 
+
+	NOTE: you can use the preocnfigured **uganda_miptools_config.yaml** if you prefer in the tutorial folder and 
+	We've edited these settings to run with this
+	tutorial dataset, but we highly recommend opening this file for editing with a
+	text editor and reading the comments thoroughly - this file specifies inputs
+	and outputs and controls all aspects of the behavior of the program.
+
+**==============================***
+**======== STEP BY STEP CONFIG ====***
+
+* set fasta directory
+* set project resources
+* etc
+
+**ADD THE CONFIGURATION STEPS THAT YOU NEED TO DO**
+**===============================**
+
+
+Wrangling 
+-------------------------
+This step converts raw reads into error-corrected haplotypes leveraging the UMIs.  collapses
 multiple reads that are duplicates of the same original sampled molecule into a
 single representative consensus sequence. Consensus sequences that are
 identical to each other are named as haplotypes. This step also reports the
@@ -127,26 +163,29 @@ PCR amplification).
 
 Interpreting the wrangler output
 --------------------------------
-In the pre-configured settings, output of the wrangling step will go to a
-folder called "wrangled_data." This is controlled by the wrangler_folder
-variable in the config.yaml file.  If you'd like to see the "raw" outputs of
-the wrangler, the main output file is called allInfo.tsv.gz and it can be
-unzipped for reading in tabular format. Each row gives UMI counts, genetic
-sequence, and statistics associated with a single haplotype associated with a
-particular MIP of a particular sample.
-
-Later steps will parse this table into graphical formats that will be easier to
+In the miptools_config.yaml,  the output folder is `wrangler_folder: wrangled_data` go to a  
+**FIX should this be wrandler_output instead of wrangler_data**
+The wrangler step usually doesn't not involve changing any wrangler parameters (default works well).  
+Also, the varous output files are normally not directly opened or modified. Later steps 
+will parse this table into graphical formats that will be easier to
 interpret.
 
-If you'd like to learn more about how to directly interpret the wrangler
-output, you can check out the
-:ref:`advanced_wrangler_interpretation` page.
+	NOTE: The main output file is called allInfo.tsv.gz and if needed can be
+	unzipped for reading in tabular format. Each row gives UMI counts, the genetic
+	sequence, and statistics associated with a single haplotype associated with a
+	particular MIP of a particular sample.  
 
-Checking Run Statistics
-=======================
+	If you'd like to learn more about 
+	how to directly interpret the wrangler output, you can check out the
+	:ref:`advanced_wrangler_interpretation` page. **FIX wording is wierd ** 
 
-This step converts the wrangler output data into graphs and tables that tell a
-user which samples and mips succeeded and which may need to be run again.
+Checking wrangler output statistics Checking Run Statistics  (**Name should change to checking wrangler stats and **)
+--------------------------------
+
+This step provides a summary of the wrangler results (MIP microhaplotype statistics). 
+Statistics like the coverage (number of UMIs) is useful for determining which 
+samples have enough sequencing coverage and which may need to be repooled and sequenced 
+again (or recaptured) if no MIP sequences for a sample occured. 
 
 | While in the folder tutorial_dataset, you can execute the check_run_stats
  command with:
@@ -159,22 +198,24 @@ user which samples and mips succeeded and which may need to be run again.
  this folder, and click the "check_run_stats.ipynb" file. Follow
  the instructions in the notebook.
 
-
-
 Interpreting the run statistics
--------------------------------
+---------------------------------
 In the pre-configured settings, output of the check_run_stats step will go to a
 folder called "stats_and_variant_calling." This is controlled by the
 variant_calling_folder variable in the config.yaml file. There are a few key
-output files that are useful to examine:
+output files that are useful to examine.    **FIX I might suggest wrangler_stats for a folder or check_wrangler_stats (with notebook within)**
 
-- **umi_heatmap.html**: This file can be downloaded and opened with a web
-  browser. It includes The names of all samples (y-axis) and the names of all
+**FIX in terms of output can modify to allow more than just targets_with_1UMI and targets_with_10UMIs)   can we make that adjustable not necessary for publication 
+
+** FIX below I would number by the cells  to keep order the same order as the pdf ** 
+
+- **01_umi_heatmap.html**: This file can be opened with a web
+  browser. It includes the names of all samples (y-axis) and the names of all
   MIPs (x-axis). In the tutorial dataset, DR23K has 121 mips, and in the
   tutorial dataset, there are 220 samples. Not all of these samples are
   visible, but if you zoom in (by clicking and dragging) you can see all
   labels. By hovering over a box on the heatmap, you can see how many UMIs are
-  associated with each sample and each MIP.
+  associated with each sample and each MIP.  **can we code zeros (0+1 log) as NAs which would make clear we had not UMIs)**
   
   - If you look for bright rows in this dataset, you can see that some samples,
     such as KO-07-001-PRX-07-1, performed extremely well across almost all MIPs,
@@ -226,25 +267,22 @@ output files that are useful to examine:
   Reads from earlier runs can be pooled with reads from later runs so that reads
   from samples that are not "Complete" are not wasted.
 
-Variant Calling
-===============
+Variant Calling (Haplotypes to simple variants)
+-----------------
 This step takes haplotypes (from the Wrangling step) and maps them to the
-reference genome (in this case 3D7). This step uses an annotation file and a
-list of mutations of interest to name all of the mutations that were seen in the
-dataset, as well as count the number of UMIs that were associated with the
-reference genome and the number of UMIs that were associated with the mutant in
-each sample.
+reference genome (in this case 3D7) in order to call simple variants (SNPs and small indels). 
+Multiple VCFs and tables are generated.  The key steps are:
 
-| After editing the relevant config.yaml file sections you can execute the
- variant_calling script (while in the tutorial_dataset folder) with:
-| :code:`bash variant_calling.sh`
+* mapping with bwa of MIP haplotypes to a reference genome creating a bam file
+* freebayes variant calling using the bam file
+* bcf tools is used to ensure variants are decomposed into simple variants. 
+* further processing of files into tables that provide nucleotide and protein coding changes and ensuring specific variant sites are include even if invariant in the sample set. 
 
-| Alternatively, you can run this jupyter script:
-| :code:`bash start_jupyter.sh`
- There should be a folder with a name that matches the "variant_calling_folder"
- variable from the config.yaml file (e.g. stats_and_variant_calling). Click
- this folder, and click the "variant_calling.ipynb" file. Follow
- the instructions in the notebook.
+NOTE: Minimal filtering is done during this step as downstream analyses may require more or less stringent fitlering. Key inputs in the yaml file can be viewed in the miptools_config.yaml file. 
+
+| Alternatively, you can run variant calling through the  jupyter notebook: via :code:`bash start_jupyter.sh`,
+and then, select and open the "variant_calling.ipynb"  within the   " stats_and_variant_calling" folder. 
+the instructions in the notebook.
 
 
 Interpreting the variant calling
@@ -265,41 +303,54 @@ output files that are useful to examine:
   The files below describe the number of UMI counts associated with each
   mutation. Every column is a different mutation, and every row is a sample.
 
-  - *coverage_AA_table.csv* - The number of total UMIs associated with the
-    region of the genome covered by the mutation in a sample.
-  - *reference_AA_table.csv* - The number of UMIs associated with the reference
-    allele in a sample.
+**ADD A LINE for a complete description of all the files see ** 
+
+**RENAME annotated_[NT/AA]_[wildtype/mutant/coverage]** WT/MUT/COV   ALT REF
+ 
+
+  - *coverage_AA_table.csv* - The total UMI depth at a variant site.  
+  - *reference_AA_table.csv* - The number of UMIs associated with the wildtype (usually reference but not always)
+    allele in a sample.  ** 
   - *alternate_AA_table.csv* - The number of UMIs associated with the mutated
     allele in a sample.
 
-The within sample allele frequency of a mutation is obtained by dividing the
-alternate UMI count in a sample be the coverage UMI count of the sample, and the
-prevalence of a mutation is obtained by counting the number of samples that meet
-some minimum coverage UMI count and that have an alternate UMI count greater
-than some minimum level. By setting a minimum UMI coverage of three and a
-minimum UMI alternate count of one, we can see how many samples meet these
-criteria. As two examples:
 
-- The crt-Asn75Glu mutation (column BG) has 183 samples that have values of at
-  least 3 in the coverage_AA_table, and 11 of these samples have values of at
-  least 1 in the alternate_AA_table. The overall prevalence of the crt-Asn75Glu
-  mutation at these coverage and alternate thresholds is 11/183 or 6%.
-- The dhfr-ts-Cys59Arg mutation (column D) has 199 samples that have values of at
-  least 3 in the coverage_AA_table, and 193 of these samples have values of at
-  least 1 in the alternate_AA_table. The overall prevalence of the
-  dhfr-ts-Cys59Arg mutation at these coverage and alternate thresholds is
-  193/197, or 97%
+
 
 In the next section, we'll use metadata files to perform a more detailed
 prevalence calling for individual regions and individual years.
 
-prevalence Calling
-==================
+Basic Genomic Epi Analysis (examining frequency and prevalence)
+----------------------
+BACKGROUND
+	**MOVE INTO ANALYSIS** 
+	The within sample allele frequency of a mutation is obtained by dividing the
+	alternate UMI count in a sample be the coverage UMI count of the sample, and the
+	prevalence of a mutation is obtained by counting the number of samples that meet
+	some minimum coverage UMI count and that have an alternate UMI count greater
+	than some minimum level. By setting a minimum UMI coverage of three and a
+	minimum UMI alternate count of one, we can see how many samples meet these
+	criteria. As two examples:
+	
+	- The crt-Asn75Glu mutation (column BG) has 183 samples that have values of at
+	  least 3 in the coverage_AA_table, and 11 of these samples have values of at
+	  least 1 in the alternate_AA_table. The overall prevalence of the crt-Asn75Glu
+	  mutation at these coverage and alternate thresholds is 11/183 or 6%.
+	- The dhfr-ts-Cys59Arg mutation (column D) has 199 samples that have values of at
+	  least 3 in the coverage_AA_table, and 193 of these samples have values of at
+	  least 1 in the alternate_AA_table. The overall prevalence of the
+	  dhfr-ts-Cys59Arg mutation at these coverage and alternate thresholds is
+	  193/197, or 97%
+
+
 For this step, you'll need to open a Jupyter notebook. If you change directory
 to the tutorial_dataset folder, you can launch the jupyter notebook with this
 command:
 
 | :code:`bash start_jupyter.sh`
+
+** Looks great-- tables are getting saved which can be used for pubs or downstream work --input to other programs **
+** add pie chart maps,  add gene/variant histogram overall prevalence ,  a mutation by regions ** 
 
 After launching the jupyter notebook, leave the terminal window open. If you're
 running the Jupyter notebook on a remote server, you may need to use port
