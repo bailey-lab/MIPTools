@@ -1,5 +1,8 @@
 # MIPTools
 
+#THIS NEEDS TO LINK TO REad the docs AND ONLY HAVE THE MOST BASIC INFO HERE
+
+
 <!-- [![Build Singularity](https://github.com/bailey-lab/MIPTools/actions/workflows/build-container.yaml/badge.svg)](https://github.com/bailey-lab/MIPTools/actions/workflows/build-container.yaml) -->
 
 ![GitHub release (latest
