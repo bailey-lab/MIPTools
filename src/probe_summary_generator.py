@@ -7,7 +7,7 @@ def get_probe_info(probe_set_keys=None, output_file=None,
                    probe_sets_file=None, mip_info_file=None):
     used_probes = set()
     if probe_sets_file is None:
-        probe_sets_file = "/opt/project_resources/mip_ids/probe_sets.json"
+        probe_sets_file = "/opt/stats_and_variant_calling/probe_sets.json"
     if mip_info_file is None:
         mip_info_file = "/opt/project_resources/mip_ids/mip_info.json"
     if probe_set_keys is not None:
@@ -69,7 +69,7 @@ def get_probe_call_info(probe_set_keys=None, output_file=None,
                         probe_sets_file=None, call_info_file=None):
     used_probes = set()
     if probe_sets_file is None:
-        probe_sets_file = "/opt/project_resources/mip_ids/probe_sets.json"
+        probe_sets_file = "/opt/stats_and_variant_calling/probe_sets.json"
     if call_info_file is None:
         call_info_file = "/opt/project_resources/mip_ids/call_info.json"
     if probe_set_keys is not None:
@@ -156,7 +156,7 @@ def merge_mip_infos(file_list, output_file=None):
 
 def update_probe_sets(
         mipset_table="/opt/project_resources/mip_ids/mipsets.csv",
-        mipset_json="/opt/project_resources/mip_ids/probe_sets.json"):
+        mipset_json="/opt/stats_and_variant_calling/probe_sets.json"):
     mipsets = pd.read_csv(mipset_table)
     mipset_list = mipsets.to_dict(orient="list")
     mipset_dict = {}

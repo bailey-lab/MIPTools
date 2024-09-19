@@ -1,3 +1,4 @@
+name: conda_environment
 channels:
   - conda-forge
   - bioconda
@@ -27,6 +28,8 @@ dependencies:
   - pip
   - pip:
       - mipscripts
+      - scif
+      - shyaml
   - plotly
   - plotnine
   - primer3

@@ -2646,7 +2646,6 @@ def bowtie(
     subprocess.check_output(com)
     return 0
 
-
 def bwa(
     fastq_file,
     output_file,
@@ -2684,14 +2683,14 @@ def bwa(
         com.extend(options)
         com.append(genome_file)
         com.append(os.path.join(input_dir, fastq_file))
-        with open(os.path.join(output_dir, output_file), "w") as outfile:
-            subprocess.check_call(com, stdout=outfile, stderr = open('bwa1.txt','a'))
+        with open(output_file, "w") as outfile:
+            subprocess.check_call(com, stdout=outfile, stderr = open(os.path.join(output_dir, 'bwa1.txt'),'a'))
     else:
         com = ["bwa"]
         com.extend(options)
         com.append(genome_file)
         com.append(os.path.join(input_dir, fastq_file))
-        sam = subprocess.Popen(com, stdout=subprocess.PIPE, stderr=open('sam_subprocess.txt','a'))
+        sam = subprocess.Popen(com, stdout=subprocess.PIPE, stderr=open(os.path.join(output_dir, 'sam_subprocess.txt'),'a'))
         bam_com = ["samtools", "view", "-b"]
         bam = subprocess.Popen(bam_com, stdin=sam.stdout, stdout=subprocess.PIPE)
         bam_file = os.path.join(output_dir, output_file)
@@ -4996,7 +4995,7 @@ def map_haplotypes(settings):
             outfile.write(haps[h]["haplotype_sequence"] + "\n" + "+" + "\n")
             outfile.write(haps[h]["quality"] + "\n")
     # run bwa
-    bwa(haplotypes_fq_file, haplotypes_sam_file, "sam", "", "", bwa_options, species)
+    bwa(haplotypes_fq_file, haplotypes_sam_file, "sam", "", wdir, bwa_options, species)
     # process alignment output sam file
     header = [
         "haplotype_ID",
@@ -5034,7 +5033,7 @@ def map_haplotypes(settings):
     # add MIP column to alignment results
     sam["MIP"] = sam["haplotype_ID"].apply(lambda a: a.split(".")[0])
     # create call_info data frame for all used probes in the experiment
-    probe_sets_file = settings["mipSetsDictionary"]
+    probe_sets_file = wdir + settings["mipSetsDictionary"]
     probe_set_keys = settings["mipSetKey"]
     used_probes = set()
     for psk in probe_set_keys:
@@ -5343,7 +5342,7 @@ def get_haplotype_counts(settings):
     # and merge with the count data.
     # create call_info data frame for all used probes in the experiment
     call_info_file = settings["callInfoDictionary"]
-    probe_sets_file = settings["mipSetsDictionary"]
+    probe_sets_file = wdir + settings["mipSetsDictionary"]
     probe_set_keys = settings["mipSetKey"]
     used_probes = set()
     for psk in probe_set_keys:
@@ -8484,7 +8483,7 @@ def combine_info_files(
     ].apply(lambda a: "-".join(a), axis=1)
     # load the probe set dictionary to extract the
     # probes that we're interested in
-    probe_sets_file = settings["mipSetsDictionary"]
+    probe_sets_file = wdir + settings["mipSetsDictionary"]
     probe_set_keys = settings["mipSetKey"]
     used_probes = set()
     for psk in probe_set_keys:
@@ -8621,7 +8620,7 @@ def process_info_file(
     run_meta["Sample ID"] = run_meta["Original SID"]
     # load the probe set dictionary to extract the
     # probes that we're interested in
-    probe_sets_file = settings["mipSetsDictionary"]
+    probe_sets_file = wdir + settings["mipSetsDictionary"]
     probe_set_keys = settings["mipSetKey"]
     used_probes = set()
     for psk in probe_set_keys:
@@ -8680,7 +8679,7 @@ def process_info_file(
 
 def update_probe_sets(
     mipset_table="/opt/project_resources/mip_ids/mipsets.csv",
-    mipset_json="/opt/project_resources/mip_ids/probe_sets.json",
+    mipset_json="probe_sets.json",
 ):
     mipsets = pd.read_csv(mipset_table)
     mipset_list = mipsets.to_dict(orient="list")
