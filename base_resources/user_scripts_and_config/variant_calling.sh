@@ -54,8 +54,8 @@ singularity_bindings="
  -B $newhome:/opt/config"
  # -B $(pwd -P):/opt/config"
  
-snakemake_args="--cores $(rmwt $general_cpu_count) --keep-going --rerun-incomplete --use-conda --latency-wait 60"
-freebayes_args="--cores $(rmwt $freebayes_cpu_count) --keep-going --rerun-incomplete --use-conda --latency-wait 60"
+snakemake_args="--cores $(rmwt $general_cpu_count) --keep-going --rerun-incomplete --latency-wait 60"
+freebayes_args="--cores $(rmwt $freebayes_cpu_count) --keep-going --rerun-incomplete --latency-wait 60"
 
 ##########################################
 # optional: unlock a crashed snakemake run
