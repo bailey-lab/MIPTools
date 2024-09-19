@@ -37,6 +37,6 @@ mip.write_analysis_settings(settings, wdir+'/settings.txt')
 #but this json file is required for other parts of the current pipeline to function correctly.
 try:
     mip.update_probe_sets("/opt/project_resources/mip_ids/mipsets.csv",
-                         "/opt/project_resources/mip_ids/probe_sets.json")
+                         wdir + "/probe_sets.json")
 except IOError:
     pass
