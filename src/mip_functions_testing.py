@@ -11194,7 +11194,7 @@ def combine_info_files(wdir,
 
 
 def update_probe_sets(mipset_table = "/opt/resources/mip_ids/mipsets.csv",
-                     mipset_json = "/opt/resources/mip_ids/probe_sets.json"):
+                     mipset_json = "probe_sets.json"):
     mipsets = pd.read_csv(mipset_table)
     mipset_list = mipsets.to_dict(orient="list")
     mipset_dict = {}

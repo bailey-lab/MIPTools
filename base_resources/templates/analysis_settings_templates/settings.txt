@@ -8,7 +8,7 @@
 ##############################################################################
 species	pf
 callInfoDictionary	/opt/project_resources/mip_ids/call_info.json
-mipSetsDictionary	/opt/project_resources/mip_ids/probe_sets.json
+mipSetsDictionary	probe_sets.json
 # create snp only vcf when using msa for variant calling
 snpOnlyVcf	0
 ##############  SETTINGS THAT CAN CHANGE PER RUN #############################
