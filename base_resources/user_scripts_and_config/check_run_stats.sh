@@ -53,7 +53,7 @@ singularity_bindings="
  -B $(rmwt $variant_calling_folder):/opt/user/stats_and_variant_calling
  -B $newhome:/opt/config"
  
-snakemake_args="--cores $(rmwt $general_cpu_count) --keep-going --rerun-incomplete --use-conda --latency-wait 60"
+snakemake_args="--cores $(rmwt $general_cpu_count) --keep-going --rerun-incomplete --latency-wait 60"
 
 ##########################################
 # optional: unlock a crashed snakemake run
