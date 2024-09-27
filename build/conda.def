@@ -1,0 +1,43 @@
+Bootstrap: docker
+From: amd64/ubuntu:22.04
+
+%files
+    conda_environment.yml /opt
+%post
+    # add to path
+    export PATH=/opt/conda/bin:/opt/conda_env/bin:$PATH
+    # apt installs
+    apt-get update \
+        && apt-get -yq dist-upgrade \
+        && apt-get install -yq --no-install-recommends \
+        ca-certificates \
+        wget 
+    # install miniforge
+    cd /tmp
+    wget -O Miniforge3.sh "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
+    bash Miniforge3.sh -bfp "/opt/conda"
+    rm Miniforge3.sh
+    conda config --system --set show_channel_urls true
+    conda clean -t --yes
+
+
+    # install from conda file
+    mamba env create -y --prefix /opt/conda_env --file /opt/conda_environment.yml
+
+    # install magrittr
+    Rscript -e 'devtools::install_version(
+        package = "magrittr",
+        version = "2.0.3",
+        repos = "https://cloud.r-project.org"
+    )'
+
+    # install RealMcCoil
+    Rscript -e 'devtools::install_github("OJWatson/McCOILR", ref = "v1.3.1")'
+
+    # install rehh
+    Rscript -e 'devtools::install_version(
+        package = "rehh", 
+        version = "3.2.2",
+        repos = "https://cloud.r-project.org"
+    )'
+    conda clean -a -y

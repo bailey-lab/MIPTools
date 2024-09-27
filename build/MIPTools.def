@@ -1,5 +1,14 @@
+Bootstrap: localimage
+From: wrangler.sif
+Stage: wrangler
+
+Bootstrap: localimage
+From: conda.sif
+Stage: conda
+
 Bootstrap: docker
-From: amd64/ubuntu:22.04
+From: amd64/ubuntu:24.04
+Stage: final
 
 ##################################################################
 ##                        Labels Section                        ##
@@ -7,24 +16,21 @@ From: amd64/ubuntu:22.04
 %labels
     Author Bailey Lab
     Version v0.4.0.9000
-
-##################################################################
-##                         Post Section                         ##
-##################################################################
+#################################################################
+##                        Files Section                        ##
+#################################################################
+%files from wrangler
+    /opt/bin/ /opt
+%files from conda
+    /opt/conda_env /opt
+%files
+    ../programs /opt
+    ../bin /opt
+    ../src /opt
+    ../snakemake /opt
+    ../base_resources/ /opt/resources
 %post
-    # set number of cpus to use in build
-    CPU_COUNT=20
-
-    # set build environment
-    export DEBIAN_FRONTEND=noninteractive \
-        SHELL=/bin/bash \
-        LANG=en_US.UTF-8 \
-        LANGUAGE=en_US.UTF-8 \
-        LC_ALL=en_US.UTF-8
-
-    # add conda env to path
-    export PATH=/opt/conda/bin:/opt/conda/environment/bin:${PATH}
-
+    # install system packages
     # install system packages
     apt-get update \
     && apt-get -yq dist-upgrade \
@@ -70,14 +76,6 @@ From: amd64/ubuntu:22.04
     wl-clipboard \
     xclip
 
-    # install miniforge
-    cd /tmp
-    wget -O Miniforge3.sh "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
-    bash Miniforge3.sh -bfp "/opt/conda"
-    rm Miniforge3.sh
-    conda config --system --set show_channel_urls true
-    conda clean -t --yes
-
     # set environment locale
     echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
     echo "LANG=en_US.UTF-8" > /etc/locale.conf
@@ -86,137 +84,23 @@ From: amd64/ubuntu:22.04
     locale-gen en_US.UTF-8
     update-locale LANG=en_US.UTF-8
 
-
     # install bcl2fastq, if the file is there
     cd /opt/programs
     unzip bcl2fastq2*.zip || true
     alien bcl2fastq2*.rpm || true
     dpkg -i bcl2fastq2*.deb || true
 
-    # Install mamba packages using an environment file.
-    # If the versioned file exists, use it as a template to ensure version
-    # numbers are fixed. Otherwise, install packages with the latest versions.
-   
-    if [ -f "/opt/resources/def_files/environment.tar.gz" ]; then
-        mkdir /opt/conda/environment
-        tar -xzf /opt/resources/def_files/environment.tar.gz -C /opt/conda/environment
-        rm /opt/resources/def_files/environment.tar.gz
-        conda-unpack
-    else
-        if [ -f "/opt/environment_versioned.yml" ]; then
-            mamba env create -y --prefix /opt/conda/environment --file /opt/environment_versioned.yml
-        else
-            # Update environment and save information to a file
-            mamba env create -y --prefix /opt/conda/environment --file /opt/environment_unversioned.yml
-            mamba env export --prefix /opt/conda/environment > /opt/environment_versioned.yml
-        fi
-        # install magrittr
-        Rscript -e 'devtools::install_version(
-            package = "magrittr",
-            version = "2.0.3",
-            repos = "https://cloud.r-project.org"
-        )'
-
-        # install RealMcCoil
-        Rscript -e 'devtools::install_github("OJWatson/McCOILR", ref = "v1.3.1")'
-
-        # install rehh
-        Rscript -e 'devtools::install_version(
-            package = "rehh", 
-            version = "3.2.2",
-            repos = "https://cloud.r-project.org"
-        )'
-    fi
-
-    # Clean mamba installs
-    mamba clean -t --yes
-
-    # enable bash kernel in jupyter
-    # pip install bash_kernel
-    /opt/conda/environment/bin/python -m bash_kernel.install
-
-    # install vt variant tool set
-    if [ -f "/opt/resources/def_files/vt" ]; then
-        mv /opt/resources/def_files/vt /opt/bin/vt
-    else
-        cd /opt/programs
-        git clone --branch 0.577 https://github.com/atks/vt.git
-        cd vt
-        make -j $CPU_COUNT
-        scp vt /opt/bin
-        cd /opt/programs
-        rm -r vt
-    fi
-
-
-    # install MIPWrangler
-    if [ -d "/opt/resources/def_files/MIPWrangler" ]; then
-        mv /opt/resources/def_files/MIPWrangler /opt/programs/MIPWrangler
-    else
-        cd /opt/programs
-        git clone --branch develop https://github.com/bailey-lab/MIPWrangler.git
-        cd MIPWrangler
-        ./install.sh $CPU_COUNT
-    fi
-
-    # # install elucidator
-    # cd /opt/programs
-    # git clone --branch develop https://github.com/nickjhathaway/elucidator.git
-    # cd elucidator
-    # ./install.sh $CPU_COUNT
-
-    # install parasight
-    if [ -f "/opt/resources/def_files/parasight.pl" ]; then
-        mv /opt/resources/def_files/parasight.pl /opt/bin/parasight.pl
-    else
-        cd /opt/programs
-        git clone --branch v7.6 https://github.com/bailey-lab/parasight.git
-        scp parasight/parasight.pl /opt/bin
-        rm -r parasight
-    fi
-
-    # install basespace cli
-    if [ -f "/opt/resources/def_files/bs" ]; then
-        mv /opt/resources/def_files/bs /opt/bin/bs
-    else
-        BS_VERSION=1.5.1
-        BS_PATH="https://launch.basespace.illumina.com/CLI/${BS_VERSION}/amd64-linux/bs"
-        wget $BS_PATH -O /opt/bin/bs
-    fi
-
     # add executable flag to executables
     chmod -R +xr /usr/bin
     chmod -R +xr /opt/bin
 
-    rm -rf /opt/resources/def_files
-
-    # create work and resources directories in /opt
-    # mkdir /opt/work \
-    #     /opt/project_resources \
-    #     /opt/species_resources \
-    #     /opt/data \
-    #     /opt/analysis \
-    #     /opt/host_species \
-    #     /opt/extras
-
-#################################################################
-##                        Files Section                        ##
-#################################################################
-%files
-    environment* /opt
-    programs /opt
-    bin /opt
-    src /opt
-    snakemake /opt
-    base_resources/ /opt/resources
 
 #################################################################
 ##                     Environment Section                     ##
 #################################################################
 %environment
-    path=/opt/bin:/opt/conda/environment/bin:/opt/conda/bin:
-    path=$path/opt/programs/MIPWrangler/bin:
-    path=$path/opt/programs/elucidator/bin:
+    path=/opt/bin:/opt/conda_env/bin:
+    path=$path/opt/bin/MIPWrangler/bin:
     path=$path$PATH
     export PATH=$path
     export XDG_RUNTIME_DIR=""

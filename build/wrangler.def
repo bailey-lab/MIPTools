@@ -1,0 +1,86 @@
+Bootstrap: docker
+From: amd64/ubuntu:22.04
+
+%post
+    # set number of cpus to use in build
+    CPU_COUNT=20
+
+    # set build environment
+    export DEBIAN_FRONTEND=noninteractive \
+        SHELL=/bin/bash \
+        LANG=en_US.UTF-8 \
+        LANGUAGE=en_US.UTF-8 \
+        LC_ALL=en_US.UTF-8
+
+    # install system packages
+    apt-get update \
+    && apt-get -yq dist-upgrade \
+    && apt-get install -yq --no-install-recommends \
+    alien \
+    autoconf \
+    automake \
+    build-essential \
+    bzip2 \
+    ca-certificates \
+    cmake \
+    fonts-dejavu \
+    fonts-liberation \
+    g++-10 \
+    gcc-10 \
+    ghostscript \
+    git \
+    less \
+    libbz2-dev \
+    libcurl4-gnutls-dev \
+    liblzma-dev \
+    libssl-dev \
+    libtbb-dev \
+    libxext6 \
+    libxrender1 \
+    libxrender1 \
+    libz-dev \
+    locales \
+    micro \
+    nano \
+    openjdk-11-jdk \
+    openssh-client \
+    pandoc \
+    perl-tk \
+    pigz \
+    pip \
+    rsync \
+    software-properties-common \
+    sudo \
+    tree \
+    unzip \
+    wget \
+    wl-clipboard \
+    xclip
+
+    mkdir -p /opt/bin
+    mkdir -p /opt/programs
+
+    # install vt variant tool set
+    cd /opt/programs
+    git clone --branch 0.577 https://github.com/atks/vt.git
+    cd vt
+    make -j $CPU_COUNT
+    mv vt /opt/bin/
+
+    #install mipwrangler
+    cd /opt/bin
+    git clone --branch develop https://github.com/bailey-lab/MIPWrangler.git
+    cd MIPWrangler
+    ./install.sh $CPU_COUNT
+    rm -rf external/build
+
+    # install parasight
+    cd /opt/programs
+    git clone --branch v7.6 https://github.com/bailey-lab/parasight.git
+    mv parasight/parasight.pl /opt/bin/
+    rm -r parasight
+
+    # install basespace cli
+    BS_VERSION=1.5.1
+    BS_PATH="https://launch.basespace.illumina.com/CLI/${BS_VERSION}/amd64-linux/bs"
+    wget $BS_PATH -O /opt/bin/bs
