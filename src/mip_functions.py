@@ -5032,13 +5032,10 @@ def map_haplotypes(settings):
     ].transform("max")
     # add MIP column to alignment results
     sam["MIP"] = sam["haplotype_ID"].apply(lambda a: a.split(".")[0])
-    # create call_info data frame for all used probes in the experiment
-    probe_sets_file = wdir + settings["mipSetsDictionary"]
-    probe_set_keys = settings["mipSetKey"]
-    used_probes = set()
-    for psk in probe_set_keys:
-        with open(probe_sets_file) as infile:
-            used_probes.update(json.load(infile)[psk])
+    # create set of probes from mip arms file
+    mip_arms_file = settings["mipArmsFile"]
+    used_probes = set(pd.read_csv(mip_arms_file, sep='\t')['mip_family'].to_list())
+
     with open(call_info_file) as infile:
         call_info = json.load(infile)
     call_df_list = []
@@ -5342,12 +5339,9 @@ def get_haplotype_counts(settings):
     # and merge with the count data.
     # create call_info data frame for all used probes in the experiment
     call_info_file = settings["callInfoDictionary"]
-    probe_sets_file = wdir + settings["mipSetsDictionary"]
-    probe_set_keys = settings["mipSetKey"]
-    used_probes = set()
-    for psk in probe_set_keys:
-        with open(probe_sets_file) as infile:
-            used_probes.update(json.load(infile)[psk])
+    # create set of probes from mip arms file
+    mip_arms_file = settings["mipArmsFile"]
+    used_probes = set(pd.read_csv(mip_arms_file, sep='\t')['mip_family'].to_list())
     with open(call_info_file) as infile:
         call_info = json.load(infile)
     call_df_list = []
@@ -8481,14 +8475,9 @@ def combine_info_files(
     run_meta["Sample ID"] = run_meta[
         ["sample_name", "sample_set", "new_replicate"]
     ].apply(lambda a: "-".join(a), axis=1)
-    # load the probe set dictionary to extract the
-    # probes that we're interested in
-    probe_sets_file = wdir + settings["mipSetsDictionary"]
-    probe_set_keys = settings["mipSetKey"]
-    used_probes = set()
-    for psk in probe_set_keys:
-        with open(probe_sets_file) as infile:
-            used_probes.update(json.load(infile)[psk])
+    # create set of probes from mip arms file
+    mip_arms_file = settings["mipArmsFile"]
+    used_probes = set(pd.read_csv(mip_arms_file, sep='\t')['mip_family'].to_list())
     for i in range(len(info_files)):
         i_file = info_files[i]
         current_run_meta = run_meta.loc[run_meta["sheet_order"] == i]
@@ -8618,14 +8607,9 @@ def process_info_file(
     run_meta["probe_set"] = run_meta["probe_set"].str[:-1]
 
     run_meta["Sample ID"] = run_meta["Original SID"]
-    # load the probe set dictionary to extract the
-    # probes that we're interested in
-    probe_sets_file = wdir + settings["mipSetsDictionary"]
-    probe_set_keys = settings["mipSetKey"]
-    used_probes = set()
-    for psk in probe_set_keys:
-        with open(probe_sets_file) as infile:
-            used_probes.update(json.load(infile)[psk])
+    # create set of probes from mip arms file
+    mip_arms_file = settings["mipArmsFile"]
+    used_probes = set(pd.read_csv(mip_arms_file, sep='\t')['mip_family'].to_list())
     i_file = info_files[0]
     current_run_meta = run_meta
     current_run_dict = current_run_meta.set_index("Original SID").to_dict(
@@ -8676,7 +8660,8 @@ def process_info_file(
     run_meta = run_meta.drop("Sample ID", axis=1)
     run_meta.to_csv(os.path.join(wdir, "samples.tsv"), sep="\t", index=False)
 
-
+# this function is probably not needed for anything anymore since 
+# probe_sets.json and mipsets.csv are being deprecated
 def update_probe_sets(
     mipset_table="/opt/project_resources/mip_ids/mipsets.csv",
     mipset_json="probe_sets.json",

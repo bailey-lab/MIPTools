@@ -31,12 +31,3 @@ settings['minHaplotypeBarcodes']=min_haplotype_barcodes
 settings['minHaplotypeSamples']=min_haplotype_samples
 settings['minHaplotypeSampleFraction']=min_haplotype_sample_fraction
 mip.write_analysis_settings(settings, wdir+'/settings.txt')
-
-#this (below) is fairly silly - it just writes a list of the names of all probes to probe_sets.json
-#and it doesn't even really work - includes the name of the mip arms text file
-#but this json file is required for other parts of the current pipeline to function correctly.
-try:
-    mip.update_probe_sets("/opt/project_resources/mip_ids/mipsets.csv",
-                         wdir + "/probe_sets.json")
-except IOError:
-    pass
