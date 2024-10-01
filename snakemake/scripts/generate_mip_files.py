@@ -42,9 +42,9 @@ family_dict=family_df.to_dict()
 family_list=sorted([family_dict['mip_family'][row] for row in family_dict['mip_family']])
 sample_list=sorted(list(samples_used))
 
-print(f'number of MIPs is: {len(family_list)}.')
-print(f'number of samples is: {len(sample_list)}.')
-print('if this is not the number of MIPs you were expecting or not the number '
+print(f'\n\n********IMPORTANT********\n\nnumber of MIPs to be wrangled is: {len(family_list)}.')
+print(f'number of samples to be wrangled is: {len(sample_list)}')
+print('\n\nIf this is not the number of MIPs you were expecting or not the number '
 	'of samples you were expecting, examine your input files carefully and try '
 	'again.')
 time.sleep(10)
