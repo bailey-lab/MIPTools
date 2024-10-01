@@ -1,6 +1,7 @@
 import pandas as pd
 import subprocess
 import os
+import time
 
 arms_file=snakemake.input.arms_file
 input_fastq_folder=snakemake.input.fastq_folder
@@ -41,19 +42,28 @@ family_dict=family_df.to_dict()
 family_list=sorted([family_dict['mip_family'][row] for row in family_dict['mip_family']])
 sample_list=sorted(list(samples_used))
 
-if len(sample_list)<2:
-	raise Exception('fewer than two samples were retrieved from the sample '
+print(f'number of MIPs is: {len(family_list)}.')
+print(f'number of samples is: {len(sample_list)}.')
+print('if this is not the number of MIPs you were expecting or not the number '
+	'of samples you were expecting, examine your input files carefully and try '
+	'again.')
+time.sleep(10)
+
+if len(sample_list)<1:
+	raise Exception('no samples were retrieved from the sample '
 		'sheet. This likely means that the probe_set column of your sample '
 		'sheet does not match the probe_set value you provided in the config '
 		'file, or that your sample sheet does not match the sample_set value '
 		'you provided in the config file. Carefully review both the sample '
-		'sheet and config files (in a plain text editor, not a spreadsheet '
-		'program) and try again. Subtle mistakes in the sample sheet, for
-		'example empty columns, double quotes in probe_set or sample_set '
-		'columns, and columns with no header, can also cause this issue')
+		'sheet and config files in a plain text editor and in a spreadsheet; '
+		'spreadsheet is good for viewing columns, while text editor is good '
+		'for viewing hidden characters like double quotes. Subtle mistakes in '
+		'the sample sheet, for example empty columns, double quotes in '
+		'probe_set or sample_set columns, and columns with no header, can also '
+		'cause this issue')
 
-if len(family_list)<2:
-	raise Exception('fewer than two MIPs were in the mip_arms.txt file. This '
+if len(family_list)<1:
+	raise Exception('no MIPs were in the mip_arms.txt file. This '
 		'likely means that the mip_arms.txt file located in the mip_ids '
 		'subfolder of the project_resources folder you provided in the '
 		'config file is either corrupted or does not exist. Create a mip_ids '
