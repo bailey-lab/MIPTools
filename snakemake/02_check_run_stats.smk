@@ -1,4 +1,6 @@
-configfile: "/opt/config/config.yaml"
+for line in open('/opt/build.sh','r'): 
+	if 'mip_version=\"' in line: exec(line)
+configfile: f'/opt/config/config_v{mip_version}.yaml'
 
 
 output_folder = "/opt/user/stats_and_variant_calling"
@@ -26,11 +28,11 @@ rule copy_params:
 	"""
 	input:
 		snakefile=snakemake_directory + "/02_check_run_stats.smk",
-		configfile="/opt/config/config.yaml",
+		configfile=f"/opt/config/config_v{mip_version}.yaml",
 		scripts=snakemake_directory + "/scripts",
 	output:
 		snakefile=log_folder + "/02_check_run_stats.smk",
-		configfile=log_folder + "/config.yaml",
+		configfile=log_folder + f"/config_v{mip_version}.yaml",
 		scripts=directory(log_folder + "/scripts"),
 	resources:
 		log_dir=log_folder,
