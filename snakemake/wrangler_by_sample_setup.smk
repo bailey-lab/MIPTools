@@ -1,4 +1,6 @@
-configfile: "/opt/config/config.yaml"
+for line in open('/opt/build.sh','r'): 
+	if 'mip_version=\"' in line: exec(line)
+configfile: f'/opt/config/config_v{mip_version}.yaml'
 
 
 output_folder = "/opt/user/wrangled_data"
@@ -15,19 +17,19 @@ rule all:
 	"""
 	input:
 		setup_finished=output_folder + "/setup_finished.txt",
-		output_configfile=output_folder + "/snakemake_params/config.yaml",
+		output_configfile=output_folder + f"/snakemake_params/config_v{mip_version}.yaml",
 
 
 rule copy_files:
 	input:
 		setup_snakefile=snakemake_folder + "/wrangler_by_sample_setup.smk",
 		finish_snakefile=snakemake_folder + "/wrangler_by_sample_finish.smk",
-		input_configfile="/opt/config/config.yaml",
+		input_configfile=f"/opt/config/config_v{mip_version}.yaml",
 		in_scripts=snakemake_folder + "/scripts",
 	output:
 		setup_snakefile=output_folder + "/snakemake_params/setup_run.smk",
 		finish_snakefile=output_folder + "/snakemake_params/finish_run.smk",
-		output_configfile=output_folder + "/snakemake_params/config.yaml",
+		output_configfile=output_folder + f"/snakemake_params/config_v{mip_version}.yaml",
 		out_scripts=directory(output_folder + "/snakemake_params/scripts"),
 	shell:
 		"""
