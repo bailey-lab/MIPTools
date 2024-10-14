@@ -1,0 +1,216 @@
+################################################################################
+##                            file path parameters                            ##
+################################################################################
+# used by both snakemake and jupyter notebook
+
+# path to the sif file, must match the version of this config file
+miptools_sif: miptools_v0.5.0.sif
+
+# path to the sample sheet (only needed for wrangler step)
+input_sample_sheet: input_data/cherrypicked_sample_sheet.tsv
+
+# path to the directory of fastq files (only needed for wrangler step)
+fastq_dir: input_data/fastq_files
+
+# path to the project resources directory
+project_resources: input_data/DR23K_project_resources
+
+# path to the species_resources folder which has an indexed copy of the genome
+# (only needed for check run stats/variant calling)
+species_resources: input_data/pf_species_resources
+
+# path to metadata directory, leave blank if you don't have any metadata files
+# (only needed if you have it and are using the prevalence calling jupyter notebook)
+prevalence_metadata: input_data/metadata_files
+
+# wrangler_folder will be created if running the wrangler step
+# will be an input to anything downstream of the wrangling step
+wrangler_folder: output/wrangled_data
+
+# path to directory for variant calling and check run stats output
+variant_calling_folder: output/stats_and_variant_calling
+
+################################################################################
+##                  wrangling parameters (also used elsewhere)                ##
+################################################################################
+# This probe set must match the probe set in the project_resources folder above
+probe_set: DR23K
+
+# If the samples you want to analyze are coming from multiple sample sets, list
+# all sample sets delimited by commas with no spaces,
+# e.g. JJJ,MSMT-2021,MSMT-2022 would pull samples that have an exact match
+# to JJJ, MSMT-2021, or MSMT-2022 in the sample_set column from the sample sheet
+sample_set: PRX-00,PRX-04,PRX-07
+
+# cpu count: Choose a number lower than the number of processors available on
+#your machine. The higher the number, the faster the job will complete, but
+#also the higher the chance that you may run out of memory (RAM), causing your
+#job to crash. If the job crashes, you can specify a lower cpu_count and rerun
+#the job. It will automatically pick up where it left off. See also
+#freebayes_cpu_count (below)
+general_cpu_count: 16
+
+#wrangler by sample options
+#if you have a very large number of samples that won't run all the way from
+#start to finish in one pass, or if you'd like to troubleshoot this pipeline,
+#you can have it generate an intermediate output other than the final step.
+#Input should be a number. By default, this should be set to 6. Options are:
+#1 (extraction of reads for each sample)
+#2 (UMI correction for each sample)
+#3 (correction for samples that had the wrong sample UMIs assigned)
+#4 (haplotype clustering for each sample)
+#5 (haplotype clustering for each mip)
+#6 (final output table)
+output_choice: 6
+
+################################################################################
+################################################################################
+##      all parameters below are for the snakemake pipelines only             ##
+##      if using jupyter notebooks you can go ahead and start that now        ##
+################################################################################
+################################################################################
+
+################################################################################
+##                variant calling (and check run stats) parameters            ##
+################################################################################
+# name (not path) of the primary table to use from the wrangling step.
+# Can usually be left at default of allInfo.tsv.gz
+wrangler_file: allInfo.tsv.gz
+
+# abbreviated name of the species of interest. Must match a value found
+# in the first column of file_locations.tsv (from species_resources directory)
+# e.g. pf
+species: pf
+
+################################################################################
+##                        prevalence calling parameters                       ##
+################################################################################
+#This block is for settings for generating final allele tables. 'geneid_to_
+#genename' is the location within your project resources folder of a file that
+#tells this pipeline which "common names" to assign to each official gene ID.
+#'target_aa_annotation' is a file of known targeted amino acid mutations of the
+#genome that we'd like freebayes to make calls for even if the regions are not
+#mutated. 'target_nt_annotation' is the same thing but for noncoding regions of
+#the genome. 'aggregate_nucleotides' controls whether complex nucleotide changes
+#that result in the same outcome get lumped together or analyzed separately,
+#while 'aggregate_aminoacids' does the same thing for protein-coding mutations.
+#'annotate' controls whether the VCF file gets annotated by SNPEff. 'decompose_
+#options' is for more granular control of the splitting of complex mutations
+#into simple ones and can be left empty for now. If 'aggregate_none' is set to
+#'true' then no aggregation across different types of complex mutations will be
+#performed. 'annotated_vcf' tells the pipeline whether the input VCF file is
+#already annotated with SNPEff, and 'output_prefix' currently needs to be set to
+#empty quotes. This function will change the prefixes of the output tables but
+#will also cause the snakemake pipeline to error out due to 'missing' the final
+#expected output tables with their default names.
+# gene_id_to_genename and target_aa_annotation should be names of files (not paths)
+geneid_to_genename: geneid_to_genename.tsv
+target_aa_annotation: targets.tsv
+target_nt_annotation: null
+aggregate_nucleotides: true
+aggregate_aminoacids: true
+annotate: true
+decompose_options: []
+aggregate_none: true
+annotated_vcf: false
+output_prefix: ""
+min_site_qual: 1
+
+# these steps are used to filter for 'real' mutations whose UMI counts pass
+#some thresholds and call prevalences on these mutations
+
+min_count: 2
+min_coverage: 10
+min_freq: 0
+num_samples_wsaf: 2
+min_wsaf: 0.5
+num_samples_umi: 2
+min_umi: 3
+
+#This block is for variant calling with freebayes. These are the settings that
+#we've found work best for Plasmodium falciparum. If you're using a different
+#genome, you may want to alter these settings (see the Jupyter notebook for
+#more info)
+freebayes_settings:
+  [
+    "--pooled-continuous",
+    "--min-alternate-fraction", "0.01",
+    "--min-alternate-count", "2",
+    "--haplotype-length", "3",
+    "--min-alternate-total", "10",
+    "--use-best-n-alleles", "70",
+    "--genotype-qualities",
+    "--gvcf",
+    "--gvcf-dont-use-chunk", "true",
+  ]
+
+#freebayes is a particularly memory intensive step.  If variant calling is failing
+#you might set this to be lower
+freebayes_cpu_count: 8
+
+################################################################################
+##                        Advanced Options and Settings                       ##
+################################################################################
+# In many cases the settings below can be left at their default values, but
+# should be examined and edited in detail if needed
+
+#memory_mb_per_step applies only when submitting on a slurm cluster. Since in
+#our experience slurm submissions slow down analysis, you can leave this at its
+#default value (it has no effect).
+memory_mb_per_step: 20000
+
+#number of umis to include for each mip/sample combo. This keeps massively over-
+#sequenced stuff from bogging down the analysis. 20000 is default, but in
+#practice, we haven't extensively tested this feature so recommend setting it to
+#a very high number (e.g. 20000000000) to avoid downsampling altogether.
+downsample_umi_count: 20000000000
+
+#when downsampling occurs, this random seed allows you to make sure thesame
+#random seeds get chosen when re-running a sample (or you could change the
+#number to see if results are robust when different random umis are chosen).
+#Since we're not recommending downsampling yet, you can leave this value alone.
+downsample_seed: 312
+
+#bwa settings go here. No need to edit this unless you'd like to decrease the
+#number of threads to use for bwa. bwa runs quickly and is not usually the cause
+#of any crashes.
+bwa_extra: ["-t", "16"]
+
+#leave these at their default values unless you'd like to only analyze
+#haplotypes that have a minimum number of UMIs, or that are seen in a minimum
+#number of samples, or that account for a minimum fraction of the UMIs that
+#exist in any given sample. The recommendation here is to not do any filtering
+#at this step (we'd like to see the output data in as 'raw' a format as
+#possible) unless you have too many haplotypes for the analysis to finish.
+min_haplotype_barcodes: 1
+min_haplotype_samples: 1
+min_haplotype_sample_fraction: 0.0001
+
+#repool spreadsheet settings. These are for determining which samples to repool
+#or recapture, and for determining whether each sample should be repooled or
+#recaptured. Current settings indicate that if 95% of the mips in a sample
+#(target_coverage_fraction=0.95) hit 10 UMIs per sample (target_coverage_key
+#=targets_with_>=10_UMIs) then this sample doesn't need to be repooled or
+#recaptured. Samples that get 10,000 UMIs or more in total (high_UMI_
+#threshold=10000) also don't need to be resequenced or repooled. If a sample has
+#more than 10 reads per UMI on average (UMI_coverage_threshold=10) then it
+#should probably be recaptured with more MIPs, because the same small number of
+#UMIs are being sequenced again and again. If the total number of UMIs for a
+#sample is below 100 (UMI_count_threshold=100) then recommend recapturing
+#(low_coverage_action=Recapture). Samples that have more than the 25th
+#percentile of the coverage (of at least 1 UMI per sample (assessment_key=
+#'targets_with_>=1_UMIs')) seen for completed samples (good_coverage_quantile=
+#0.25) and yet still aren't complete are marked as 'uneven coverage'. These
+#settings only impact the advice that the repool.csv spreadsheet will give you
+#and can probably be mostly left alone, except that the best choice for high_
+#UMI_threshold will be strongly impacted by the number of MIPs in your project
+#design.
+high_UMI_threshold: 10000
+low_coverage_action: Recapture
+target_coverage_count: null
+target_coverage_fraction: 0.95
+target_coverage_key: targets_with_>=10_UMIs
+UMI_coverage_threshold: 10
+UMI_count_threshold: 100
+assessment_key: targets_with_>=1_UMIs
+good_coverage_quantile: 0.25
