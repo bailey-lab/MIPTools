@@ -82,6 +82,27 @@ wrangler_file: allInfo.tsv.gz
 # e.g. pf
 species: pf
 
+#This block is for variant calling with freebayes. These are the settings that
+#we've found work best for Plasmodium falciparum. If you're using a different
+#genome, you may want to alter these settings (see the Jupyter notebook for
+#more info)
+freebayes_settings:
+  [
+    "--pooled-continuous",
+    "--min-alternate-fraction", "0.01",
+    "--min-alternate-count", "2",
+    "--haplotype-length", "3",
+    "--min-alternate-total", "10",
+    "--use-best-n-alleles", "70",
+    "--genotype-qualities",
+    "--gvcf",
+    "--gvcf-dont-use-chunk", "true",
+  ]
+
+#freebayes is a particularly memory intensive step.  If variant calling is failing
+#you might set this to be lower
+freebayes_cpu_count: 8
+
 ################################################################################
 ##                        prevalence calling parameters                       ##
 ################################################################################
@@ -126,27 +147,6 @@ num_samples_wsaf: 2
 min_wsaf: 0.5
 num_samples_umi: 2
 min_umi: 3
-
-#This block is for variant calling with freebayes. These are the settings that
-#we've found work best for Plasmodium falciparum. If you're using a different
-#genome, you may want to alter these settings (see the Jupyter notebook for
-#more info)
-freebayes_settings:
-  [
-    "--pooled-continuous",
-    "--min-alternate-fraction", "0.01",
-    "--min-alternate-count", "2",
-    "--haplotype-length", "3",
-    "--min-alternate-total", "10",
-    "--use-best-n-alleles", "70",
-    "--genotype-qualities",
-    "--gvcf",
-    "--gvcf-dont-use-chunk", "true",
-  ]
-
-#freebayes is a particularly memory intensive step.  If variant calling is failing
-#you might set this to be lower
-freebayes_cpu_count: 8
 
 ################################################################################
 ##                        Advanced Options and Settings                       ##
