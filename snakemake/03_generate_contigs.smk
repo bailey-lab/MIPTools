@@ -9,20 +9,19 @@ import subprocess
 
 subprocess.call(f"mkdir -p {log_folder}", shell=True)
 
-if config["target_aa_annotation"]:
-	targeting = config["target_aa_annotation"]
-elif config["target_nt_annotation"]:
-	targeting = config["target_nt_annotation"]
-elif config["target_aa_annotation"] and config["target_nt_annotation"]:
+if (config["target_aa_annotation"] 
+	and config["target_nt_annotation"]):
 	print(
-		"can't set both target_aa_annotation and target_nt_annotation, one of"
+		"can't set both target_aa_annotation and target_nt_annotation, one of\n"
 		"these needs to be false"
 	)
 	exit()
+elif config["target_aa_annotation"]:
+	targeting = "/opt/project_resources/"+config["target_aa_annotation"]
+elif config["target_nt_annotation"]:
+	targeting = "/opt/project_resources/"+config["target_nt_annotation"]
 else:
 	targeting = None
-
-targets_file_choice = config["target_aa_annotation"]
 
 
 rule all:

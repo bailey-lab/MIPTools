@@ -11,6 +11,12 @@ import subprocess
 freebayes_command_dict_yaml = open(output_folder + "/freebayes_command_dict.yaml", "r")
 freebayes_command_dict = yaml.safe_load(freebayes_command_dict_yaml)
 
+if config["target_aa_annotation"]:
+	target_aa_annotation = "/opt/project_resources/"+config["target_aa_annotation"]
+	target_nt_annotation = None
+elif config["target_nt_annotation"]:
+	target_aa_annotation = None
+	target_nt_annotation = "/opt/project_resources/"+config["target_nt_annotation"]
 
 rule all:
 	input:
@@ -84,11 +90,11 @@ rule generate_tables:
 	params:
 		wdir=output_folder,
 		settings_file="settings.txt",
-		geneid_to_genename=config["geneid_to_genename"],
-		target_aa_annotation=config["target_aa_annotation"],
+		geneid_to_genename='/opt/project_resources/'+config["geneid_to_genename"],
+		target_aa_annotation=target_aa_annotation,
 		aggregate_nucleotides=config["aggregate_nucleotides"],
 		aggregate_aminoacids=config["aggregate_aminoacids"],
-		target_nt_annotation=config["target_nt_annotation"],
+		target_nt_annotation=target_nt_annotation,
 		annotate=config["annotate"],
 		decompose_options=config["decompose_options"],
 		annotated_vcf=config["annotated_vcf"],
