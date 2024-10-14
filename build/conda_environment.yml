@@ -35,7 +35,7 @@ dependencies:
   - primer3
   - primer3-py
   - pysam
-  - python
+  - python=3.12.*
   - r-base
   - r-devtools
   - r-dplyr
