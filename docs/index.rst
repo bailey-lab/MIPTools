@@ -52,7 +52,7 @@ A typical pipeline might look something like this:
   :caption: Guides
   :maxdepth: 2
 
-  guides/example_cross_sectional_study
+  guides/example-cross-sectional-study
   guides/probe-design
   guides/analysis-pipeline
   guides/hpcc
