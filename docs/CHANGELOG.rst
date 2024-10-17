@@ -7,7 +7,27 @@ MIPTools (development version)
 
 New Features
 ------------
+- New features that have been introduced since the most recent release will
+  appear here until they get rolled into the next release.
 
+MIPTools 0.5.0
+==============
+
+New Features
+------------
+-  User can call a single script, run_miptools.sh, which automatically launches
+   the other steps of miptools.
+-  shell scripts and config files now have version numbers associated to reduce
+   confusion around which sif files are compatible with which scripts.
+   for interactively exploring mutation prevalences.
+-  Added a choropleth map jupyter notebook, called prevalence_plotting.ipynb,
+   for interactively exploring mutation prevalences.
+-  Introduced a config.yaml file that eliminates the need for user to provide
+   binding arguments to singularity
+-  wrangling and variant calling are now both subdivided into snakemake steps so
+   that partially completed jobs can be resumed and so that crashes report the
+   exact step where a crash occurred. This also improves scalability to large
+   datasets.
 -  When running the ``wrangler`` app, if the number of UMIs detected for a MIP
    is above a certain threshold, we reduce the UMI count to a lower value. This
    is done in order to increase the speed of our pipeline. Above a certain UMI
@@ -31,7 +51,15 @@ New Features
 
 Bug Fixes
 ---------
-
+-  Removed an alarming (but ultimately harmless) error message associated with
+   snakemake 'shell' commands.
+-  Removed the redundant mip_info.json files so they're no longer required by 
+   the pipeline.
+-  Upgraded pandas to a newer version and fixed ambiguous merge commands
+-  Upgraded jupyter notebooks to a newer version
+-  Upgraded conda packages.
+-  Added cached wrangler and conda sif files to avoid automatically rebuilding
+   these on MIPTools rebuild.
 -  Upgrade C and C++ compiler versions (:github:issue:`43`).
 -  Don't install conda and mamba packages using defaults as this can cause the
    install process to hang.
