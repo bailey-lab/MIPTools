@@ -3,22 +3,23 @@ import plotly.express as px
 import json
 import pandas as pd
 
-def calculate_prevalences(metadata_file, prevalences_input_table, mutations, output_summary_table):
-	def create_site_dict(metadata_file):
+def calculate_prevalences(metadata_file, prevalences_input_table, mutations, output_summary_table, sample_column, summarize_column):
+	def create_summary_dict(metadata_file):
 		'''
 		Takes a metadata csv of format Sites,Sampleid 
 		and creates a dictionary {Sampleid+UMI_suffix:Site}
 		'''
-		site_dict = {}
+		summarize_dict = {}
 		for line_number, line in enumerate(open(metadata_file)):
+			if line_number==0:
+				sample_column = line.index(sample_column)
+				summarize_column = line.index(summarize_column)
 			if line_number > 0: #discard header
 				line = line.strip().split(',')
-				sample = line[1]
-				site = line[0]
-				site_dict[sample] = site
-		return site_dict
+				summarize_dict[line[sample_column]] = line[summarize_column]
+		return summarize_dict
 
-	def get_counts(prevalences_input_table, site_dict):
+	def get_counts(prevalences_input_table, summary_dict):
 		'''
 		Creates a dictionary of format {site:{column_number:[alt_count, cov_count]}}
 		column_number is used instead of mutation_name because occasionally a mutation_name appears twice in the input_table
@@ -37,8 +38,8 @@ def calculate_prevalences(metadata_file, prevalences_input_table, mutations, out
 				line = line.strip().split(',')
 				sample = line[0]
 				sample_tallies = line[1:]
-				if sample in site_dict:
-					site = site_dict[sample]
+				if sample in summary_dict:
+					site = summary_dict[sample]
 					if site not in count_dict:
 						count_dict[site] = {}
 					for column_number, tally in enumerate(sample_tallies):
@@ -97,8 +98,8 @@ def calculate_prevalences(metadata_file, prevalences_input_table, mutations, out
 					prevalence = alt/cov
 				output_file.write(f"\t{prevalence} ({alt}/{cov})")
 
-	site_dict = create_site_dict(metadata_file)
-	count_dict, mutation_dict = get_counts(prevalences_input_table, site_dict)
+	summary_dict = create_summary_dict(metadata_file)
+	count_dict, mutation_dict = get_counts(prevalences_input_table, summary_dict)
 	create_output_file(count_dict, mutations, output_summary_table)
 	# print(count_dict)
 

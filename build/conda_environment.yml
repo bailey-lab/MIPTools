@@ -3,6 +3,7 @@ channels:
   - conda-forge
   - bioconda
 dependencies:
+  - python-kaleido
   - basemap-data-hires
   - bash_kernel
   - bcftools
