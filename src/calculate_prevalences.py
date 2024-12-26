@@ -4,19 +4,21 @@ import json
 import pandas as pd
 
 def calculate_prevalences(metadata_file, prevalences_input_table, mutations, output_summary_table, sample_column, summarize_column):
-	def create_summary_dict(metadata_file):
+	def create_summary_dict(metadata_file, sample_column, summarize_column):
 		'''
 		Takes a metadata csv of format Sites,Sampleid 
 		and creates a dictionary {Sampleid+UMI_suffix:Site}
 		'''
 		summarize_dict = {}
 		for line_number, line in enumerate(open(metadata_file)):
+			line = line.strip().split(',')
 			if line_number==0:
 				sample_column = line.index(sample_column)
 				summarize_column = line.index(summarize_column)
+				latitude=line.index('Latitude')
+				longitude=line.index('Longitude')
 			if line_number > 0: #discard header
-				line = line.strip().split(',')
-				summarize_dict[line[sample_column]] = line[summarize_column]
+				summarize_dict[line[sample_column]] = [line[summarize_column], float(line[latitude]), float(line[longitude])]
 		return summarize_dict
 
 	def get_counts(prevalences_input_table, summary_dict):
@@ -24,7 +26,7 @@ def calculate_prevalences(metadata_file, prevalences_input_table, mutations, out
 		Creates a dictionary of format {site:{column_number:[alt_count, cov_count]}}
 		column_number is used instead of mutation_name because occasionally a mutation_name appears twice in the input_table
 		'''
-		count_dict = {}
+		count_dict, coord_dict = {}, {}
 		count_dict['overall'] = {}
 		base, top = 0, 0
 		for line_number, line in enumerate(open(prevalences_input_table, 'r')):
@@ -39,55 +41,64 @@ def calculate_prevalences(metadata_file, prevalences_input_table, mutations, out
 				sample = line[0]
 				sample_tallies = line[1:]
 				if sample in summary_dict:
-					site = summary_dict[sample]
-					if site not in count_dict:
-						count_dict[site] = {}
+					location, latitude, longitude = summary_dict[sample]
+					coord_dict.setdefault(location, [[],[]])
+					coord_dict[location][0].append(latitude)
+					coord_dict[location][1].append(longitude)
+					if location not in count_dict:
+						count_dict[location] = {}
 					for column_number, tally in enumerate(sample_tallies):
 						# mutation_name = column_number
 						if tally == '':
-							if column_number not in count_dict[site]:
-								count_dict[site][column_number] = [0, 0]
+							if column_number not in count_dict[location]:
+								count_dict[location][column_number] = [0, 0]
 							if column_number not in count_dict['overall']:
 								count_dict['overall'][column_number] = [0, 0]
 						if tally == '0.0':
-							if column_number not in count_dict[site]:
-								count_dict[site][column_number] = [0, 0]
-							count_dict[site][column_number][1] += 1
+							if column_number not in count_dict[location]:
+								count_dict[location][column_number] = [0, 0]
+							count_dict[location][column_number][1] += 1
 							if column_number not in count_dict['overall']:
 								count_dict['overall'][column_number] = [0, 0]
 							count_dict['overall'][column_number][1] += 1
 						if tally == '1.0':
-							if column_number not in count_dict[site]:
-								count_dict[site][column_number] = [0, 0]
-							count_dict[site][column_number][1] += 1
-							count_dict[site][column_number][0] += 1
+							if column_number not in count_dict[location]:
+								count_dict[location][column_number] = [0, 0]
+							count_dict[location][column_number][1] += 1
+							count_dict[location][column_number][0] += 1
 							if column_number not in count_dict['overall']:
 								count_dict['overall'][column_number] = [0, 0]
 							count_dict['overall'][column_number][1] += 1
 							count_dict['overall'][column_number][0] += 1
-		return count_dict, mutation_dict
+		return count_dict, coord_dict, mutation_dict
 
-	def create_output_file(count_dict, mutations, output_summary_table):
+	def create_output_file(count_dict, coord_dict, mutations, output_summary_table, summarize_column):
 		output_file = open(output_summary_table, 'w')
-		output_file.write('Sites')
-		sites = list(count_dict.keys())
-		sites.remove('overall')
-		sites.sort()
+
+		#write the name of the column from the metadata sheet that we summarized by
+		output_file.write(summarize_column)
+		locations = list(count_dict.keys())
+		locations.remove('overall')
+		locations.sort()
+		output_file.write('\tLatitude\tLongitude')
 		for column_number in mutation_dict:
 			if mutation_dict[column_number] in mutations:
 				output_file.write('\t'+mutation_dict[column_number])
-		for site in sites:
-			output_file.write('\n'+site)
-			for column_number in count_dict[site]:
+		for location in locations:
+			output_file.write('\n'+location)
+			latitude=round(sum(coord_dict[location][0])/len(coord_dict[location][0]), 7)
+			longitude=round(sum(coord_dict[location][1])/len(coord_dict[location][1]), 7)
+			output_file.write(f'\t{latitude}\t{longitude}')
+			for column_number in count_dict[location]:
 				if mutation_dict[column_number] in mutations:
-					alt = count_dict[site][column_number][0]
-					cov = count_dict[site][column_number][1]
+					alt = count_dict[location][column_number][0]
+					cov = count_dict[location][column_number][1]
 					if alt == 0:
 						prevalence = 0
 					else:
-						prevalence = alt/cov
+						prevalence = round(alt/cov, 4)
 					output_file.write(f"\t{prevalence} ({alt}/{cov})")
-		output_file.write('\n'+'overall')
+		output_file.write('\n'+'overall\t\t')
 		for column_number in count_dict['overall']:
 			if mutation_dict[column_number] in mutations:
 				alt = count_dict['overall'][column_number][0]
@@ -95,12 +106,12 @@ def calculate_prevalences(metadata_file, prevalences_input_table, mutations, out
 				if alt == 0:
 					prevalence = 0
 				else:
-					prevalence = alt/cov
+					prevalence = round(alt/cov, 4)
 				output_file.write(f"\t{prevalence} ({alt}/{cov})")
 
-	summary_dict = create_summary_dict(metadata_file)
-	count_dict, mutation_dict = get_counts(prevalences_input_table, summary_dict)
-	create_output_file(count_dict, mutations, output_summary_table)
+	summary_dict = create_summary_dict(metadata_file, sample_column, summarize_column)
+	count_dict, coord_dict, mutation_dict = get_counts(prevalences_input_table, summary_dict)
+	create_output_file(count_dict, coord_dict, mutations, output_summary_table, summarize_column)
 	# print(count_dict)
 
 def load_json(region_of_interest):
