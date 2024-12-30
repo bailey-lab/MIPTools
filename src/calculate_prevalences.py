@@ -6,8 +6,8 @@ import pandas as pd
 def calculate_prevalences(metadata_file, prevalences_input_table, mutations, output_summary_table, sample_column, summarize_column):
 	def create_summary_dict(metadata_file, sample_column, summarize_column):
 		'''
-		Takes a metadata csv of format Sites,Sampleid 
-		and creates a dictionary {Sampleid+UMI_suffix:Site}
+		Takes a metadata csv of format location,Sampleid 
+		and creates a dictionary {Sampleid+UMI_suffix:location}
 		'''
 		summarize_dict = {}
 		for line_number, line in enumerate(open(metadata_file)):
@@ -89,8 +89,17 @@ def calculate_prevalences(metadata_file, prevalences_input_table, mutations, out
 			latitude=round(sum(coord_dict[location][0])/len(coord_dict[location][0]), 7)
 			longitude=round(sum(coord_dict[location][1])/len(coord_dict[location][1]), 7)
 			output_file.write(f'\t{latitude}\t{longitude}')
+			#ideally, mutation_dict would be keyed by mutation (instead of column_number).
+			#This is because we want to iterate through a sorted list of mutations (not the unsorted list of mutation_dict)
+			#As a temporary workaround for compatibility with the existing structure,
+			#I'm making a new dictionary for these lookups.
+			mutation_keys={}
 			for column_number in count_dict[location]:
-				if mutation_dict[column_number] in mutations:
+				mutation=mutation_dict[column_number]
+				mutation_keys[mutation]=column_number
+			for mutation in mutations:
+				if mutation in mutation_keys:
+					column_number=mutation_keys[mutation]
 					alt = count_dict[location][column_number][0]
 					cov = count_dict[location][column_number][1]
 					if alt == 0:
