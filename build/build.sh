@@ -1,6 +1,6 @@
 # set the version number. this will be used to update the version number of the output 
 # sif file and user scripts and config files 
-mip_version="0.5.0"
+mip_version="0.5.1"
 
 # - change the config file name in the bash scripts
 # - change the sif file name in the config.yaml

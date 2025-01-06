@@ -3,6 +3,9 @@ channels:
   - conda-forge
   - bioconda
 dependencies:
+  - texlive-core
+  - pandoc
+  - python-kaleido
   - basemap-data-hires
   - bash_kernel
   - bcftools
@@ -18,7 +21,7 @@ dependencies:
   - lastz
   - matplotlib
   - matplotlib-venn
-  - nbconvert=7.6.0
+  - nbconvert
   - notebook
   - nnn
   - numpy
