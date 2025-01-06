@@ -1,20 +1,15 @@
-
 import pandas as pd
 
-
-def remove_percent(item):
+def strip_percent(value):
     try:
-        return int(item.split("(")[0])
-    except (IndexError, ValueError):
-        return item
-
+        value=int(str(value).split("(")[0])
+    except (ValueError, TypeError):
+        pass
+    return value
 
 def get_stats(stat_file):
-    sti = pd.read_table(stat_file).applymap(remove_percent)
-    sti = sti.loc[sti["Sample"] != "Sample"]
-    for c in sti.columns:
-        try:
-            sti[c] = sti[c].astype(int)
-        except ValueError:
-            pass
-    return sti
+    table=pd.read_csv(stat_file, sep='\t')
+    header=list(table.columns.values)
+    for column in header:
+        table[column]=table[column].map(strip_percent)
+    return table
