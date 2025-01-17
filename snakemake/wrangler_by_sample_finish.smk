@@ -240,8 +240,11 @@ rule convert_pmo:
 		gff_URL=config['gff_URL'],
 		panel_ID=config['probe_set'],
 		genome_name=config['genome_name'],
-		genome_version=config['genome_version']
+		genome_version=config['genome_version'],
+		wrangled_name=config['run_ID']
 	output:
-		pmo_json=output_folder+'/saved_panels/'+config['probe_set']+'.json'
+		panel_pmo=output_folder+'/saved_panels/'+config['probe_set']+'.json',
+		microhaplotype_pmo=output_folder+'/saved_microhaps/'+config['run_ID']+'.json',
+		combined_pmo=output_folder+'/final_PMO/'+config['probe_set']+'_'+config['run_ID']+'.json'
 	script:
 		'scripts/convert_pmo.py'
