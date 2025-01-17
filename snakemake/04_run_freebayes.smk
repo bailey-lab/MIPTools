@@ -17,12 +17,15 @@ if config["target_aa_annotation"]:
 elif config["target_nt_annotation"]:
 	target_aa_annotation = None
 	target_nt_annotation = "/opt/project_resources/"+config["target_nt_annotation"]
+else:
+	target_aa_annotation = None
+	target_nt_annotation = None
 
 rule all:
 	input:
-		ref_table=output_folder + "/reference_table.csv",
-		cov_table=output_folder + "/coverage_table.csv",
-		alt_table=output_folder + "/alternate_table.csv",
+		ref_table=output_folder + "/reference_AN_table.csv",
+		cov_table=output_folder + "/coverage_AN_table.csv",
+		alt_table=output_folder + "/alternate_AN_table.csv",
 
 
 
@@ -84,9 +87,9 @@ rule generate_tables:
 	input:
 		variants = output_folder + "/variants_mutations_only.vcf.gz",
 	output:
-		ref_table=output_folder + "/reference_table.csv",
-		cov_table=output_folder + "/coverage_table.csv",
-		alt_table=output_folder + "/alternate_table.csv",
+		ref_table=output_folder + "/reference_AN_table.csv",
+		cov_table=output_folder + "/coverage_AN_table.csv",
+		alt_table=output_folder + "/alternate_AN_table.csv",
 	params:
 		wdir=output_folder,
 		settings_file="settings.txt",
