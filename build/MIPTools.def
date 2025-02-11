@@ -37,6 +37,11 @@ Stage: final
     apt-get update \
     && apt-get -yq dist-upgrade \
     && apt-get install -yq --no-install-recommends \
+    texlive-xetex \
+    texlive-latex-extra \
+    texlive-fonts-recommended \
+    texlive-latex-recommended \
+    texlive-plain-generic \
     alien \
     autoconf \
     automake \

@@ -37,7 +37,7 @@ final_dict = {
 		output_folder + "/analysis/populationClustering/{target}/analysis/log.txt",
 		target=all_targets,
 	),
-	6: output_folder + "/extractInfoSummary.tsv.gz",
+	6: [output_folder+'/saved_panels/'+config['probe_set']+'.json', output_folder + "/extractInfoSummary.tsv.gz"]
 
 }
 output_choice = config["output_choice"]
@@ -229,3 +229,22 @@ rule concatenate_summary_files:
 			| sed '1!{{/Sample/d}}' \
 			| pigz > {output.stitch_info_by_target}
 		"""
+
+rule convert_pmo:
+	input:
+		final_table=output_folder + "/allInfo.tsv.gz",
+		mip_arms=output_folder + "/mip_ids/mipArms.txt"
+	params:
+		species_ID=config['species_ID'],
+		genome_URL=config['genome_URL'],
+		gff_URL=config['gff_URL'],
+		panel_ID=config['probe_set'],
+		genome_name=config['genome_name'],
+		genome_version=config['genome_version'],
+		wrangled_name=config['run_ID']
+	output:
+		panel_pmo=output_folder+'/saved_panels/'+config['probe_set']+'.json',
+		microhaplotype_pmo=output_folder+'/saved_microhaps/'+config['run_ID']+'.json',
+		combined_pmo=output_folder+'/final_PMO/'+config['probe_set']+'_'+config['run_ID']+'.json'
+	script:
+		'scripts/convert_pmo.py'
