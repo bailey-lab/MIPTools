@@ -74,19 +74,7 @@
     echo "ssh -fNL localhost:${nb_port}:${server_ip}:${nb_port}"\
     "${server_user}\n"
 
-    # Setup juptyr notebook settings
-    jupyter labextension enable plotlywidget/extension --level=user
-    jupyter labextension enable toc2/main --level=user
-    jupyter labextension enable codefolding/main --level=user
-    jupyter labextension enable highlighter/highlighter --level=user
-    jupyter labextension enable keyboard_shortcut_editor/main --level=user
-    jupyter labextension enable spellchecker/main --level=user
-
     # Run notebook
-    silent() {
-        jupyter notebook --notebook-dir=${nb_dir} --ip=${server_ip} \
-            --port=${nb_port} --no-browser >/dev/null 2>&1 &
-    }
     jupyter notebook --notebook-dir=${nb_dir} --ip=${server_ip} \
             --port=${nb_port} --no-browser
 
@@ -436,3 +424,9 @@
     if [ -f /opt/user/stats_and_variant_calling/freebayes_command_dict.yaml ]; then
         snakemake -d /opt/config -s /opt/snakemake/05_filter_variants.smk --unlock
     fi
+
+######################################################
+## get version ##
+##########################################################33
+%apprun check_version
+    echo $VERSION
