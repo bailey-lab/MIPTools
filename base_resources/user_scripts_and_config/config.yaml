@@ -4,7 +4,7 @@
 # used by both snakemake and jupyter notebook
 
 # path to the sif file, must match the version of this config file
-miptools_sif: miptools_v0.5.0.sif
+miptools_sif: /home/alfred/github_pipelines/MIPTools/build/miptools_v0.5.1.sif
 
 # path to the sample sheet (only needed for wrangler step)
 input_sample_sheet: input_data/cherrypicked_sample_sheet.tsv
@@ -25,10 +25,10 @@ prevalence_metadata: input_data/metadata_files
 
 # wrangler_folder will be created if running the wrangler step
 # will be an input to anything downstream of the wrangling step
-wrangler_folder: output/wrangled_data
+wrangler_folder: output2/wrangled_data
 
 # path to directory for variant calling and check run stats output
-variant_calling_folder: output/stats_and_variant_calling
+variant_calling_folder: output2/stats_and_variant_calling
 
 ################################################################################
 ##                  wrangling parameters (also used elsewhere)                ##
@@ -76,6 +76,16 @@ output_choice: 6
 # name (not path) of the primary table to use from the wrangling step.
 # Can usually be left at default of allInfo.tsv.gz
 wrangler_file: allInfo.tsv.gz
+
+################################################################################
+##                            PMO settings                                    ##
+################################################################################
+species_ID: 36329
+genome_URL: 'some_URL'
+gff_URL: 'some_gff'
+genome_name: 'modified plasmodb'
+genome_version: 'genome_version'
+run_ID: 'testing'
 
 # abbreviated name of the species of interest. Must match a value found
 # in the first column of file_locations.tsv (from species_resources directory)
@@ -214,3 +224,10 @@ UMI_coverage_threshold: 10
 UMI_count_threshold: 100
 assessment_key: targets_with_>=1_UMIs
 good_coverage_quantile: 0.25
+
+################################################################################
+##               Config File Version, NOT to be changed                       ##
+################################################################################
+# the version of the config file is tied to a particular version and should not be
+# changed by the user
+config_file_version: 0.5.2
