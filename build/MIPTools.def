@@ -1,3 +1,17 @@
+# This definition file can take an older version of a sif file instead of building from 
+# scratch to speed up iterative development.  Just uncomment the localimage bootstrap lines
+# and comment out the docker bootstrap lines.  Point the localimage to a sif file that 
+# exists already locally
+
+# There are some arguments in the arguments section that should be inspected and 
+# adjusted as necessary before each build.  The MIP_WRANGLER_CHECKOUT variable points to 
+# a specific commit to ensure that the wrangling process is consistent, it can be changed
+# to a more updated commit as necessary.  The MIPTOOLS_VERSION argument is the only place 
+# where the version number should ever be updated
+
+# at build time you can either run a custom build command yourself
+# or use the build.sh script to ensure consistent naming of sif files
+
 Bootstrap: docker
 From: amd64/ubuntu:24.04
 
@@ -7,6 +21,7 @@ From: amd64/ubuntu:24.04
 %arguments
     MIPTOOLS_VERSION=0.5.2
     CPU_COUNT=8
+    MIP_WRANGLER_CHECKOUT=9ee0ccdbf86dd719c22ce4c3ccd449d09c9a3623
 
 %setup
     sed -i "s/config_file_version:.*/config_file_version: {{ MIPTOOLS_VERSION }}/g" \
@@ -132,7 +147,7 @@ From: amd64/ubuntu:24.04
         cd /opt/bin && rm -rf MIPWrangler
         git clone --branch develop https://github.com/bailey-lab/MIPWrangler.git
         cd MIPWrangler
-        git checkout 9ee0ccdbf86dd719c22ce4c3ccd449d09c9a3623
+        git checkout {{ MIP_WRANGLER_CHECKOUT }}
         ./install.sh {{ CPU_COUNT }}
         rm -rf external/build
     fi
