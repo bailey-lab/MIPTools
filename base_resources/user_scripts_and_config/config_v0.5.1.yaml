@@ -85,6 +85,7 @@ genome_URL: 'some_URL'
 gff_URL: 'some_gff'
 genome_name: 'modified plasmodb'
 genome_version: 'genome_version'
+run_ID: 'testing'
 
 # abbreviated name of the species of interest. Must match a value found
 # in the first column of file_locations.tsv (from species_resources directory)
@@ -223,3 +224,10 @@ UMI_coverage_threshold: 10
 UMI_count_threshold: 100
 assessment_key: targets_with_>=1_UMIs
 good_coverage_quantile: 0.25
+
+################################################################################
+##               Config File Version, NOT to be changed                       ##
+################################################################################
+# the version of the config file is tied to a particular version and should not be
+# changed by the user
+config_file_version: 0.5.2

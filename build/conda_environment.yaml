@@ -18,6 +18,7 @@ dependencies:
   - gatk4
   - htslib
   - ipywidgets
+  - jupyterlab
   - lastz
   - matplotlib
   - matplotlib-venn
@@ -28,7 +29,6 @@ dependencies:
   - openpyxl
   - pandas
   - parallel
-  - pip
   - pip:
       - mipscripts
       - scif

@@ -8,20 +8,13 @@ ulimit -n $(ulimit -Hn)
 newhome=$(pwd -P)
 cd $newhome
 
-# set the mip_version to avoid any conflicts between the shell script and the
-# version of miptools in the sif file
-mip_version=v0.5.1
+# get the config version from the config file
 check_for_sif(){
-    no_sif=false
-    if [[ ! -f $miptools_sif ]]; then
+    SIF_VERSION=$(singularity run --app check_version $miptools_sif)
+    if [[ ! $config_file_version == $SIF_VERSION  ]]; then
         echo ""
-        echo "error: the path to the sif in the config file cannot be found, please check on it"
-        no_sif=true
-    fi
-    if [[ ! $miptools_sif == *"$mip_version"*  ]]; then
-        echo ""
-        echo "it looks like you do not have a version $mip_version sif selected in your config file"
-        echo "please edit the config file to choose a sif file version $mip_version"
+        echo "it looks like you do not have a version $config_file_version sif selected in your config file"
+        echo "please edit the config file to choose a sif file version $config_file_version"
         no_sif=true
     fi
 }
@@ -52,6 +45,7 @@ rmwt () {
 
 # create singularity bindings
 establish_binds () {
+    eval $(yml config_$config_file_version.yaml)
     miptools_sif=$(rmwt $miptools_sif)
     project_resources=$(rmwt $project_resources)
     species_resources=$(rmwt $species_resources)
@@ -93,12 +87,11 @@ main_menu (){
     do
         case $opt in
             "edit config")
-                ./micro config_$mip_version.yaml
+                ./micro config*.yaml
                 eval $(yml config*.yaml)
                 break
                 ;;
             "run wrangler")
-                eval $(yml config_$mip_version.yaml)
                 establish_binds
                 check_for_sif
                 if [[ $no_sif = true ]]; then break; fi
@@ -110,7 +103,6 @@ main_menu (){
                 break
                 ;;
             "check run stats")
-                eval $(yml config_$mip_version.yaml)
                 establish_binds
                 check_for_sif
                 if [[ $no_sif = true ]]; then break; fi
@@ -122,7 +114,6 @@ main_menu (){
                 break
                 ;;
             "variant calling")
-                eval $(yml config_$mip_version.yaml)
                 establish_binds
                 check_for_sif
                 if [[ $no_sif = true ]]; then break; fi
@@ -135,7 +126,6 @@ main_menu (){
                 break
                 ;;
             "start jupyter")
-                eval $(yml config_$mip_version.yaml)
                 establish_binds
                 check_for_sif
                 if [[ $no_sif = true ]]; then break; fi
@@ -147,7 +137,6 @@ main_menu (){
                 break
                 ;;
             "unlock snakemake")
-                eval $(yml config_$mip_version.yaml)
                 establish_binds
                 singularity run \
                     --app unlock_snakemake \

@@ -1,7 +1,6 @@
-for line in open('/opt/build.sh','r'): 
-	if 'mip_version=\"' in line: exec(line)
-configfile: f'/opt/config/config_v{mip_version}.yaml'
-
+import os
+mip_version=os.environ['VERSION']
+configfile: f'/opt/config/config_{mip_version}.yaml'
 
 output_folder = "/opt/user/wrangled_data"
 base_resources = "/opt/resources"
