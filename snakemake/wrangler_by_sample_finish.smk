@@ -2,7 +2,6 @@ import os
 mip_version=os.environ['VERSION']
 configfile: f'/opt/config/config_{mip_version}.yaml'
 
-
 output_folder = "/opt/user/wrangled_data"
 base_resources = "/opt/resources"
 

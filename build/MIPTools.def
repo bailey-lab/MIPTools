@@ -191,7 +191,6 @@ From: amd64/ubuntu:24.04
     locale-gen en_US.UTF-8
     update-locale LANG=en_US.UTF-8
 
-
 #################################################################
 ##                     Environment Section                     ##
 #################################################################
@@ -204,7 +203,6 @@ From: amd64/ubuntu:24.04
     export LC_ALL="en_US.UTF-8"
     export PYTHONNOUSERSITE=1
     export VERSION={{ MIPTOOLS_VERSION }}
-
 
 #############################################################
 ###                Setup Runscript                              ###
