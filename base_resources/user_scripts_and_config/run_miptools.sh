@@ -45,7 +45,7 @@ rmwt () {
 
 # create singularity bindings
 establish_binds () {
-    eval $(yml config_$config_file_version.yaml)
+    eval $(yml config_*.yaml)
     miptools_sif=$(rmwt $miptools_sif)
     project_resources=$(rmwt $project_resources)
     species_resources=$(rmwt $species_resources)
