@@ -119,17 +119,18 @@ For convenience, settings can be passed in to all steps via a single shared
 yaml file, called config.yaml. We've also provided a text editor called 'micro'
 for editing this file, and a shell script that automatically opens the
 config.yaml file for editing. To launch this script, run the script that begins
-with 'run_miptools' using bash. An example (using version 0.5.0) is below.
+with 'run_miptools' using bash. An example (using version 0.5.2) is below.
 
 .. code-block:: console
 
-    bash run_miptools_v0.5.0.sh
+    bash run_miptools_v0.5.2.sh
 
 After launching the run_miptools script, you can edit the file by selecting
 option 1. **Read the comments carefully**. Fill in the miptools_sif,
 input_sample_sheet, fastq_dir, project_resources, species_resources,
 prevalence_metadata, wrangler_folder, and variant_calling_folder variables with
 the locations of files from the 'understanding the input data' section above.
+When finished, you can quit the text editor (which is called micro) with ctrl-q.
 
 Wrangling
 =========
