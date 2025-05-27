@@ -31,7 +31,6 @@ version = "v0.4.0.9000"
 # ones.
 extensions = [
     "sphinx.ext.githubpages",  # add .nojekyll to gh-pages
-    "myst_parser",  # write docs using MyST (a flavor of markdown)
     "sphinx_copybutton",  # add copy button to code chunks
     "sphinx_toolbox.github",  # link to github
     "sphinx_licenseinfo",  # add license information
