@@ -306,14 +306,24 @@ criteria. As two examples:
 In the next section, we'll use metadata files to perform a more detailed
 prevalence calling for individual regions and individual years.
 
-prevalence Calling
-==================
+Variant Graphing
+================
+In the step above, we manually calculated the overall prevalence of the crt-Asn75Glu
+mutation. This step allows you to automate this process for all mutations at a more
+granular level (for example the prevalence of each mutation at each region or study
+site). This step will additionally allow you to calculate the population frequency of
+mutations (average frequency is the number of UMIs that have the mutation divided by
+total UMIs, while prevalence is the number of individuals that have the mutation
+divided by total individuals with enough coverage). Finally, this step will output
+interactive graphs that show which regions and sampling sites have which prevalences
+(or frequencies) of each mutation.
+
 For this step, you'll need to open a Jupyter notebook. After launching the
 :code:`run_miptools` script, you can launch Jupyter using option 5, making sure
 to follow the instructions in :ref:`jupyter_instructions` and follow the
-instructions to access the prevalence_plotting.ipynb file.
+instructions to access the variant_graphing.ipynb file.
 
 If you follow the instructions in the notebook, you should have the ability to
 choose mutations of interest and see their prevalences plotted as colored
-regions, with four colored regions corresponding to Agago, Amolatar, Kabale, and
-Kole, and three maps corresponding to 2016, 2019, and 2022.
+dots, with four colored dots corresponding to Agago, Amolatar, Kabale, and
+Kole.
