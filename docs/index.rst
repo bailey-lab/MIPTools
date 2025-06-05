@@ -83,6 +83,12 @@ A typical pipeline might look something like this:
   CHANGELOG
   license
 
+.. toctree::
+  :caption: Glossary
+  :maxdepth: 1
+
+  files-generated
+
 Need Help?
 ----------
 
