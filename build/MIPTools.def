@@ -1,129 +1,46 @@
 Bootstrap: localimage
-From: wrangler.sif
-Stage: wrangler
-
-Bootstrap: localimage
-From: conda.sif
-Stage: conda
-
-Bootstrap: docker
-From: amd64/ubuntu:24.04
+From: sif_files/miptools_base_{{ VERSION }}.sif
 Stage: final
 
-##################################################################
-##                        Labels Section                        ##
-##################################################################
 %labels
     Author Bailey Lab
-    Version v0.4.0.9000
-#################################################################
-##                        Files Section                        ##
-#################################################################
-%files from wrangler
-    /opt/bin/ /opt
-%files from conda
-    /opt/conda_env /opt
+    Version {{ VERSION }}
+
 %files
     ../programs /opt
     ../bin /opt
     ../src /opt
     ../snakemake /opt
-    ../base_resources/ /opt/resources
+    ../base_resources /opt/resources
     scif_recipes.scif /opt
-    build.sh /opt
+
 %post
-    # install system packages
-    # install system packages
-    apt-get update \
-    && apt-get -yq dist-upgrade \
-    && apt-get install -yq --no-install-recommends \
-    texlive-xetex \
-    texlive-latex-extra \
-    texlive-fonts-recommended \
-    texlive-latex-recommended \
-    texlive-plain-generic \
-    alien \
-    autoconf \
-    automake \
-    build-essential \
-    bzip2 \
-    ca-certificates \
-    cmake \
-    fonts-dejavu \
-    fonts-liberation \
-    g++-10 \
-    gcc-10 \
-    ghostscript \
-    git \
-    less \
-    libbz2-dev \
-    libcurl4-gnutls-dev \
-    liblzma-dev \
-    libssl-dev \
-    libtbb-dev \
-    libxext6 \
-    libxrender1 \
-    libxrender1 \
-    libz-dev \
-    locales \
-    micro \
-    nano \
-    openjdk-11-jdk \
-    openssh-client \
-    pandoc \
-    perl-tk \
-    pigz \
-    pip \
-    rsync \
-    software-properties-common \
-    sudo \
-    tree \
-    unzip \
-    wget \
-    wl-clipboard \
-    xclip
-
-    export PATH=/opt/conda_env/bin:$PATH
-    scif install /opt/scif_recipes.scif
-
-    # set environment locale
-    echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
-    echo "LANG=en_US.UTF-8" > /etc/locale.conf
-    echo "LC_ALL=en_US.UTF-8" >> /etc/environment
-    echo "LANGUAGE=en_US.UTF-8" >> /etc/environment
-    locale-gen en_US.UTF-8
-    update-locale LANG=en_US.UTF-8
-
-    # install bcl2fastq, if the file is there
-    cd /opt/programs
-    unzip bcl2fastq2*.zip || true
-    alien bcl2fastq2*.rpm || true
-    dpkg -i bcl2fastq2*.deb || true
+    cd /opt/resources/user_scripts_and_config
+    VERSION={{ VERSION }}
+    sed -i '2i export VERSION={{ VERSION }}' run_miptools.sh
+    sed -i "1i # The config file is tied to a particular version of miptools, do not edit\nVERSION: '$VERSION'\n\n" config.yaml
+    sed -i "4i # path to the sif file used, must match version above\nmiptools_sif: 'miptools_$VERSION.sif'" config.yaml
+    mv 'run_miptools.sh' 'run_miptools_{{ VERSION }}.sh'
+    mv 'config.yaml' config_{{ VERSION }}.yaml
 
     # add executable flag to executables
     chmod -R +xr /usr/bin
     chmod -R +xr /opt/bin
 
+    # install scif recipes
+    /opt/.pixi/envs/default/bin/scif install /opt/scif_recipes.scif
 
-#################################################################
-##                     Environment Section                     ##
-#################################################################
 %environment
-    path=/opt/bin:/opt/conda_env/bin:
-    path=$path/opt/bin/MIPWrangler/bin:
-    path=$path$PATH
-    export PATH=$path
-    export XDG_RUNTIME_DIR=""
+    export PATH=/opt/bin:/opt/.pixi/envs/default/bin:/opt/programs/MIPWrangler/bin:$PATH
     export DEBIAN_FRONTEND=noninteractive
     export LANG=en_US.UTF-8
     export LANGUAGE="en_US.UTF-8"
     export LC_ALL="en_US.UTF-8"
     export PYTHONNOUSERSITE=1
+    export VERSION={{ VERSION }}
 
-
-#############################################################
-###                Setup Runscript                              ###
-# copies run scripts and config files into the current directory
-#############################################################
 %runscript
     rsync /opt/resources/user_scripts_and_config/* /opt/config/ --ignore-existing --ignore-missing-args
+
+%help
+    singularity run -B $(pwd -P):/opt/config /path/to/your/downloaded/miptools_dev.sif

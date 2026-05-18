@@ -63,10 +63,8 @@
     done
 
     # Save templates
-    rsync /opt/resources/jupyter_notebooks/* /opt/user/stats_and_variant_calling --ignore-existing \
-        --ignore-missing-args
-    rsync /opt/resources/jupyter_notebooks/supplemental_jupyter_notebooks/* /opt/user/stats_and_variant_calling/supplemental_jupyter_notebooks --ignore-existing \
-        --ignore-missing-args
+    rsync -a --ignore-existing /opt/resources/jupyter_notebooks/ /opt/user/stats_and_variant_calling
+    cp "/opt/prevalence_metadata/$(basename $prevalence_metadata_file)" /opt/user/stats_and_variant_calling/
 
     # Inform the user how to access the notebook
     echo "\nIf you are running this command from a remote server, you will need"
