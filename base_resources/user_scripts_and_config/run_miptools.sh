@@ -8,20 +8,19 @@ ulimit -n $(ulimit -Hn)
 newhome=$(pwd -P)
 cd $newhome
 
-# set the mip_version to avoid any conflicts between the shell script and the
+# set the version to avoid any conflicts between the shell script and the
 # version of miptools in the sif file
-mip_version=v0.5.0
 check_for_sif(){
     no_sif=false
-    if [[ ! -f $miptools_sif ]]; then
+    if [[ ! -e $miptools_sif ]]; then
         echo ""
         echo "error: the path to the sif in the config file cannot be found, please check on it"
         no_sif=true
     fi
-    if [[ ! $miptools_sif == *"$mip_version"*  ]]; then
+    if [[ ! $(singularity exec $miptools_sif printenv VERSION) == "$VERSION"  ]]; then
         echo ""
-        echo "it looks like you do not have a version $mip_version sif selected in your config file"
-        echo "please edit the config file to choose a sif file version $mip_version"
+        echo "it looks like you do not have a version $VERSION sif selected in your config file"
+        echo "please edit the config file to choose a sif file version $VERSION"
         no_sif=true
     fi
 }
@@ -59,7 +58,7 @@ establish_binds () {
     fastq_dir=$(rmwt $fastq_dir)
     wrangler_folder=$(rmwt $wrangler_folder)
     variant_calling_folder=$(rmwt $variant_calling_folder)
-    prevalence_metadata=$(rmwt $prevalence_metadata)
+    prevalence_metadata_file=$(rmwt $prevalence_metadata_file)
 
     singularity_bindings="-B $newhome:/opt/config"
     if [ ! -z $project_resources ]; then singularity_bindings="$singularity_bindings
@@ -76,8 +75,8 @@ establish_binds () {
     if [ ! -z $variant_calling_folder ]; then singularity_bindings="$singularity_bindings
         -B $variant_calling_folder:/opt/user/stats_and_variant_calling"
         mkdir -p $variant_calling_folder; fi
-    if [ ! -z $prevalence_metadata ]; then singularity_bindings="$singularity_bindings
-        -B $prevalence_metadata:/opt/user/prevalence_metadata"; fi
+    if [ -f $prevalence_metadata_file ]; then singularity_bindings="$singularity_bindings
+        -B $(dirname $prevalence_metadata_file):/opt/prevalence_metadata"; fi
 }
 
 # give user options to edit config or run different pipelines
@@ -93,12 +92,12 @@ main_menu (){
     do
         case $opt in
             "edit config")
-                ./micro config_$mip_version.yaml
+                ./micro config_$VERSION.yaml
                 eval $(yml config*.yaml)
                 break
                 ;;
             "run wrangler")
-                eval $(yml config_$mip_version.yaml)
+                eval $(yml config_$VERSION.yaml)
                 establish_binds
                 check_for_sif
                 if [[ $no_sif = true ]]; then break; fi
@@ -110,7 +109,7 @@ main_menu (){
                 break
                 ;;
             "check run stats")
-                eval $(yml config_$mip_version.yaml)
+                eval $(yml config_$VERSION.yaml)
                 establish_binds
                 check_for_sif
                 if [[ $no_sif = true ]]; then break; fi
@@ -122,7 +121,7 @@ main_menu (){
                 break
                 ;;
             "variant calling")
-                eval $(yml config_$mip_version.yaml)
+                eval $(yml config_$VERSION.yaml)
                 establish_binds
                 check_for_sif
                 if [[ $no_sif = true ]]; then break; fi
@@ -135,7 +134,7 @@ main_menu (){
                 break
                 ;;
             "start jupyter")
-                eval $(yml config_$mip_version.yaml)
+                eval $(yml config_$VERSION.yaml)
                 establish_binds
                 check_for_sif
                 if [[ $no_sif = true ]]; then break; fi
@@ -147,7 +146,7 @@ main_menu (){
                 break
                 ;;
             "unlock snakemake")
-                eval $(yml config_$mip_version.yaml)
+                eval $(yml config_$VERSION.yaml)
                 establish_binds
                 singularity run \
                     --app unlock_snakemake \
