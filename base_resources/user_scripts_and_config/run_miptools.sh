@@ -140,6 +140,7 @@ main_menu (){
                 if [[ $no_sif = true ]]; then break; fi
                 singularity run \
                     --app jupyter \
+                    --env prevalence_metadata_file="$prevalence_metadata_file" \
                     $singularity_bindings \
                     $miptools_sif \
                     -d /opt/user

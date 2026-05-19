@@ -33,11 +33,8 @@ variant_calling_folder: results/stats_and_variant_calling
 # This probe set must match the probe set in the project_resources folder above
 probe_set: DR23K
 
-# If the samples you want to analyze are coming from multiple sample sets, list
-# all sample sets delimited by commas with no spaces,
-# e.g. JJJ,MSMT-2021,MSMT-2022 would pull samples that have an exact match
-# to JJJ, MSMT-2021, or MSMT-2022 in the sample_set column from the sample sheet
-sample_set: PRX-00,PRX-04,PRX-07
+# Name of the sample set you wish to analyze
+sample_set: PRX-00
 
 # cpu count: Choose a number lower than the number of processors available on
 #your machine. The higher the number, the faster the job will complete, but

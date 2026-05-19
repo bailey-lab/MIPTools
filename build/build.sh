@@ -13,7 +13,6 @@ if [ ! -e sif_files/miptools_base_$VERSION.sif ]; then
 		--arch amd64 \
 		sif_files/miptools_base_$VERSION.sif MIPTools_base.def
 fi
-		# --sandbox \
 
 sudo singularity build \
 	--arch amd64 \
@@ -22,4 +21,3 @@ sudo singularity build \
 	--mksquashfs-args "-no-compression" \
 	sif_files/miptools_$VERSION.sif MIPTools.def
 
-	# --sandbox \
