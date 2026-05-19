@@ -60,6 +60,7 @@ tblib = ">=3.2.2,<4"
 vcftools = ">=0.1.16,<0.2"
 xlrd = ">=2.0.2,<3"
 r-magrittr = ">=2.0.3,<3"
+geopandas = ">=1.1.3,<2"
 
 [pypi-dependencies]
 mipscripts = ">=0.3.4, <0.4"
