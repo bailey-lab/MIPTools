@@ -63,7 +63,7 @@
     done
 
     # Save templates
-    rsync -a --ignore-existing /opt/resources/jupyter_notebooks/ /opt/user/jupyter_notebooks
+    rsync -a --ignore-existing /opt/resources/jupyter_notebooks/ /opt/user
 
     # Inform the user how to access the notebook
     echo "\nIf you are running this command from a remote server, you will need"
