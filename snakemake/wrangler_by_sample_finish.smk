@@ -19,7 +19,8 @@ config_gff_URL = config['pmo_settings']['gff_URL']
 config_genome_name = config['pmo_settings']['genome_name']
 config_genome_version = config['pmo_settings']['genome_version']
 config_run_ID = config['pmo_settings']['run_ID']
-output_folder = f"/opt/user/{config_probe_set}_{config_sample_set}_wrangled_data"
+output_directory_title = config.wrangler_settings.output_title
+output_folder = f"/opt/user/{output_directory_title}"
 base_resources = "/opt/resources"
 
 all_samples, all_targets = [], []

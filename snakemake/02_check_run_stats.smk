@@ -3,11 +3,12 @@ version = os.environ['VERSION']
 import tomllib
 import subprocess
 from box import Box
+import pandas as pd
 from pathlib import Path
 with open(f"/opt/user/config.toml", "rb") as f:
     config = Box(tomllib.load(f))
 
-config_threads = config.universal_settings.general_cpu_count
+config_threads = config.check_run_stats.cpu_count
 config_bwa_extra = config.check_run_stats.bwa_extra
 config_wrangler_info_file = config.variant_calling_inputs.wrangler_info_file_name
 config_species = config.check_run_stats.species
@@ -65,6 +66,38 @@ rule copy_params:
 		cp -r {input.scripts} {output.scripts}
 		"""
 
+rule check_wrangler_output:
+	input:
+		all_samples_df = "/opt/wrangled_data/mip_ids/allMipsSamplesNames.tab.txt",
+		sample_sheet = "/opt/wrangled_data/sample_sheet.tsv",
+	output:
+		check_finished = output_folder + "/wrangled_sample_info.txt",
+	run:
+		all_samples_df = pd.read_table(input.all_samples_df)
+		submitted_samples = set(all_samples_df["samples"].dropna().replace("", pd.NA).dropna())
+		present_samples = {s for s in submitted_samples if os.path.isdir(f"/opt/wrangled_data/analysis/{s}")}
+
+		# Look up sample set and probe set from the saved sample sheet
+		sample_sheet = pd.read_table(input.sample_sheet)
+		sample_sheet["wrangler_name"] = (
+			sample_sheet["sample_name"].astype(str)
+			+ "-" + sample_sheet["sample_set"].astype(str)
+			+ "-" + sample_sheet["replicate"].astype(str)
+		)
+		present_df = sample_sheet[sample_sheet["wrangler_name"].isin(present_samples)]
+
+		# print(present_df)
+		probe_sets = sorted(present_df["probe_set"].unique())
+		sample_sets = sorted(present_df["sample_set"].unique())
+
+		print(f"Wrangled samples present: {len(present_samples)}")
+		print(f"Sample sets: {sample_sets}")
+		print(f"Probe sets: {probe_sets}")
+		with open(output.check_finished, "w") as f:
+			f.write(f"Wrangled samples present: {len(present_samples)}\n")
+			f.write(f"Sample sets: {sample_sets}\n")
+			f.write(f"Probe sets: {probe_sets}\n")
+	
 
 rule modify_ozkan_settings:
 	"""

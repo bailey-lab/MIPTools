@@ -10,8 +10,9 @@ with open(f"/opt/user/config.toml", "rb") as f:
 sample_set = config.wrangler_settings.sample_set
 probe_set = config.wrangler_settings.probe_set
 thread_count = config.wrangler_settings.cpu_count
+output_directory_title = config.wrangler_settings.output_title
 input_sample_sheet = Path("/opt") / Path(config.wrangler_inputs.input_sample_sheet).name
-output_folder = f"/opt/user/{probe_set}_{sample_set}_wrangled_data"
+output_folder = f"/opt/user/{output_directory_title}"
 fastq_folder = "/opt/fastq_dir"
 snakemake_folder = "/opt/snakemake"
 project_resources_dir = "/opt/project_resources"
@@ -32,7 +33,7 @@ rule copy_files:
 	input:
 		input_configfile=f"/opt/user/config.toml",
 	output:
-		output_configfile=output_folder + f"/snakemake_params/config.toml",
+		output_configfile=os.path.join(output_folder, "snakemake_params", "config.toml"),
 	shell:
 		"""
 		cp {input.input_configfile} {output.output_configfile}
@@ -77,6 +78,7 @@ rule setup:
 	threads: thread_count
 	shell:
 		"""
+		rm -rf {params.output_dir}
 		MIPWrangler mipSetup \
 		  --mipArmsFilename {output_folder}/mip_ids/mipArms.txt \
 		  --mipSampleFile {output_folder}/mip_ids/allMipsSamplesNames.tab.txt \
