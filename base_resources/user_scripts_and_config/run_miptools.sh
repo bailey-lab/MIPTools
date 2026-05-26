@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# do not edit version here, the build script will apply the version defined there at build time
+VERSION=dev
+
 # set the ulimit high in case there are a very large number of files
 ulimit -n $(ulimit -Hn)
 
@@ -8,155 +11,124 @@ ulimit -n $(ulimit -Hn)
 newhome=$(pwd -P)
 cd $newhome
 
+# import bindmounts and ensure that they are absolute paths
+current_section=""
+while IFS= read -r line || [[ -n "$line" ]]; do
+    [[ "$line" =~ ^[[:space:]]*($|#) ]] && continue
+
+    if [[ "$line" =~ ^[[:space:]]*\[([^]]+)\] ]]; then
+        current_section="${BASH_REMATCH[1]//./_}_"
+        continue
+    fi
+
+    line=$(sed -E 's/("[^"]*"|[0-9]+)[[:space:]]*#.*/\1/' <<< "$line")
+
+    if [[ "$line" =~ ^[[:space:]]*([a-zA-Z_][a-zA-Z0-9_]*)[[:space:]]*=[[:space:]]*(\"(.*)\"|[0-9]+)[[:space:]]*$ ]]; then
+        declare "${current_section}${BASH_REMATCH[1]}=${BASH_REMATCH[3]:-${BASH_REMATCH[2]}}"
+    fi
+done < "config.toml"
+
+miptools_sif="$(readlink -f "$universal_inputs_miptools_sif")"
+project_resources="$(readlink -f "$universal_inputs_project_resources_directory")"
+input_sample_sheet="$(readlink -f "$wrangler_inputs_input_sample_sheet")"
+fastq_dir="$(readlink -f "$wrangler_inputs_fastq_dir")"
+species_resources="$(readlink -f "$variant_calling_inputs_species_resources")"
+prevalence_metadata_file="$(readlink -f "$prevalence_summary_inputs_prevalence_metadata_file")"
+wrangler_directory="$(readlink -f "$variant_calling_inputs_wrangler_directory")"
+
+singularity_options=(-B "$newhome:/opt/user")
+    [[ -n "$project_resources" && -d "$project_resources" ]] &&
+        singularity_options+=(-B "$project_resources:/opt/project_resources")
+    [[ -n "$species_resources" && -d "$species_resources" ]] &&
+        singularity_options+=(-B "$species_resources:/opt/species_resources")
+    [[ -n "$input_sample_sheet" && -f "$input_sample_sheet" ]] &&
+        singularity_options+=(-B "$input_sample_sheet:/opt/$(basename "$input_sample_sheet")")
+    [[ -n "$fastq_dir" && -d "$fastq_dir" ]] &&
+        singularity_options+=(-B "$fastq_dir:/opt/fastq_dir")
+    [[ -n "$wrangler_directory" && -d "$wrangler_directory" ]] &&
+        singularity_options+=(-B "$wrangler_directory:/opt/wrangled_data")
+    [[ -n "$prevalence_metadata_file" && -f "$prevalence_metadata_file" ]] &&
+        singularity_options+=(-B "$prevalence_metadata_file:/opt/$(basename "$prevalence_metadata_file")")
+
+    singularity_options+=(-B "$HOME/data/MIPTools/snakemake:/opt/snakemake")
+    singularity_options+=(-B "$HOME/data/MIPTools/src:/opt/src")
+
+
 # set the version to avoid any conflicts between the shell script and the
 # version of miptools in the sif file
 check_for_sif(){
-    no_sif=false
     if [[ ! -e $miptools_sif ]]; then
         echo ""
         echo "error: the path to the sif in the config file cannot be found, please check on it"
-        no_sif=true
+        exit 1
     fi
     if [[ ! $(singularity exec $miptools_sif printenv VERSION) == "$VERSION"  ]]; then
         echo ""
         echo "it looks like you do not have a version $VERSION sif selected in your config file"
         echo "please edit the config file to choose a sif file version $VERSION"
-        no_sif=true
+        exit 1
     fi
 }
 
-# import variables from yaml
-yml (){
-   local prefix=$2
-   local s='[[:space:]]*' w='[a-zA-Z0-9_]*' fs=$(echo @|tr @ '\034')
-   sed -ne "s|^\($s\):|\1|" \
-        -e "s|^\($s\)\($w\)$s:$s[\"']\(.*\)[\"']$s\$|\1$fs\2$fs\3|p" \
-        -e "s|^\($s\)\($w\)$s:$s\(.*\)$s\$|\1$fs\2$fs\3|p"  $1 |
-   awk -F$fs '{
-      indent = length($1)/2;
-      vname[indent] = $2;
-      for (i in vname) {if (i > indent) {delete vname[i]}}
-      if (length($3) > 0) {
-         vn=""; for (i=0; i<indent; i++) {vn=(vn)(vname[i])("_")}
-         printf("%s%s%s=\"%s\"\n", "'$prefix'",vn, $2, $3);
-      }
-   }'
-}
-
-# remove whitespace from variables
-rmwt () {
-   no_hash=$(echo -e $1 | sed -e 's/\#.*$//')
-   echo -e $no_hash | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'
-}
-
-# create singularity bindings
-establish_binds () {
-    miptools_sif=$(rmwt $miptools_sif)
-    project_resources=$(rmwt $project_resources)
-    species_resources=$(rmwt $species_resources)
-    input_sample_sheet_directory=$(rmwt $(dirname $input_sample_sheet))
-    fastq_dir=$(rmwt $fastq_dir)
-    wrangler_folder=$(rmwt $wrangler_folder)
-    variant_calling_folder=$(rmwt $variant_calling_folder)
-    prevalence_metadata_file=$(rmwt $prevalence_metadata_file)
-
-    singularity_bindings="-B $newhome:/opt/config"
-    if [ ! -z $project_resources ]; then singularity_bindings="$singularity_bindings
-        -B $project_resources:/opt/project_resources"; fi
-    if [ ! -z $species_resources ]; then singularity_bindings="$singularity_bindings
-        -B $species_resources:/opt/species_resources"; fi
-    if [ ! -z $input_sample_sheet_directory ]; then singularity_bindings="$singularity_bindings
-        -B $input_sample_sheet_directory:/opt/input_sample_sheet_directory"; fi
-    if [ ! -z $fastq_dir ]; then singularity_bindings="$singularity_bindings
-        -B $fastq_dir:/opt/fastq_dir"; fi
-    if [ ! -z $wrangler_folder ]; then singularity_bindings="$singularity_bindings
-        -B $wrangler_folder:/opt/user/wrangled_data"
-        mkdir -p $wrangler_folder; fi
-    if [ ! -z $variant_calling_folder ]; then singularity_bindings="$singularity_bindings
-        -B $variant_calling_folder:/opt/user/stats_and_variant_calling"
-        mkdir -p $variant_calling_folder; fi
-    if [ -f $prevalence_metadata_file ]; then singularity_bindings="$singularity_bindings
-        -B $(dirname $prevalence_metadata_file):/opt/prevalence_metadata"; fi
-}
-
 # give user options to edit config or run different pipelines
-ready_to_quit=false
 main_menu (){
     echo ""
     echo "Enter a number to select one of the following actions"
     PS3='Choose an option: '
-    options=("edit config" "run wrangler" "check run stats" \
-                "variant calling" "start jupyter" "unlock snakemake" "Quit" \
+    options=(
+        "edit config" "run wrangler" "check run stats" \
+        "variant calling" "start jupyter" "unlock snakemake" \
     )
     select opt in "${options[@]}"
     do
         case $opt in
             "edit config")
                 ./micro config_$VERSION.yaml
-                eval $(yml config*.yaml)
                 break
                 ;;
             "run wrangler")
-                eval $(yml config_$VERSION.yaml)
-                establish_binds
                 check_for_sif
-                if [[ $no_sif = true ]]; then break; fi
                 singularity run \
                     --app wrangler \
-                    $singularity_bindings \
-                    $miptools_sif \
-                    -c $general_cpu_count
+                    "${singularity_options[@]}" \
+                    "$miptools_sif" \
+                    -c "$wrangler_settings_cpu_count"
                 break
                 ;;
             "check run stats")
-                eval $(yml config_$VERSION.yaml)
-                establish_binds
                 check_for_sif
-                if [[ $no_sif = true ]]; then break; fi
                 singularity run \
                     --app check_run_stats \
-                    $singularity_bindings \
-                    $miptools_sif \
-                    -c $general_cpu_count
+                    "${singularity_options[@]}" \
+                    "$miptools_sif" \
+                    -c "$check_run_stats_cpu_count"
                 break
                 ;;
             "variant calling")
-                eval $(yml config_$VERSION.yaml)
-                establish_binds
                 check_for_sif
-                if [[ $no_sif = true ]]; then break; fi
                 singularity run \
                     --app variant_calling \
-                    $singularity_bindings \
-                    $miptools_sif \
-                    -c $general_cpu_count \
-                    -f $freebayes_cpu_count
+                    "${singularity_options[@]}" \
+                    "$miptools_sif" \
+                    -c "$check_run_stats_cpu_count" \
+                    -f "$prevalence_calling_freebayes_cpu_count"
                 break
                 ;;
             "start jupyter")
-                eval $(yml config_$VERSION.yaml)
-                establish_binds
                 check_for_sif
-                if [[ $no_sif = true ]]; then break; fi
                 singularity run \
                     --app jupyter \
                     --env prevalence_metadata_file="$prevalence_metadata_file" \
-                    $singularity_bindings \
-                    $miptools_sif \
+                    "${singularity_options[@]}" \
+                    "$miptools_sif" \
                     -d /opt/user
                 break
                 ;;
             "unlock snakemake")
-                eval $(yml config_$VERSION.yaml)
-                establish_binds
                 singularity run \
                     --app unlock_snakemake \
-                    $singularity_bindings \
-                    $miptools_sif
-                break
-                ;;
-            "Quit")
-                ready_to_quit=true
+                    "${singularity_options[@]}" \
+                    "$miptools_sif"
                 break
                 ;;
             *) echo "invalid option $REPLY";;
@@ -164,7 +136,4 @@ main_menu (){
     done
 }
 
-while [ $ready_to_quit = false ];
-do
-    main_menu
-done
+main_menu

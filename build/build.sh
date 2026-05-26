@@ -3,7 +3,9 @@
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 cd "$script_dir" || exit 1
 
-export VERSION=dev
+# set the version here at build time, this will be applied to the run_miptools.sh script and the config.toml file
+# inside the sif container, and will be used to tag the sif file itself
+VERSION=dev
 
 mkdir -p sif_files
 

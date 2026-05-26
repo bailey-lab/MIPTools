@@ -17,11 +17,10 @@ Stage: final
 %post
     cd /opt/resources/user_scripts_and_config
     VERSION={{ VERSION }}
-    sed -i '2i export VERSION={{ VERSION }}' run_miptools.sh
-    sed -i "1i # The config file is tied to a particular version of miptools, do not edit\nVERSION: '$VERSION'\n\n" config.yaml
-    sed -i "4i # path to the sif file used, must match version above\nmiptools_sif: 'miptools_$VERSION.sif'" config.yaml
+    sed -i 's/^VERSION=.*/VERSION={{ VERSION }}/' run_miptools.sh
+    sed -i 's/^VERSION =.*/VERSION = "{{ VERSION }}"/' run_miptools.sh
     mv 'run_miptools.sh' 'run_miptools_{{ VERSION }}.sh'
-    mv 'config.yaml' config_{{ VERSION }}.yaml
+    mv 'config.toml' config_{{ VERSION }}.toml
 
     # add executable flag to executables
     chmod -R +xr /usr/bin
@@ -40,7 +39,7 @@ Stage: final
     export VERSION={{ VERSION }}
 
 %runscript
-    rsync /opt/resources/user_scripts_and_config/* /opt/config/ --ignore-existing --ignore-missing-args
+    rsync /opt/resources/user_scripts_and_config/* /opt/user/ --ignore-existing --ignore-missing-args
 
 %help
-    singularity run -B $(pwd -P):/opt/config /path/to/your/downloaded/miptools_dev.sif
+    singularity run -B $(pwd -P):/opt/user /path/to/your/downloaded/miptools_dev.sif
