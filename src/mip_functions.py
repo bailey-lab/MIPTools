@@ -9071,7 +9071,7 @@ def plot_performance(
     boundaries = [-0.5, 0.5, 1.5]
     norm = colors.BoundaryNorm(boundaries, cmap.N)
     heat = ax.pcolormesh(
-        UMI_counts.applymap(
+        UMI_counts.map(
             lambda a: np.nan if np.isnan(a) else 0 if a < UMI_threshold else 1
         ),
         cmap=cmap,

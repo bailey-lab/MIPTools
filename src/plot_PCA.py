@@ -12,8 +12,8 @@ def plot_PCA(var_table, cov_table, min_variant_depth, min_coverage,
                          'tab:purple', 'tab:brown', 'tab:pink', 'tab:gray',
                          'tab:olive', 'tab:cyan')):
     # filter variants
-    var_filt = var_table.applymap(lambda a: a if a >= min_variant_depth else 0)
-    cov_filt = cov_table.applymap(lambda a: a if a >= min_coverage else 0)
+    var_filt = var_table.map(lambda a: a if a >= min_variant_depth else 0)
+    cov_filt = cov_table.map(lambda a: a if a >= min_coverage else 0)
     # calculate within sample frequencies of the variants
     freqs = var_filt/cov_filt
     print(freqs.shape)
@@ -30,8 +30,8 @@ def plot_PCA(var_table, cov_table, min_variant_depth, min_coverage,
     # call biallelic genotypes from frequencies,
     # setting a minimum within sample frequency threshold to call
     # an allele present
-    geno = freqs.applymap(lambda a: np.nan if np.isnan(a)
-                          else 0 if a <= min_within_sample_freq else 1)
+    geno = freqs.map(lambda a: np.nan if np.isnan(a)
+                     else 0 if a <= min_within_sample_freq else 1)
     geno = geno.sort_index(axis=1)
     tab = geno.T
     # filter samples that have less than % of loci called
