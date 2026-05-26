@@ -1,22 +1,35 @@
 import os
 version = os.environ['VERSION']
-configfile: f'/opt/config/config_{version}.yaml'
+import yaml
+import subprocess
+import tomllib
+with open(f"/opt/user/config.toml", "rb") as f:
+    config = tomllib.load(f)
 
 
 output_folder = "/opt/user/stats_and_variant_calling"
-
-import yaml
-import subprocess
+config_target_aa_annotation = config['prevalence_calling']['target_aa_annotation']
+config_target_nt_annotation = config['prevalence_calling']['target_nt_annotation']
+config_freebayes_settings = config['prevalence_calling']['freebayes_settings']
+config_gene_id_to_genename = config['prevalence_calling']['geneid_to_genename']
+config_aggregate_nucleotides = config['prevalence_calling']['aggregate_nucleotides']
+config_aggregate_aminoacids = config['prevalence_calling']['aggregate_aminoacids']
+config_annotate = config['prevalence_calling']['annotate']
+config_decompose_options = config['prevalence_calling']['decompose_options']
+config_annotated_vcf = config['prevalence_calling']['annotated_vcf']
+config_aggregate_none = config['prevalence_calling']['aggregate_none']
+config_output_prefix = config['prevalence_calling']['output_prefix']
+config_min_site_qual = config['prevalence_calling']['min_site_qual']
 
 freebayes_command_dict_yaml = open(output_folder + "/freebayes_command_dict.yaml", "r")
 freebayes_command_dict = yaml.safe_load(freebayes_command_dict_yaml)
 
-if config["target_aa_annotation"]:
-	target_aa_annotation = "/opt/project_resources/"+config["target_aa_annotation"]
+if config_target_aa_annotation:
+	target_aa_annotation = "/opt/project_resources/"+config_target_aa_annotation
 	target_nt_annotation = None
-elif config["target_nt_annotation"]:
+elif config_target_nt_annotation:
 	target_aa_annotation = None
-	target_nt_annotation = "/opt/project_resources/"+config["target_nt_annotation"]
+	target_nt_annotation = "/opt/project_resources/"+config_target_nt_annotation
 else:
 	target_aa_annotation = None
 	target_nt_annotation = None
@@ -58,7 +71,7 @@ rule concatenate_and_fix_vcf_headers:
 	output:
 		variants=output_folder + "/variants.vcf.gz",
 	params:
-		freebayes_settings=config["freebayes_settings"],
+		freebayes_settings=config_freebayes_settings,
 		wdir=output_folder,
 		settings_file="settings.txt",
 	# resources below are currently not utilized - haven't figured out a way to
@@ -93,16 +106,16 @@ rule generate_tables:
 	params:
 		wdir=output_folder,
 		settings_file="settings.txt",
-		geneid_to_genename='/opt/project_resources/'+config["geneid_to_genename"],
+		geneid_to_genename='/opt/project_resources/'+config_gene_id_to_genename,
 		target_aa_annotation=target_aa_annotation,
-		aggregate_nucleotides=config["aggregate_nucleotides"],
-		aggregate_aminoacids=config["aggregate_aminoacids"],
 		target_nt_annotation=target_nt_annotation,
-		annotate=config["annotate"],
-		decompose_options=config["decompose_options"],
-		annotated_vcf=config["annotated_vcf"],
-		aggregate_none=config["aggregate_none"],
-		output_prefix=config["output_prefix"],
-		min_site_qual=config["min_site_qual"]
+		aggregate_nucleotides=config_aggregate_nucleotides,
+		aggregate_aminoacids=config_aggregate_aminoacids,
+		annotate=config_annotate,
+		decompose_options=config_decompose_options,
+		annotated_vcf=config_annotated_vcf,
+		aggregate_none=config_aggregate_none,
+		output_prefix=config_output_prefix,
+		min_site_qual=config_min_site_qual
 	script:
 		"scripts/generate_tables.py"

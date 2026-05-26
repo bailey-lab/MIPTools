@@ -1,0 +1,88 @@
+[universal]
+
+[universal.paths]
+output_directory = "results"
+project_resources = "input_data/DR23K_project_resources"
+
+[universal.parameters]
+probe_set = "DR23K"
+sample_set = "PRX-00"
+general_cpu_count = 16
+
+[wrangling.inputs]
+sample_sheet = "input_data/cherrypicked_sample_sheet.tsv"
+fastq_dir = "input_data/fastq_files"
+
+[wrangling.output_options]
+output_choice = "6"
+
+[wrangling.pmo_params]
+species_ID = 36329
+genome_URL = "some_URL"
+gff_URL = "some_gff"
+genome_name = "modified plasmodb"
+genome_version = "genome_version"
+run_ID = "a1"
+
+[variant_calling]
+species = "pf"
+
+[variant_calling.inputs]
+species_resources = "input_data/pf_species_resources"
+wrangler_info_file = "" # leave blank if you do not yet have a MIPWrangler output folder
+
+[variant_calling.freebayes]
+freebayes_cpu_count = 8
+freebayes_settings = [
+    "--pooled-continuous",
+    "--min-alternate-fraction", "0.01",
+    "--min-alternate-count", "2",
+    "--haplotype-length", "3",
+    "--min-alternate-total", "10",
+    "--use-best-n-alleles", "70",
+    "--genotype-qualities",
+    "--gvcf",
+    "--gvcf-dont-use-chunk", "true",
+]
+
+[variant_calling.prevalence_calling]
+geneid_to_genename = "geneid_to_genename.tsv"
+target_aa_annotation = "targets.tsv"
+# target_nt_annotation = ""
+aggregate_nucleotides = true
+aggregate_aminoacids = true
+annotate = true
+decompose_options = []
+aggregate_none = true
+annotated_vcf = false
+output_prefix = ""
+min_site_qual = 1
+
+min_count = 2
+min_coverage = 10
+min_freq = 0
+num_samples_wsaf = 2
+min_wsaf = 0.5
+num_samples_umi = 2
+min_umi = 3
+
+[prevalence.inputs]
+prevalence_metadata_file = "input_data/metadata_files/PRX-00_metadata.csv"
+
+[advanced]
+memory_mb_per_step = 20000
+downsample_umi_count = 20000000000
+downsample_seed = 312
+bwa_extra = ["-t", "16"]
+min_haplotype_barcodes = 1
+min_haplotype_samples = 1
+min_haplotype_sample_fraction = 0.0001
+high_UMI_threshold = 10000
+low_coverage_action = "Recapture"
+target_coverage_count = "null"
+target_coverage_fraction = 0.95
+target_coverage_key = "targets_with_>=10_UMIs"
+UMI_coverage_threshold = 10
+UMI_count_threshold = 100
+assessment_key = "targets_with_>=1_UMIs"
+good_coverage_quantile = 0.25

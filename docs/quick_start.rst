@@ -108,7 +108,7 @@ scripts (plus a little text editor):
 
 .. code-block:: console
 
-    singularity run -B $(pwd -P):/opt/config /path/to/your/downloaded/miptools_dev.sif
+    singularity run -B $(pwd -P):/opt/user /path/to/your/downloaded/miptools_dev.sif
 
 Setting up a run
 ----------------

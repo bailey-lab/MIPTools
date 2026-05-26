@@ -1,9 +1,17 @@
 import os
+from pathlib import Path
+from box import Box
 version = os.environ['VERSION']
-configfile: f'/opt/config/config_{version}.yaml'
 
+import tomllib
+with open(f"/opt/user/config.toml", "rb") as f:
+    config = Box(tomllib.load(f))
 
-output_folder = "/opt/user/wrangled_data"
+sample_set = config.wrangler_settings.sample_set
+probe_set = config.wrangler_settings.probe_set
+thread_count = config.wrangler_settings.cpu_count
+input_sample_sheet = Path("/opt") / Path(config.wrangler_inputs.input_sample_sheet).name
+output_folder = f"/opt/user/{probe_set}_{sample_set}_wrangled_data"
 fastq_folder = "/opt/fastq_dir"
 snakemake_folder = "/opt/snakemake"
 project_resources_dir = "/opt/project_resources"
@@ -17,26 +25,17 @@ rule all:
 	"""
 	input:
 		setup_finished=output_folder + "/setup_finished.txt",
-		output_configfile=output_folder + f"/snakemake_params/config_{version}.yaml",
+		output_configfile=output_folder + f"/snakemake_params/config.toml",
 
 
 rule copy_files:
 	input:
-		setup_snakefile=snakemake_folder + "/wrangler_by_sample_setup.smk",
-		finish_snakefile=snakemake_folder + "/wrangler_by_sample_finish.smk",
-		input_configfile=f"/opt/config/config_{version}.yaml",
-		in_scripts=snakemake_folder + "/scripts",
+		input_configfile=f"/opt/user/config.toml",
 	output:
-		setup_snakefile=output_folder + "/snakemake_params/setup_run.smk",
-		finish_snakefile=output_folder + "/snakemake_params/finish_run.smk",
-		output_configfile=output_folder + f"/snakemake_params/config_{version}.yaml",
-		out_scripts=directory(output_folder + "/snakemake_params/scripts"),
+		output_configfile=output_folder + f"/snakemake_params/config.toml",
 	shell:
 		"""
-		cp {input.setup_snakefile} {output.setup_snakefile}
-		cp {input.finish_snakefile} {output.finish_snakefile}
 		cp {input.input_configfile} {output.output_configfile}
-		cp -r {input.in_scripts} {output.out_scripts}
 		"""
 
 
@@ -52,12 +51,11 @@ rule generate_mip_files:
 	"""
 	input:
 		arms_file=project_resources_dir + "/mip_ids/mip_arms.txt",
-		sample_sheet="/opt/input_sample_sheet_directory/"
-		+ config["input_sample_sheet"].split("/")[-1],
+		sample_sheet=input_sample_sheet,
 		fastq_folder=fastq_folder,
 	params:
-		sample_set=config["sample_set"],
-		probe_sets=config["probe_set"],
+		sample_set=sample_set,
+		probe_sets=probe_set,
 	output:
 		mip_arms=output_folder + "/mip_ids/mipArms.txt",
 		sample_file=output_folder + "/mip_ids/allMipsSamplesNames.tab.txt",
@@ -76,7 +74,7 @@ rule setup:
 		fastq_dir=fastq_folder,
 	output:
 		setup_finished=output_folder + "/setup_finished.txt",
-	threads: config["general_cpu_count"]
+	threads: thread_count
 	shell:
 		"""
 		MIPWrangler mipSetup \

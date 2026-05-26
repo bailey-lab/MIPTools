@@ -1,25 +1,30 @@
 import os
+import subprocess
 version = os.environ['VERSION']
-configfile: f'/opt/config/config_{version}.yaml'
-
+import tomllib
+with open(f"/opt/user/config.toml", "rb") as f:
+    config = tomllib.load(f)
 
 output_folder = "/opt/user/stats_and_variant_calling"
 log_folder = "/opt/user/stats_and_variant_calling/run_settings"
-import subprocess
+
+config_target_aa_annotation = config['prevalence_calling']['target_aa_annotation']
+config_target_nt_annotation = config['prevalence_calling']['target_nt_annotation']
+config_freebayes_settings = config['prevalence_calling']['freebayes_settings']
 
 subprocess.call(f"mkdir -p {log_folder}", shell=True)
 
-if (config["target_aa_annotation"] 
-	and config["target_nt_annotation"]):
+if (config_target_aa_annotation 
+	and config_target_nt_annotation):
 	print(
 		"can't set both target_aa_annotation and target_nt_annotation, one of\n"
 		"these needs to be false"
 	)
 	exit()
-elif config["target_aa_annotation"]:
-	targeting = "/opt/project_resources/"+config["target_aa_annotation"]
-elif config["target_nt_annotation"]:
-	targeting = "/opt/project_resources/"+config["target_nt_annotation"]
+elif config_target_aa_annotation:
+	targeting = "/opt/project_resources/"+config_target_aa_annotation
+elif config_target_nt_annotation:
+	targeting = "/opt/project_resources/"+config_target_nt_annotation
 else:
 	targeting = None
 
@@ -74,7 +79,7 @@ rule generate_contigs:
 		#targets_vcf=output_folder+'/targets.vcf.gz'
 	params:
 		targets_file=targeting,
-		freebayes_settings=config["freebayes_settings"],
+		freebayes_settings=config_freebayes_settings,
 		wdir=output_folder,
 		settings_file="settings.txt",
 	# resources below are currently not utilized - haven't figured out a way to

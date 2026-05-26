@@ -1,8 +1,17 @@
 import os
 version = os.environ['VERSION']
-configfile: f'/opt/config/config_{version}.yaml'
+import tomllib
+with open(f"/opt/user/config.toml", "rb") as f:
+    config = tomllib.load(f)
 
 output_folder = "/opt/user/stats_and_variant_calling"
+config_min_count = config['variant_filtering']['min_count']
+config_min_coverage = config['variant_filtering']['min_coverage']
+config_min_freq = config['variant_filtering']['min_freq']
+config_num_samples_wsaf = config['variant_filtering']['num_samples_wsaf']
+config_min_wsaf = config['variant_filtering']['min_wsaf']
+config_num_samples_umi = config['variant_filtering']['num_samples_umi']
+config_min_umi = config['variant_filtering']['min_umi']
 
 import yaml
 import subprocess
@@ -32,12 +41,12 @@ rule genotype_calls:
 		filtered_prev_inp=output_folder+'/final_filtered_prevalences_input_table.csv'
 
 	params:
-		min_count=config['min_count'],
-		min_coverage=config['min_coverage'],
-		min_freq=config['min_freq'],
-		num_samples_wsaf=config['num_samples_wsaf'],
-		min_wsaf=config['min_wsaf'],
-		num_samples_umi=config['num_samples_umi'],
-		min_umi=config['min_umi']
+		min_count=config_min_count,
+		min_coverage=config_min_coverage,
+		min_freq=config_min_freq,
+		num_samples_wsaf=config_num_samples_wsaf,
+		min_wsaf=config_min_wsaf,
+		num_samples_umi=config_num_samples_umi,
+		min_umi=config_min_umi,
 	script:
 		"scripts/genotype_calls.py"

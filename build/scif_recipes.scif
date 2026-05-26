@@ -63,8 +63,7 @@
     done
 
     # Save templates
-    rsync -a --ignore-existing /opt/resources/jupyter_notebooks/ /opt/user/stats_and_variant_calling
-    cp "/opt/prevalence_metadata/$(basename $prevalence_metadata_file)" /opt/user/stats_and_variant_calling/
+    rsync -a --ignore-existing /opt/resources/jupyter_notebooks/ /opt/user/jupyter_notebooks
 
     # Inform the user how to access the notebook
     echo "\nIf you are running this command from a remote server, you will need"
@@ -72,21 +71,13 @@
     echo "ssh -fNL localhost:${nb_port}:${server_ip}:${nb_port}"\
     "${server_user}\n"
 
-    # Setup juptyr notebook settings
-    jupyter labextension enable plotlywidget/extension --level=user
-    jupyter labextension enable toc2/main --level=user
-    jupyter labextension enable codefolding/main --level=user
-    jupyter labextension enable highlighter/highlighter --level=user
-    jupyter labextension enable keyboard_shortcut_editor/main --level=user
-    jupyter labextension enable spellchecker/main --level=user
 
     # Run notebook
-    silent() {
-        jupyter notebook --notebook-dir=${nb_dir} --ip=${server_ip} \
-            --port=${nb_port} --no-browser >/dev/null 2>&1 &
-    }
-    jupyter notebook --notebook-dir=${nb_dir} --ip=${server_ip} \
-            --port=${nb_port} --no-browser
+    jupyter lab \
+        --notebook-dir=${nb_dir} \
+        --ip=${server_ip} \
+        --port=${nb_port} \
+        --no-browser
 
 ##################################################################
 ##                         Wrangler App                         ##
@@ -101,7 +92,7 @@
                     --keep-going
                     --rerun-incomplete
                     --latency-wait 60
-                    -d /opt/config"
+                    -d /opt/user"
     snakemake -s /opt/snakemake/wrangler_by_sample_setup.smk \
         $snakemake_args
     snakemake -s /opt/snakemake/wrangler_by_sample_finish.smk \
@@ -113,18 +104,24 @@
 ##                     Check Run Stats App                      ##
 ##################################################################
 %apprun check_run_stats
-    while getopts "c:" opt; do
+    target_rule=""
+    while getopts "c:a:" opt; do
       case "${opt}" in
-        c) general_cpu_cores=${OPTARG} ;;
+        c) general_cpu_cores="${OPTARG}" ;;
+        a) target_rule="${OPTARG}" ;;
       esac
     done
-    snakemake_args="--cores $general_cpu_cores
-                        --keep-going
-                        --rerun-incomplete
-                        --latency-wait 60
-                        -d /opt/config"
+
+    snakemake_args="
+      --cores "$general_cpu_cores"
+      --keep-going
+      --rerun-incomplete
+      --latency-wait 60
+      -d /opt/user
+      "$target_rule"
+    "
     snakemake -s /opt/snakemake/02_check_run_stats.smk \
-        $snakemake_args
+      $snakemake_args
     echo 'ulimit is'
     ulimit -n
 
@@ -142,13 +139,13 @@
                         --keep-going
                         --rerun-incomplete
                         --latency-wait 60
-                        -d /opt/config"
+                        -d /opt/user"
 
     freebayes_args="--cores $freebayes_cores
                     --keep-going
                     --rerun-incomplete
                     --latency-wait 60
-                    -d /opt/config"
+                    -d /opt/user"
     snakemake -s /opt/snakemake/02_check_run_stats.smk \
         $snakemake_args
     snakemake -s /opt/snakemake/03_generate_contigs.smk \
@@ -415,22 +412,22 @@
 ## unlock snakemake ##
 ######################################################
 %apprun unlock_snakemake
-    snakemake -d /opt/config -s /opt/snakemake/wrangler_by_sample_setup.smk --unlock
+    snakemake -d /opt/user -s /opt/snakemake/wrangler_by_sample_setup.smk --unlock
 
     if [ -f /opt/user/wrangled_data/mip_ids/allMipsSamplesNames.tab.txt ]; then
-        snakemake -d /opt/config -s /opt/snakemake/wrangler_by_sample_finish.smk --unlock
+        snakemake -d /opt/user -s /opt/snakemake/wrangler_by_sample_finish.smk --unlock
     fi
 
-    snakemake -d /opt/config -s /opt/snakemake/02_check_run_stats.smk --unlock
+    snakemake -d /opt/user -s /opt/snakemake/02_check_run_stats.smk --unlock
 
     if [ -f /opt/user/stats_and_variant_calling/aligned_haplotypes.csv ]; then
-        snakemake -d /opt/config -s /opt/snakemake/03_generate_contigs.smk --unlock
+        snakemake -d /opt/user -s /opt/snakemake/03_generate_contigs.smk --unlock
     fi
 
     if [ -f /opt/user/stats_and_variant_calling/freebayes_command_dict.yaml ]; then
-        snakemake -d /opt/config -s /opt/snakemake/04_run_freebayes.smk --unlock
+        snakemake -d /opt/user -s /opt/snakemake/04_run_freebayes.smk --unlock
     fi
 
     if [ -f /opt/user/stats_and_variant_calling/freebayes_command_dict.yaml ]; then
-        snakemake -d /opt/config -s /opt/snakemake/05_filter_variants.smk --unlock
+        snakemake -d /opt/user -s /opt/snakemake/05_filter_variants.smk --unlock
     fi

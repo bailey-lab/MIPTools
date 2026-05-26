@@ -1,21 +1,43 @@
 import os
 version = os.environ['VERSION']
-configfile: f'/opt/config/config_{version}.yaml'
+import tomllib
+import subprocess
+from box import Box
+from pathlib import Path
+with open(f"/opt/user/config.toml", "rb") as f:
+    config = Box(tomllib.load(f))
 
+config_threads = config.universal_settings.general_cpu_count
+config_bwa_extra = config.check_run_stats.bwa_extra
+config_wrangler_info_file = config.variant_calling_inputs.wrangler_info_file_name
+config_species = config.check_run_stats.species
+config_probe_set = config.check_run_stats.get('probe_set')
+config_sample_set = config.check_run_stats.get('sample_set')
+config_freebayes_cpu_count = config.prevalence_calling.freebayes_cpu_count
+config_min_haplotype_barcodes = config.check_run_stats.min_haplotype_barcodes
+config_min_haplotype_samples = config.check_run_stats.min_haplotype_samples
+config_min_haplotype_sample_fraction = config.check_run_stats.min_haplotype_sample_fraction
+
+config_high_UMI_theshold = config['check_run_stats']['high_UMI_threshold']
+config_low_coverage_action = config['check_run_stats']['low_coverage_action']
+config_target_coverage_count = config['check_run_stats'].get('target_coverage_count')
+config_target_coverage_fraction = config['check_run_stats']['target_coverage_fraction']
+config_target_coverage_key = config['check_run_stats']['target_coverage_key']
+config_UMI_coverage_threshold = config['check_run_stats']['UMI_coverage_threshold']
+config_UMI_count_threshold = config['check_run_stats']['UMI_count_threshold']
+config_assessment_key = config['check_run_stats']['assessment_key']
+config_good_coverage_quantile = config['check_run_stats']['good_coverage_quantile']
 
 output_folder = "/opt/user/stats_and_variant_calling"
 log_folder = output_folder + "/run_settings"
 base_resources = "/opt/resources"
 snakemake_directory = "/opt/snakemake"
-wrangler_folder = "/opt/user/wrangled_data"
-import subprocess
 
 subprocess.call(f"mkdir -p {log_folder}", shell=True)
 
 
 rule all:
 	input:
-		snakefile=log_folder + "/02_check_run_stats.smk",
 		repool_csv=output_folder + "/repool.csv",
 		UMI_counts=output_folder + "/UMI_counts.csv",
 		output_graph=output_folder + "/umi_heatmap.html",
@@ -28,11 +50,11 @@ rule copy_params:
 	"""
 	input:
 		snakefile=snakemake_directory + "/02_check_run_stats.smk",
-		configfile=f"/opt/config/config_{version}.yaml",
+		configfile=f"/opt/user/config.toml",
 		scripts=snakemake_directory + "/scripts",
 	output:
 		snakefile=log_folder + "/02_check_run_stats.smk",
-		configfile=log_folder + f"/config_{version}.yaml",
+		configfile=log_folder + f"/config.toml",
 		scripts=directory(log_folder + "/scripts"),
 	resources:
 		log_dir=log_folder,
@@ -49,16 +71,19 @@ rule modify_ozkan_settings:
 	copies Ozkan's default settings, plus any user updated settings, to an
 	output folder alongside the data for later reference.
 	"""
+	input:
+		snakefile=log_folder + "/02_check_run_stats.smk",
+		configfile=log_folder + f"/config.toml"
 	params:
 		template_settings=base_resources + "/templates/analysis_settings_templates/settings.txt",
-		processor_number=config["general_cpu_count"],
-		bwa_extra=config["bwa_extra"],
-		species=config["species"],
-		probe_set=config["probe_set"].strip(),
-		freebayes_threads=config["freebayes_cpu_count"],
-		min_haplotype_barcodes=config["min_haplotype_barcodes"],
-		min_haplotype_samples=config["min_haplotype_samples"],
-		min_haplotype_sample_fraction=config["min_haplotype_sample_fraction"],
+		processor_number=config_threads,
+		bwa_extra=config_bwa_extra,
+		species=config_species,
+		probe_set=config_probe_set.strip(),
+		freebayes_threads=config_freebayes_cpu_count,
+		min_haplotype_barcodes=config_min_haplotype_barcodes,
+		min_haplotype_samples=config_min_haplotype_samples,
+		min_haplotype_sample_fraction=config_min_haplotype_sample_fraction,
 		wdir=output_folder,
 	output:
 		user_settings=output_folder + "/settings.txt",
@@ -81,10 +106,10 @@ rule parse_info_file:
 	params:
 		wdir=output_folder,
 		settings_file="settings.txt",
-		info_files=[wrangler_folder + '/' + config["wrangler_file"]],
-		sample_sheets=wrangler_folder + "/sample_sheet.tsv",
-		sample_set=config["sample_set"].strip(),
-		probe_set=config["probe_set"].strip(),
+		info_files=[f"/opt/wrangled_data/{config_wrangler_info_file}"],
+		sample_sheets=f"/opt/wrangled_data/sample_sheet.tsv",
+		sample_set=config_sample_set.strip(),
+		probe_set=config_probe_set.strip(),
 	resources:
 		log_dir=log_folder,
 	script:
@@ -151,15 +176,15 @@ rule make_repool_table:
 	input:
 		output_folder + "/run_meta.csv",
 	params:
-		high_UMI_threshold=config["high_UMI_threshold"],
-		low_coverage_action=config["low_coverage_action"],
-		target_coverage_count=config["target_coverage_count"],
-		target_coverage_fraction=config["target_coverage_fraction"],
-		target_coverage_key=config["target_coverage_key"],
-		UMI_coverage_threshold=config["UMI_coverage_threshold"],
-		UMI_count_threshold=config["UMI_count_threshold"],
-		assessment_key=config["assessment_key"],
-		good_coverage_quantile=config["good_coverage_quantile"],
+		high_UMI_threshold=config_high_UMI_theshold,
+		low_coverage_action=config_low_coverage_action,
+		target_coverage_count=config_target_coverage_count,
+		target_coverage_fraction=config_target_coverage_fraction,
+		target_coverage_key=config_target_coverage_key,
+		UMI_coverage_threshold=config_UMI_coverage_threshold,
+		UMI_count_threshold=config_UMI_count_threshold,
+		assessment_key=config_assessment_key,
+		good_coverage_quantile=config_good_coverage_quantile,
 		repool_csv= output_folder + "/repool.csv",
 		wdir = output_folder,
 	resources:

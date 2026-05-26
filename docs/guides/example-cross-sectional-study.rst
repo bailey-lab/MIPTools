@@ -101,7 +101,7 @@ the config files by executing this command:
 
 .. code-block:: console
 
-    singularity run -B $(pwd -P):/opt/config miptools_dev.sif
+    singularity run -B $(pwd -P):/opt/user miptools_dev.sif
 
 Otherwise you'll need to modify your command to specify the full path of the sif
 file. Remember that a prerequisite for this tutorial is an installed copy of
@@ -109,7 +109,7 @@ singularity on your computer.
 
 | In general, when you analyze any dataset, you should cd into a folder and run
  the
-| :code:`singularity run -B $(pwd -P):/opt/config /path/to/your/downloaded/miptools_dev.sif`
+| :code:`singularity run -B $(pwd -P):/opt/user /path/to/your/downloaded/miptools_dev.sif`
  step to download all config files. You'll then need to modify the config.yaml
  file to point to your input files and parameters.
 
@@ -127,7 +127,7 @@ with 'run_miptools' using bash. An example (using version 0.5.2) is below.
 
 After launching the run_miptools script, you can edit the file by selecting
 option 1. **Read the comments carefully**. Fill in the miptools_sif,
-input_sample_sheet, fastq_dir, project_resources, species_resources,
+sample_sheet, fastq_dir, project_resources, species_resources,
 prevalence_metadata, wrangler_folder, and variant_calling_folder variables with
 the locations of files from the 'understanding the input data' section above.
 When finished, you can quit the text editor (which is called micro) with ctrl-q.

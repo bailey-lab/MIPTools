@@ -1,9 +1,25 @@
 import os
+from box import Box
 version = os.environ['VERSION']
-configfile: f'/opt/config/config_{version}.yaml'
+
+import tomllib
+with open(f"/opt/user/config.toml", "rb") as f:
+    config = Box(tomllib.load(f))
 
 
-output_folder = "/opt/user/wrangled_data"
+config_probe_set = config['wrangler_settings']['probe_set']
+config_sample_set = config['wrangler_settings']['sample_set']
+config_output_choice = int(config['wrangler_settings']['output_choice'])
+config_downsample_umi_count = config['wrangler_settings']['downsample_umi_count']
+config_downsample_seed = config['wrangler_settings']['downsample_seed']
+config_memory_mb_per_step = config['wrangler_settings']['memory_mb_per_step']
+config_species_ID = config['pmo_settings']['species_ID']
+config_genome_URL = config['pmo_settings']['genome_URL']
+config_gff_URL = config['pmo_settings']['gff_URL']
+config_genome_name = config['pmo_settings']['genome_name']
+config_genome_version = config['pmo_settings']['genome_version']
+config_run_ID = config['pmo_settings']['run_ID']
+output_folder = f"/opt/user/{config_probe_set}_{config_sample_set}_wrangled_data"
 base_resources = "/opt/resources"
 
 all_samples, all_targets = [], []
@@ -37,10 +53,10 @@ final_dict = {
 		output_folder + "/analysis/populationClustering/{target}/analysis/log.txt",
 		target=all_targets,
 	),
-	6: [output_folder+'/saved_panels/'+config['probe_set']+'.json', output_folder + "/extractInfoSummary.tsv.gz"]
+	6: [output_folder+'/saved_panels/'+config_probe_set+'.json', output_folder + "/extractInfoSummary.tsv.gz"]
 
 }
-output_choice = config["output_choice"]
+output_choice = config_output_choice
 final_out = final_dict[output_choice]
 
 
@@ -62,7 +78,7 @@ rule extract_by_arm:
 		"""
 
 
-if config["downsample_umi_count"] < 2**32:
+if config_downsample_umi_count < 2**32:
 
 	rule mip_barcode_correction:
 		input:
@@ -72,10 +88,10 @@ if config["downsample_umi_count"] < 2**32:
 			),
 		params:
 			output_dir=output_folder + "/analysis",
-			downsample_seed=config["downsample_seed"],
-			downsample_amount=config["downsample_umi_count"],
+			downsample_seed=config_downsample_seed,
+			downsample_amount=config_downsample_umi_count,
 		resources:
-			mem_mb=config["memory_mb_per_step"],
+			mem_mb=config_memory_mb_per_step,
 			time_min=20,
 		output:
 			barcode_corrections_finished=output_folder
@@ -97,9 +113,9 @@ else:
 			),
 		params:
 			output_dir=output_folder + "/analysis",
-			downsample_seed=config["downsample_seed"],
+			downsample_seed=config_downsample_seed,
 		resources:
-			mem_mb=config["memory_mb_per_step"],
+			mem_mb=config_memory_mb_per_step,
 			time_min=20,
 		output:
 			barcode_corrections_finished=output_folder
@@ -143,7 +159,7 @@ rule mip_clustering:
 	params:
 		output_dir=output_folder + "/analysis",
 	resources:
-		mem_mb=config["memory_mb_per_step"],
+		mem_mb=config_memory_mb_per_step,
 		time_min=60,
 	output:
 		mip_clustering=output_folder
@@ -164,7 +180,7 @@ rule pop_cluster_target:
 	params:
 		output_dir=output_folder + "/analysis",
 	resources:
-		mem_mb=config["memory_mb_per_step"],
+		mem_mb=config_memory_mb_per_step,
 		time_min=60,
 	output:
 		pop_clustering=output_folder
@@ -210,21 +226,21 @@ rule concatenate_summary_files:
 		r"""
 		sed -r '1d;s/(\s+)?\S+//2' {output_folder}/analysis/resources/sampleInputFiles.tab.txt |
 			awk '$2=$1' |
-			sed "s/ /\//g;s/$/_mipExtraction\/extractInfoSummary.txt/g;s/^/\/opt\/user\/wrangled_data\/analysis\//g" \
+			sed "s/ /\//g;s/$/_mipExtraction\/extractInfoSummary.txt/g;s|^|{output_folder}/analysis/|g" \
 			| xargs cat \
 			| sed '1!{{/Sample/d}}' \
 			| pigz > {output.extract_info_summary}
-		
+
 		sed -r '1d;s/(\s+)?\S+//2' {output_folder}/analysis/resources/sampleInputFiles.tab.txt |
 			awk '$2=$1' |
-			sed "s/ /\//g;s/$/_mipExtraction\/extractInfoByTarget.txt/g;s/^/\/opt\/user\/wrangled_data\/analysis\//g" \
+			sed "s/ /\//g;s/$/_mipExtraction\/extractInfoByTarget.txt/g;s|^|{output_folder}/analysis/|g" \
 			| xargs cat \
 			| sed '1!{{/Sample/d}}' \
 			| pigz > {output.extract_info_by_target}
-		
+
 		sed -r '1d;s/(\s+)?\S+//2' {output_folder}/analysis/resources/sampleInputFiles.tab.txt |
 			awk '$2=$1' |
-			sed "s/ /\//g;s/$/_mipExtraction\/stitchInfoByTarget.txt/g;s/^/\/opt\/user\/wrangled_data\/analysis\//g" \
+			sed "s/ /\//g;s/$/_mipExtraction\/stitchInfoByTarget.txt/g;s|^|{output_folder}/analysis/|g" \
 			| xargs cat \
 			| sed '1!{{/Sample/d}}' \
 			| pigz > {output.stitch_info_by_target}
@@ -235,16 +251,16 @@ rule convert_pmo:
 		final_table=output_folder + "/allInfo.tsv.gz",
 		mip_arms=output_folder + "/mip_ids/mipArms.txt"
 	params:
-		species_ID=config['species_ID'],
-		genome_URL=config['genome_URL'],
-		gff_URL=config['gff_URL'],
-		panel_ID=config['probe_set'],
-		genome_name=config['genome_name'],
-		genome_version=config['genome_version'],
-		wrangled_name=config['run_ID']
+		species_ID=config_species_ID,
+		genome_URL=config_genome_URL,
+		gff_URL=config_gff_URL,
+		panel_ID=config_probe_set,
+		genome_name=config_genome_name,
+		genome_version=config_genome_version,
+		wrangled_name=config_run_ID
 	output:
-		panel_pmo=output_folder+'/saved_panels/'+config['probe_set']+'.json',
-		microhaplotype_pmo=output_folder+'/saved_microhaps/'+config['run_ID']+'.json',
-		combined_pmo=output_folder+'/final_PMO/'+config['probe_set']+'_'+config['run_ID']+'.json'
+		panel_pmo=output_folder+'/saved_panels/'+config_probe_set+'.json',
+		microhaplotype_pmo=output_folder+'/saved_microhaps/'+config_run_ID+'.json',
+		combined_pmo=output_folder+'/final_PMO/'+config_probe_set+'_'+config_run_ID+'.json'
 	script:
 		'scripts/convert_pmo.py'
