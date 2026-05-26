@@ -1,5 +1,4 @@
 import pandas as pd
-import subprocess
 import os
 import time
 
@@ -12,7 +11,18 @@ desired_probe_sets=snakemake.params.probe_sets.replace(' ', '').strip().split(',
 mip_arms=snakemake.output.mip_arms
 sample_file=open(snakemake.output.sample_file, 'w')
 output_sample_sheet=snakemake.output.sample_sheet
-subprocess.call(f'cp {input_sample_sheet} {output_sample_sheet}', shell=True)
+
+# copy the input sample sheet to the output sample sheet location and only include the sample sets and probe sets
+# chosen by the user in the config file
+desired_probe_sets_upper = set(p.upper() for p in desired_probe_sets)
+sample_sheet_df = pd.read_table(input_sample_sheet)
+# sample_sheet_df = sample_sheet_df[
+#     sample_sheet_df['sample_set'].str.strip().str.upper().isin(desired_sample_set) &
+#     sample_sheet_df['probe_set'].apply(
+#         lambda x: bool(set(p.strip().upper() for p in x.split(',')) & desired_probe_sets_upper)
+#     )
+# ]
+sample_sheet_df.to_csv(output_sample_sheet, index=False, sep='\t')
 
 #grab only selected columns from original arms file and output them to new arms file
 arms_df=pd.read_table(arms_file)
@@ -20,7 +30,7 @@ arms_df=arms_df[['mip_id', 'mip_family', 'extension_arm', 'ligation_arm', 'exten
 arms_df.to_csv(mip_arms, index=False, sep='\t')
 sequenced_samples=[sample.split('_')[0] for sample in os.listdir(input_fastq_folder)]
 
-print('sequenced samples are', sequenced_samples)
+# print('sequenced samples are', sequenced_samples)
 
 samples_used=set([])
 for line_number, line in enumerate(open(input_sample_sheet)):

@@ -4943,7 +4943,7 @@ def map_haplotypes(settings):
     )
     hap_sample_counts = (
         raw_results.groupby("haplotype_ID")["sample_name"]
-        .apply(lambda a: len(set(a)))
+        .nunique()
         .reset_index()
         .rename(columns={"sample_name": "Haplotype Samples"})
     )
@@ -5100,12 +5100,11 @@ def map_haplotypes(settings):
     # each MIP copy/haplotype_ID combination must have a single alignment
     # if there are multiple, the best one will be chosen
 
-    def get_best_alignment(group):
-        return group.sort_values("alignment_score", ascending=False).iloc[0]
-
-    haplotypes = haplotypes.groupby(
-        ["MIP", "Copy", "haplotype_ID"], as_index=False
-    ).apply(get_best_alignment)
+    haplotypes = (
+        haplotypes
+        .sort_values("alignment_score", ascending=False)
+        .drop_duplicates(subset=["MIP", "Copy", "haplotype_ID"])
+    )
     haplotypes.index = range(len(haplotypes))
     # filter to best mapping copy/haplotype pairs
     mapped_haplotypes = haplotypes.loc[haplotypes["mapped_copy"]]
@@ -5583,7 +5582,7 @@ def freebayes_call(
         )
 
     # create contigs per chromosome
-    contigs = call_df.groupby("chrom").apply(get_contig)
+    contigs = call_df.groupby("chrom").apply(get_contig, include_groups=False)
     contigs = contigs.reset_index()
     contigs.rename(
         columns={
@@ -8528,7 +8527,7 @@ def combine_info_files(
         info["Library Prep"] = "merged"
     info = (
         info.groupby(["sample_name", "haplotype_sequence", "Library Prep"])
-        .apply(combine_sample_data)
+        .apply(combine_sample_data, include_groups=False)
         .reset_index()
     )
     m_groups = info.groupby("mip_name")
@@ -8710,7 +8709,7 @@ def generate_fastqs(wdir, mipster_files, min_bc_count, min_bc_frac):
             & (mipster_dfs["c_barcorac"] >= min_bc_frac)
         ]
         .groupby("s_Sample")
-        .apply(lambda x: pd.DataFrame.to_dict(x, orient="index"))
+        .apply(lambda x: pd.DataFrame.to_dict(x, orient="index"), include_groups=False)
         .to_dict()
     )
     for sample in mipster:
@@ -8769,7 +8768,12 @@ def generate_processed_fastqs(fastq_dir, mipster_file, min_bc_count=1, pro=8):
     mipster = (
         mipster.loc[mipster["barcode_count"] >= min_bc_count]
         .groupby("sample_name")
-        .apply(lambda x: pd.DataFrame.to_dict(x, orient="index"))
+        .apply(
+            lambda x: pd.DataFrame.to_dict(
+                x.assign(sample_name=x.name), orient="index"
+            ),
+            include_groups=False,
+        )
         .to_dict()
     )
     p = Pool(pro)
@@ -8858,7 +8862,12 @@ def generate_mapped_fastqs(
     mipster_dict = (
         mipster.loc[mipster["barcode_count"] >= min_bc_count]
         .groupby("sample_name")
-        .apply(lambda x: pd.DataFrame.to_dict(x, orient="index"))
+        .apply(
+            lambda x: pd.DataFrame.to_dict(
+                x.assign(sample_name=x.name), orient="index"
+            ),
+            include_groups=False,
+        )
         .to_dict()
     )
     if save:
@@ -8896,7 +8905,7 @@ def generate_unprocessed_fastqs(fastq_dir, mipster_file, min_bc_count=1, pro=8):
     mipster = (
         mipster.loc[mipster["barcode_count"] >= min_bc_count]
         .groupby("sample_name")
-        .apply(lambda x: pd.DataFrame.to_dict(x, orient="index"))
+        .apply(lambda x: pd.DataFrame.to_dict(x, orient="index"), include_groups=False)
         .to_dict()
     )
     p = Pool(pro)
