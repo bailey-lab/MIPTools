@@ -1,22 +1,50 @@
-[universal]
+# ---------------------------------------------------------------------------------------------
+# Version Info, do not edit
+# ---------------------------------------------------------------------------------------------
+# The config file is tied to a particular version of miptools, do not edit this
+VERSION = 'dev'
 
-[universal.paths]
-output_directory = "results"
-project_resources = "input_data/DR23K_project_resources"
+# ----------------------------------------------------------------------------------------------
+# Input Files
+# ----------------------------------------------------------------------------------------------
+#
+# Paths to input files and directories, these will be mounted into the container at runtime,
+# if any edits are made to these while a jupyter notebook is running, the container will need to be 
+# shut down and restarted with the run_miptools.sh script for the changes to take effect
+#
+[universal_inputs]
+miptools_sif = "miptools_dev.sif"
+project_resources_directory = "input_data/DR23K_project_resources"
 
-[universal.parameters]
-probe_set = "DR23K"
-sample_set = "PRX-00"
-general_cpu_count = 16
-
-[wrangling.inputs]
-sample_sheet = "input_data/cherrypicked_sample_sheet.tsv"
+[wrangler_inputs]
+input_sample_sheet = "input_data/cherrypicked_sample_sheet.tsv"
 fastq_dir = "input_data/fastq_files"
 
-[wrangling.output_options]
-output_choice = "6"
+[variant_calling_inputs]
+# no need to edit these until after you have already run mipwrangler at least once and have the
+# wrangled data available
+species_resources = "input_data/pf_species_resources"
+wrangler_directory = "DR23K_PRX-00_wrangled_data"
+wrangler_info_file_name = "allInfo.tsv.gz"
 
-[wrangling.pmo_params]
+[prevalence_summary_inputs]
+prevalence_metadata_file = ""
+
+# ---------------------------------------------------------------------------------------------
+# MIPWrangler Settings
+# ---------------------------------------------------------------------------------------------
+[wrangler_settings]
+cpu_count = 16
+probe_set = "DR23K"
+sample_set = "PRX-00"
+output_title = "DR23K_PRX-00_wrangled_data"
+# optional
+output_choice = 6
+memory_mb_per_step = 20000
+downsample_umi_count = 20000000000
+downsample_seed = 312
+
+[pmo_settings]
 species_ID = 36329
 genome_URL = "some_URL"
 gff_URL = "some_gff"
@@ -24,40 +52,54 @@ genome_name = "modified plasmodb"
 genome_version = "genome_version"
 run_ID = "a1"
 
-[variant_calling]
+# ----------------------------------------------------------------------------------------------
+# Variant Calling Settings
+# ----------------------------------------------------------------------------------------------
+[check_run_stats]
+cpu_count = 16
+probe_set = "DR23K"
+sample_set = "PRX-00"
 species = "pf"
+bwa_extra = ["-t", "16"]
+min_haplotype_barcodes = 1
+min_haplotype_samples = 1
+min_haplotype_sample_fraction = 0.0001
+high_UMI_threshold = 10000
+low_coverage_action = "Recapture"
+# target_coverage_count = was null in config.yaml, why is that?
+target_coverage_fraction = 0.95
+target_coverage_key = "targets_with_>=10_UMIs"
+UMI_coverage_threshold = 10
+UMI_count_threshold = 100
+assessment_key = "targets_with_>=1_UMIs"
+good_coverage_quantile = 0.25
 
-[variant_calling.inputs]
-species_resources = "input_data/pf_species_resources"
-wrangler_info_file = "" # leave blank if you do not yet have a MIPWrangler output folder
-
-[variant_calling.freebayes]
+[prevalence_calling]
 freebayes_cpu_count = 8
-freebayes_settings = [
-    "--pooled-continuous",
-    "--min-alternate-fraction", "0.01",
-    "--min-alternate-count", "2",
-    "--haplotype-length", "3",
-    "--min-alternate-total", "10",
-    "--use-best-n-alleles", "70",
-    "--genotype-qualities",
-    "--gvcf",
-    "--gvcf-dont-use-chunk", "true",
-]
-
-[variant_calling.prevalence_calling]
-geneid_to_genename = "geneid_to_genename.tsv"
 target_aa_annotation = "targets.tsv"
-# target_nt_annotation = ""
+target_nt_annotation = false
+freebayes_settings = [
+  "--pooled-continuous",
+  "--min-alternate-fraction", "0.01",
+  "--min-alternate-count", "2",
+  "--haplotype-length", "3",
+  "--min-alternate-total", "10",
+  "--use-best-n-alleles", "70",
+  "--genotype-qualities",
+  "--gvcf",
+  "--gvcf-dont-use-chunk", "true",
+]
+geneid_to_genename = "geneid_to_genename.tsv"
 aggregate_nucleotides = true
 aggregate_aminoacids = true
 annotate = true
 decompose_options = []
-aggregate_none = true
 annotated_vcf = false
+aggregate_none = true
 output_prefix = ""
 min_site_qual = 1
 
+[variant_filtering]
 min_count = 2
 min_coverage = 10
 min_freq = 0
@@ -66,23 +108,4 @@ min_wsaf = 0.5
 num_samples_umi = 2
 min_umi = 3
 
-[prevalence.inputs]
-prevalence_metadata_file = "input_data/metadata_files/PRX-00_metadata.csv"
 
-[advanced]
-memory_mb_per_step = 20000
-downsample_umi_count = 20000000000
-downsample_seed = 312
-bwa_extra = ["-t", "16"]
-min_haplotype_barcodes = 1
-min_haplotype_samples = 1
-min_haplotype_sample_fraction = 0.0001
-high_UMI_threshold = 10000
-low_coverage_action = "Recapture"
-target_coverage_count = "null"
-target_coverage_fraction = 0.95
-target_coverage_key = "targets_with_>=10_UMIs"
-UMI_coverage_threshold = 10
-UMI_count_threshold = 100
-assessment_key = "targets_with_>=1_UMIs"
-good_coverage_quantile = 0.25
