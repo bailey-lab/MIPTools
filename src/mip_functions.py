@@ -27,6 +27,10 @@ import sys
 import allel
 from Bio import SeqIO
 
+# scikit-allel reads DP and AD as int16 by default, which wraps around for
+# depths above 32767 (pooled samples). Read them as int32 instead.
+ALLEL_DEPTH_TYPES = {"calldata/DP": "i4", "calldata/AD": "i4"}
+
 print("functions reloading")
 # backbone dictionary
 mip_backbones = {
@@ -6512,6 +6516,7 @@ def vcf_to_tables_fb(
             fields=["*"],
             alt_number=1,
             transformers=allel.ANNTransformer(),
+            types=ALLEL_DEPTH_TYPES,
         )
         # allel import provides a variants dictionary with keys such as
         # variants/AD, variants/POS for variant level information
@@ -6799,7 +6804,9 @@ def vcf_to_tables_fb(
         subprocess.run(comm, check=True)
         subprocess.run(["bcftools", "index", "-f", decomposed_vcf], check=True)
         # load decomposed vcf file
-        variants = allel.read_vcf(decomposed_vcf, fields=["*"], alt_number=1)
+        variants = allel.read_vcf(
+            decomposed_vcf, fields=["*"], alt_number=1, types=ALLEL_DEPTH_TYPES
+        )
         # Freebayes vcfs have AO and RO counts for alt and ref allele depths
         # but GATK has a combined AD depth. Create AO and RO from AD if
         # needed
@@ -6949,10 +6956,16 @@ def vcf_to_tables_fb(
                 fields=["*"],
                 alt_number=1,
                 transformers=allel.ANNTransformer(),
+                types=ALLEL_DEPTH_TYPES,
             )
         else:
             # if the file is not annotated, don't try to parse ANN field.
-            variants = allel.read_vcf(annotated_vcf_path, fields=["*"], alt_number=1)
+            variants = allel.read_vcf(
+                annotated_vcf_path,
+                fields=["*"],
+                alt_number=1,
+                types=ALLEL_DEPTH_TYPES,
+            )
         # Freebayes vcfs have AO and RO counts for alt and ref allele depths
         # but GATK has a combined AD depth. Create AO and RO from AD if
         # needed
@@ -7301,6 +7314,7 @@ def vcf_to_tables(
             fields=["*"],
             alt_number=1,
             transformers=allel.ANNTransformer(),
+            types=ALLEL_DEPTH_TYPES,
         )
         # allel import provides a variants dictionary with keys such as
         # variants/AD, variants/POS for variant level information
@@ -7552,7 +7566,9 @@ def vcf_to_tables(
         subprocess.run(comm, check=True)
         subprocess.run(["bcftools", "index", "-f", decomposed_vcf], check=True)
         # load decomposed vcf file
-        variants = allel.read_vcf(decomposed_vcf, fields=["*"], alt_number=1)
+        variants = allel.read_vcf(
+            decomposed_vcf, fields=["*"], alt_number=1, types=ALLEL_DEPTH_TYPES
+        )
         # Freebayes vcfs have AO and RO counts for alt and ref allele depths
         # but GATK has a combined AD depth. Create AO and RO from AD if
         # needed
@@ -7667,10 +7683,16 @@ def vcf_to_tables(
                 fields=["*"],
                 alt_number=1,
                 transformers=allel.ANNTransformer(),
+                types=ALLEL_DEPTH_TYPES,
             )
         else:
             # if the file is not annotated, don't try to parse ANN field.
-            variants = allel.read_vcf(annotated_vcf_path, fields=["*"], alt_number=1)
+            variants = allel.read_vcf(
+                annotated_vcf_path,
+                fields=["*"],
+                alt_number=1,
+                types=ALLEL_DEPTH_TYPES,
+            )
         # Freebayes vcfs have AO and RO counts for alt and ref allele depths
         # but GATK has a combined AD depth. Create AO and RO from AD if
         # needed
