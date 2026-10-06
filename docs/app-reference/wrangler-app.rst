@@ -45,8 +45,8 @@ Options
 	      selected again only if the run is repeated with the same seed,
 	      threshold, weighting, and analysis folder layout. Moving or
 	      renaming the analysis folders can change the selected UMIs even
-	      with the same seed. If not provided, downsampling is random and
-	      cannot be reproduced.
+	      with the same seed. Use a different seed to see whether results
+	      are robust to which UMIs are selected.
 
 Defaults
 --------
@@ -64,7 +64,7 @@ Defaults
 	-o    Default: '/opt/bin/runMIPWranglerCurrent.sh'
 	-t    Default: 2000
 	-w    Default: false
-	-S    Default: none (unseeded)
+	-S    Default: 312
 
 Examples
 ========

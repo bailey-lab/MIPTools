@@ -9,7 +9,7 @@ if [[ $# -ne 5 && $# -ne 6 ]]; then
     msg="${msg}5) A flag indicating if downsmapling should be weighted.\n"
     msg="${msg}   Either an empty string or the -w flag as a string.\n"
     msg="${msg}6) (Optional) The random seed option for downsampling as a string,\n"
-    msg="${msg}   e.g. '--seed 7', or an empty string for unseeded downsampling."
+    msg="${msg}   e.g. '--seed 7', or an empty string to use the downsampler's default seed."
     echo ${msg} >&2
     exit 2
 fi

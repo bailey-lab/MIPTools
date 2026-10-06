@@ -136,8 +136,10 @@ parser.add_argument(
     threshold, weighting, and the same analysis folder layout (run from the
     same folder with the same relative paths). Moving or renaming the
     analysis folders, or rerunning on a copy at a different location, can
-    result in different UMIs being selected even with the same seed. If not
-    provided, downsampling is random and cannot be reproduced.""",
+    result in different UMIs being selected even with the same seed.
+    Use a different seed to see whether results are robust to which UMIs
+    are selected. Default: 312.""",
+    default=312,
     type=int,
 )
 
@@ -351,12 +353,9 @@ if args["weighted"]:
     weighted = "-w"
 else:
     weighted = "''"
-# Setup the downsampling seed. If no seed is provided, feed in the empty string
-# to the bash script as an argument. Otherwise, feed in the option and value.
-if args["seed"] is not None:
-    seed = "--seed " + str(args["seed"])
-else:
-    seed = "''"
+# Setup the downsampling seed. It is fed to the bash script as the option and
+# value in a single argument.
+seed = "--seed " + str(args["seed"])
 wrangler_commands = [
     ["cd", "analysis"],
     [

@@ -39,8 +39,9 @@ parser.add_argument(
     help="""Random seed for reproducible downsampling. Each file is seeded
     independently using this value combined with the file path, so the UMIs
     kept for a file do not depend on how files are distributed among worker
-    processes. If not provided, selection is random and not reproducible.""",
-    default=None,
+    processes. The same UMIs are only selected again if the seed, threshold,
+    weighting, and file paths are the same.""",
+    default=312,
     type=int,
 )
 parser.add_argument(
