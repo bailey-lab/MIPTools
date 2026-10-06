@@ -126,6 +126,22 @@ parser.add_argument(
     action="store_true",
     help="Whether to apply a weight when randomly sampling UMIs.",
 )
+parser.add_argument(
+    "-S",
+    "--seed",
+    help="""Integer random seed for UMI downsampling, making the downsampling
+    reproducible when the same seed is used again. Each MIP/sample file is
+    seeded independently from this value and the file's path, so the same
+    UMIs are only selected again if the run is repeated with the same seed,
+    threshold, weighting, and the same analysis folder layout (run from the
+    same folder with the same relative paths). Moving or renaming the
+    analysis folders, or rerunning on a copy at a different location, can
+    result in different UMIs being selected even with the same seed.
+    Use a different seed to see whether results are robust to which UMIs
+    are selected. Default: 312.""",
+    default=312,
+    type=int,
+)
 
 # Parse arguments from command line
 args = vars(parser.parse_args())
@@ -337,6 +353,9 @@ if args["weighted"]:
     weighted = "-w"
 else:
     weighted = "''"
+# Setup the downsampling seed. It is fed to the bash script as the option and
+# value in a single argument.
+seed = "--seed " + str(args["seed"])
 wrangler_commands = [
     ["cd", "analysis"],
     [
@@ -348,6 +367,7 @@ wrangler_commands = [
         str(args["population_fraction_cutoff"]),
         str(args["downsample_threshold"]),
         weighted,
+        seed,
         ">>",
         os.path.join(analysis_dir, "nohup.out"),
     ],
